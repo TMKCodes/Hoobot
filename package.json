@@ -1,0 +1,19 @@
+{
+  "name": "binance-node-bot",
+  "version": "1.0.0",
+  "description": "Binance Bot to trade based on EMA calculations.",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "start": "ts-node src/index.ts"
+  },
+  "author": "Toni Lukkaroinen",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "@types/node": "^20.4.2"
+  },
+  "dependencies": {
+    "binance-api-node": "^0.12.6"
+  }
+}
