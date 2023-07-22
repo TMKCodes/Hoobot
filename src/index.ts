@@ -125,7 +125,7 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
   }
   console.log(`RSI is ${rsiCheck}`);
 
-  logToFile(`lastOrderCheck === ${lastOrderCheck} && balanceCheck === ${balanceCheck} && emaCheck === ${emaCheck} && macdCheck === ${macdCheck} && rsiCheck === ${rsiCheck}, candleTime: ${candletime}`);
+  logToFile(`lastOrderCheck === ${lastOrderCheck}\r\nbalanceCheck === ${balanceCheck}\r\nemaCheck === ${emaCheck}\r\nmacdCheck === ${macdCheck}\r\nrsiCheck === ${rsiCheck}\r\ncandleTime: ${candletime}`);
   if((lastOrderCheck === "BUY" || lastOrderCheck === "UNKNOWN") && balanceCheck === `SELL` && emaCheck === `SELL` && macdCheck === `SELL` && rsiCheck === `SELL`) {
     console.log(`\r\nPLACE A SELL TRADE\r\n----------------------------------`);
     let price = parseFloat(closePrice);
