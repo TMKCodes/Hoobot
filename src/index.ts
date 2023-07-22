@@ -238,12 +238,6 @@ async function rebalance(candlesticks: candlestick[]) {
 
     const lastOrder = await getLastCompletedOrder(binance, options.pair.split("/").join(""));
 
-    console.log(JSON.stringify(lastOrder));
-    
-    // Your rebalancing strategy here...
-    // Example: If the portfolio is out of balance, call the placeTrade function
-    // (This is a simplified example and you should adjust it based on your strategy)
-
     console.log(`\r\nCHECK IF ORDER SHOULD BE PLACED AT ${candleTime}\r\n----------------------------------`);
     await placeTrade(lastOrder, emaA, emaB, rsi, macd, currentBalance, closePrice, tradingPairFilters, candleTime);
     prev.macd = macd;
