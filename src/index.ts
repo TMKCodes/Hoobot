@@ -76,7 +76,6 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
   if(lastOrder !== undefined) {
     lastOrderCheck = lastOrder.isBuyer ? 'BUY' : 'SELL'; 
   }
-  console.log(`LAST ORDER is ${lastOrderCheck}`);
 
   if (balanceA > tradingPairFilters.stepSize && balanceB < tradingPairFilters.stepSize) {
     balanceCheck = `SELL`;
@@ -85,7 +84,6 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
   } else {
     return console.log(`No balance to trade.\r\n----------------------------------`);
   }
-  console.log(`BALANCE is ${balanceCheck}`);
 
   if (prev.emaA !== undefined && prev.emaB !== undefined) {
     if(emaA > emaB && prev.emaA < prev.emaB) {
@@ -109,23 +107,20 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
       emaCheck = `SELL`;
     }
   }
-  console.log(`EMA is ${emaCheck}`);
 
   if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
     macdCheck = `BUY`
   } else if (macd.macdLine < macd.signalLine && macd.histogram < 0) {
     macdCheck = `SELL`;
   }
-  console.log(`MACD is ${macdCheck}`);
 
   if(rsi < options.oversoldTreshold) {
     rsiCheck = `BUY`;
   } else if(rsi > options.overboughtTreshold) {
     rsiCheck = `SELL`;
   }
-  console.log(`RSI is ${rsiCheck}`);
 
-  logToFile(`lastOrderCheck === ${lastOrderCheck}\r\nbalanceCheck === ${balanceCheck}\r\nemaCheck === ${emaCheck}\r\nmacdCheck === ${macdCheck}\r\nrsiCheck === ${rsiCheck}\r\ncandleTime: ${candletime}`);
+  logToFile(`LAST ORDER === ${lastOrderCheck}\r\nBALANCE === ${balanceCheck}\r\nEMA === ${emaCheck}\r\nMACD === ${macdCheck}\r\nRSI === ${rsiCheck}\r\nCANDLE TIME: ${candletime}`);
   if((lastOrderCheck === "BUY" || lastOrderCheck === "UNKNOWN") && balanceCheck === `SELL` && emaCheck === `SELL` && macdCheck === `SELL` && rsiCheck === `SELL`) {
     console.log(`\r\nPLACE A SELL TRADE\r\n----------------------------------`);
     let price = parseFloat(closePrice);
