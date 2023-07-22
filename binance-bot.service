@@ -1,0 +1,13 @@
+[Unit]
+Description=Binance Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=tonto
+WorkingDirectory=/home/tonto/Repositories/Binance-Node-bot
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
