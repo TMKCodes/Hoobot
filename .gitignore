@@ -5,6 +5,7 @@ client/node_modules
 server/.*
 server/node_modules
 deploy.sh
+trading_logs.txt
 
 # dependencies
 /node_modules

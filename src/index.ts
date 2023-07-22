@@ -120,7 +120,7 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
     rsiCheck = `SELL`;
   }
 
-  logToFile(`LAST ORDER === ${lastOrderCheck}\r\nBALANCE === ${balanceCheck}\r\nEMA === ${emaCheck}\r\nMACD === ${macdCheck}\r\nRSI === ${rsiCheck}\r\nCANDLE TIME: ${candletime}`);
+  console.log(`\r\nLAST ORDER: ${lastOrderCheck}\r\nBALANCE: ${balanceCheck}\r\nEMA: ${emaCheck}\r\nMACD: ${macdCheck}\r\nRSI: ${rsiCheck}\r\nCANDLE TIME: ${candletime}\r\n`);
   if((lastOrderCheck === "BUY" || lastOrderCheck === "UNKNOWN") && balanceCheck === `SELL` && emaCheck === `SELL` && macdCheck === `SELL` && rsiCheck === `SELL`) {
     console.log(`\r\nPLACE A SELL TRADE\r\n----------------------------------`);
     let price = parseFloat(closePrice);
@@ -154,7 +154,7 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
       return false;
     }
   } else {
-    console.log(`NOT TRADING RIGHT NOW.\r\n----------------------------------`);
+    console.log(`NOT TRADING RIGHT NOW.\r\n\r\n`);
     return false;
   }
 }
