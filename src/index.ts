@@ -1,4 +1,4 @@
-import fs from 'fs';
+
 import dotenv from 'dotenv';
 import Binance from 'node-binance-api';
 import { loginDiscord } from './discord/discord';
@@ -10,27 +10,28 @@ import { ConfigOptions, parseArgs } from './binance/args';
 import { getCurrentBalance } from './binance/balances';
 import { logToFile } from './binance/logToFile';
 import { getLastCompletedOrder, handleOpenOrders, order } from './binance/orders';
+import { checkBeforeOrder, tradeDirection } from './binance/tradeChecks';
+import { play } from './binance/playSound';
 
+
+dotenv.config();
 
 interface previous {
   macd: any;
-  emaA: any;
-  emaB: any;
+  shortEma: any;
+  longEma: any;
 }
 
 const prev: previous = {
   macd: undefined,
-  emaA: undefined,
-  emaB: undefined,
+  shortEma: undefined,
+  longEma: undefined,
 }
-
-let lastEmaCrossover: string | undefined = undefined;
-
-dotenv.config();
-
 // Get configuration options from command-line arguments
 const args = process.argv.slice(2);
 const options = parseArgs(args) as ConfigOptions;
+
+const soundFile = './alarm.mp3'
 
 // Initialize Binance client
 const binance = new Binance().options({
@@ -65,88 +66,49 @@ async function getTradingPairFilters(pair: string) {
 }
 
 // Place buy or sell order based on EMA difference
-async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: number, macd: { macdLine: number; signalLine: number; histogram: number; }, balance: number[], closePrice: string, tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, candletime: string) {
+async function placeTrade(lastOrder: order, shortEma: number, longEma: number, rsi: number, macd: { macdLine: number; signalLine: number; histogram: number; }, balance: number[], closePrice: string, tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, candletime: string) {
   const balanceA = await binance.roundStep(balance[0], tradingPairFilters.stepSize);
   const balanceB = await binance.roundStep(balance[1], tradingPairFilters.stepSize);
-  let lastOrderCheck: string = `UNKNOWN`;
-  let balanceCheck: string = `UNKNOWN`;
-  let emaCheck: string = `UNKNOWN`;
-  let macdCheck: string = `UNKNOWN`;
-  let rsiCheck: string = `NEUTRAL`;
-  if(lastOrder !== undefined) {
-    lastOrderCheck = lastOrder.isBuyer ? 'BUY' : 'SELL'; 
-  }
+  const orderBook = await binance.depth(options.pair.split("/").join(""));
+  const direction = tradeDirection(balanceA, balanceB, parseFloat(closePrice), shortEma, longEma, macd, rsi, candletime, lastOrder, options);
+  console.log(`Trade direction: ${direction}`);
 
-  if (balanceA > tradingPairFilters.stepSize && balanceB < tradingPairFilters.stepSize) {
-    balanceCheck = `SELL`;
-  } else if (balanceA < tradingPairFilters.stepSize && balanceB > tradingPairFilters.stepSize) {
-    balanceCheck = `BUY`
-  } else {
-    return console.log(`No balance to trade.\r\n----------------------------------`);
-  }
-
-  if (prev.emaA !== undefined && prev.emaB !== undefined) {
-    if(emaA > emaB && prev.emaA < prev.emaB) {
-      emaCheck = `BUY`;
-      lastEmaCrossover = "Changed to buy";
-    } else if(emaA < emaB && prev.emaA > prev.emaB) {
-      emaCheck = `SELL`;
-      lastEmaCrossover = "Changed to sell";
-    }
-  } else if (lastEmaCrossover !== undefined) {
-    if(lastEmaCrossover === "Changed to buy" && emaA > emaB ) {
-      emaCheck = `BUY`;
-    } else if(lastEmaCrossover === "Changed to sell" && emaA < emaB ) {
-      emaCheck = `SELL`;
-    }
-  }
-  if (emaCheck === `UNKNOWN`) {
-    if (emaA > emaB) {
-      emaCheck = `BUY`;
-    } else if (emaA < emaB){
-      emaCheck = `SELL`;
-    }
-  }
-
-  if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
-    macdCheck = `BUY`
-  } else if (macd.macdLine < macd.signalLine && macd.histogram < 0) {
-    macdCheck = `SELL`;
-  }
-
-  if(rsi < options.oversoldTreshold) {
-    rsiCheck = `BUY`;
-  } else if(rsi > options.overboughtTreshold) {
-    rsiCheck = `SELL`;
-  }
-
-  console.log(`\r\nLAST ORDER: ${lastOrderCheck}\r\nBALANCE: ${balanceCheck}\r\nEMA: ${emaCheck}\r\nMACD: ${macdCheck}\r\nRSI: ${rsiCheck}\r\nCANDLE TIME: ${candletime}\r\n`);
-  if((lastOrderCheck === "BUY" || lastOrderCheck === "UNKNOWN") && balanceCheck === `SELL` && emaCheck === `SELL` && macdCheck === `SELL` && rsiCheck === `SELL`) {
+  if (direction === 'SELL') {
+    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     console.log(`\r\nPLACE A SELL TRADE\r\n----------------------------------`);
-    let price = parseFloat(closePrice);
+    let price = orderBookAsks[0] - tradingPairFilters.tickSize;
     const quantity = balanceA * price;
-    const maxQuantity = Math.min(quantity, options.maxAmount);
+    let maxQuantity = quantity;
+    if(options.maxAmount !== 0) {
+      maxQuantity = Math.min(quantity, options.maxAmount);
+    }
     const stopPrice = price * (1 - (options.riskPercentage / 100));
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime) === true) {
+      play(soundFile);
       logToFile(`Placing order: binance.sell(${options.pair.split("/").join("")}, ${roundedQuantity}, ${roundedPrice}, { stopPrice: ${roundedStopPrice}, type: 'STOP_LOSS_LIMIT' })`);
       const order = await binance.sell(options.pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
       return order;
     } else {
       return false;
     }
-  } else if((lastOrderCheck === "SELL" || lastOrderCheck === "UNKNOWN") && balanceCheck === `BUY` && emaCheck === `BUY` && macdCheck === `BUY` && rsiCheck === `BUY`) {
+  } else if (direction === 'BUY') {
     console.log(`\r\nPLACE A BUY TRADE\r\n----------------------------------`);
-    let price = parseFloat(closePrice); 
+    const orderBookBids = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+    let price = orderBookBids[orderBookBids.length - 1] + tradingPairFilters.tickSize; 
     const quantity = balanceB;
-    const maxQuantity = Math.min(quantity, options.maxAmount);
+    let maxQuantity = quantity;
+    if(options.maxAmount !== 0) {
+      maxQuantity = Math.min(quantity, options.maxAmount);
+    }
     const stopPrice = price * (1 - (options.riskPercentage / 100));
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime) === true) {
+      play(soundFile);
       logToFile(`Placing order: binance.buy(${options.pair.split("/").join("")}, ${roundedQuantity}, ${roundedPrice}, { stopPrice: ${roundedStopPrice}, type: 'STOP_LOSS_LIMIT' })`);
       const order = await binance.buy(options.pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
       return order;
@@ -159,44 +121,6 @@ async function placeTrade(lastOrder: order, emaA: number, emaB: number, rsi: num
   }
 }
 
-const checkBeforeOrder = (quantity: number, price: number, stopPrice: number, tradingPairFilters: any, candleTime: string) => {
-  if(parseFloat(tradingPairFilters.minPrice) > stopPrice) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Limit price price too low. `);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.maxPrice) < stopPrice) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Limit price price too high.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.minPrice) > price) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Stop price too low.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.maxPrice) < price) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Stop price too high.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.minQty) > quantity) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount too low.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.maxQty) < quantity) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount too high.`);
-    return false;
-  }
-
-  // Check if the notional value meets the minimum requirement
-  if (tradingPairFilters.minNotional && quantity < parseFloat(tradingPairFilters.minNotional)) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount in ${options.pair.split("/")[1]} is below the minimum requirement: ${quantity} < ${tradingPairFilters.minNotional}`);
-    return false;
-  }
-  if (tradingPairFilters.maxNotional && quantity > parseFloat(tradingPairFilters.maxNotional)) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount is ${options.pair.split("/")[1]} above the maximum requirement: ${quantity} < ${tradingPairFilters.maxNotional}`);
-    return false;
-  }
-  return true;
-}
-
 // Rebalancing function (adjust this function based on your rebalancing strategy)
 async function rebalance(candlesticks: candlestick[]) {
   try {
@@ -207,7 +131,7 @@ async function rebalance(candlesticks: candlestick[]) {
     console.log(`Candlesticks count: ${candlesticks.length}`);
     const closePrice = candlesticks[candlesticks.length-1].close;
     console.log(`Last close price: ${closePrice}`);
-    if (candlesticks.length < options.emaB) {
+    if (candlesticks.length < options.longEma) {
       console.log(`INSUFFICIENT CANDLESTICK AMOUNT FOR CALCULATIONS, PLEASE WAIT.`);
       return
     }
@@ -224,30 +148,46 @@ async function rebalance(candlesticks: candlestick[]) {
     const tradingPairFilters = await getTradingPairFilters(options.pair.split("/").join(""));
     const { balances } = await getCurrentBalance(binance, options);
     const currentBalance = balances;
-    const emaA = calculateEMA(candlesticks, options.emaA);
-    const emaB = calculateEMA(candlesticks, options.emaB);
-    const rsi = calculateRSI(candlesticks);
-    const macd = calculateMACD(candlesticks, emaA, emaB, 9);
-    logEMASignals(emaA, emaB, prev.emaA, prev.emaB);
+    const shortEma = calculateEMA(candlesticks, options.shortEma);
+    const longEma = calculateEMA(candlesticks, options.longEma);
+    const rsi = calculateRSI(candlesticks, options.rsiLength);
+    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 9);
+    logEMASignals(shortEma, longEma, prev.shortEma, prev.longEma);
     logMACDSignals(macd, prev.macd);
     logRSISignals(rsi);
 
     const lastOrder = await getLastCompletedOrder(binance, options.pair.split("/").join(""));
 
     console.log(`\r\nCHECK IF ORDER SHOULD BE PLACED AT ${candleTime}\r\n----------------------------------`);
-    await placeTrade(lastOrder, emaA, emaB, rsi, macd, currentBalance, closePrice, tradingPairFilters, candleTime);
+    await placeTrade(lastOrder, shortEma, longEma, rsi, macd, currentBalance, closePrice, tradingPairFilters, candleTime);
     prev.macd = macd;
-    prev.emaA = emaA;
-    prev.emaB = emaB;
+    prev.shortEma = shortEma;
+    prev.longEma = longEma;
   } catch (error: any) {
     console.log(`An error occurred during trading: ${JSON.stringify(error)}`);
     console.log(JSON.stringify(error));
   }
 }
 
-loginDiscord(binance, options);
 
-// Run the trading function
-listenForCandlesticks(binance, options.pair, options.candlestickInterval, (candlesticks: candlestick[]) => {
-  rebalance(candlesticks);
-});
+
+const main = async () => {
+  try {
+    loginDiscord(binance, options);
+    // const candlesticks = await getLastCandlesticks(binance, options.pair, options.candlestickInterval);
+    // const emaData = findEMACrossovers(candlesticks, options.shortEma, options.longEma);
+    // console.log(JSON.stringify(emaData, null, 4));
+
+    // const pairs = await findPossiblePairs(binance, options);
+    // console.log(JSON.stringify(pairs.map(v => v.symbol), null, 4));
+    // Run the trading function
+    listenForCandlesticks(binance, options.pair, options.candlestickInterval, (candlesticks: candlestick[]) => {
+      rebalance(candlesticks);
+    });
+  } catch (error: any) {
+    console.log(error);
+  }
+}
+
+main();
+

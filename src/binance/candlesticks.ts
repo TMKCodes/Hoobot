@@ -50,44 +50,48 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
 
 export const listenForCandlesticks = async (binance: Binance, pair: string, interval: string, callback: (candlesticks: candlestick[]) => void) => {
   const maxCandlesticks = 1000;
-  let candlesticks: candlestick[] = await getLastCandlesticks(binance, pair, interval);
-  console.log(`START LISTENING FOR NEW CANDLESTICKS\r\n----------------------------------`)
-  const wsEndpoint = binance.websockets.candlesticks(pair.split("/").join(""), interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
-    let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
-    let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
-    
-    // Create a new candlestick with the received data
-    const newCandlestick: candlestick = {
-      symbol: symbol,
-      interval: interval,
-      type: eventType,
-      time: eventTime,
-      open: open,
-      high: high,
-      low: low,
-      close: close,
-      trades: trades,
-      volume: volume,
-      quoteVolume: quoteVolume,
-      buyVolume: buyVolume,
-      quoteBuyVolume: quoteBuyVolume,
-      isFinal: isFinal,
-    };
+  try {
+    let candlesticks: candlestick[] = await getLastCandlesticks(binance, pair, interval);
+    console.log(`START LISTENING FOR NEW CANDLESTICKS\r\n----------------------------------`)
+    const wsEndpoint = binance.websockets.candlesticks(pair.split("/").join(""), interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
+      let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
+      let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
+      
+      // Create a new candlestick with the received data
+      const newCandlestick: candlestick = {
+        symbol: symbol,
+        interval: interval,
+        type: eventType,
+        time: eventTime,
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        trades: trades,
+        volume: volume,
+        quoteVolume: quoteVolume,
+        buyVolume: buyVolume,
+        quoteBuyVolume: quoteBuyVolume,
+        isFinal: isFinal,
+      };
 
-    // Check if the previous candlestick was final.
-    if (candlesticks[candlesticks.length - 1].isFinal === true) {
-      // Push new since it was final
-      candlesticks.push(newCandlestick);
-    } else {
-      // Update since it was not final
-      candlesticks[candlesticks.length - 1] = newCandlestick;
-    }
+      // Check if the previous candlestick was final.
+      if (candlesticks[candlesticks.length - 1].isFinal === true) {
+        // Push new since it was final
+        candlesticks.push(newCandlestick);
+      } else {
+        // Update since it was not final
+        candlesticks[candlesticks.length - 1] = newCandlestick;
+      }
 
-    // Check if the array length exceeds the maximum allowed size
-    if (candlesticks.length > maxCandlesticks) {
-      // Remove the oldest candlesticks to keep the array size within the limit
-      candlesticks = candlesticks.slice(candlesticks.length - maxCandlesticks);
-    }
-    callback(candlesticks);
-  })
+      // Check if the array length exceeds the maximum allowed size
+      if (candlesticks.length > maxCandlesticks) {
+        // Remove the oldest candlesticks to keep the array size within the limit
+        candlesticks = candlesticks.slice(candlesticks.length - maxCandlesticks);
+      }
+      callback(candlesticks);
+    });
+  } catch (error: any) {
+    console.log(error);
+  }
 }

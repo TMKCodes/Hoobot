@@ -1,26 +1,24 @@
 export function logRSISignals(rsi: number) {
   console.log(`RSI: ${rsi}`);
 
-  const overboughtThreshold = 70;
-  const oversoldThreshold = 30;
-
-  if (rsi > overboughtThreshold) {
-    console.log(`RSI Overbought condition: Sell`);
+  if (rsi > 80) {
+    console.log(`RSI condition: Extremely Overbought - Sell fast`);
+  } else if (rsi < 20) {
+    console.log(`RSI condition: Extremely Oversold - Buy fast`);
+  } else if (rsi > 70) {
+    console.log(`RSI condition: Overbought - Sell`);
+  } else if (rsi < 30) {
+    console.log(`RSI condition: Oversold - Buy`);
+  } else if (rsi < 50) {
+    console.log(`RSI signal: Bullish - Buy`);
+  } else if(rsi > 50) {
+    console.log(`RSI signal: Bearish - Sell`);
   }
-
-  if (rsi < oversoldThreshold) {
-    console.log(`RSI Oversold condition: Buy`);
-  }
-
-  if (rsi < overboughtThreshold && rsi > oversoldThreshold) {
-    console.log(`RSI Neutral condition: neutral.`)
-  }
-
 }
 
 // Calculate RSI
-export function calculateRSI(candles: any[], period: number = 14): number {
-  if (candles.length < period) {
+export function calculateRSI(candles: any[], length: number = 14): number {
+  if (candles.length < length) {
     throw new Error('Insufficient data to calculate RSI');
   }
   // Get closing prices from candles
@@ -45,24 +43,24 @@ export function calculateRSI(candles: any[], period: number = 14): number {
     }
   }
 
-  // Calculate average gains and losses over the first 'period' data points
+  // Calculate average gains and losses over the first 'length' data points
   let sumGains = 0;
   let sumLosses = 0;
-  for (let i = 0; i < period; i++) {
+  for (let i = 0; i < length; i++) {
     sumGains += gains[i];
     sumLosses += losses[i];
   }
-  let avgGain = sumGains / period;
-  let avgLoss = sumLosses / period;
+  let avgGain = sumGains / length;
+  let avgLoss = sumLosses / length;
 
   //console.log(`Initial avgGain: ${avgGain}, avgLoss: ${avgLoss}`);
 
   // Calculate the RSI itself
   const rsArray: number[] = [];
-  for (let i = period; i <= closePrices.length; i++) {
+  for (let i = length; i <= closePrices.length; i++) {
     if (i < closePrices.length) {
-      avgGain = ((avgGain * (period - 1)) + gains[i - 1]) / period;
-      avgLoss = ((avgLoss * (period - 1)) + losses[i - 1]) / period;
+      avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
+      avgLoss = ((avgLoss * (length - 1)) + losses[i - 1]) / length;
     }
 
     // Handle the case when average loss is 0
