@@ -2,43 +2,58 @@ import { ConfigOptions } from "./args";
 import { logToFile } from "./logToFile";
 import { order } from "./orders";
 
-export const checkBeforeOrder = (quantity: number, price: number, stopPrice: number, tradingPairFilters: any, candleTime: string, options: ConfigOptions) => {
-  if(parseFloat(tradingPairFilters.minPrice) > stopPrice) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Limit price price too low. `);
+export const checkBeforeOrder = (
+  quantity: number,
+  price: number,
+  stopPrice: number,
+  tradingPairFilters: any,
+  candleTime: string,
+  options: ConfigOptions
+) => {
+  const logFailure = (message: string) => {
+    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, ${message}`);
     return false;
-  }
-  if(parseFloat(tradingPairFilters.maxPrice) < stopPrice) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Limit price price too high.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.minPrice) > price) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Stop price too low.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.maxPrice) < price) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Stop price too high.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.minQty) > quantity) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount too low.`);
-    return false;
-  }
-  if(parseFloat(tradingPairFilters.maxQty) < quantity) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount too high.`);
+  };
+
+  const isPriceValid = (min: number, max: number, value: number, type: string) => {
+    if (value < min) {
+      return logFailure(`${type} too low.`);
+    } else if (value > max) {
+      return logFailure(`${type} too high.`);
+    }
+    return true;
+  };
+
+  const isQuantityValid = (min: number, max: number, value: number) => {
+    if (value < min) {
+      return logFailure(`Amount too low.`);
+    } else if (value > max) {
+      return logFailure(`Amount too high.`);
+    }
+    return true;
+  };
+
+  const isNotionalValid = (minNotional: number, maxNotional: number, quantity: number) => {
+    if (tradingPairFilters.minNotional && quantity < minNotional) {
+      return logFailure(`Amount in ${options.pair.split("/")[1]} is below the minimum requirement.`);
+    } else if (tradingPairFilters.maxNotional && quantity > maxNotional) {
+      return logFailure(`Amount in ${options.pair.split("/")[1]} is above the maximum requirement.`);
+    }
+    return true;
+  };
+
+  if (
+    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), stopPrice, 'Limit price') ||
+    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Stop price') ||
+    !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity) ||
+    !isNotionalValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), quantity)
+  ) {
     return false;
   }
 
-  // Check if the notional value meets the minimum requirement
-  if (tradingPairFilters.minNotional && quantity < parseFloat(tradingPairFilters.minNotional)) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount in ${options.pair.split("/")[1]} is below the minimum requirement: ${quantity} < ${tradingPairFilters.minNotional}`);
-    return false;
-  }
-  if (tradingPairFilters.maxNotional && quantity > parseFloat(tradingPairFilters.maxNotional)) {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Amount is ${options.pair.split("/")[1]} above the maximum requirement: ${quantity} < ${tradingPairFilters.maxNotional}`);
-    return false;
-  }
   return true;
-}
+};
+
 
 export const tradeDirection = (
   balanceA: number, 
@@ -66,41 +81,29 @@ export const tradeDirection = (
     nextOrderCheck = lastOrder.isBuyer ? 'SELL' : 'BUY';
   }
 
-  if (options.useEMA === true) {
-    if (shortEma > longEma) {
-      emaCheck = 'BUY';
-    } else if (shortEma < longEma) {
-      emaCheck = 'SELL';
-    }
-  } else {
-    emaCheck = 'DISABLED';
+  if (shortEma > longEma) {
+    emaCheck = 'BUY';
+  } else if (shortEma < longEma) {
+    emaCheck = 'SELL';
   }
 
-  if(options.useMACD === true) {
-    if (macd.macdLine > macd.signalLine && macd.macdLine < 0 ) {
-      macdCheck = `BUY`;
-    } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0) {
-      macdCheck = `SELL`;
-    }
-  } else {
-    macdCheck = 'DISABLED';
+  if (macd.macdLine > macd.signalLine && macd.macdLine < 0 ) {
+    macdCheck = `BUY`;
+  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0) {
+    macdCheck = `SELL`;
   }
-  if(options.useRSI === true) {
-    if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
-      if (rsi > 50) {
-        rsiCheck = 'SELL';
-      } else if (rsi < 50) {
-        rsiCheck = 'BUY';
-      }
-    } else {
-      if (rsi > options.overboughtTreshold) {
-        rsiCheck = 'SELL';
-      } else if (rsi < options.oversoldTreshold) {
-        rsiCheck = 'BUY';
-      }
+  if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
+    if (rsi > 50) {
+      rsiCheck = 'SELL';
+    } else if (rsi < 50) {
+      rsiCheck = 'BUY';
     }
   } else {
-    rsiCheck = 'DISABLED';
+    if (rsi > options.overboughtTreshold) {
+      rsiCheck = 'SELL';
+    } else if (rsi < options.oversoldTreshold) {
+      rsiCheck = 'BUY';
+    }
   }
 
   let tradeDirection = 'HOLD';
@@ -129,7 +132,7 @@ export const tradeDirection = (
     }
     tradeDirection = sellSignal;
   }
-  logToFile(JSON.stringify({
+  const checks = JSON.stringify({
     lastOrder: nextOrderCheck,
     balance: balanceCheck,
     ema: emaCheck,
@@ -137,6 +140,8 @@ export const tradeDirection = (
     rsi: rsiCheck,
     candletime: candletime,
     direction: tradeDirection,
-  }, null, 4));
+  }, null, 4);
+  logToFile(checks);
+  console.log(checks);
   return tradeDirection;
 }

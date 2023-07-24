@@ -1,44 +1,64 @@
 import { calculateEMAArray } from "./ema";
 
-export function logMACDSignals(macd: { macdLine: number; signalLine: number; histogram: number; }, prevMacd: { macdLine: number; signalLine: number; histogram: number; }) {
+export const logMACDSignals = (macd: {
+  macdLine: number;
+  signalLine: number;
+  histogram: number;
+}, prevMacd: {
+  macdLine: number;
+  signalLine: number;
+  histogram: number;
+} | undefined) => {
   const { macdLine, signalLine, histogram } = macd;
 
-  console.log(`MACD Line: ${macdLine}`);
-  console.log(`MACD Signal Line: ${signalLine}`);
-  console.log(`MACD Histogram: ${histogram}`);
+  console.log(`MACD Line: ${macdLine.toFixed(2)}`);
+  console.log(`MACD Signal Line: ${signalLine.toFixed(2)}`);
+  console.log(`MACD Histogram: ${histogram.toFixed(2)}`);
 
-  // Check for bullish signal (MACD line crossing above signal line and histogram turning positive)
-  if (prevMacd === undefined) {
+  if (!prevMacd) {
     if (macdLine > signalLine && histogram > 0) {
-      console.log('MACD Signal: Bullish Buy');
+      console.log('MACD Signal: Bullish');
     } else if (macdLine < signalLine && histogram < 0) {
-      console.log('MACD Signal: Bearish Sell');
+      console.log('MACD Signal: Bearish');
     }
-  } else if (prevMacd !== undefined) {
-    if (macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine) {
-      console.log('MACD Signal: Bullish Line Crossover - Buy');
-    } else if (macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine) {
-      console.log('MACD Signal: Bearish Line Crossover - Sell');
-    } else if (macdLine > prevMacd.macdLine && histogram > prevMacd.histogram) {
-      console.log('MACD Signal: Bullish Divergence - Buy');
-    } else if (macdLine < prevMacd.macdLine && histogram < prevMacd.histogram) {
-      console.log('MACD Signal: Bearish Divergence - Sell');
-    } else if (macdLine > 0 && prevMacd.macdLine <= 0) {
-      console.log('MACD Signal: Bullish Zero Line Crossover - Buy');
-    } else if (macdLine < 0 && prevMacd.macdLine >= 0) {
-      console.log('MACD Signal: Bearish Zero Line Crossover - Sell');
-    } else if (macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine) {
-      console.log('MACD Signal: Bullish Centerline Crossover - Buy');
-    } else if (macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine) {
-      console.log('MACD Signal: Bearish Centerline Crossover - Sell');
-    } else if (macdLine > 100 && prevMacd.macdLine <= 100) {
-      console.log('MACD Signal: Strong Bullish Trend - Buy');
-    } else if (macdLine < -100 && prevMacd.macdLine >= -100) {
-      console.log('MACD Signal: Strong Bearish Trend - Sell');
-    } else if (histogram > 0 && prevMacd.histogram < 0) {
-      console.log('MACD Signal: Positive Histogram Divergence - Buy');
-    } else if (histogram < 0 && prevMacd.histogram > 0) {
-      console.log('MACD Signal: Negative Histogram Divergence - Sell');
+  } else {
+    const isBullishCrossover = macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine;
+    const isBearishCrossover = macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine;
+    const isBullishDivergence = macdLine > prevMacd.macdLine && histogram > prevMacd.histogram;
+    const isBearishDivergence = macdLine < prevMacd.macdLine && histogram < prevMacd.histogram;
+    const isBullishZeroLineCrossover = macdLine > 0 && prevMacd.macdLine <= 0;
+    const isBearishZeroLineCrossover = macdLine < 0 && prevMacd.macdLine >= 0;
+    const isBullishCenterlineCrossover = macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine;
+    const isBearishCenterlineCrossover = macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine;
+    const isStrongBullishTrend = macdLine > 100 && prevMacd.macdLine <= 100;
+    const isStrongBearishTrend = macdLine < -100 && prevMacd.macdLine >= -100;
+    const isPositiveHistogramDivergence = histogram > 0 && prevMacd.histogram < 0;
+    const isNegativeHistogramDivergence = histogram < 0 && prevMacd.histogram > 0;
+
+    if (isBullishCrossover) {
+      console.log('MACD Signal: Bullish Line Crossover');
+    } else if (isBearishCrossover) {
+      console.log('MACD Signal: Bearish Line Crossover');
+    } else if (isBullishDivergence) {
+      console.log('MACD Signal: Bullish Divergence');
+    } else if (isBearishDivergence) {
+      console.log('MACD Signal: Bearish Divergence');
+    } else if (isBullishZeroLineCrossover) {
+      console.log('MACD Signal: Bullish Zero Line Crossover');
+    } else if (isBearishZeroLineCrossover) {
+      console.log('MACD Signal: Bearish Zero Line Crossover');
+    } else if (isBullishCenterlineCrossover) {
+      console.log('MACD Signal: Bullish Centerline Crossover');
+    } else if (isBearishCenterlineCrossover) {
+      console.log('MACD Signal: Bearish Centerline Crossover');
+    } else if (isStrongBullishTrend) {
+      console.log('MACD Signal: Strong Bullish Trend');
+    } else if (isStrongBearishTrend) {
+      console.log('MACD Signal: Strong Bearish Trend');
+    } else if (isPositiveHistogramDivergence) {
+      console.log('MACD Signal: Positive Histogram Divergence');
+    } else if (isNegativeHistogramDivergence) {
+      console.log('MACD Signal: Negative Histogram Divergence');
     }
   }
 }

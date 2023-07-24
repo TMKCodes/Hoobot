@@ -29,41 +29,48 @@ export function calculateEMAArray(candles: any[], length: number): number[] {
   return emaValues;
 }
 
-export function logEMASignals(shortEma: number, longEma: number, prevShortEma: number, prevLongEma: number) {
-  console.log(`EMA A: ${shortEma}`);
-  console.log(`EMA B: ${longEma}`);
-  console.log(`EMA Difference: ${shortEma - longEma}`);
+export const logEMASignals = (
+  shortEma: number,
+  longEma: number,
+  prevShortEma: number | undefined,
+  prevLongEma: number | undefined
+) => {
+  console.log(`EMA A: ${shortEma.toFixed(2)}`);
+  console.log(`EMA B: ${longEma.toFixed(2)}`);
+  console.log(`EMA Difference: ${(shortEma - longEma).toFixed(2)}`);
 
   const emaDiff = shortEma - longEma;
+
   if (emaDiff > 0) {
-    console.log(`EMA Signal: Bullish Buy`);
+    console.log(`EMA Signal: Bullish`);
   } else if (emaDiff < 0) {
-    console.log(`EMA Signal: Bearish Sell`);
+    console.log(`EMA Signal: Bearish`);
   } else {
     console.log(`EMA Signal: Neutral`);
   }
 
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
-    // Check for bullish EMA crossover (EMA A crosses above EMA B)
-    if (shortEma > longEma && prevShortEma < prevLongEma) {
-      console.log('EMA Signal: Bullish Crossover - Buy');
+    const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
+    const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
+    const isUpwardDirection = shortEma > prevShortEma && longEma > prevLongEma;
+    const isDownwardDirection = shortEma < prevShortEma && longEma < prevLongEma;
+    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+
+    if (isBullishCrossover) {
+      console.log('EMA Signal: Bullish Crossover');
+    } else if (isBearishCrossover) {
+      console.log('EMA Signal: Bearish Crossover');
     }
 
-    // Check for bearish EMA crossover (EMA A crosses below EMA B)
-    if (shortEma < longEma && prevShortEma > prevLongEma) {
-      console.log('EMA Signal: Bearish Crossover - Sell');
-    }
-
-    // Check for EMA direction (upward, downward, or flat)
-    if (shortEma > prevShortEma && longEma > prevLongEma) {
+    if (isUpwardDirection) {
       console.log('EMA Direction: Upward');
-    } else if (shortEma < prevShortEma && longEma < prevLongEma) {
+    } else if (isDownwardDirection) {
       console.log('EMA Direction: Downward');
-    } else {
+    } else if (isFlatDirection) {
       console.log('EMA Direction: Flat');
     }
   }
-}
+};
 
 interface EMAData {
   shortEma: number[];

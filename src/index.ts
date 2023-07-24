@@ -66,12 +66,12 @@ async function getTradingPairFilters(pair: string) {
 }
 
 // Place buy or sell order based on EMA difference
-async function placeTrade(lastOrder: order, shortEma: number, longEma: number, rsi: number, macd: { macdLine: number; signalLine: number; histogram: number; }, balance: number[], closePrice: string, tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, candletime: string) {
+async function placeTrade(lastOrder: order, shortEma: number, longEma: number, rsi: number, macd: { macdLine: number; signalLine: number; histogram: number; }, balance: number[], closePrice: number, tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, candletime: string) {
   const balanceA = await binance.roundStep(balance[0], tradingPairFilters.stepSize);
   const balanceB = await binance.roundStep(balance[1], tradingPairFilters.stepSize);
   const orderBook = await binance.depth(options.pair.split("/").join(""));
 
-  const direction = tradeDirection(balanceA, balanceB, parseFloat(closePrice), shortEma, longEma, macd, rsi, candletime, lastOrder, options);
+  const direction = tradeDirection(balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, candletime, lastOrder, options);
   console.log(`Trade direction: ${direction}`);
 
   if (direction === 'SELL') {
@@ -130,8 +130,8 @@ async function rebalance(candlesticks: candlestick[]) {
     const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
     console.log(`Candlestick time: ${candleTime}`);
     console.log(`Candlesticks count: ${candlesticks.length}`);
-    const closePrice = candlesticks[candlesticks.length-1].close;
-    console.log(`Last close price: ${closePrice}`);
+    const closePrice = parseFloat(candlesticks[candlesticks.length-1].close);
+    console.log(`Last close price: ${closePrice.toFixed(2)}`);
     if (candlesticks.length < options.longEma) {
       console.log(`INSUFFICIENT CANDLESTICK AMOUNT FOR CALCULATIONS, PLEASE WAIT.`);
       return
@@ -182,8 +182,8 @@ const main = async () => {
     // const pairs = await findPossiblePairs(binance, options);
     // console.log(JSON.stringify(pairs.map(v => v.symbol), null, 4));
     // Run the trading function
-    listenForCandlesticks(binance, options.pair, options.candlestickInterval, (candlesticks: candlestick[]) => {
-      rebalance(candlesticks);
+    listenForCandlesticks(binance, options.pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {
+      await rebalance(candlesticks);
     });
   } catch (error: any) {
     console.log(error);
