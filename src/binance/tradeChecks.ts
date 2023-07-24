@@ -1,6 +1,8 @@
+import { ConfigOptions } from "./args";
 import { logToFile } from "./logToFile";
+import { order } from "./orders";
 
-export const checkBeforeOrder = (quantity: number, price: number, stopPrice: number, tradingPairFilters: any, candleTime: string) => {
+export const checkBeforeOrder = (quantity: number, price: number, stopPrice: number, tradingPairFilters: any, candleTime: string, options: ConfigOptions) => {
   if(parseFloat(tradingPairFilters.minPrice) > stopPrice) {
     logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, Limit price price too low. `);
     return false;
@@ -47,8 +49,8 @@ export const tradeDirection = (
   macd: { macdLine: number; signalLine: number; }, 
   rsi: number, 
   candletime: string,
-  lastOrder: { isBuyer: any; }, 
-  options: { useEMA: boolean; useMACD: boolean; useRSI: boolean; overboughtTreshold: number; oversoldTreshold: number; }
+  lastOrder: order, 
+  options: ConfigOptions
 ) => {
   let nextOrderCheck: string = `HOLD`;
   let balanceCheck: string = `HOLD`;

@@ -70,6 +70,7 @@ async function placeTrade(lastOrder: order, shortEma: number, longEma: number, r
   const balanceA = await binance.roundStep(balance[0], tradingPairFilters.stepSize);
   const balanceB = await binance.roundStep(balance[1], tradingPairFilters.stepSize);
   const orderBook = await binance.depth(options.pair.split("/").join(""));
+
   const direction = tradeDirection(balanceA, balanceB, parseFloat(closePrice), shortEma, longEma, macd, rsi, candletime, lastOrder, options);
   console.log(`Trade direction: ${direction}`);
 
@@ -86,7 +87,7 @@ async function placeTrade(lastOrder: order, shortEma: number, longEma: number, r
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
-    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime) === true) {
+    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime, options) === true) {
       play(soundFile);
       logToFile(`Placing order: binance.sell(${options.pair.split("/").join("")}, ${roundedQuantity}, ${roundedPrice}, { stopPrice: ${roundedStopPrice}, type: 'STOP_LOSS_LIMIT' })`);
       const order = await binance.sell(options.pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
@@ -107,7 +108,7 @@ async function placeTrade(lastOrder: order, shortEma: number, longEma: number, r
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
-    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime) === true) {
+    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime, options) === true) {
       play(soundFile);
       logToFile(`Placing order: binance.buy(${options.pair.split("/").join("")}, ${roundedQuantity}, ${roundedPrice}, { stopPrice: ${roundedStopPrice}, type: 'STOP_LOSS_LIMIT' })`);
       const order = await binance.buy(options.pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
