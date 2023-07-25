@@ -7,8 +7,7 @@ export const checkBeforeOrder = (
   price: number,
   stopPrice: number,
   tradingPairFilters: any,
-  candleTime: string,
-  options: ConfigOptions
+  candleTime: string
 ) => {
   const logFailure = (message: string) => {
     logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, ${message}`);
@@ -33,20 +32,10 @@ export const checkBeforeOrder = (
     return true;
   };
 
-  const isNotionalValid = (minNotional: number, maxNotional: number, quantity: number) => {
-    if (tradingPairFilters.minNotional && quantity < minNotional) {
-      return logFailure(`Amount in ${options.pair.split("/")[1]} is below the minimum requirement.`);
-    } else if (tradingPairFilters.maxNotional && quantity > maxNotional) {
-      return logFailure(`Amount in ${options.pair.split("/")[1]} is above the maximum requirement.`);
-    }
-    return true;
-  };
-
   if (
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), stopPrice, 'Limit price') ||
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Stop price') ||
-    !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity) ||
-    !isNotionalValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), quantity)
+    !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity)
   ) {
     return false;
   }
@@ -92,6 +81,7 @@ export const tradeDirection = (
   } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0) {
     macdCheck = `SELL`;
   }
+
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
     if (rsi > 50) {
       rsiCheck = 'SELL';
@@ -109,26 +99,38 @@ export const tradeDirection = (
   let tradeDirection = 'HOLD';
   if (nextOrderCheck === 'SELL' && balanceCheck === 'SELL') {
     let sellSignal = 'SELL'
-    if(options.useEMA === true && emaCheck === 'BUY') {
+    if(options.useEMA === true && (emaCheck === 'BUY' || emaCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useEMA === false) {
+      emaCheck = "DISABLED";
     }
-    if(options.useMACD === true && macdCheck === 'BUY') {
+    if(options.useMACD === true && (macdCheck === 'BUY' || macdCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useMACD === false) {
+      macdCheck = "DISABLED";
     }
-    if(options.useRSI === true && rsiCheck === 'BUY') {
+    if(options.useRSI === true && (rsiCheck === 'BUY' || rsiCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useRSI === false) {
+      rsiCheck = "DISABLED";
     }
     tradeDirection = sellSignal;
   } else if(nextOrderCheck == 'BUY' && balanceCheck === 'BUY') {
     let sellSignal = 'BUY'
-    if(options.useEMA === true && emaCheck === 'SELL') {
+    if(options.useEMA === true && (emaCheck === 'SELL' || emaCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useEMA === false) {
+      emaCheck = "DISABLED";
     }
-    if(options.useMACD === true && macdCheck === 'SELL') {
+    if(options.useMACD === true && (macdCheck === 'SELL' || macdCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useMACD === false) {
+      macdCheck = "DISABLED";
     }
-    if(options.useRSI === true && rsiCheck === 'SELL') {
+    if(options.useRSI === true && (rsiCheck === 'SELL' || rsiCheck === 'HOLD')) {
       sellSignal = 'HOLD';
+    } else if(options.useRSI === false) {
+      rsiCheck = "DISABLED";
     }
     tradeDirection = sellSignal;
   }

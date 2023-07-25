@@ -4,7 +4,7 @@ export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2
 export interface ConfigOptions {
   apiKey: string;
   apiSecret: string;
-  pair: string;
+  pair: string | string[];
   candlestickInterval: CandlestickInterval;
   shortEma: number;
   longEma: number;
@@ -20,7 +20,7 @@ export interface ConfigOptions {
   tradeFee: number;
   pairMinVolume?: number;
   pairMinPriceChange?: number;
-  [key: string]: string | number | boolean | undefined; // Index signature
+  [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
 // Parse command-line arguments and return options object
@@ -30,7 +30,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     return {
       apiKey: process.env.API_KEY || '',
       apiSecret: process.env.API_SECRET || '',
-      pair: process.env.PAIR || '',
+      pair: process.env.PAIR ? process.env.PAIR.split(",") : [],
       candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
       shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
       longEma: parseFloat(process.env.LONG_EMA!) || 26,

@@ -1,5 +1,4 @@
-
-import { Client, Events, GatewayIntentBits, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js'; 
+import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel } from 'discord.js'; 
 import { deployCommands } from './commands/deploy';
 
 const deployable: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
@@ -35,13 +34,13 @@ deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
 
 
-export const loginDiscord = (binance: Binance, options: ConfigOptions): Client | boolean => {
+export const loginDiscord = (binance: Binance, options: ConfigOptions): Client => {
   const token = process.env.DISCORD_BOT_TOKEN;
+  const client = new Client({ intents: [GatewayIntentBits.Guilds]});
   if(token === undefined) {
     console.log("Discord bot token has not been set.");
   } else {
     deployCommands(deployable);
-    const client = new Client({ intents: [GatewayIntentBits.Guilds]});
     client.once(Events.ClientReady, (c) => {
       console.log(`Logged in as ${c.user.tag}`);
     });
@@ -65,5 +64,20 @@ export const loginDiscord = (binance: Binance, options: ConfigOptions): Client |
     client.login(token);
     return client;
   }
-  return false;
+  return client;
 }
+
+// Function to send a message to a channel by its ID
+export const sendMessageToChannel = async (client: Client, channelId: string, message: string) => {
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (channel instanceof TextChannel) {
+      channel.send(message);
+      console.log(`Message sent to channel ${channelId}`);
+    } else {
+      console.log(`Channel with ID ${channelId} not found or is not a text channel.`);
+    }
+  } catch (error) {
+    console.error(`Error sending message to channel with ID ${channelId}: ${error}`);
+  }
+};
