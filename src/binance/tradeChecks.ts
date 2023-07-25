@@ -63,11 +63,11 @@ export const tradeDirection = (
   let rsiCheck: string = `HOLD`;
 
   balanceCheck = ((balanceA * closePrice) < balanceB) ? 'BUY' : 'SELL';
-
+  console.log(JSON.stringify(lastOrder));
   if (lastOrder === undefined) {
     nextOrderCheck = balanceCheck;
   } else {
-    nextOrderCheck = lastOrder.isBuyer ? 'SELL' : 'BUY';
+    nextOrderCheck = lastOrder.isBuyer === true ? 'SELL' : 'BUY';
   }
 
   if (shortEma > longEma) {
@@ -135,7 +135,7 @@ export const tradeDirection = (
     tradeDirection = sellSignal;
   }
   const checks = JSON.stringify({
-    lastOrder: nextOrderCheck,
+    nextOrder: nextOrderCheck,
     balance: balanceCheck,
     ema: emaCheck,
     macd: macdCheck,

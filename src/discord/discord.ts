@@ -19,6 +19,10 @@ import binanceBalance from './commands/binanceBalance';
 deployable.push(binanceBalance.builder.toJSON());
 commands.push({name: binanceBalance.builder.name, execute: binanceBalance.execute});
 
+import binanceProfit from './commands/binanceProfit';
+deployable.push(binanceProfit.builder.toJSON());
+commands.push({name: binanceProfit.builder.name, execute: binanceProfit.execute});
+
 import avatar from './commands/avatar';
 deployable.push(avatar.builder.toJSON());
 commands.push({name: avatar.builder.name, execute: avatar.execute});
