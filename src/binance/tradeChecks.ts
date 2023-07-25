@@ -63,7 +63,6 @@ export const tradeDirection = (
   let rsiCheck: string = `HOLD`;
 
   balanceCheck = ((balanceA * closePrice) < balanceB) ? 'BUY' : 'SELL';
-  console.log(JSON.stringify(lastOrder));
   if (lastOrder === undefined) {
     nextOrderCheck = balanceCheck;
   } else {

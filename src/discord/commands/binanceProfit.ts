@@ -29,11 +29,13 @@ export default {
 
       let totalProfit = 0;
       let lastTrade: any = undefined;
+      let lastTime = "";
 
       for (const trade of tradeHistory) {
         if (lastTrade === undefined) {
           // Set last trade since it was undefined.
           lastTrade = trade;
+          lastTime = trade.time;
         } else {
           if (trade.isBuyer) {
             // Calculate profit for the buy trade
@@ -59,7 +61,7 @@ export default {
       }
 
       // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-      await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %`);
+      await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
     } catch (error) {
       console.error('Error fetching trade history:', error);
       await interaction.reply('An error occurred while fetching trade history.');

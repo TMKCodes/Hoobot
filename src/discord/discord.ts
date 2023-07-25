@@ -73,6 +73,10 @@ export const loginDiscord = (binance: Binance, options: ConfigOptions): Client =
 
 // Function to send a message to a channel by its ID
 export const sendMessageToChannel = async (client: Client, channelId: string, message: string) => {
+  if(client == undefined) {
+    console.error(`Error sending message to channel with ID ${channelId}, discord client was undefined.`);
+    return;
+  }
   try {
     const channel = await client.channels.fetch(channelId);
     if (channel instanceof TextChannel) {

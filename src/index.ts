@@ -78,26 +78,19 @@ async function placeTrade(discord: Client, pair: string, lastOrder: order, short
   const direction = tradeDirection(balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, candletime, lastOrder, options);
   console.log(`Trade direction: ${direction}`);
 
-
   if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     console.log(`\r\nPLACE A SELL TRADE\r\n----------------------------------`);
     let price = orderBookAsks[0] - tradingPairFilters.tickSize;
     const quantity = balanceA * 0.99;
-    console.log(`Quantity: ${quantity}`);
     let maxQuantity = quantity;
     if(options.maxAmount !== 0) {
       maxQuantity = Math.min(quantity, options.maxAmount);
     }
-    console.log(`maxQuantity: ${maxQuantity}`);
     const stopPrice = price * (1 - (options.riskPercentage / 100));
-    console.log(`stopPrice: ${stopPrice}`);
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
-    console.log(`roundedPrice: ${roundedPrice}`);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
-    console.log(`roundedQuantity: ${roundedQuantity}`);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
-    console.log(`roundedStopPrice: ${roundedStopPrice}`);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, candletime);
     console.log(checkBefore);
     if (checkBefore === true) {
@@ -205,8 +198,11 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
 
 const main = async () => {
   try {
-    const discord = loginDiscord(binance, options);
-
+    let discord: any = undefined;
+    if(process.env.DISCORD_ENABLED === "true") {
+      discord = loginDiscord(binance, options);
+    }
+    
     // const candlesticks = await getLastCandlesticks(binance, options.pair, options.candlestickInterval);
     // const emaData = findEMACrossovers(candlesticks, options.shortEma, options.longEma);
     // console.log(JSON.stringify(emaData, null, 4));
