@@ -23,6 +23,10 @@ import binanceProfit from './commands/binanceProfit';
 deployable.push(binanceProfit.builder.toJSON());
 commands.push({name: binanceProfit.builder.name, execute: binanceProfit.execute});
 
+import binanceLastTrades from './commands/binanceLastTrades';
+deployable.push(binanceLastTrades.builder.toJSON());
+commands.push({name: binanceLastTrades.builder.name, execute: binanceLastTrades.execute});
+
 import avatar from './commands/avatar';
 deployable.push(avatar.builder.toJSON());
 commands.push({name: avatar.builder.name, execute: avatar.execute});

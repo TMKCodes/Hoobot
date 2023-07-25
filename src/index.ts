@@ -7,7 +7,7 @@ import { calculateEMA, logEMASignals } from './binance/ema';
 import { calculateMACD, logMACDSignals } from './binance/macd';
 import { calculateRSI, logRSISignals } from './binance/rsi';
 import { ConfigOptions, parseArgs } from './binance/args';
-import { getCurrentBalance } from './binance/balances';
+import { getCurrentBalance, getCurrentBalances } from './binance/balances';
 import { logToFile } from './binance/logToFile';
 import { getLastCompletedOrder, handleOpenOrders, order } from './binance/orders';
 import { checkBeforeOrder, tradeDirection } from './binance/tradeChecks';
@@ -45,6 +45,22 @@ const binance = new Binance().options({
   family: 4,
 });
 
+
+interface tradingPairFiltersType {
+  [pair: string]: {
+    minPrice: any;
+    maxPrice: any;
+    tickSize: any;
+    minQty: any;
+    maxQty: any;
+    stepSize: any;
+    minNotional: any;
+    maxNotional: any;
+  };
+}
+
+const tradingPairFilters: tradingPairFiltersType[] = [];
+
 // Function to fetch exchange info and get trading pair filters
 async function getTradingPairFilters(pair: string) {
   const exchangeInfo = await binance.exchangeInfo();
@@ -70,9 +86,21 @@ async function getTradingPairFilters(pair: string) {
 }
 
 // Place buy or sell order based on EMA difference
-async function placeTrade(discord: Client, pair: string, lastOrder: order, shortEma: number, longEma: number, rsi: number, macd: { macdLine: number; signalLine: number; histogram: number; }, balance: number[], closePrice: number, tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, candletime: string) {
-  const balanceA = await binance.roundStep(balance[0], tradingPairFilters.stepSize);
-  const balanceB = await binance.roundStep(balance[1], tradingPairFilters.stepSize);
+async function placeTrade(
+  discord: Client, 
+  pair: string, 
+  lastOrder: order, 
+  shortEma: number, 
+  longEma: number, 
+  rsi: number, 
+  macd: { macdLine: number; signalLine: number; histogram: number; }, 
+  balance: { [coin: string]: number; }, 
+  closePrice: number, 
+  tradingPairFilters: { minPrice: any; maxPrice: any; tickSize: any; minQty: any; maxQty: any; stepSize: any; }, 
+  candletime: string
+) {
+  const balanceA = await binance.roundStep(balance[pair.split("/")[0]], tradingPairFilters.stepSize);
+  const balanceB = await binance.roundStep(balance[pair.split("/")[0]], tradingPairFilters.stepSize);
   const orderBook = await binance.depth(pair.split("/").join(""));
 
   const direction = tradeDirection(balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, candletime, lastOrder, options);
@@ -168,12 +196,9 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
     }
 
     // Get the current portfolio state and desired allocation'
-    const tradingPairFilters = await getTradingPairFilters(pair);
-    const balanceA = await getCurrentBalance(binance, pair.split("/")[0]);
-    const balanceB = await getCurrentBalance(binance, pair.split("/")[1]);
-    const currentBalance = [balanceA, balanceB];
-    console.log(`${pair.split("/")[0]}: ${balanceA.toFixed(7)}`);
-    console.log(`${pair.split("/")[1]}: ${balanceB.toFixed(7)}`);
+    const balances = await getCurrentBalances(binance, pair.split("/"));
+    console.log(`${pair.split("/")[0]}: ${balances[pair.split("/")[0]].toFixed(7)}`);
+    console.log(`${pair.split("/")[1]}: ${balances[pair.split("/")[1]].toFixed(7)}`);
     const shortEma = calculateEMA(candlesticks, options.shortEma);
     const longEma = calculateEMA(candlesticks, options.longEma);
     const rsi = calculateRSI(candlesticks, options.rsiLength);
@@ -184,7 +209,7 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
     const lastOrder = await getLastCompletedOrder(binance, pair);
 
     console.log(`\r\nCHECK IF ORDER SHOULD BE PLACED ${pair} AT ${candleTime}\r\n----------------------------------`);
-    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, currentBalance, closePrice, tradingPairFilters, candleTime);
+    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, balances, closePrice, tradingPairFilters[pair], candleTime);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;
@@ -215,12 +240,17 @@ const main = async () => {
     if (Array.isArray(options.pair)) {
       // If options.pair is an array, listen for candlesticks for each pair separately
       for (const pair of options.pair) {
+        const filter = await getTradingPairFilters(pair);
+        tradingPairFilters.push({ pair: filter });
         listenForCandlesticks(binance, pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {
           await rebalance(discord, pair, candlesticks);
         });
       }
     } else {
       // If options.pair is a single string, listen for candlesticks for that pair only
+      const filter = await getTradingPairFilters(options.pair);
+      tradingPairFilters.push({ pair: filter });
+      console.log(tradingPairFilters);
       listenForCandlesticks(binance, options.pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {
         await rebalance(discord, options.pair as string, candlesticks);
       });
