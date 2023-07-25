@@ -12,8 +12,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.3",
     "@types/node": "^20.4.2",
-    "@types/play-sound": "^1.1.0",
-    "@types/retry": "^0.12.2"
+    "@types/play-sound": "^1.1.0"
   },
   "dependencies": {
     "audic": "^3.0.2",
@@ -21,9 +20,6 @@
     "discord.js": "^14.11.0",
     "dotenv": "^16.3.1",
     "node-binance-api": "^0.13.1",
-    "node-sound": "^0.0.8",
-    "play-sound": "^1.1.5",
-    "retry": "^0.13.1",
-    "sound-play": "^1.1.0"
+    "play-sound": "^1.1.5"
   }
 }
