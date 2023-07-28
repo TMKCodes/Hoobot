@@ -6,13 +6,14 @@ import { candlestick, listenForCandlesticks } from './binance/candlesticks';
 import { calculateEMA, logEMASignals } from './binance/ema';
 import { calculateMACD, logMACDSignals } from './binance/macd';
 import { calculateRSI, logRSISignals } from './binance/rsi';
-import { ConfigOptions, parseArgs } from './binance/args';
+import { ConfigOptions, getSecondsFromInterval, parseArgs } from './binance/args';
 import { getCurrentBalances } from './binance/balances';
 import { getLastCompletedOrder, handleOpenOrders, order } from './binance/orders';
 import { checkBeforeOrder, tradeDirection } from './binance/tradeChecks';
 import { play } from './binance/playSound';
 import { Client } from 'discord.js';
 import consoleLogger from './binance/consoleLogger';
+import { filter, filters, getFilters } from './binance/filters';
 
 dotenv.config();
 
@@ -45,56 +46,8 @@ const binance = new Binance().options({
 });
 
 
-interface tradingPairFilter {
-  minPrice: any;
-  maxPrice: any;
-  tickSize: any;
-  minQty: any;
-  maxQty: any;
-  stepSize: any;
-  minNotional: any;
-  maxNotional: any;
-  bidMultiplierUp: any,
-  bidMultiplierDown: any,
-  askMultiplierUp: any,
-  askMultiplierDown: any
-}
+let tradingPairFilters: filters = {};
 
-interface tradingPairFilters {
-  [pair: string]: tradingPairFilter;
-}
-
-let tradingPairFilters: tradingPairFilters = {};
-
-
-// Function to fetch exchange info and get trading pair filters
-async function getTradingPairFilters(pair: string) {
-  const exchangeInfo = await binance.exchangeInfo();
-  const symbolInfo = exchangeInfo.symbols.find((symbol: { symbol: string; }) => symbol.symbol === pair.split("/").join(""));
-  //console.log(symbolInfo);
-  if (symbolInfo) {
-    const priceFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "PRICE_FILTER");
-    const lotSizeFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "LOT_SIZE");
-    const notionalFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "NOTIONAL");
-    const percentPriceFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "PERCENT_PRICE_BY_SIDE");
-    return {
-      minPrice: priceFilter.minPrice,
-      maxPrice: priceFilter.maxPrice,
-      tickSize: priceFilter.tickSize,
-      minQty: lotSizeFilter.minQty,
-      maxQty: lotSizeFilter.maxQty,
-      stepSize: lotSizeFilter.stepSize,
-      minNotional: notionalFilter.minNotional,
-      maxNotional: notionalFilter.maxNotional,
-      bidMultiplierUp: percentPriceFilter.bidMultiplierUp,
-      bidMultiplierDown: percentPriceFilter.bidMultiplierDown,
-      askMultiplierUp: percentPriceFilter.askMultiplierUp,
-      askMultiplierDown: percentPriceFilter.askMultiplierDown
-    };
-  } else {
-    throw new Error("Trading pair not found in exchange info");
-  }
-}
 
 function calculateWeightedAverage(prices) {
   let totalQuantity = 0;
@@ -120,13 +73,13 @@ async function placeTrade(
   rsi: number, 
   macd: { macdLine: number; signalLine: number; histogram: number; }, 
   balance: { [coin: string]: number; }, 
+  orderBook: any,
   closePrice: number, 
-  tradingPairFilters: tradingPairFilter, 
+  tradingPairFilters: filter, 
   candletime: string
 ) {
   const balanceA = await binance.roundStep(balance[pair.split("/")[0]], tradingPairFilters.stepSize);
   const balanceB = await binance.roundStep(balance[pair.split("/")[1]], tradingPairFilters.stepSize);
-  const orderBook = await binance.depth(pair.split("/").join(""));
 
   const direction = tradeDirection(consoleLogger, balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, candletime, lastOrder, options);
   consoleLogger.push(`Trade direction`, direction);
@@ -152,7 +105,8 @@ async function placeTrade(
       let order: any = false;
       try {
         play(soundFile);
-        order = await binance.sell(pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
+        const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
+        order = await binance.sell(pair.split("/").join(""), roundedQuantity, roundedPrice);
         const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
         consoleLogger.push(`sell-order`, {
@@ -174,8 +128,6 @@ async function placeTrade(
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookBids[orderBookBids.length - 1] + parseFloat(tradingPairFilters.tickSize); 
-
-
     const quantity = (balanceB / price) * 0.99;
     if(quantity < tradingPairFilters.minNotional && quantity > tradingPairFilters.maxNotional) {
       return false;
@@ -202,7 +154,8 @@ async function placeTrade(
       let order: any = false;
       try {
         play(soundFile);
-        order = await binance.buy(pair.split("/").join(""), roundedQuantity, roundedPrice, { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' });
+        const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
+        order = await binance.buy(pair.split("/").join(""), roundedQuantity, roundedPrice);
         const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
         consoleLogger.push(`buy-order`, {
@@ -237,14 +190,17 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return
     }
+    const orderBook = await binance.depth(pair.split("/").join(""));
+    const filter = tradingPairFilters[pair.split("/").join("")];
+
     // Check for open orders before placing a new one
     const openOrders = await binance.openOrders(false); // Implement a function to get open orders
     if (openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-      return await handleOpenOrders(discord, binance, openOrders); // Implement a function to handle open orders
+      const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
+      return await handleOpenOrders(discord, binance, openOrders, orderBook, maxAgeInSeconds, options);
     }
-
-    // Get the current portfolio state and desired allocation'Meh
+    
     const balances = await getCurrentBalances(binance, pair.split("/"));
     consoleLogger.push(pair.split("/")[0], balances[pair.split("/")[0]].toFixed(7));
     consoleLogger.push(pair.split("/")[1], balances[pair.split("/")[1]].toFixed(7));
@@ -257,8 +213,7 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
     logRSISignals(consoleLogger, rsi);
     const lastOrder = await getLastCompletedOrder(binance, pair);
 
-    const filter = tradingPairFilters[pair.split("/").join("")];
-    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, balances, closePrice, filter, candleTime);
+    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, candleTime);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;
@@ -288,7 +243,7 @@ const main = async () => {
     if (Array.isArray(options.pair)) {
       // If options.pair is an array, listen for candlesticks for each pair separately
       for (const pair of options.pair) {
-        const filter = await getTradingPairFilters(pair);
+        const filter = await getFilters(binance, pair);
         tradingPairFilters[pair.split("/").join("")] = filter;
         console.log(tradingPairFilters);
         listenForCandlesticks(binance, pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {
@@ -297,7 +252,7 @@ const main = async () => {
       }
     } else {
       // If options.pair is a single string, listen for candlesticks for that pair only
-      const filter = await getTradingPairFilters(options.pair);
+      const filter = await getFilters(binance, options.pair);
       tradingPairFilters[options.pair.split("/").join("")] = filter;
       console.log(tradingPairFilters);
       listenForCandlesticks(binance, options.pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {

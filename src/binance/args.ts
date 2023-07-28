@@ -1,5 +1,26 @@
 export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
 
+export const getSecondsFromInterval = (interval: CandlestickInterval): number => {
+  const intervalToSeconds: Record<CandlestickInterval, number> = {
+    "1m": 60,
+    "3m": 60 * 3,
+    "5m": 60 * 5,
+    "15m": 60 * 15,
+    "30m": 60 * 30,
+    "1h": 60 * 60,
+    "2h": 60 * 60 * 2,
+    "4h": 60 * 60 * 4,
+    "6h": 60 * 60 * 6,
+    "8h": 60 * 60 * 8,
+    "12h": 60 * 60 * 12,
+    "1d": 60 * 60 * 24,
+    "3d": 60 * 60 * 24 * 3,
+    "1w": 60 * 60 * 24 * 7,
+    "1M": 60 * 60 * 24 * 30, // Assuming 30 days in a month
+  }
+  return intervalToSeconds[interval];
+}
+
 // Configuration options interface
 export interface ConfigOptions {
   apiKey: string;
