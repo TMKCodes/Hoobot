@@ -1,18 +1,20 @@
-export function logRSISignals(rsi: number) {
-  console.log(`RSI: ${rsi.toFixed(2)}`);
 
+import { ConsoleLogger } from './consoleLogger';
+
+export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number) {
+  consoleLogger.push(`RSI`, rsi.toFixed(2));
   if (rsi > 80) {
-    console.log(`RSI condition: Extremely Overbought`);
+    consoleLogger.push(`RSI condition`, `Extremely Overbought`);
   } else if (rsi < 20) {
-    console.log(`RSI condition: Extremely Oversold`);
+    consoleLogger.push(`RSI condition`, `Extremely Oversold`);
   } else if (rsi > 70) {
-    console.log(`RSI condition: Overbought`);
+    consoleLogger.push(`RSI condition`, `Overbought`);
   } else if (rsi < 30) {
-    console.log(`RSI condition: Oversold`);
+    consoleLogger.push(`RSI condition`, `Oversold`);
   } else if (rsi < 50) {
-    console.log(`RSI signal: Bullish`);
+    consoleLogger.push(`RSI signal`, `Bullish`);
   } else if(rsi > 50) {
-    console.log(`RSI signal: Bearish`);
+    consoleLogger.push(`RSI signal`, `Bearish`);
   }
 }
 

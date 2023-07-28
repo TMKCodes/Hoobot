@@ -20,7 +20,7 @@ export interface candlestick {
 export async function getLastCandlesticks(binance: Binance, pair: string, interval: string): Promise<candlestick[]> {
   return new Promise<candlestick[]>((resolve, reject) => {
     binance.candlesticks(pair.split("/").join(""), interval, (error: any, ticks: any, symbol: string, interval: string) => {
-      console.log(`Start downloading 250 previous candlesticks.`);
+      console.log(`DOWNLOAD 250 PREVIOUS CANDLESTICKS\r\n----------------------------------`);
       if (error) {
         reject(error);
       } else {
@@ -40,7 +40,6 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
           quoteBuyVolume: candle[11],
           isFinal: candle[12],
         }));
-        console.log(`Downloaded 250 previous candlesticks.`);
         resolve(parsedData);
       }
     }, { limit: 250 });

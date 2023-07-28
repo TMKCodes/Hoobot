@@ -1,3 +1,5 @@
+import { ConsoleLogger } from "./consoleLogger";
+
 // Calculate Exponential Moving Average (EMA)
 export function calculateEMA(candles: any[], length: number): number {
   // const prices = candles.slice(-length).map((candle) => parseFloat(candle.close));
@@ -30,23 +32,24 @@ export function calculateEMAArray(candles: any[], length: number): number[] {
 }
 
 export const logEMASignals = (
+  consoleLogger: ConsoleLogger,
   shortEma: number,
   longEma: number,
   prevShortEma: number | undefined,
   prevLongEma: number | undefined
 ) => {
-  console.log(`EMA A: ${shortEma.toFixed(2)}`);
-  console.log(`EMA B: ${longEma.toFixed(2)}`);
-  console.log(`EMA Difference: ${(shortEma - longEma).toFixed(2)}`);
+  consoleLogger.push(`EMA A`, shortEma.toFixed(2));
+  consoleLogger.push(`EMA B`, longEma.toFixed(2));
+  consoleLogger.push(`EMA Difference`, (shortEma - longEma).toFixed(2));
 
   const emaDiff = shortEma - longEma;
 
   if (emaDiff > 0) {
-    console.log(`EMA Signal: Bullish`);
+    consoleLogger.push(`EMA Signal`, `Bullish`);
   } else if (emaDiff < 0) {
-    console.log(`EMA Signal: Bearish`);
+    consoleLogger.push(`EMA Signal`, `Bearish`);
   } else {
-    console.log(`EMA Signal: Neutral`);
+    consoleLogger.push(`EMA Signal`, `Neutral`);
   }
 
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
@@ -57,17 +60,17 @@ export const logEMASignals = (
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
 
     if (isBullishCrossover) {
-      console.log('EMA Signal: Bullish Crossover');
+      consoleLogger.push(`EMA Signal`, `Bullish Crossover`);
     } else if (isBearishCrossover) {
-      console.log('EMA Signal: Bearish Crossover');
+      consoleLogger.push(`EMA Signal`, `Bearish Crossover`);
     }
 
     if (isUpwardDirection) {
-      console.log('EMA Direction: Upward');
+      consoleLogger.push(`EMA Direction`, `Upward`);
     } else if (isDownwardDirection) {
-      console.log('EMA Direction: Downward');
+      consoleLogger.push(`EMA Direction`, `Downward`);
     } else if (isFlatDirection) {
-      console.log('EMA Direction: Flat');
+      consoleLogger.push(`EMA Direction`, `Flat`);
     }
   }
 };

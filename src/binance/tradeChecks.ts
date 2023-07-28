@@ -1,4 +1,5 @@
 import { ConfigOptions } from "./args";
+import { ConsoleLogger } from "./consoleLogger";
 import { logToFile } from "./logToFile";
 import { order } from "./orders";
 
@@ -7,7 +8,8 @@ export const checkBeforeOrder = (
   price: number,
   stopPrice: number,
   tradingPairFilters: any,
-  candleTime: string
+  orderBook,
+  candleTime: string,
 ) => {
   const logFailure = (message: string) => {
     logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, ${message}`);
@@ -32,10 +34,21 @@ export const checkBeforeOrder = (
     return true;
   };
 
+
+
+  // const isNotionalValid = (min: number, max: number, value: number) => {
+  //   if (value < min) {
+  //     return logFailure(`Amount too low.`);
+  //   } else if (value > max) {
+  //     return logFailure(`Amount too high.`);
+  //   }
+  //   return true;
+  // }
+
   if (
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), stopPrice, 'Limit price') ||
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Stop price') ||
-    !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity)
+    !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity) 
   ) {
     return false;
   }
@@ -45,12 +58,13 @@ export const checkBeforeOrder = (
 
 
 export const tradeDirection = (
+  consoleLogger: ConsoleLogger,
   balanceA: number, 
   balanceB: number, 
   closePrice: number, 
   shortEma: number, 
   longEma: number, 
-  macd: { macdLine: number; signalLine: number; }, 
+  macd: { macdLine: number; signalLine: number; histogram: number; }, 
   rsi: number, 
   candletime: string,
   lastOrder: order, 
@@ -62,11 +76,21 @@ export const tradeDirection = (
   let macdCheck: string = `HOLD`;
   let rsiCheck: string = `HOLD`;
 
-  balanceCheck = ((balanceA * closePrice) < balanceB) ? 'BUY' : 'SELL';
+
+  if(balanceA < (balanceB / closePrice)) {
+    balanceCheck = 'BUY';
+  } else {
+    balanceCheck = 'SELL';
+  }
+  
   if (lastOrder === undefined) {
     nextOrderCheck = balanceCheck;
   } else {
-    nextOrderCheck = lastOrder.isBuyer === true ? 'SELL' : 'BUY';
+    if (lastOrder.isBuyer === true) {
+      nextOrderCheck = 'SELL';
+    } else {
+      nextOrderCheck = 'BUY';
+    }
   }
 
   if (shortEma > longEma) {
@@ -75,9 +99,9 @@ export const tradeDirection = (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine && macd.macdLine < 0 ) {
+  if (macd.macdLine > macd.signalLine && macd.macdLine < 0 && macd.histogram > 0.10) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0) {
+  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0 && macd.histogram < -0.10) {
     macdCheck = `SELL`;
   }
 
@@ -133,16 +157,12 @@ export const tradeDirection = (
     }
     tradeDirection = sellSignal;
   }
-  const checks = JSON.stringify({
-    nextOrder: nextOrderCheck,
-    balance: balanceCheck,
-    ema: emaCheck,
-    macd: macdCheck,
-    rsi: rsiCheck,
-    candletime: candletime,
-    direction: tradeDirection,
-  }, null, 4);
-  logToFile(checks);
-  console.log(checks);
+  consoleLogger.push("Trade checks", {
+    'Next order': nextOrderCheck,
+    'Balance': balanceCheck,
+    'EMA signal': emaCheck,
+    'MACD signal': macdCheck,
+    'RSI signal': rsiCheck,
+  });
   return tradeDirection;
 }
