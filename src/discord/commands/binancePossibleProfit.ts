@@ -36,8 +36,8 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
 
 export default {
   builder: new SlashCommandBuilder()
-    .setName("profit")
-    .setDescription("Replices with Binance profit on pair orders!")
+    .setName("possible-profit")
+    .setDescription("Replices with Binance possible profit on pair!")
     .addStringOption(option =>
       option.setName('pair')
         .setDescription('The pair to check')),
@@ -51,45 +51,32 @@ export default {
     try {
       // Get the user's trade history for the given pair
       const tradeHistory = await binance.trades(pair);
+      //console.log(JSON.stringify(tradeHistory));
 
-      let totalProfit = 0;
-      let lastTrade: any = undefined;
-      let lastTime = "";
+      const orderBook = await binance.depth(pair);
+      //console.log(JSON.stringify(orderBook));
 
-      for (const trade of tradeHistory) {
-        if (lastTrade === undefined) {
-          // Set last trade since it was undefined.
-          lastTrade = trade;
-          lastTime = trade.time;
-        } else {
-          if (trade.isBuyer) {
-            // Calculate profit for the buy trade
-            // Calculate profit for the buy trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice);
-            const profitPositive = profit > 0;
-            if(profitPositive) {
-              totalProfit -= (profit + 0.075);
-            } else {
-              totalProfit += profit - 0.075;
-            }
-          } else {
-            // Calculate profit for the sell trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice); 
-            totalProfit += profit - 0.075;
-          }
-          lastTrade = trade; // Update lastTrade for the next iteration
-        }
+      // Find the last trade from the tradeHistory array
+      const lastTrade = tradeHistory[tradeHistory.length - 1];
+
+      if (lastTrade.side === "BUY") {
+        // Calculate the percentage change to the current highest bid price
+        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).pop()!); // Get the highest bid price
+        const percentageChange = calculatePercentageDifference(lastTrade.price, currentHighestBidPrice) - 0.075;
+        // const changeDirection = (parseFloat(lastTrade.price) < currentHighestBidPrice) ? "+" : "-";
+        await interaction.reply(`The last order was a buy order ${parseFloat(lastTrade.price).toFixed(2)}\r\nPercentage change to current highest bid ${currentHighestBidPrice} price: ${percentageChange.toFixed(2)}%`);
+      } else {
+        // Calculate the percentage change to the current lowest ask price
+        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); // Get the lowest ask price
+        const percentageChange = calculatePercentageDifference(currentLowestAskPrice, lastTrade.price) - 0.075;
+        // const changeDirection = (parseFloat(lastTrade.price) > currentLowestAskPrice) ? "+" : "-";
+        await interaction.reply(`The last order was a sell order ${parseFloat(lastTrade.price).toFixed(2)}\r\nPercentage change to current lowest ask ${currentLowestAskPrice} price: ${percentageChange.toFixed(2)}%`);
       }
 
-      // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-      await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
     } catch (error) {
       console.error('Error fetching trade history:', error);
       await interaction.reply('An error occurred while fetching trade history.');
     }
   }
+
 }

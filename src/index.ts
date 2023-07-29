@@ -1,5 +1,29 @@
+/* =====================================================================
+* Binance Trading Bot - Proprietary License
+* Copyright (c) 2023 Hoosat Oy. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are not permitted without prior written permission
+* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+* software, in whole or in part, is strictly prohibited.
+*
+* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* The user of this software uses it at their own risk. Hoosat Oy shall
+* not be liable for any losses, damages, or liabilities arising from
+* the use of this software.
+* ===================================================================== */
 
-import dotenv from 'dotenv';
 import Binance from 'node-binance-api';
 import { loginDiscord, sendMessageToChannel } from './discord/discord';
 import { candlestick, listenForCandlesticks } from './binance/candlesticks';
@@ -14,6 +38,7 @@ import { play } from './binance/playSound';
 import { Client } from 'discord.js';
 import consoleLogger from './binance/consoleLogger';
 import { filter, filters, getFilters } from './binance/filters';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -49,19 +74,19 @@ const binance = new Binance().options({
 let tradingPairFilters: filters = {};
 
 
-function calculateWeightedAverage(prices) {
-  let totalQuantity = 0;
-  let weightedSum = 0;
+// function calculateWeightedAverage(prices) {
+//   let totalQuantity = 0;
+//   let weightedSum = 0;
 
-  for (const [price, quantity] of prices) {
-    const priceValue = parseFloat(price);
-    const quantityValue = parseFloat(quantity);
-    totalQuantity += quantityValue;
-    weightedSum += priceValue * quantityValue;
-  }
+//   for (const [price, quantity] of prices) {
+//     const priceValue = parseFloat(price);
+//     const quantityValue = parseFloat(quantity);
+//     totalQuantity += quantityValue;
+//     weightedSum += priceValue * quantityValue;
+//   }
 
-  return weightedSum / totalQuantity;
-}
+//   return weightedSum / totalQuantity;
+// }
 
 // Place buy or sell order based on EMA difference
 async function placeTrade(
@@ -76,12 +101,11 @@ async function placeTrade(
   orderBook: any,
   closePrice: number, 
   tradingPairFilters: filter, 
-  candletime: string
 ) {
   const balanceA = await binance.roundStep(balance[pair.split("/")[0]], tradingPairFilters.stepSize);
   const balanceB = await binance.roundStep(balance[pair.split("/")[1]], tradingPairFilters.stepSize);
 
-  const direction = tradeDirection(consoleLogger, balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, candletime, lastOrder, options);
+  const direction = tradeDirection(consoleLogger, balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
   consoleLogger.push(`Trade direction`, direction);
 
   if (direction === 'SELL') {
@@ -100,12 +124,12 @@ async function placeTrade(
     const roundedPrice = binance.roundStep(price, tradingPairFilters.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, tradingPairFilters.stepSize);
     const roundedStopPrice =  binance.roundStep(stopPrice, tradingPairFilters.tickSize);
-    const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, orderBook, candletime);
+    const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, orderBook);
     if (checkBefore === true) {
       let order: any = false;
       try {
         play(soundFile);
-        const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
+        // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
         order = await binance.sell(pair.split("/").join(""), roundedQuantity, roundedPrice);
         const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
@@ -150,11 +174,11 @@ async function placeTrade(
     console.log(`roundedQuantity: ${roundedQuantity}`);
     console.log(`roundedPrice: ${roundedPrice}`);
     console.log(`roundedStopPrice: ${roundedStopPrice}`);
-    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, orderBook, candletime) === true) {
+    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, tradingPairFilters, orderBook) === true) {
       let order: any = false;
       try {
         play(soundFile);
-        const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
+        // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
         order = await binance.buy(pair.split("/").join(""), roundedQuantity, roundedPrice);
         const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
@@ -213,7 +237,7 @@ async function rebalance(discord: Client, pair: string, candlesticks: candlestic
     logRSISignals(consoleLogger, rsi);
     const lastOrder = await getLastCompletedOrder(binance, pair);
 
-    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, candleTime);
+    await placeTrade(discord, pair, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;
