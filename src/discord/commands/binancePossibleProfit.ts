@@ -29,9 +29,13 @@ import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../binance/args';
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = Math.abs(newNumber - oldNumber);
+  const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
+}
+
+const reverseSign = (number: number) => {
+  return -number;
 }
 
 export default {
@@ -59,18 +63,20 @@ export default {
       // Find the last trade from the tradeHistory array
       const lastTrade = tradeHistory[tradeHistory.length - 1];
 
-      if (lastTrade.side === "BUY") {
+      const quoteAsset = lastTrade.symbol.replace(lastTrade.commissionAsset, '')
+
+      if (lastTrade.isBuyer === true) {
         // Calculate the percentage change to the current highest bid price
-        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).pop()!); // Get the highest bid price
+        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); // Get the highest bid price
         const percentageChange = calculatePercentageDifference(lastTrade.price, currentHighestBidPrice) - 0.075;
         // const changeDirection = (parseFloat(lastTrade.price) < currentHighestBidPrice) ? "+" : "-";
-        await interaction.reply(`The last order was a buy order ${parseFloat(lastTrade.price).toFixed(2)}\r\nPercentage change to current highest bid ${currentHighestBidPrice} price: ${percentageChange.toFixed(2)}%`);
+        await interaction.reply(`Last order was buy order at ${parseFloat(lastTrade.price).toFixed(2)} price.\r\nThe order amount in base asset was ${lastTrade.qty} ${lastTrade.commissionAsset}\r\nThe order amount in quote asset was ${lastTrade.quoteQty} ${quoteAsset}\r\nPercentage change to current highest bid ${currentHighestBidPrice} price: ${percentageChange.toFixed(2)}%`);
       } else {
         // Calculate the percentage change to the current lowest ask price
-        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); // Get the lowest ask price
-        const percentageChange = calculatePercentageDifference(currentLowestAskPrice, lastTrade.price) - 0.075;
+        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).pop()!); // Get the lowest ask price
+        const percentageChange = reverseSign(calculatePercentageDifference(lastTrade.price, currentLowestAskPrice)) - 0.075;
         // const changeDirection = (parseFloat(lastTrade.price) > currentLowestAskPrice) ? "+" : "-";
-        await interaction.reply(`The last order was a sell order ${parseFloat(lastTrade.price).toFixed(2)}\r\nPercentage change to current lowest ask ${currentLowestAskPrice} price: ${percentageChange.toFixed(2)}%`);
+        await interaction.reply(`Last order was sell order at  ${parseFloat(lastTrade.price).toFixed(2)} price.\r\nThe order amount base asset was ${lastTrade.qty} ${lastTrade.commissionAsset}\r\nThe order amount in quote asset was ${lastTrade.quoteQty} ${quoteAsset}\r\nPercentage change to current lowest ask ${currentLowestAskPrice} price: ${percentageChange.toFixed(2)}%`);
       }
 
     } catch (error) {

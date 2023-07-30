@@ -29,9 +29,13 @@ import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../binance/args';
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = Math.abs(newNumber - oldNumber);
+  const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
+}
+
+const reverseSign = (number: number) => {
+  return -number;
 }
 
 export default {
@@ -64,26 +68,21 @@ export default {
         } else {
           if (trade.isBuyer) {
             // Calculate profit for the buy trade
-            // Calculate profit for the buy trade
             const newPrice = parseFloat(trade.price);
             const oldPrice = parseFloat(lastTrade.price);
             const profit = calculatePercentageDifference(oldPrice, newPrice);
-            const profitPositive = profit > 0;
-            if(profitPositive) {
-              totalProfit -= (profit + 0.075);
-            } else {
-              totalProfit += profit - 0.075;
-            }
+            totalProfit += reverseSign(profit);
           } else {
             // Calculate profit for the sell trade
             const newPrice = parseFloat(trade.price);
             const oldPrice = parseFloat(lastTrade.price);
             const profit = calculatePercentageDifference(oldPrice, newPrice); 
-            totalProfit += profit - 0.075;
+            totalProfit += profit;
           }
           lastTrade = trade; // Update lastTrade for the next iteration
         }
       }
+      totalProfit = totalProfit - (tradeHistory.length * 0.075);
 
       // The totalProfit variable now contains the overall profit for all sell orders in the trade history
       await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);

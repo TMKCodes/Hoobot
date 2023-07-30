@@ -41,9 +41,9 @@ export const logMACDSignals = (
 ) => {
   const { macdLine, signalLine, histogram } = macd;
 
-  consoleLogger.push(`MACD Line`, macdLine.toFixed(2));
-  consoleLogger.push(`MACD Signal Line`, signalLine.toFixed(2));
-  consoleLogger.push(`MACD Histogram`, histogram.toFixed(2));
+  consoleLogger.push(`MACD Line`, macdLine.toFixed(7));
+  consoleLogger.push(`MACD Signal Line`, signalLine.toFixed(7));
+  consoleLogger.push(`MACD Histogram`, histogram.toFixed(7));
 
   if (!prevMacd) {
     if (macdLine > signalLine && histogram > 0) {

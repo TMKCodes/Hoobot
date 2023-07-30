@@ -41,7 +41,7 @@ export default {
       await interaction.reply("Please provide a valid pair to check.");
       return;
     }
-    const tradeHistory = (await binance.trades(pair)).reverse().slice(0, 10);
+    const tradeHistory = (await binance.trades(pair)).reverse().slice(0, 5);
     const trades = tradeHistory.map((trade) => {
       return {
         orderId: trade.orderId,

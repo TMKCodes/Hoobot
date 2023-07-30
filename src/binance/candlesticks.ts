@@ -43,7 +43,7 @@ export interface candlestick {
   isFinal: boolean
 }
 
-export async function getLastCandlesticks(binance: Binance, pair: string, interval: string): Promise<candlestick[]> {
+export async function getLastCandlesticks(binance: Binance, pair: string, interval: string, limit: number = 250): Promise<candlestick[]> {
   return new Promise<candlestick[]>((resolve, reject) => {
     binance.candlesticks(pair.split("/").join(""), interval, (error: any, ticks: any, symbol: string, interval: string) => {
       console.log(`DOWNLOAD 250 PREVIOUS CANDLESTICKS\r\n----------------------------------`);
@@ -68,7 +68,7 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
         }));
         resolve(parsedData);
       }
-    }, { limit: 250 });
+    }, { limit: limit });
   });
 }
 
@@ -76,7 +76,7 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
 export const listenForCandlesticks = async (binance: Binance, pair: string, interval: string, callback: (candlesticks: candlestick[]) => void) => {
   const maxCandlesticks = 1000;
   try {
-    let candlesticks: candlestick[] = await getLastCandlesticks(binance, pair, interval);
+    let candlesticks: candlestick[] = await getLastCandlesticks(binance, pair, interval, 250);
     console.log(`START LISTENING FOR NEW CANDLESTICKS\r\n----------------------------------`)
     const wsEndpoint = binance.websockets.candlesticks(pair.split("/").join(""), interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
       let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;

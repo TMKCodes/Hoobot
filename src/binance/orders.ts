@@ -132,7 +132,6 @@ export const handleOpenOrders = async (
 // Function to get the last completed order for a given trading pair
 export const getLastCompletedOrder = async (binance: Binance, pair: string): Promise<order> => {
   const tradeHistory = await binance.trades(pair.split("/").join(""));
-  const completedOrders = tradeHistory.filter((trade: { isBuyer: boolean; orderStatus: string; }) => trade.orderStatus === 'FILLED');
-  completedOrders.sort((a: { tradeId: number; }, b: { tradeId: number; }) => b.tradeId - a.tradeId);
-  return completedOrders.length > 0 ? completedOrders[0] : undefined;
+  tradeHistory.sort((a: { time: number; }, b: { time: number; }) => b.time - a.time);
+  return tradeHistory.length > 0 ? tradeHistory[0] : "LOL";
 }
