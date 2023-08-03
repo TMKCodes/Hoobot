@@ -65,11 +65,7 @@ async function placeTrade(
   if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-    const quantity = balanceA * 0.99;
-    const quoteQuantity = quantity * price;
-    if (quoteQuantity < filter.minNotional && quoteQuantity > filter.maxNotional) {
-      return false;
-    }
+    const quantity = balanceA;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
       maxQuantity = Math.min(quantity, options.maxAmount);
@@ -77,32 +73,40 @@ async function placeTrade(
     const stopPrice = price * (1 - (options.riskPercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
+    const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
     const percentageChange = calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice) - 0.075;
     if (checkBefore === true) {
       let order: any = false;
-      try {
-        play(soundFile);
-        // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
-        order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-        const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
-        sendMessageToChannel(discord, cryptoChannelID, orderMsg);
-        consoleLogger.push(`sell-order`, {
-          symbol: symbol.split("/").join(""),
-          quantity: roundedQuantity,
-          price: roundedPrice,
-          stopPrice: roundedStopPrice,
-        })
-      } catch (error: any) {
-        console.error(JSON.stringify(error));
-        if (error.msg !== undefined) {
-          sendMessageToChannel(discord, cryptoChannelID, error.msg);
+      console.log(quantity);
+      console.log(filter.minNotional);
+      console.log(filter.maxNotional);
+      if(quoteQuantity > parseFloat(filter.minNotional) && quoteQuantity < parseFloat(filter.maxNotional)) {
+        try {
+          play(soundFile);
+          // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
+          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
+          const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
+          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          consoleLogger.push(`sell-order`, {
+            symbol: symbol.split("/").join(""),
+            quantity: roundedQuantity,
+            price: roundedPrice,
+            stopPrice: roundedStopPrice,
+          })
+        } catch (error: any) {
+          console.error(JSON.stringify(error));
+          if (error.msg !== undefined) {
+            sendMessageToChannel(discord, cryptoChannelID, error.msg);
+          }
         }
+        return order;
+      } else {
+        return false;
       }
-      return order;
     } else {
-      return false;
+      console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
@@ -118,31 +122,36 @@ async function placeTrade(
     const stopPrice = price * (1 + (options.riskPercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
+    const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
       const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice)) - 0.075;
       let order: any = false;
-      try {
-        play(soundFile);
-        // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
-        order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-        const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
-        sendMessageToChannel(discord, cryptoChannelID, orderMsg);
-        consoleLogger.push(`buy-order`, {
-          symbol: symbol.split("/").join(""),
-          quantity: roundedQuantity,
-          price: roundedPrice,
-          stopPrice: roundedStopPrice,
-        })
-      } catch (error: any) {
-        console.error(JSON.stringify(error));
-        if (error.msg !== undefined) {
-          sendMessageToChannel(discord, cryptoChannelID, error.msg);
+      if(quoteQuantity > parseFloat(filter.minNotional) && quoteQuantity < parseFloat(filter.maxNotional)) {
+        try {
+          play(soundFile);
+          // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
+          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
+          const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
+          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          consoleLogger.push(`buy-order`, {
+            symbol: symbol.split("/").join(""),
+            quantity: roundedQuantity,
+            price: roundedPrice,
+            stopPrice: roundedStopPrice,
+          })
+        } catch (error: any) {
+          console.error(JSON.stringify(error));
+          if (error.msg !== undefined) {
+            sendMessageToChannel(discord, cryptoChannelID, error.msg);
+          }
         }
+        return order;
+      } else {
+        return false;
       }
-      return order;
     } else {
-      return false;
+      console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
     }
   } else {
     return false;

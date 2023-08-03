@@ -73,6 +73,10 @@ const main = async () => {
     binance.websockets.userData((data: any) => {
       const newBalances = getBalancesFromWebsocket(data);
       if (newBalances !== undefined) {
+        const balanceKeys = Object.keys(newBalances);
+        for (const key of balanceKeys) {
+          balances[key] = newBalances[key];
+        }
         balanceLogger.push(`New balance`, balances);
         balanceLogger.print();
         balanceLogger.flush();
