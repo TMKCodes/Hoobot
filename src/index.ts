@@ -26,20 +26,22 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord, sendMessageToChannel } from './discord/discord';
-import { candlestick, listenForCandlesticks } from './binance/candlesticks';
+import { SymbolCandlesticks, candlestick, getLastCandlesticks, listenForCandlesticks } from './binance/candlesticks';
 import { calculateEMA, logEMASignals } from './binance/ema';
 import { calculateMACD, logMACDSignals } from './binance/macd';
 import { calculateRSI, logRSISignals } from './binance/rsi';
 import { ConfigOptions, getSecondsFromInterval, parseArgs } from './binance/args';
-import { getCurrentBalances } from './binance/balances';
+import { getBalancesFromWebsocket, getCurrentBalances } from './binance/balances';
 import { getLastCompletedOrder, handleOpenOrders, order } from './binance/orders';
 import { checkBeforeOrder, tradeDirection } from './binance/tradeChecks';
 import { play } from './binance/playSound';
 import { Client } from 'discord.js';
-import consoleLogger from './binance/consoleLogger';
+import { consoleLogger } from './binance/consoleLogger';
 import { filter, filters, getFilters } from './binance/filters';
 import dotenv from 'dotenv';
 import { algorithmic } from './binance/algorithmic';
+import { getTradeableSymbols } from './binance/symbols';
+import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';
 
 
 
@@ -66,29 +68,69 @@ const main = async () => {
       discord = loginDiscord(binance, options);
     }
 
+    let balances = await getCurrentBalances(binance);
+    const balanceLogger = consoleLogger();
+    binance.websockets.userData((data: any) => {
+      const newBalances = getBalancesFromWebsocket(data);
+      if (newBalances !== undefined) {
+        balanceLogger.push(`New balance`, balances);
+        balanceLogger.print();
+        balanceLogger.flush();
+      }
+    }, (data: any) => {
+      // Possible to add discord notification if order has been fulfilled with websocket notification.
+    });
+
+    const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
-      // Check if options.pair is an array or a single string
+      // Check if options.symbol is an array or a single string
       if (Array.isArray(options.symbols)) {
-        // If options.pair is an array, listen for candlesticks for each pair separately
-        for (const pair of options.symbols) {
-          const filter = await getFilters(binance, pair);
-          tradingPairFilters[pair.split("/").join("")] = filter;
-          listenForCandlesticks(binance, pair, options.candlestickInterval, async (candlesticks: candlestick[]) => {
-            await algorithmic(discord, binance, consoleLogger, pair, candlesticks, filter, options)
+        // If options.symbol is an array, listen for candlesticks for each symbol separately
+        for (const symbol of options.symbols) {
+          const filter = await getFilters(binance, symbol);
+          tradingPairFilters[symbol.split("/").join("")] = filter;
+          const logger = consoleLogger();
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 250, (candlesticks: candlestick[]) => {
+            algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
           });
         }
       } else {
-        // If options.pair is a single string, listen for candlesticks for that pair only
+        // If options.symbol is a single string, listen for candlesticks for that symbol only
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, async (candlesticks: candlestick[]) => {
-          await algorithmic(discord, binance, consoleLogger, options.symbols as string, candlesticks, filter, options)
+        const logger = consoleLogger();
+        //const candlestick = await getLastCandlesticks(binance, options.symbols as string, interval, 250);
+        //algorithmic(discord, binance, logger, options.symbols as string, balances, symbolCandlesticks[options.symbols as string].candles, filter, options)
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  250, (candlesticks: candlestick[]) => {
+          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
         });
       }
     } else if (options.mode === "hilow") {
 
-    } else if (options.mode === "arbitage") {
-
+    } else if (options.mode === "arbitrage") {
+      const symbolInfo = await getTradeableSymbols(binance);
+      if (Array.isArray(options.symbols)) {
+        for (const symbol of options.symbols) {
+          console.log(`current symbol is there: ${JSON.stringify(symbolInfo.filter(info => info.symbol === symbol.split("/").join("")))}`);
+          const roundTrips = findRoundTrips(symbol, symbolInfo);
+          console.log(`RoundTrips found: ${roundTrips.length}`);
+          const uniqueSymbolsInTrips = uniqueSymbolsOfRoundTrips(roundTrips);
+          console.log(`Unique symbols found: ${uniqueSymbolsInTrips.length}`); 
+          for (const uniqueSymbol of uniqueSymbolsInTrips) {
+            listenForCandlesticks(binance, uniqueSymbol.symbol, options.candlestickInterval, symbolCandlesticks, 0, (candlesticks: candlestick[]) => {
+              console.log(`New candlestick for symbol ${uniqueSymbol.symbol}`);
+              const currentRoundTrips = roundTripsContainsSymbol(roundTrips, uniqueSymbol.symbol);
+              for(const currentRoundTrip of currentRoundTrips) {
+                const profit = arbitrageProfit(symbolCandlesticks, currentRoundTrip, 1000);
+                if (profit !== undefined) {
+                  console.log(currentRoundTrip)
+                  console.log(profit);
+                }
+              }
+            })
+          }
+        }
+      }
     }
   } catch (error: any) {
     console.error(JSON.stringify(error));

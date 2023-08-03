@@ -26,6 +26,12 @@
 
 import Binance from 'node-binance-api';
 
+export interface SymbolCandlesticks {
+  [symbolPair: string]: {
+    candles: candlestick[]
+  }
+}
+
 export interface candlestick {
   symbol: string,
   interval: string,
@@ -46,7 +52,6 @@ export interface candlestick {
 export async function getLastCandlesticks(binance: Binance, pair: string, interval: string, limit: number = 250): Promise<candlestick[]> {
   return new Promise<candlestick[]>((resolve, reject) => {
     binance.candlesticks(pair.split("/").join(""), interval, (error: any, ticks: any, symbol: string, interval: string) => {
-      console.log(`DOWNLOAD 250 PREVIOUS CANDLESTICKS\r\n----------------------------------`);
       if (error) {
         reject(error);
       } else {
@@ -73,12 +78,18 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
 }
 
 
-export const listenForCandlesticks = async (binance: Binance, pair: string, interval: string, callback: (candlesticks: candlestick[]) => void) => {
+export const listenForCandlesticks = async (binance: Binance, symbol: string, interval: string, candleStore: SymbolCandlesticks, historyLength: number, callback: (candlesticks: candlestick[]) => void) => {
+  symbol = symbol.split("/").join("");
   const maxCandlesticks = 1000;
   try {
-    let candlesticks: candlestick[] = await getLastCandlesticks(binance, pair, interval, 250);
-    console.log(`START LISTENING FOR NEW CANDLESTICKS\r\n----------------------------------`)
-    const wsEndpoint = binance.websockets.candlesticks(pair.split("/").join(""), interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
+    if (candleStore[symbol] === undefined) {
+      if (historyLength === 0) {
+        candleStore[symbol] = { candles: [] }
+      } else {
+        candleStore[symbol] = { candles: await getLastCandlesticks(binance, symbol, interval, historyLength) }; 
+      }
+    }
+    const wsEndpoint = binance.websockets.candlesticks(symbol, interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
       let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
       let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
       
@@ -101,20 +112,25 @@ export const listenForCandlesticks = async (binance: Binance, pair: string, inte
       };
 
       // Check if the previous candlestick was final.
-      if (candlesticks[candlesticks.length - 1].isFinal === true) {
+      if (candleStore[symbol] === undefined || candleStore[symbol].candles === undefined) {
+        candleStore[symbol] = { candles: [newCandlestick] }
+      } else if (candleStore[symbol].candles.length === 0) {
+        // Push new since candles do not exist.
+        candleStore[symbol].candles.push(newCandlestick);
+      } else if (candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal === true) {
         // Push new since it was final
-        candlesticks.push(newCandlestick);
+        candleStore[symbol].candles.push(newCandlestick);
       } else {
         // Update since it was not final
-        candlesticks[candlesticks.length - 1] = newCandlestick;
+        candleStore[symbol].candles[candleStore[symbol].candles.length - 1] = newCandlestick;
       }
 
       // Check if the array length exceeds the maximum allowed size
-      if (candlesticks.length > maxCandlesticks) {
-        // Remove the oldest candlesticks to keep the array size within the limit
-        candlesticks = candlesticks.slice(candlesticks.length - maxCandlesticks);
+      if (candleStore[symbol]?.candles?.length > maxCandlesticks) {
+        // Remove the oldest candleStore[symbol].candles to keep the array size within the limit
+        candleStore[symbol].candles = candleStore[symbol]?.candles.slice(candleStore[symbol]?.candles?.length - maxCandlesticks);
       }
-      callback(candlesticks);
+      callback(candleStore[symbol].candles);
     });
   } catch (error: any) {
     console.log(error);

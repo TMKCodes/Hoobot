@@ -26,11 +26,12 @@
 
 import fs from 'fs';
 
-const logFilePath = './trading_logs.txt';
+const logFilePath = './logs.txt';
 
 // Log to file function
 export function logToFile(logMessage: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    console.log(logMessage);
     fs.appendFile(logFilePath, `${logMessage}\n`, (err) => {
       if (err) {
         console.error('Error writing to log file:', err);

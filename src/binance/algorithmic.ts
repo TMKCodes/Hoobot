@@ -7,7 +7,7 @@ import { checkBeforeOrder, tradeDirection } from "./tradeChecks";
 import { ConsoleLogger } from "./consoleLogger";
 import { play } from "./playSound";
 import { sendMessageToChannel } from "../discord/discord";
-import { getCurrentBalances } from "./balances";
+import { Balances, getCurrentBalances } from "./balances";
 import { calculateEMA, logEMASignals } from "./ema";
 import { calculateRSI, logRSISignals } from "./rsi";
 import { calculateMACD, logMACDSignals } from "./macd";
@@ -29,25 +29,35 @@ const prev: previous = {
   longEma: undefined,
 }
 
+export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
+  const difference = newNumber - oldNumber;
+  const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
+  return percentageDifference;
+}
+
+export const reverseSign = (number: number) => {
+  return -number;
+}
+
 // Place buy or sell order based on EMA difference
 async function placeTrade(
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
-  pair: string,
+  symbol: string,
   lastOrder: order,
   shortEma: number,
   longEma: number,
   rsi: number,
   macd: { macdLine: number; signalLine: number; histogram: number; },
-  balance: { [coin: string]: number; },
+  balances: Balances,
   orderBook: any,
   closePrice: number,
   filter: filter,
   options: ConfigOptions,
 ) {
-  const balanceA = await binance.roundStep(balance[pair.split("/")[0]], filter.stepSize);
-  const balanceB = await binance.roundStep(balance[pair.split("/")[1]], filter.stepSize);
+  const balanceA = await binance.roundStep(balances[symbol.split("/")[0]], filter.stepSize);
+  const balanceB = await binance.roundStep(balances[symbol.split("/")[1]], filter.stepSize);
 
   const direction = tradeDirection(consoleLogger, balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
   consoleLogger.push(`Trade direction`, direction);
@@ -69,16 +79,17 @@ async function placeTrade(
     const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
+    const percentageChange = calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice) - 0.075;
     if (checkBefore === true) {
       let order: any = false;
       try {
         play(soundFile);
         // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
-        order = await binance.sell(pair.split("/").join(""), roundedQuantity, roundedPrice);
-        const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
+        order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
+        const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
         consoleLogger.push(`sell-order`, {
-          pair: pair.split("/").join(""),
+          symbol: symbol.split("/").join(""),
           quantity: roundedQuantity,
           price: roundedPrice,
           stopPrice: roundedStopPrice,
@@ -109,15 +120,16 @@ async function placeTrade(
     const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
+      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice)) - 0.075;
       let order: any = false;
       try {
         play(soundFile);
         // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
-        order = await binance.buy(pair.split("/").join(""), roundedQuantity, roundedPrice);
-        const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${pair}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Stop Price: ${roundedStopPrice}`;
+        order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
+        const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
         sendMessageToChannel(discord, cryptoChannelID, orderMsg);
         consoleLogger.push(`buy-order`, {
-          pair: pair.split("/").join(""),
+          symbol: symbol.split("/").join(""),
           quantity: roundedQuantity,
           price: roundedPrice,
           stopPrice: roundedStopPrice,
@@ -139,7 +151,15 @@ async function placeTrade(
 
 // Rebalancing function (adjust this function based on your rebalancing strategy)
 // 
-export async function algorithmic(discord: Client, binance: Binance, consoleLogger: ConsoleLogger, pair: string, candlesticks: candlestick[], filter: filter, options: ConfigOptions) {
+export async function algorithmic(
+  discord: Client, 
+  binance: Binance, 
+  consoleLogger: ConsoleLogger, 
+  symbol: string, 
+  balances: Balances,
+  candlesticks: candlestick[], 
+  filter: filter, 
+  options: ConfigOptions) {
   try {
     const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
     consoleLogger.push(`Candlestick time`, candleTime);
@@ -149,7 +169,7 @@ export async function algorithmic(discord: Client, binance: Binance, consoleLogg
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return
     }
-    const orderBook = await binance.depth(pair.split("/").join(""));
+    const orderBook = await binance.depth(symbol.split("/").join(""));
 
     // Check for open orders before placing a new one
     const openOrders = await binance.openOrders(false); // Implement a function to get open orders
@@ -158,10 +178,9 @@ export async function algorithmic(discord: Client, binance: Binance, consoleLogg
       const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
       return await handleOpenOrders(discord, binance, openOrders, orderBook, maxAgeInSeconds, options);
     }
-
-    const balances = await getCurrentBalances(binance, pair.split("/"));
-    consoleLogger.push(pair.split("/")[0], balances[pair.split("/")[0]].toFixed(7));
-    consoleLogger.push(pair.split("/")[1], balances[pair.split("/")[1]].toFixed(7));
+    
+    consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
+    consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const shortEma = calculateEMA(candlesticks, options.shortEma);
     const longEma = calculateEMA(candlesticks, options.longEma);
     const rsi = calculateRSI(candlesticks, options.rsiLength);
@@ -169,9 +188,9 @@ export async function algorithmic(discord: Client, binance: Binance, consoleLogg
     logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma, prev.longEma);
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);
-    const lastOrder = await getLastCompletedOrder(binance, pair);
+    const lastOrder = await getLastCompletedOrder(binance, symbol);
 
-    await placeTrade(discord, binance, consoleLogger, pair, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
+    await placeTrade(discord, binance, consoleLogger, symbol, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;

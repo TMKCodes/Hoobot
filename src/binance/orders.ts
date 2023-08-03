@@ -61,7 +61,7 @@ export const cancelOrder = async (binance: Binance, symbol: string, orderId: num
 };
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = Math.abs(newNumber - oldNumber);
+  const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
 }
@@ -78,7 +78,6 @@ export const handleOpenOrders = async (
   const currentTime = Date.now();
   for (const order of openOrders) {
     const { orderId, symbol, time, side, status, price } = order;
-    console.log(order)
     if (orderId === null) {
       return;
     }
@@ -104,11 +103,11 @@ export const handleOpenOrders = async (
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
         const bid = orderBookBids[orderBookBids.length - 1];
         console.log("Open Order, bid: ", bid);
-        const diff = calculatePercentageDifference(bid, price);
+        const diff = Math.abs(calculatePercentageDifference(bid, price));
         console.log(`diff: ${diff}`);
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage}, difference between ${bid} bid and current ${price} order price ${diff}.`;
+          const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${bid} bid and current ${price} order price ${diff}.`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           console.log(`orderMsg`);
         }
@@ -116,11 +115,11 @@ export const handleOpenOrders = async (
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
         const ask = orderBookAsks[0];
         console.log("Open Order, ask: ", ask);
-        const diff = calculatePercentageDifference(ask, price);
+        const diff = Math.abs(calculatePercentageDifference(ask, price));
         console.log(`diff: ${diff}`);
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage}, difference between ${ask} ask and current ${price} order price ${diff}.`;
+          const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${ask} ask and current ${price} order price ${diff}.`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           console.log(`orderMsg`);
         }

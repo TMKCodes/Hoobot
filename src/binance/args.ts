@@ -26,7 +26,7 @@
 
 export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
 
-export type BotMode = "algorithmic" | "hilow" | "arbitage"
+export type BotMode = "algorithmic" | "hilow" | "arbitrage"
 
 export const getSecondsFromInterval = (interval: CandlestickInterval): number => {
   const intervalToSeconds: Record<CandlestickInterval, number> = {
@@ -81,7 +81,7 @@ export function parseArgs(args: string[]): ConfigOptions {
       apiKey: process.env.API_KEY || '',
       apiSecret: process.env.API_SECRET || '',
       mode: process.env.MODE as BotMode || 'algorithmic',
-      symbols: process.env.SYMBOLS ? process.env.SYMBOLS.split(",") : [],
+      symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
       candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
       shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
       longEma: parseFloat(process.env.LONG_EMA!) || 26,

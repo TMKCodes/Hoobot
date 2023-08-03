@@ -34,7 +34,7 @@ interface consoleData {
   [key: string]: string | string[] | number | boolean | object | undefined;
 }
 
-const consoleLogger = (): ConsoleLogger => {
+export const consoleLogger = (): ConsoleLogger => {
   let DisplayData: consoleData = {};
 
   const push = (key: string, value: string | string[] | number | boolean | object | undefined) => {
@@ -73,5 +73,3 @@ const consoleLogger = (): ConsoleLogger => {
 
   return logger;
 };
-
-export default consoleLogger();

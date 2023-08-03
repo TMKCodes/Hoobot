@@ -58,18 +58,7 @@ export const checkBeforeOrder = (
     }
     return true;
   };
-
-
-
-  // const isNotionalValid = (min: number, max: number, value: number) => {
-  //   if (value < min) {
-  //     return logFailure(`Amount too low.`);
-  //   } else if (value > max) {
-  //     return logFailure(`Amount too high.`);
-  //   }
-  //   return true;
-  // }
-
+  
   if (
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), stopPrice, 'Limit price') ||
     !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Stop price') ||
@@ -123,9 +112,9 @@ export const tradeDirection = (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine && macd.macdLine < 0 && macd.histogram > 0.10) {
+  if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0 && macd.histogram < -0.10) {
+  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0 && macd.histogram < 0) {
     macdCheck = `SELL`;
   }
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
