@@ -70,6 +70,7 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
 export const handleOpenOrders = async (
   discord: Client, 
   binance: Binance, 
+  symbol: string,
   openOrders: any[], 
   orderBook: any, 
   maxAgeSeconds: number = 600,
@@ -77,13 +78,17 @@ export const handleOpenOrders = async (
 ) => {
   const currentTime = Date.now();
   for (const order of openOrders) {
-    const { orderId, symbol, time, side, status, price } = order;
+    const { orderId, oSymbol, time, side, status, price } = order;
+    if (oSymbol !== symbol) {
+      return;
+    }
     if (orderId === null) {
       return;
     }
     const orderAgeSeconds = Math.floor((currentTime - time) / 1000);
-    console.log(`Order ID: ${orderId}, Symbol: ${symbol}, Age: ${orderAgeSeconds} seconds`);
+    console.log(`Order ID: ${orderId}, Symbol: ${oSymbol}, Age: ${orderAgeSeconds} seconds`);
     // Get order status to determine if it's active, partially filled, or filled
+    
     if (status === 'PARTIALLY_FILLED') {
       const statusMsg = `Order ID ${orderId} for symbol ${symbol} is already partially filled..`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);

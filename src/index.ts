@@ -69,7 +69,6 @@ const main = async () => {
     }
 
     let balances = await getCurrentBalances(binance);
-    const balanceLogger = consoleLogger();
     binance.websockets.userData((data: any) => {
       const newBalances = getBalancesFromWebsocket(data);
       if (newBalances !== undefined) {
@@ -77,9 +76,6 @@ const main = async () => {
         for (const key of balanceKeys) {
           balances[key] = newBalances[key];
         }
-        balanceLogger.push(`New balance`, balances);
-        balanceLogger.print();
-        balanceLogger.flush();
       }
     }, (data: any) => {
       // Possible to add discord notification if order has been fulfilled with websocket notification.

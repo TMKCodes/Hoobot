@@ -56,16 +56,16 @@ async function placeTrade(
   filter: filter,
   options: ConfigOptions,
 ) {
-  const balanceA = await binance.roundStep(balances[symbol.split("/")[0]], filter.stepSize);
-  const balanceB = await binance.roundStep(balances[symbol.split("/")[1]], filter.stepSize);
+  const quoteBalance = balances[symbol.split("/")[0]];
+  const baseBalance = balances[symbol.split("/")[1]];
 
-  const direction = tradeDirection(consoleLogger, balanceA, balanceB, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
+  const direction = tradeDirection(consoleLogger, quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
   consoleLogger.push(`Trade direction`, direction);
 
   if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-    const quantity = balanceA;
+    const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
       maxQuantity = Math.min(quantity, options.maxAmount);
@@ -82,7 +82,7 @@ async function placeTrade(
       console.log(quantity);
       console.log(filter.minNotional);
       console.log(filter.maxNotional);
-      if(quoteQuantity > parseFloat(filter.minNotional) && quoteQuantity < parseFloat(filter.maxNotional)) {
+      if(quoteQuantity > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
           // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
@@ -111,26 +111,32 @@ async function placeTrade(
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
-    const quantity = (balanceB / price) * 0.99;
-    if (quantity < filter.minNotional && quantity > filter.maxNotional) {
-      return false;
-    }
-    let maxQuantity = quantity;
+    console.log(baseBalance);
+    const quantityInQuote = (baseBalance / price) * 0.999;
+    const quantityInBase = baseBalance * 0.999
+    let maxQuantityInQuote = quantityInQuote;
     if (options.maxAmount !== 0) {
-      maxQuantity = Math.min(quantity, options.maxAmount);
+      maxQuantityInQuote = Math.min(quantityInQuote, options.maxAmount);
+    }
+    let maxQuantityInBase = quantityInBase;
+    if (options.maxAmount !== 0) {
+      maxQuantityInBase = Math.min(quantityInBase, options.maxAmount);
     }
     const stopPrice = price * (1 + (options.riskPercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
-    const quoteQuantity = roundedQuantity * price;
+    const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
+    const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
       const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice)) - 0.075;
       let order: any = false;
-      if(quoteQuantity > parseFloat(filter.minNotional) && quoteQuantity < parseFloat(filter.maxNotional)) {
+      console.log(`roundedQuantityInBase: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}`);
+      if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
           // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
+          console.log(`roundedQuantity: ${roundedQuantity}`);
+          console.log(`roundedPrice: ${roundedPrice}`);
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
@@ -141,13 +147,14 @@ async function placeTrade(
             stopPrice: roundedStopPrice,
           })
         } catch (error: any) {
-          console.error(JSON.stringify(error));
+          console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
             sendMessageToChannel(discord, cryptoChannelID, error.msg);
           }
         }
         return order;
       } else {
+        console.log(`\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
         return false;
       }
     } else {
@@ -181,11 +188,11 @@ export async function algorithmic(
     const orderBook = await binance.depth(symbol.split("/").join(""));
 
     // Check for open orders before placing a new one
-    const openOrders = await binance.openOrders(false); // Implement a function to get open orders
+    const openOrders = await binance.openOrders(symbol.split("/").join("")); // Implement a function to get open orders
     if (openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
       const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-      return await handleOpenOrders(discord, binance, openOrders, orderBook, maxAgeInSeconds, options);
+      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options);
     }
     
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));

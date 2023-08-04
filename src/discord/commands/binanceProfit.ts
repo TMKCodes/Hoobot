@@ -34,6 +34,11 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
   return percentageDifference;
 }
 
+export const getUnixTimestamp = (datetime: string): number => {
+  const date = new Date(datetime);
+  return Math.floor(date.getTime() / 1000);
+}
+
 const reverseSign = (number: number) => {
   return -number;
 }
@@ -52,40 +57,47 @@ export default {
       return;
     }
 
+    const targetDatetime = '2023-07-25 11:29:08';
+    const targetTimestamp = getUnixTimestamp(targetDatetime);
+
     try {
       // Get the user's trade history for the given pair
       const tradeHistory = await binance.trades(pair);
+      const newTradeHistory = tradeHistory.filter((trade: { time: number }) => trade.time / 1000 >= targetTimestamp);
 
       let totalProfit = 0;
       let lastTrade: any = undefined;
       let lastTime = "";
-
-      for (const trade of tradeHistory) {
-        if (lastTrade === undefined) {
-          // Set last trade since it was undefined.
-          lastTrade = trade;
-          lastTime = trade.time;
-        } else {
-          if (trade.isBuyer) {
-            // Calculate profit for the buy trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice);
-            totalProfit += reverseSign(profit);
+      if(newTradeHistory.length >= 2) {
+        for (const trade of newTradeHistory) {
+          if (lastTrade === undefined) {
+            // Set last trade since it was undefined.
+            lastTrade = trade;
+            lastTime = trade.time;
           } else {
-            // Calculate profit for the sell trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice); 
-            totalProfit += profit;
+            if (trade.isBuyer) {
+              // Calculate profit for the buy trade
+              const newPrice = parseFloat(trade.price);
+              const oldPrice = parseFloat(lastTrade.price);
+              const profit = calculatePercentageDifference(oldPrice, newPrice);
+              totalProfit += reverseSign(profit);
+            } else {
+              // Calculate profit for the sell trade
+              const newPrice = parseFloat(trade.price);
+              const oldPrice = parseFloat(lastTrade.price);
+              const profit = calculatePercentageDifference(oldPrice, newPrice); 
+              totalProfit += profit;
+            }
+            lastTrade = trade; // Update lastTrade for the next iteration
           }
-          lastTrade = trade; // Update lastTrade for the next iteration
         }
-      }
-      totalProfit = totalProfit - (tradeHistory.length * 0.075);
+        totalProfit = totalProfit - (newTradeHistory.length * 0.075);
 
-      // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-      await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
+        // The totalProfit variable now contains the overall profit for all sell orders in the trade history
+        await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
+      } else {
+        await interaction.reply(`Total profit for ${pair}: Can not calculate percentage, less than two trades.`);
+      }
     } catch (error) {
       console.error('Error fetching trade history:', error);
       await interaction.reply('An error occurred while fetching trade history.');

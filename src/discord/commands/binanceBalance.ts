@@ -25,25 +25,25 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { getCurrentBalance } from '../../binance/balances';
+import { Balances, getCurrentBalances } from '../../binance/balances';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../binance/args';
 
 export default {
   builder: new SlashCommandBuilder()
                 .setName("balances")
-                .setDescription("Replices with Binance balances!")
-                .addStringOption(option =>
-                  option.setName('coin')
-                    .setDescription('The coin to check')),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
-    const coin = interaction.options.getString('coin').toUpperCase(); // Get the 'coin' value from the interaction options
-    if (!coin) {
-      await interaction.reply("Please provide a valid coin to check.");
-      return;
-    }
+                .setDescription("Replices with Binance balances!"),
+  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, config: ConfigOptions) => {
+    
 
-    const balances = await getCurrentBalance(binance, coin);
-    await interaction.reply(`${coin}: ${JSON.stringify(balances)}`);
+    const balances = await getCurrentBalances(binance);
+    const newBalances: Balances = {}
+    const symbols = Object.keys(balances);
+    for (const symbol of symbols) {
+      if(balances[symbol] > 0) {
+        newBalances[symbol] = balances[symbol];
+      }
+    }
+    await interaction.reply(`${JSON.stringify(newBalances, null, 4)}`);
   }
 }
