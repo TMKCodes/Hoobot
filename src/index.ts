@@ -68,7 +68,7 @@ const main = async () => {
       discord = loginDiscord(binance, options);
     }
 
-    let balances = await getCurrentBalances(binance);
+    const balances = await getCurrentBalances(binance);
     binance.websockets.userData((data: any) => {
       const newBalances = getBalancesFromWebsocket(data);
       if (newBalances !== undefined) {

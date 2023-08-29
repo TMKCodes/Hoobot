@@ -24,7 +24,9 @@
 * the use of this software.
 * ===================================================================== */
 
+import Binance from "node-binance-api";
 import { ConfigOptions } from "./args";
+import { Balances, getCurrentBalance } from "./balances";
 import { ConsoleLogger } from "./consoleLogger";
 import { logToFile } from "./logToFile";
 import { order } from "./orders";
@@ -71,10 +73,10 @@ export const checkBeforeOrder = (
 };
 
 
-export const tradeDirection = (
+export const tradeDirection = async (
   consoleLogger: ConsoleLogger,
-  balanceA: number, 
-  balanceB: number, 
+  balanceBase: number, 
+  balanceQuote: number, 
   closePrice: number, 
   shortEma: number, 
   longEma: number, 
@@ -90,7 +92,7 @@ export const tradeDirection = (
   let rsiCheck: string = `HOLD`;
 
 
-  if(balanceA < (balanceB / closePrice)) {
+  if(balanceBase < (balanceQuote / closePrice)) {
     balanceCheck = 'BUY';
   } else {
     balanceCheck = 'SELL';
@@ -105,6 +107,9 @@ export const tradeDirection = (
       nextOrderCheck = 'BUY';
     }
   }
+  if (balanceCheck !== nextOrderCheck) {
+    return "RECHECK BALANCES";
+  }
 
   if (shortEma > longEma) {
     emaCheck = 'BUY';
@@ -112,9 +117,9 @@ export const tradeDirection = (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
+  if (macd.macdLine > macd.signalLine) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.macdLine > 0 && macd.histogram < 0) {
+  } else if (macd.macdLine < macd.signalLine) {
     macdCheck = `SELL`;
   }
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {

@@ -12,6 +12,7 @@ import { calculateEMA, logEMASignals } from "./ema";
 import { calculateRSI, logRSISignals } from "./rsi";
 import { calculateMACD, logMACDSignals } from "./macd";
 import { candlestick } from "./candlesticks";
+import { dir } from "console";
 
 
 const soundFile = './alarm.mp3'
@@ -59,10 +60,12 @@ async function placeTrade(
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
 
-  const direction = tradeDirection(consoleLogger, quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
+  const direction = await tradeDirection(consoleLogger,quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
   consoleLogger.push(`Trade direction`, direction);
-
-  if (direction === 'SELL') {
+  if (direction === "RECHECK BALANCES") {
+    balances = await getCurrentBalances(binance);
+    return false;
+  } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     const quantity = quoteBalance;
@@ -79,9 +82,6 @@ async function placeTrade(
     const percentageChange = calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice) - 0.075;
     if (checkBefore === true) {
       let order: any = false;
-      console.log(quantity);
-      console.log(filter.minNotional);
-      console.log(filter.maxNotional);
       if(quoteQuantity > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
@@ -130,13 +130,10 @@ async function placeTrade(
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
       const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice)) - 0.075;
       let order: any = false;
-      console.log(`roundedQuantityInBase: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}`);
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
           // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
-          console.log(`roundedQuantity: ${roundedQuantity}`);
-          console.log(`roundedPrice: ${roundedPrice}`);
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
