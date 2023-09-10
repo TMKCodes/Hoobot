@@ -46,7 +46,7 @@ async function placeTrade(
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  lastOrder: order,
+  tradeHistory: order[],
   shortEma: number,
   longEma: number,
   rsi: number,
@@ -59,8 +59,8 @@ async function placeTrade(
 ) {
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
-
-  const direction = await tradeDirection(consoleLogger,quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, lastOrder, options);
+  const lastTrade = tradeHistory[0];
+  const direction = await tradeDirection(consoleLogger,quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, tradeHistory, options);
   consoleLogger.push(`Trade direction`, direction);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
@@ -79,7 +79,7 @@ async function placeTrade(
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    const percentageChange = calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice) - 0.075;
+    const percentageChange = calculatePercentageDifference(parseFloat(lastTrade.price), roundedPrice) - 0.075;
     if (checkBefore === true) {
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
@@ -128,7 +128,7 @@ async function placeTrade(
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastOrder.price), roundedPrice)) - 0.075;
+      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastTrade.price), roundedPrice)) - 0.075;
       let order: any = false;
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
@@ -191,6 +191,8 @@ export async function algorithmic(
       const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
       return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options);
     }
+
+    const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
     
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
@@ -203,7 +205,7 @@ export async function algorithmic(
     logRSISignals(consoleLogger, rsi);
     const lastOrder = await getLastCompletedOrder(binance, symbol);
 
-    await placeTrade(discord, binance, consoleLogger, symbol, lastOrder, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
+    await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;

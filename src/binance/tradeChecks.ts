@@ -24,12 +24,10 @@
 * the use of this software.
 * ===================================================================== */
 
-import Binance from "node-binance-api";
 import { ConfigOptions } from "./args";
-import { Balances, getCurrentBalance } from "./balances";
 import { ConsoleLogger } from "./consoleLogger";
 import { logToFile } from "./logToFile";
-import { order } from "./orders";
+import { calculatePercentageDifference, order } from "./orders";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -82,15 +80,52 @@ export const tradeDirection = async (
   longEma: number, 
   macd: { macdLine: number; signalLine: number; histogram: number; }, 
   rsi: number, 
-  lastOrder: order, 
+  tradeHistory: order[], 
   options: ConfigOptions
 ) => {
-  let nextOrderCheck: string = `HOLD`;
+  const lastTrade = tradeHistory[0];
+  let profitCheck: string = "HOLD";
+  let nextTradeCheck: string = `HOLD`;
+  let lastProfit: number = 0;
+  let nextPossibleProfit: number = 0;
   let balanceCheck: string = `HOLD`;
   let emaCheck: string = `HOLD`;
   let macdCheck: string = `HOLD`;
   let rsiCheck: string = `HOLD`;
 
+  if (tradeHistory.length >= 2) {
+    if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
+      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
+      lastProfit = profitLastTrade;
+      const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
+      nextPossibleProfit = possibleProfit;
+      if(profitLastTrade < 0) {
+        if(possibleProfit > 0) {
+          profitCheck = "SELL";
+        } else {
+          profitCheck = "HOLD";
+        }
+      } else {
+        profitCheck = "SELL"
+      }
+    } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
+      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
+      lastProfit = profitLastTrade;
+      const possibleProfit = calculatePercentageDifference( parseFloat(tradeHistory[0].price), closePrice);
+      nextPossibleProfit = possibleProfit;
+      if(profitLastTrade < 0) {
+        if(possibleProfit > 0) {
+          profitCheck = "BUY";
+        } else {
+          profitCheck = "HOLD";
+        }
+      } else {
+        profitCheck = "BUY"
+      }
+    }
+  } else {
+    profitCheck = "SKIP";
+  }
 
   if(balanceBase < (balanceQuote / closePrice)) {
     balanceCheck = 'BUY';
@@ -98,16 +133,16 @@ export const tradeDirection = async (
     balanceCheck = 'SELL';
   }
   
-  if (lastOrder === undefined) {
-    nextOrderCheck = balanceCheck;
+  if (lastTrade === undefined) {
+    nextTradeCheck = balanceCheck;
   } else {
-    if (lastOrder.isBuyer === true) {
-      nextOrderCheck = 'SELL';
+    if (lastTrade.isBuyer === true) {
+      nextTradeCheck = 'SELL';
     } else {
-      nextOrderCheck = 'BUY';
+      nextTradeCheck = 'BUY';
     }
   }
-  if (balanceCheck !== nextOrderCheck) {
+  if (balanceCheck !== nextTradeCheck) {
     return "RECHECK BALANCES";
   }
 
@@ -137,45 +172,54 @@ export const tradeDirection = async (
   }
 
   let tradeDirection = 'HOLD';
-  if (nextOrderCheck === 'SELL' && balanceCheck === 'SELL') {
-    let sellSignal = 'SELL'
+  if (nextTradeCheck === 'SELL' && balanceCheck === 'SELL') {
+    let signal = 'SELL'
     if(options.useEMA === true && (emaCheck === 'BUY' || emaCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useEMA === false) {
       emaCheck = "DISABLED";
     }
     if(options.useMACD === true && (macdCheck === 'BUY' || macdCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useMACD === false) {
       macdCheck = "DISABLED";
     }
     if(options.useRSI === true && (rsiCheck === 'BUY' || rsiCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useRSI === false) {
       rsiCheck = "DISABLED";
     }
-    tradeDirection = sellSignal;
-  } else if(nextOrderCheck == 'BUY' && balanceCheck === 'BUY') {
-    let sellSignal = 'BUY'
+    if (profitCheck === 'BUY' || profitCheck === 'HOLD') {
+      signal = "HOLD";
+    }
+    tradeDirection = signal;
+  } else if(nextTradeCheck == 'BUY' && balanceCheck === 'BUY') {
+    let signal = 'BUY'
     if(options.useEMA === true && (emaCheck === 'SELL' || emaCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useEMA === false) {
       emaCheck = "DISABLED";
     }
     if(options.useMACD === true && (macdCheck === 'SELL' || macdCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useMACD === false) {
       macdCheck = "DISABLED";
     }
     if(options.useRSI === true && (rsiCheck === 'SELL' || rsiCheck === 'HOLD')) {
-      sellSignal = 'HOLD';
+      signal = 'HOLD';
     } else if(options.useRSI === false) {
       rsiCheck = "DISABLED";
     }
-    tradeDirection = sellSignal;
+    if (profitCheck === 'SELL' || profitCheck === 'HOLD') {
+      signal = "HOLD";
+    }
+    tradeDirection = signal;
   }
   consoleLogger.push("Trade checks", {
-    'Next order': nextOrderCheck,
+    'Last profit': lastProfit,
+    'Possible profit': nextPossibleProfit,
+    'Profit': profitCheck,
+    'Next Trade': nextTradeCheck,
     'Balance': balanceCheck,
     'EMA signal': emaCheck,
     'MACD signal': macdCheck,
