@@ -99,29 +99,46 @@ export const tradeDirection = async (
       lastProfit = profitLastTrade;
       const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
       nextPossibleProfit = possibleProfit;
-      if(profitLastTrade < 0) {
-        if(possibleProfit > 0) {
+      if(options.holdUntilPositiveTrade === true) {
+        if(possibleProfit > 0.1) {
           profitCheck = "SELL";
         } else {
           profitCheck = "HOLD";
         }
       } else {
-        profitCheck = "SELL"
+        if(profitLastTrade < 0) {
+          if(possibleProfit > 0.1) {
+            profitCheck = "SELL";
+          } else {
+            profitCheck = "HOLD";
+          }
+        } else {
+          profitCheck = "SELL"
+        }
       }
     } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
       const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
       lastProfit = profitLastTrade;
-      const possibleProfit = calculatePercentageDifference( parseFloat(tradeHistory[0].price), closePrice);
+      const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
       nextPossibleProfit = possibleProfit;
-      if(profitLastTrade < 0) {
-        if(possibleProfit > 0) {
+      if(options.holdUntilPositiveTrade === true) {
+        if(possibleProfit > 0.1) {
           profitCheck = "BUY";
         } else {
           profitCheck = "HOLD";
         }
       } else {
-        profitCheck = "BUY"
+        if(profitLastTrade < 0) {
+          if(possibleProfit > 0.1) {
+            profitCheck = "BUY";
+          } else {
+            profitCheck = "HOLD";
+          }
+        } else {
+          profitCheck = "BUY"
+        }
       }
+      
     }
   } else {
     profitCheck = "SKIP";
@@ -158,9 +175,9 @@ export const tradeDirection = async (
     macdCheck = `SELL`;
   }
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
-    if (rsi > 50) {
+    if (rsi > 55) {
       rsiCheck = 'SELL';
-    } else if (rsi < 50) {
+    } else if (rsi < 45) {
       rsiCheck = 'BUY';
     }
   } else {

@@ -189,7 +189,7 @@ export async function algorithmic(
     if (openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
       const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options);
+      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
     }
 
     const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);

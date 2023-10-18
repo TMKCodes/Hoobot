@@ -71,6 +71,7 @@ export interface ConfigOptions {
   tradeFee: number;
   pairMinVolume?: number;
   pairMinPriceChange?: number;
+  holdUntilPositiveTrade?: boolean;
   [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
@@ -98,6 +99,7 @@ export function parseArgs(args: string[]): ConfigOptions {
       tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
       pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
       pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
+      holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
     };
   }
   // If command-line arguments provided, parse them

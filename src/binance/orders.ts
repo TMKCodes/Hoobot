@@ -29,6 +29,7 @@ import { play } from "./playSound";
 import { sendMessageToChannel } from "../discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions } from "./args";
+import { ConsoleLogger } from "./consoleLogger";
 
 const soundFile = './alarm.mp3'
 
@@ -74,7 +75,8 @@ export const handleOpenOrders = async (
   openOrders: any[], 
   orderBook: any, 
   maxAgeSeconds: number = 600,
-  options: ConfigOptions
+  options: ConfigOptions,
+  consoleLogger: ConsoleLogger, 
 ) => {
   const currentTime = Date.now();
   for (const order of openOrders) {
@@ -87,22 +89,25 @@ export const handleOpenOrders = async (
     }
     const orderAgeSeconds = Math.floor((currentTime - time) / 1000);
     console.log(`Order ID: ${orderId}, Symbol: ${oSymbol}, Age: ${orderAgeSeconds} seconds`);
+    consoleLogger.push("Order ID: ", orderId);
+    consoleLogger.push("Symbol: ", oSymbol);
+    consoleLogger.push("Age seconds: ", orderAgeSeconds);
     // Get order status to determine if it's active, partially filled, or filled
     
     if (status === 'PARTIALLY_FILLED') {
       const statusMsg = `Order ID ${orderId} for symbol ${symbol} is already partially filled..`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
-      console.log(statusMsg);
+      consoleLogger.push("status-msg", statusMsg);
     } else if (status === 'FILLED') {
       const statusMsg = `Order ID ${orderId} for symbol ${symbol} is already filled.`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
-      console.log(statusMsg);
+      consoleLogger.push("status-msg", statusMsg);
     } else if (orderAgeSeconds > maxAgeSeconds) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
       const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to exceeding max age ${maxAgeSeconds} seconds.`;
       sendMessageToChannel(discord, cryptoChannelID, orderMsg);
-      console.log(`orderMsg`);
+      consoleLogger.push("order-msg", orderMsg);
     } else {
       if (side === "BUY") {
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
@@ -114,7 +119,7 @@ export const handleOpenOrders = async (
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${bid} bid and current ${price} order price ${diff}.`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
-          console.log(`orderMsg`);
+          consoleLogger.push("order-msg", orderMsg);
         }
       } else {
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
@@ -126,7 +131,7 @@ export const handleOpenOrders = async (
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${ask} ask and current ${price} order price ${diff}.`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
-          console.log(`orderMsg`);
+          consoleLogger.push("order-msg", orderMsg);
         }
       }
     }
