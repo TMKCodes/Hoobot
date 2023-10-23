@@ -97,24 +97,32 @@ export const tradeDirection = async (
 
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
 
-  if(force[symbol]?.skip === true) {
-    profitCheck = "SKIP";
-  } else {
+  if(tradeHistory.length >= 2) {
+    if(tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
+      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
+      lastProfit = profitLastTrade;
+      const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
+      nextPossibleProfit = possibleProfit;
+    } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
+      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
+        lastProfit = profitLastTrade;
+        const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
+        nextPossibleProfit = possibleProfit;
+    }
+  }
+
+  if(force[symbol]?.skip !== true) {
     if (tradeHistory.length >= 2) {
       if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
-        const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
-        lastProfit = profitLastTrade;
-        const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
-        nextPossibleProfit = possibleProfit;
         if(options.holdUntilPositiveTrade === true) {
-          if(possibleProfit > 0.1) {
+          if(nextPossibleProfit > 0.1) {
             profitCheck = "SELL";
           } else {
             profitCheck = "HOLD";
           }
         } else {
-          if(profitLastTrade < 0) {
-            if(possibleProfit > 0.1) {
+          if(lastProfit < 0) {
+            if(nextPossibleProfit > 0.1) {
               profitCheck = "SELL";
             } else {
               profitCheck = "HOLD";
@@ -124,19 +132,15 @@ export const tradeDirection = async (
           }
         }
       } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
-        const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
-        lastProfit = profitLastTrade;
-        const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
-        nextPossibleProfit = possibleProfit;
         if(options.holdUntilPositiveTrade === true) {
-          if(possibleProfit > 0.1) {
+          if(nextPossibleProfit > 0.1) {
             profitCheck = "BUY";
           } else {
             profitCheck = "HOLD";
           }
         } else {
-          if(profitLastTrade < 0) {
-            if(possibleProfit > 0.1) {
+          if(lastProfit < 0) {
+            if(nextPossibleProfit > 0.1) {
               profitCheck = "BUY";
             } else {
               profitCheck = "HOLD";
@@ -150,6 +154,8 @@ export const tradeDirection = async (
     } else {
       profitCheck = "SKIP";
     }
+  } else {
+    profitCheck = "SKIP";
   }
   
 
