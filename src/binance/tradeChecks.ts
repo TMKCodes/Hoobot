@@ -24,6 +24,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { readFileSync } from "fs";
 import { ConfigOptions } from "./args";
 import { ConsoleLogger } from "./consoleLogger";
 import { logToFile } from "./logToFile";
@@ -73,6 +74,7 @@ export const checkBeforeOrder = (
 
 export const tradeDirection = async (
   consoleLogger: ConsoleLogger,
+  symbol: string,
   balanceBase: number, 
   balanceQuote: number, 
   closePrice: number, 
@@ -93,56 +95,63 @@ export const tradeDirection = async (
   let macdCheck: string = `HOLD`;
   let rsiCheck: string = `HOLD`;
 
-  if (tradeHistory.length >= 2) {
-    if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
-      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
-      lastProfit = profitLastTrade;
-      const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
-      nextPossibleProfit = possibleProfit;
-      if(options.holdUntilPositiveTrade === true) {
-        if(possibleProfit > 0.1) {
-          profitCheck = "SELL";
-        } else {
-          profitCheck = "HOLD";
-        }
-      } else {
-        if(profitLastTrade < 0) {
+  const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
+
+  if(force[symbol]?.skip === true) {
+    profitCheck = "SKIP";
+  } else {
+    if (tradeHistory.length >= 2) {
+      if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
+        const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
+        lastProfit = profitLastTrade;
+        const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
+        nextPossibleProfit = possibleProfit;
+        if(options.holdUntilPositiveTrade === true) {
           if(possibleProfit > 0.1) {
             profitCheck = "SELL";
           } else {
             profitCheck = "HOLD";
           }
         } else {
-          profitCheck = "SELL"
+          if(profitLastTrade < 0) {
+            if(possibleProfit > 0.1) {
+              profitCheck = "SELL";
+            } else {
+              profitCheck = "HOLD";
+            }
+          } else {
+            profitCheck = "SELL"
+          }
         }
-      }
-    } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
-      const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
-      lastProfit = profitLastTrade;
-      const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
-      nextPossibleProfit = possibleProfit;
-      if(options.holdUntilPositiveTrade === true) {
-        if(possibleProfit > 0.1) {
-          profitCheck = "BUY";
-        } else {
-          profitCheck = "HOLD";
-        }
-      } else {
-        if(profitLastTrade < 0) {
+      } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
+        const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
+        lastProfit = profitLastTrade;
+        const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
+        nextPossibleProfit = possibleProfit;
+        if(options.holdUntilPositiveTrade === true) {
           if(possibleProfit > 0.1) {
             profitCheck = "BUY";
           } else {
             profitCheck = "HOLD";
           }
         } else {
-          profitCheck = "BUY"
+          if(profitLastTrade < 0) {
+            if(possibleProfit > 0.1) {
+              profitCheck = "BUY";
+            } else {
+              profitCheck = "HOLD";
+            }
+          } else {
+            profitCheck = "BUY"
+          }
         }
+        
       }
-      
+    } else {
+      profitCheck = "SKIP";
     }
-  } else {
-    profitCheck = "SKIP";
   }
+  
 
   if(balanceBase < (balanceQuote / closePrice)) {
     balanceCheck = 'BUY';
@@ -233,6 +242,7 @@ export const tradeDirection = async (
     tradeDirection = signal;
   }
   consoleLogger.push("Trade checks", {
+    'Symbol': symbol,
     'Last profit': lastProfit,
     'Possible profit': nextPossibleProfit,
     'Profit': profitCheck,

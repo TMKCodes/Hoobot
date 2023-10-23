@@ -13,6 +13,7 @@ import { calculateRSI, logRSISignals } from "./rsi";
 import { calculateMACD, logMACDSignals } from "./macd";
 import { candlestick } from "./candlesticks";
 import { dir } from "console";
+import { readFileSync, writeFileSync } from "fs";
 
 
 const soundFile = './alarm.mp3'
@@ -60,7 +61,7 @@ async function placeTrade(
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const lastTrade = tradeHistory[0];
-  const direction = await tradeDirection(consoleLogger,quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, tradeHistory, options);
+  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, tradeHistory, options);
   consoleLogger.push(`Trade direction`, direction);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
@@ -85,6 +86,9 @@ async function placeTrade(
       if(quoteQuantity > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
+          const force = JSON.parse(readFileSync("force.json", "utf-8"));
+          force[symbol.split("/").join("")].skip = false;
+          writeFileSync("force.json", JSON.stringify(force));
           // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
           order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
@@ -94,7 +98,7 @@ async function placeTrade(
             quantity: roundedQuantity,
             price: roundedPrice,
             stopPrice: roundedStopPrice,
-          })
+          });
         } catch (error: any) {
           console.error(JSON.stringify(error));
           if (error.msg !== undefined) {
@@ -133,6 +137,9 @@ async function placeTrade(
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
           play(soundFile);
+          const force = JSON.parse(readFileSync("force.json", "utf-8"));
+          force[symbol.split("/").join("")].skip = false;
+          writeFileSync("force.json", JSON.stringify(force));
           // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
@@ -142,7 +149,7 @@ async function placeTrade(
             quantity: roundedQuantity,
             price: roundedPrice,
             stopPrice: roundedStopPrice,
-          })
+          });
         } catch (error: any) {
           console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
@@ -199,7 +206,7 @@ export async function algorithmic(
     const shortEma = calculateEMA(candlesticks, options.shortEma);
     const longEma = calculateEMA(candlesticks, options.longEma);
     const rsi = calculateRSI(candlesticks, options.rsiLength);
-    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 9);
+    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 7);
     logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma, prev.longEma);
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);
