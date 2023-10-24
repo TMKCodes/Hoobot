@@ -1,8 +1,8 @@
-{ 
+{
   "BNBUSDT": {
-    "skip": true 
-  }, 
+    "skip": false
+  },
   "ETHTUSD": {
-    "skip": true
+    "skip": false
   }
 }

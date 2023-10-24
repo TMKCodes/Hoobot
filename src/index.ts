@@ -42,6 +42,7 @@ import dotenv from 'dotenv';
 import { algorithmic } from './binance/algorithmic';
 import { getTradeableSymbols } from './binance/symbols';
 import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';
+import { hilow } from './binance/hilow';
 
 
 
@@ -108,7 +109,24 @@ const main = async () => {
         });
       }
     } else if (options.mode === "hilow") {
-
+      if (Array.isArray(options.symbols)) {
+        for (const symbol of options.symbols) {
+          console.log(symbol);
+          const filter = await getFilters(binance, symbol);
+          tradingPairFilters[symbol.split("/").join("")] = filter;
+          const logger = consoleLogger();
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 250, (candlesticks: candlestick[]) => {
+            hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+          });
+        }
+      } else {
+        const filter = await getFilters(binance, options.symbols);
+        tradingPairFilters[options.symbols.split("/").join("")] = filter;
+        const logger = consoleLogger();
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  250, (candlesticks: candlestick[]) => {
+          hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+        });
+      }
     } else if (options.mode === "arbitrage") {
       const symbolInfo = await getTradeableSymbols(binance);
       if (Array.isArray(options.symbols)) {

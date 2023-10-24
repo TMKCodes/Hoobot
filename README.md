@@ -53,6 +53,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `RISK_PERCENTAGE`: The percentage of the account balance the bot can risk for each trade.
 - `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
 - `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
+- `HOLD_UNTIL_POSITIVE_TRADE`: `true` to not allow negative trades.
 
 ### Discord Configuration
 
@@ -60,6 +61,21 @@ Below is an explanation of the various configuration values present in the `.env
 - `DISCORD_BOT_TOKEN`: The Discord bot token required for the bot to connect to your Discord server.
 - `DISCORD_APPLICATION_ID`: The application ID associated with the Discord bot.
 - `DISCORD_SERVER_ID`: The ID of the Discord server where the bot will operate.
+
+### force.json
+
+Force.json is a file where you can force allow negative trade for one trade as in force skip holding until positive trade. For example if your bot sells too quickly and it needs to buy with negative trade. Then you can flip the switch in the json for the symbol. The skip value will be automatically changed back to false after the negative trade.
+
+```
+{
+  "BNBUSDT": {
+    "skip": true
+  },
+  "ETHTUSD": {
+    "skip": false
+  }
+}
+```
 
 ## Funds low? 
 
