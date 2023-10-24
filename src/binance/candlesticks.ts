@@ -49,7 +49,7 @@ export interface candlestick {
   isFinal: boolean
 }
 
-export async function getLastCandlesticks(binance: Binance, pair: string, interval: string, limit: number = 250): Promise<candlestick[]> {
+export async function getLastCandlesticks(binance: Binance, pair: string, interval: string, limit: number = 500): Promise<candlestick[]> {
   return new Promise<candlestick[]>((resolve, reject) => {
     binance.candlesticks(pair.split("/").join(""), interval, (error: any, ticks: any, symbol: string, interval: string) => {
       if (error) {
@@ -122,6 +122,7 @@ export const listenForCandlesticks = async (binance: Binance, symbol: string, in
         candleStore[symbol].candles.push(newCandlestick);
       } else {
         // Update since it was not final
+        candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal = true;
         candleStore[symbol].candles[candleStore[symbol].candles.length - 1] = newCandlestick;
       }
 

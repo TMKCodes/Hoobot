@@ -206,7 +206,7 @@ export async function algorithmic(
     const shortEma = calculateEMA(candlesticks, options.shortEma);
     const longEma = calculateEMA(candlesticks, options.longEma);
     const rsi = calculateRSI(candlesticks, options.rsiLength);
-    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 7);
+    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 6);
     logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma, prev.longEma);
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);

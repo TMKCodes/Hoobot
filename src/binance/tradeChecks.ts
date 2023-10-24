@@ -115,14 +115,14 @@ export const tradeDirection = async (
     if (tradeHistory.length >= 2) {
       if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > 0.1) {
+          if(nextPossibleProfit > 0.07) {
             profitCheck = "SELL";
           } else {
             profitCheck = "HOLD";
           }
         } else {
           if(lastProfit < 0) {
-            if(nextPossibleProfit > 0.1) {
+            if(nextPossibleProfit > 0.07) {
               profitCheck = "SELL";
             } else {
               profitCheck = "HOLD";
@@ -133,14 +133,14 @@ export const tradeDirection = async (
         }
       } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > 0.1) {
+          if(nextPossibleProfit > 0) {
             profitCheck = "BUY";
           } else {
             profitCheck = "HOLD";
           }
         } else {
           if(lastProfit < 0) {
-            if(nextPossibleProfit > 0.1) {
+            if(nextPossibleProfit > 0) {
               profitCheck = "BUY";
             } else {
               profitCheck = "HOLD";
@@ -184,11 +184,12 @@ export const tradeDirection = async (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine) {
+  if (macd.macdLine > macd.signalLine && macd.histogram < 0) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine) {
+  } else if (macd.macdLine < macd.signalLine && macd.histogram > 0) {
     macdCheck = `SELL`;
   }
+  
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
     if (rsi > 55) {
       rsiCheck = 'SELL';
