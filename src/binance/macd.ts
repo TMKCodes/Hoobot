@@ -117,12 +117,15 @@ export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: nu
   for(let i = 0; i < shortEMAs.length; i++) {
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
-  if(macdLine.length > 50) {
-    macdLine = macdLine.slice(-50);
-  }
   
   let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalLength, source);
 
+  if(signalLine.length < macdLine.length) {
+    macdLine = macdLine.slice(-signalLine.length);
+  }
+  if(macdLine.length < signalLine.length) {
+    signalLine = signalLine.slice(-macdLine.length); 
+  }
   const histogram: number[] = [];
   for (let i = 0; i < signalLine.length; i++) {
     histogram.push(macdLine[i] - signalLine[i]);
