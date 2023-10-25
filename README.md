@@ -16,6 +16,7 @@ Binance provides a user-friendly interface and robust trading tools that allow b
 in crypto trading.
 
 
+## NOTE: Currently only Algorithmic trading is available.
 
 ## Installation
 
@@ -39,6 +40,7 @@ Below is an explanation of the various configuration values present in the `.env
 
 - `API_KEY`: Your Binance API key, which allows the bot to access your Binance account for trading.
 - `API_SECRET`: Your Binance API secret, used to sign requests for enhanced security.
+- `MODE`: A string value to decide trading mode ("algorithmic", "hilow", "arbitage")
 - `PAIR`: The trading pair the bot will use, e.g., "BETH/USDT" for Ethereum against USDT (Tether).
 - `CANDLESTICK_INTERVAL`: The interval used for fetching candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
 - `USE_EMA`: A boolean value ("true" or "false") indicating whether the bot should use Exponential Moving Average (EMA) in its strategy.
