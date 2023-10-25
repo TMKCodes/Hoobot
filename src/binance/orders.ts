@@ -80,7 +80,6 @@ export const handleOpenOrders = async (
   const currentTime = Date.now();
   for (const order of openOrders) {
     const { orderId, symbol, time, side, status, price } = order;
-    console.log(order);
     if (oSymbol !== symbol) {
       continue;
     }

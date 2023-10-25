@@ -93,6 +93,7 @@ async function placeTrade(
           const force = JSON.parse(readFileSync("force.json", "utf-8"));
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
+          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`sell-order`, {
@@ -101,7 +102,6 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
-          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           let openOrders: any[] = [];
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
@@ -153,6 +153,8 @@ async function placeTrade(
           const force = JSON.parse(readFileSync("force.json", "utf-8"));
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
+          
+          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`buy-order`, {
@@ -161,7 +163,6 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
-          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           let openOrders: any[] = [];
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
