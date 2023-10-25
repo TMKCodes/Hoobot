@@ -132,7 +132,6 @@ export const tradeDirection = async (
         } else {
           profitCheck = "BUY";
         }
-        
       }
     } else {
       profitCheck = "SKIP";

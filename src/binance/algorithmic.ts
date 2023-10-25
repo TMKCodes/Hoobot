@@ -31,6 +31,10 @@ const prev: previous = {
   longEma: undefined,
 }
 
+function delay(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
   const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
@@ -99,6 +103,14 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          let openOrders: any[] = [];
+          do {
+            openOrders = await binance.openOrders(symbol.split("/").join(""));
+            consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
+            const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
+            await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
+          } while(openOrders.length > 0);
+          await delay(getSecondsFromInterval(options.candlestickInterval));
         } catch (error: any) {
           console.error(JSON.stringify(error));
           if (error.msg !== undefined) {
@@ -111,6 +123,7 @@ async function placeTrade(
       }
     } else {
       console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+      return false;
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
@@ -150,6 +163,14 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          let openOrders: any[] = [];
+          do {
+            openOrders = await binance.openOrders(symbol.split("/").join(""));
+            consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
+            const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
+            await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
+          } while(openOrders.length > 0);
+          await delay(getSecondsFromInterval(options.candlestickInterval));
         } catch (error: any) {
           console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
@@ -163,6 +184,7 @@ async function placeTrade(
       }
     } else {
       console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+      return false;
     }
   } else {
     return false;
@@ -190,17 +212,7 @@ export async function algorithmic(
       return
     }
     const orderBook = await binance.depth(symbol.split("/").join(""));
-
-    // Check for open orders before placing a new one
-    const openOrders = await binance.openOrders(symbol.split("/").join("")); // Implement a function to get open orders
-    if (openOrders.length > 0) {
-      consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-      const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
-    }
-
     const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
-    
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const shortEma = calculateEMA(candlesticks, options.shortEma, options.source);
@@ -211,7 +223,6 @@ export async function algorithmic(
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);
     const lastOrder = await getLastCompletedOrder(binance, symbol);
-
     await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
     prev.macd = macd;
     prev.shortEma = shortEma;
