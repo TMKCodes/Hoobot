@@ -16,7 +16,7 @@ Binance provides a user-friendly interface and robust trading tools that allow b
 in crypto trading.
 
 
-## NOTE: Currently only Algorithmic trading is available.
+## NOTE: Currently only Algorithmic trading with EMA, MACD, RSI signals is available.
 
 ## Installation
 
