@@ -59,6 +59,8 @@ export interface ConfigOptions {
   candlestickInterval: CandlestickInterval;
   shortEma: number;
   longEma: number;
+  macdLength: number;
+  source: string;
   rsiLength: number;
   useEMA: boolean; 
   useMACD: boolean; 
@@ -87,6 +89,8 @@ export function parseArgs(args: string[]): ConfigOptions {
       candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
       shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
       longEma: parseFloat(process.env.LONG_EMA!) || 26,
+      macdLength: parseFloat(process.env.MACD_LENGTH!) || 9,
+      source: process.env.SOURCE,
       rsiLength: parseFloat(process.env.RSI_LENGTH!) || 14,
       useEMA: process.env.USE_EMA === "true" ? true : false,
       useMACD: process.env.USE_MACD === "true" ? true : false,
@@ -111,6 +115,8 @@ export function parseArgs(args: string[]): ConfigOptions {
     candlestickInterval: "1m",
     shortEma: 7,
     longEma: 26,
+    macdLength: 9,
+    source: 'close',
     rsiLength: 14,
     useEMA: true,
     useMACD: true,

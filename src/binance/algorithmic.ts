@@ -203,10 +203,10 @@ export async function algorithmic(
     
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
-    const shortEma = calculateEMA(candlesticks, options.shortEma);
-    const longEma = calculateEMA(candlesticks, options.longEma);
-    const rsi = calculateRSI(candlesticks, options.rsiLength);
-    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, 6);
+    const shortEma = calculateEMA(candlesticks, options.shortEma, options.source);
+    const longEma = calculateEMA(candlesticks, options.longEma, options.source);
+    const rsi = calculateRSI(candlesticks, options.rsiLength, options.source);
+    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, options.macdLength, options.source);
     logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma, prev.longEma);
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);

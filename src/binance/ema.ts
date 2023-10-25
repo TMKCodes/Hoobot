@@ -27,19 +27,28 @@
 import { ConsoleLogger } from "./consoleLogger";
 
 // Calculate Exponential Moving Average (EMA)
-export function calculateEMA(candles: any[], length: number): number {
+export function calculateEMA(candles: any[], length: number, source: string = 'close'): number {
   // const prices = candles.slice(-length).map((candle) => parseFloat(candle.close));
   // const sum = prices.reduce((total, price) => total + price);
   // const ema = sum / length;
   // return ema;
-  const ema = calculateEMAArray(candles, length);
+  const ema = calculateEMAArray(candles, length, source);
   return ema[ema.length - 1];
 }
 
 
-export function calculateEMAArray(candles: any[], length: number): number[] {
+export function calculateEMAArray(candles: any[], length: number, source: string = 'close'): number[] {
   const emaValues: number[] = [];
-  const prices = candles.map((candle) => parseFloat(candle.close));
+  let prices: number[] = [];
+  if(source == 'close') {
+    prices = candles.map((candle) => parseFloat(candle.close));
+  } else if(source == 'open') {
+    prices = candles.map((candle) => parseFloat(candle.open));
+  } else if(source == 'high') {
+    prices = candles.map((candle) => parseFloat(candle.high));
+  } else if(source == 'low') {
+    prices = candles.map((candle) => parseFloat(candle.low));
+  }
 
   let sum = 0;
   for (let i = 0; i < length; i++) {

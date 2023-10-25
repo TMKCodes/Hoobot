@@ -44,12 +44,21 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number) {
 }
 
 // Calculate RSI
-export function calculateRSI(candles: any[], length: number = 14): number {
+export function calculateRSI(candles: any[], length: number = 14, source: string = 'close'): number {
   if (candles.length < length) {
     throw new Error('Insufficient data to calculate RSI');
   }
   // Get closing prices from candles
-  const closePrices: number[] = candles.map((candle) => parseFloat(candle.close));
+  let closePrices: number[] = [];
+  if(source == 'close') {
+    closePrices = candles.map((candle) => parseFloat(candle.close));
+  } else if(source == 'open') {
+    closePrices = candles.map((candle) => parseFloat(candle.open));
+  } else if(source == 'high') {
+    closePrices = candles.map((candle) => parseFloat(candle.high));
+  } else if(source == 'low') {
+    closePrices = candles.map((candle) => parseFloat(candle.low));
+  }
 
   // Calculate price changes
   const priceChanges: number[] = [];

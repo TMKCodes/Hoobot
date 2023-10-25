@@ -93,8 +93,8 @@ export const logMACDSignals = (
   }
 }
 
-export const calculateMACD = (candles: any[], shortEMA: number, longEMA: number, signalEMAperiod = 9) => {
-  const macd = calculateMACDArray(candles, shortEMA, longEMA, signalEMAperiod);
+export const calculateMACD = (candles: any[], shortEMA: number, longEMA: number, signalLength = 9, source: string) => {
+  const macd = calculateMACDArray(candles, shortEMA, longEMA, signalLength, source);
   return {
     macdLine: macd.macdLine[macd.macdLine.length - 1],
     signalLine: macd.signalLine[macd.signalLine.length - 1],
@@ -102,10 +102,10 @@ export const calculateMACD = (candles: any[], shortEMA: number, longEMA: number,
   }
 }
 
-export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: number, signalEMAperiod = 9) {
+export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
   
-  let shortEMAs = calculateEMAArray(candles, shortEMA);
-  let longEMAs = calculateEMAArray(candles, longEMA);
+  let shortEMAs = calculateEMAArray(candles, shortEMA, source);
+  let longEMAs = calculateEMAArray(candles, longEMA, source);
   
   if(longEMAs.length < shortEMAs.length) {
     shortEMAs = shortEMAs.slice(-longEMAs.length);
@@ -121,15 +121,15 @@ export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: nu
     macdLine = macdLine.slice(-50);
   }
   
-  let signalEMA = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalEMAperiod);
+  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalLength, source);
 
   const histogram: number[] = [];
-  for (let i = 0; i < signalEMA.length; i++) {
-    histogram.push(macdLine[i] - signalEMA[i]);
+  for (let i = 0; i < signalLine.length; i++) {
+    histogram.push(macdLine[i] - signalLine[i]);
   }
   return {
     macdLine,
-    signalLine: signalEMA,
+    signalLine,
     histogram,
   };
 }
