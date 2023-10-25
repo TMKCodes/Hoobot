@@ -93,7 +93,7 @@ export const handleOpenOrders = async (
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
       consoleLogger.push("status-msg", statusMsg);
     } else if (status === 'FILLED') {
-      const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** is already filled.`;
+      const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** has been filled.`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
       consoleLogger.push("status-msg", statusMsg);
     } else if (orderAgeSeconds > options.maxOrderAge) {
