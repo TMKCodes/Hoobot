@@ -94,7 +94,7 @@ async function placeTrade(
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
           order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-          const orderMsg = `>>>Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: ${roundedQuantity}\nPrice: ${roundedPrice}\nProfit if trade fullfills: ${percentageChange.toFixed(2)}%`;
+          const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: ${roundedQuantity}\nPrice: ${roundedPrice}\nProfit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`sell-order`, {
             symbol: symbol.split("/").join(""),
@@ -155,7 +155,7 @@ async function placeTrade(
           writeFileSync("force.json", JSON.stringify(force));
           
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-          const orderMsg = `>>>Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: ${roundedQuantity}\nPrice: ${roundedPrice}\nProfit if trade fullfills: ${percentageChange.toFixed(2)}%`;
+          const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: ${roundedQuantity}\nPrice: ${roundedPrice}\nProfit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`buy-order`, {
             symbol: symbol.split("/").join(""),
