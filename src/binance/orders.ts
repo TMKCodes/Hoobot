@@ -71,26 +71,22 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
 export const handleOpenOrders = async (
   discord: Client, 
   binance: Binance, 
-  symbol: string,
+  oSymbol: string,
   openOrders: any[], 
   orderBook: any, 
-  maxAgeSeconds: number = 600,
   options: ConfigOptions,
   consoleLogger: ConsoleLogger, 
 ) => {
   const currentTime = Date.now();
   for (const order of openOrders) {
-    const { orderId, oSymbol, time, side, status, price } = order;
+    const { orderId, symbol, time, side, status, price } = order;
+    console.log(order);
     if (oSymbol !== symbol) {
-      return;
-    }
-    if (orderId === null) {
-      return;
+      continue;
     }
     const orderAgeSeconds = Math.floor((currentTime - time) / 1000);
-    console.log(`Order ID: ${orderId}, Symbol: ${oSymbol}, Age: ${orderAgeSeconds} seconds`);
     consoleLogger.push("Order ID: ", orderId);
-    consoleLogger.push("Symbol: ", oSymbol);
+    consoleLogger.push("Symbol: ", symbol);
     consoleLogger.push("Age seconds: ", orderAgeSeconds);
     // Get order status to determine if it's active, partially filled, or filled
     
@@ -102,19 +98,17 @@ export const handleOpenOrders = async (
       const statusMsg = `Order ID ${orderId} for symbol ${symbol} is already filled.`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
       consoleLogger.push("status-msg", statusMsg);
-    } else if (orderAgeSeconds > maxAgeSeconds) {
+    } else if (orderAgeSeconds > options.maxOrderAge) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
-      const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to exceeding max age ${maxAgeSeconds} seconds.`;
+      const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to exceeding max age ${options.maxOrderAge} seconds.`;
       sendMessageToChannel(discord, cryptoChannelID, orderMsg);
       consoleLogger.push("order-msg", orderMsg);
     } else {
       if (side === "BUY") {
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
         const bid = orderBookBids[orderBookBids.length - 1];
-        console.log("Open Order, bid: ", bid);
         const diff = Math.abs(calculatePercentageDifference(bid, price));
-        console.log(`diff: ${diff}`);
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${bid} bid and current ${price} order price ${diff}.`;
@@ -124,9 +118,7 @@ export const handleOpenOrders = async (
       } else {
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
         const ask = orderBookAsks[0];
-        console.log("Open Order, ask: ", ask);
         const diff = Math.abs(calculatePercentageDifference(ask, price));
-        console.log(`diff: ${diff}`);
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `Order ID ${orderId} for symbol ${symbol} cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(4)}%, difference between ${ask} ask and current ${price} order price ${diff}.`;
@@ -136,6 +128,8 @@ export const handleOpenOrders = async (
       }
     }
   }
+  consoleLogger.print();
+  consoleLogger.flush();
 };
 
 // Function to get the last completed order for a given trading pair

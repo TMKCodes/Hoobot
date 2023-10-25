@@ -31,14 +31,6 @@ export async function hilow(
     }
     const orderBook = await binance.depth(symbol.split("/").join(""));
 
-    // Check for open orders before placing a new one
-    const openOrders = await binance.openOrders(symbol.split("/").join("")); // Implement a function to get open orders
-    if (openOrders.length > 0) {
-      consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-      const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
-    }
-
     const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
     
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));

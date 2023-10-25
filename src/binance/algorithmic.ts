@@ -72,7 +72,7 @@ async function placeTrade(
     return false;
   } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0] - parseFloat(filter.tickSize);
+    let price = orderBookAsks[0];
     const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
@@ -93,8 +93,6 @@ async function placeTrade(
           const force = JSON.parse(readFileSync("force.json", "utf-8"));
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
-          // const _options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' }; 
-          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed sell order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`sell-order`, {
@@ -103,12 +101,14 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           let openOrders: any[] = [];
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
-            consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-            const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-            await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
+            if(openOrders.length > 0) {
+              consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
+              await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+            }
           } while(openOrders.length > 0);
           await delay(getSecondsFromInterval(options.candlestickInterval));
         } catch (error: any) {
@@ -119,16 +119,16 @@ async function placeTrade(
         }
         return order;
       } else {
+        consoleLogger.push("error", `\r\nFailed check: ${quoteQuantity} > ${parseFloat(filter.minNotional)}\r\n`);
         return false;
       }
     } else {
-      console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+      consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
       return false;
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
-    console.log(baseBalance);
+    let price = orderBookBids[orderBookBids.length - 1];
     const quantityInQuote = (baseBalance / price) * 0.999;
     const quantityInBase = baseBalance * 0.999
     let maxQuantityInQuote = quantityInQuote;
@@ -153,8 +153,6 @@ async function placeTrade(
           const force = JSON.parse(readFileSync("force.json", "utf-8"));
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
-          // const options = { stopPrice: roundedStopPrice, type: 'STOP_LOSS_LIMIT' };
-          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `Placed buy order: ID: ${order.orderId}, Pair: ${symbol}, Quantity: ${roundedQuantity}, Price: ${roundedPrice}, Profit if trade fullfills: ${percentageChange.toFixed(2)}%`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push(`buy-order`, {
@@ -163,12 +161,14 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           let openOrders: any[] = [];
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
-            consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-            const maxAgeInSeconds = getSecondsFromInterval(options.candlestickInterval) * 0.95;
-            await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, maxAgeInSeconds, options, consoleLogger);
+            if(openOrders.length > 0) {
+              consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
+              await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+            }
           } while(openOrders.length > 0);
           await delay(getSecondsFromInterval(options.candlestickInterval));
         } catch (error: any) {
@@ -179,11 +179,11 @@ async function placeTrade(
         }
         return order;
       } else {
-        console.log(`\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
+        consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
         return false;
       }
     } else {
-      console.log("NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+      consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
       return false;
     }
   } else {
@@ -209,9 +209,16 @@ export async function algorithmic(
     consoleLogger.push(`Last close price`, closePrice.toFixed(7));
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
-      return
+      return false;
     }
     const orderBook = await binance.depth(symbol.split("/").join(""));
+    let openOrders: any[] = [];
+    openOrders = await binance.openOrders(symbol.split("/").join(""));
+    if(openOrders.length > 0) {
+      consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
+      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+      
+    }
     const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));

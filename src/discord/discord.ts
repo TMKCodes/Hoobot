@@ -115,7 +115,6 @@ export const sendMessageToChannel = async (client: Client, channelId: string, me
     const channel = await client.channels.fetch(channelId);
     if (channel instanceof TextChannel) {
       channel.send(message);
-      console.log(`Message sent to channel ${channelId}`);
     } else {
       console.log(`Channel with ID ${channelId} not found or is not a text channel.`);
     }
