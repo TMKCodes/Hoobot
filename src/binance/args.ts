@@ -74,6 +74,8 @@ export interface ConfigOptions {
   pairMinVolume?: number;
   pairMinPriceChange?: number;
   holdUntilPositiveTrade?: boolean;
+  minimumProfitSell: number;
+  minimumProfitBuy: number;
   [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
@@ -104,6 +106,8 @@ export function parseArgs(args: string[]): ConfigOptions {
       pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
       pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
       holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
+      minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
+      minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
     };
   }
   // If command-line arguments provided, parse them
@@ -129,6 +133,8 @@ export function parseArgs(args: string[]): ConfigOptions {
     tradeFee: 0.075,
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
+    minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
+    minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
   };
   for (let i = 0; i < args.length; i += 2) {
     const argName = args[i].substring(2);

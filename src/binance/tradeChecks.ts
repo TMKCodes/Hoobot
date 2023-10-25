@@ -115,14 +115,14 @@ export const tradeDirection = async (
     if (tradeHistory.length >= 2) {
       if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > 0.07) {
+          if(nextPossibleProfit > options.minimumProfitSell) {
             profitCheck = "SELL";
           } else {
             profitCheck = "HOLD";
           }
         } else {
           if(lastProfit < 0) {
-            if(nextPossibleProfit > 0.07) {
+            if(nextPossibleProfit > options.minimumProfitSell) {
               profitCheck = "SELL";
             } else {
               profitCheck = "HOLD";
@@ -133,14 +133,14 @@ export const tradeDirection = async (
         }
       } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > 0) {
+          if(nextPossibleProfit > options.minimumProfitBuy) {
             profitCheck = "BUY";
           } else {
             profitCheck = "HOLD";
           }
         } else {
           if(lastProfit < 0) {
-            if(nextPossibleProfit > 0) {
+            if(nextPossibleProfit > options.minimumProfitBuy) {
               profitCheck = "BUY";
             } else {
               profitCheck = "HOLD";
