@@ -85,7 +85,6 @@ export const tradeDirection = async (
   tradeHistory: order[], 
   options: ConfigOptions
 ) => {
-  const lastTrade = tradeHistory[0];
   let profitCheck: string = "HOLD";
   let nextTradeCheck: string = `HOLD`;
   let lastProfit: number = 0;
@@ -105,9 +104,9 @@ export const tradeDirection = async (
       nextPossibleProfit = possibleProfit;
     } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
       const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
-        lastProfit = profitLastTrade;
-        const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
-        nextPossibleProfit = possibleProfit;
+      lastProfit = profitLastTrade;
+      const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
+      nextPossibleProfit = possibleProfit;
     }
   }
 
@@ -121,15 +120,7 @@ export const tradeDirection = async (
             profitCheck = "HOLD";
           }
         } else {
-          if(lastProfit < 0) {
-            if(nextPossibleProfit > options.minimumProfitSell) {
-              profitCheck = "SELL";
-            } else {
-              profitCheck = "HOLD";
-            }
-          } else {
-            profitCheck = "SELL"
-          }
+          profitCheck = "SELL"
         }
       } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
         if(options.holdUntilPositiveTrade === true) {
@@ -139,15 +130,7 @@ export const tradeDirection = async (
             profitCheck = "HOLD";
           }
         } else {
-          if(lastProfit < 0) {
-            if(nextPossibleProfit > options.minimumProfitBuy) {
-              profitCheck = "BUY";
-            } else {
-              profitCheck = "HOLD";
-            }
-          } else {
-            profitCheck = "BUY"
-          }
+          profitCheck = "BUY";
         }
         
       }
@@ -165,10 +148,10 @@ export const tradeDirection = async (
     balanceCheck = 'SELL';
   }
   
-  if (lastTrade === undefined) {
+  if (tradeHistory[0] === undefined) {
     nextTradeCheck = balanceCheck;
   } else {
-    if (lastTrade.isBuyer === true) {
+    if (tradeHistory[0].isBuyer === true) {
       nextTradeCheck = 'SELL';
     } else {
       nextTradeCheck = 'BUY';
@@ -186,7 +169,7 @@ export const tradeDirection = async (
 
   if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.histogram < 0) {
+  } else if (macd.macdLine < macd.signalLine && macd.histogram < 0 && macd.macdLine > 0) {
     macdCheck = `SELL`;
   }
   

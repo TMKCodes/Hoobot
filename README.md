@@ -58,7 +58,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
 - `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
 - `HOLD_UNTIL_POSITIVE_TRADE`: `true` to not allow negative trades.
-- `MINIMUM_PROFIT_SALE`: A number value to indicate minimum profit on sale, if hold until positive trade is enabled. Can be negative value.
+- `MINIMUM_PROFIT_SELL`: A number value to indicate minimum profit on sale, if hold until positive trade is enabled. Can be negative value.
 - `MINIMUM_PROFIT_BUY`: A number value to indicate minimum profit on buy, if hold until positive trade is enabled. Can be negative value.
 
 ### Discord Configuration
