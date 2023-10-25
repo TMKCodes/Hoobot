@@ -46,6 +46,8 @@ Below is an explanation of the various configuration values present in the `.env
 - `USE_RSI`: A boolean value indicating whether the bot should use Relative Strength Index (RSI) in its strategy.
 - `SHORT_EMA`: The time period for the short-term EMA.
 - `LONG_EMA`: The time period for the long-term EMA.
+- `SOURCE`: A string value ("close", "open", "high", "low") indicates which value is used in EMA calculations.
+- `MACD_LENGTH`: A number value indicating length for MACD signal EMA calculations.
 - `RSI_LENGTH`: The time period for the RSI calculation.
 - `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
 - `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
@@ -54,6 +56,8 @@ Below is an explanation of the various configuration values present in the `.env
 - `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
 - `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
 - `HOLD_UNTIL_POSITIVE_TRADE`: `true` to not allow negative trades.
+- `MINIMUM_PROFIT_SALE`: A number value to indicate minimum profit on sale, if hold until positive trade is enabled. Can be negative value.
+- `MINIMUM_PROFIT_BUY`: A number value to indicate minimum profit on buy, if hold until positive trade is enabled. Can be negative value.
 
 ### Discord Configuration
 
