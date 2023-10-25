@@ -184,9 +184,9 @@ export const tradeDirection = async (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine && macd.histogram < 0) {
+  if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.histogram > 0) {
+  } else if (macd.macdLine < macd.signalLine && macd.histogram < 0) {
     macdCheck = `SELL`;
   }
   
