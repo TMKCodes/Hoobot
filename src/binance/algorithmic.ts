@@ -103,14 +103,21 @@ async function placeTrade(
             stopPrice: roundedStopPrice,
           });
           let openOrders: any[] = [];
+          let handleOpenOrderResult: string = "";
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
             if(openOrders.length > 0) {
               consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-              await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+              handleOpenOrderResult = await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+              if (handleOpenOrderResult === "canceled") {
+                break;
+              }
             }
           } while(openOrders.length > 0);
-          const statusMsg = `>>> Order ID **${order.orderIdrId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+          if (handleOpenOrderResult === "canceled") {
+            return false;
+          }
+          const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
           sendMessageToChannel(discord, cryptoChannelID, statusMsg);
           consoleLogger.push("status-msg", statusMsg);
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
@@ -167,14 +174,21 @@ async function placeTrade(
             stopPrice: roundedStopPrice,
           });
           let openOrders: any[] = [];
+          let handleOpenOrderResult: String = "";
           do {
             openOrders = await binance.openOrders(symbol.split("/").join(""));
             if(openOrders.length > 0) {
               consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-              await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+              handleOpenOrderResult = await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+              if (handleOpenOrderResult === "canceled") {
+                break;
+              }
             }
           } while(openOrders.length > 0);
-          const statusMsg = `>>> Order ID **${order.orderIdrId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+          if (handleOpenOrderResult === "canceled") {
+            return false;
+          }
+          const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
           sendMessageToChannel(discord, cryptoChannelID, statusMsg);
           consoleLogger.push("status-msg", statusMsg);
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
