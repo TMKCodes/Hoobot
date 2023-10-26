@@ -76,7 +76,7 @@ async function placeTrade(
     return false;
   } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0] + parseFloat(filter.tickSize);
+    let price = orderBookAsks[0];
     const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
@@ -117,6 +117,7 @@ async function placeTrade(
                 break;
               }
             }
+            await delay(1500);
           } while(openOrders.length > 0);
           if (handleOpenOrderResult !== "canceled") {
             const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
@@ -143,7 +144,7 @@ async function placeTrade(
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1] - parseFloat(filter.tickSize);
+    let price = orderBookBids[orderBookBids.length - 1];
     const quantityInQuote = (baseBalance / price) * 0.999;
     const quantityInBase = baseBalance * 0.999
     let maxQuantityInQuote = quantityInQuote;
@@ -189,6 +190,7 @@ async function placeTrade(
                 break;
               }
             }
+            await delay(1500);
           } while(openOrders.length > 0);
           if (handleOpenOrderResult !== "canceled") {
             const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
@@ -244,7 +246,6 @@ export async function algorithmic(
     if(openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
       return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
-      
     }
     const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
