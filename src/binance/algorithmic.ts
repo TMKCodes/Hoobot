@@ -110,6 +110,9 @@ async function placeTrade(
               await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
             }
           } while(openOrders.length > 0);
+          const statusMsg = `>>> Order ID **${order.orderIdrId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+          sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+          consoleLogger.push("status-msg", statusMsg);
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error));
@@ -171,6 +174,9 @@ async function placeTrade(
               await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
             }
           } while(openOrders.length > 0);
+          const statusMsg = `>>> Order ID **${order.orderIdrId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+          sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+          consoleLogger.push("status-msg", statusMsg);
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error.body));

@@ -92,10 +92,6 @@ export const handleOpenOrders = async (
       const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** is already partially filled..`;
       sendMessageToChannel(discord, cryptoChannelID, statusMsg);
       consoleLogger.push("status-msg", statusMsg);
-    } else if (status === 'FILLED') {
-      const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** has been filled.`;
-      sendMessageToChannel(discord, cryptoChannelID, statusMsg);
-      consoleLogger.push("status-msg", statusMsg);
     } else if (orderAgeSeconds > options.maxOrderAge) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
