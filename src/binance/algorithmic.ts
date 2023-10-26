@@ -114,13 +114,12 @@ async function placeTrade(
               }
             }
           } while(openOrders.length > 0);
-          if (handleOpenOrderResult === "canceled") {
-            return false;
+          if (handleOpenOrderResult !== "canceled") {
+            const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+            sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+            consoleLogger.push("status-msg", statusMsg);
+            await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
           }
-          const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-          sendMessageToChannel(discord, cryptoChannelID, statusMsg);
-          consoleLogger.push("status-msg", statusMsg);
-          await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error));
           if (error.msg !== undefined) {
@@ -185,13 +184,12 @@ async function placeTrade(
               }
             }
           } while(openOrders.length > 0);
-          if (handleOpenOrderResult === "canceled") {
-            return false;
+          if (handleOpenOrderResult !== "canceled") {
+            const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+            sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+            consoleLogger.push("status-msg", statusMsg);
+            await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
           }
-          const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled. Waiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-          sendMessageToChannel(discord, cryptoChannelID, statusMsg);
-          consoleLogger.push("status-msg", statusMsg);
-          await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
