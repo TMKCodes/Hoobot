@@ -19,16 +19,22 @@ import { readFileSync, writeFileSync } from "fs";
 const soundFile = './alarm.mp3'
 const cryptoChannelID = "1133114701136547961"
 
-interface previous {
-  macd: any;
-  shortEma: any;
-  longEma: any;
+export interface macd { 
+  macdLine: number; 
+  signalLine: number; 
+  histogram: number; 
 }
 
-const prev: previous = {
-  macd: undefined,
-  shortEma: undefined,
-  longEma: undefined,
+export interface history {
+  macd: macd[] | undefined;
+  shortEma: number[] | undefined;
+  longEma: number[] | undefined;
+}
+
+const prev: history = {
+  macd: [],
+  shortEma: [],
+  longEma: [],
 }
 
 function delay(ms: number) {
@@ -55,15 +61,15 @@ async function placeTrade(
   shortEma: number,
   longEma: number,
   rsi: number[],
-  macd: { macdLine: number; signalLine: number; histogram: number; },
-  prev: previous,
+  macd: macd,
+  prev: history,
   balances: Balances,
   orderBook: any,
   closePrice: number,
   filter: filter,
   options: ConfigOptions,
 ) {
-  if(prev.macd === undefined || prev.longEma == undefined || prev.shortEma.undefined) {
+  if(prev.macd === undefined || prev.longEma === undefined || prev.shortEma === undefined) {
     return false;
   }
   const quoteBalance = balances[symbol.split("/")[0]];
@@ -76,7 +82,7 @@ async function placeTrade(
     return false;
   } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0];
+    let price = orderBookAsks[0] + parseFloat(filter.tickSize);
     const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
@@ -144,7 +150,7 @@ async function placeTrade(
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1];
+    let price = orderBookBids[orderBookBids.length - 1] - parseFloat(filter.tickSize);
     const quantityInQuote = (baseBalance / price) * 0.999;
     const quantityInBase = baseBalance * 0.999
     let maxQuantityInQuote = quantityInQuote;
@@ -254,14 +260,22 @@ export async function algorithmic(
     const longEma = calculateEMA(candlesticks, options.longEma, options.source);
     const rsi = calculateRSI(candlesticks, options.rsiLength, options.source);
     const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, options.macdLength, options.source);
-    logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma, prev.longEma);
-    logMACDSignals(consoleLogger, macd, prev.macd);
-    logRSISignals(consoleLogger, rsi);
-    const lastOrder = await getLastCompletedOrder(binance, symbol);
-    await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, prev, balances, orderBook, closePrice, filter, options);
-    prev.macd = macd;
-    prev.shortEma = shortEma;
-    prev.longEma = longEma;
+    if(prev.shortEma.length > 2 && prev.longEma.length > 2 && prev.macd.length > 2) {
+      logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma[prev.shortEma.length - 1], prev.longEma[prev.shortEma.length - 1]);
+      logMACDSignals(consoleLogger, macd, prev.macd[prev.macd.length - 1]);
+      logRSISignals(consoleLogger, rsi);
+      const lastOrder = await getLastCompletedOrder(binance, symbol);
+      await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, prev, balances, orderBook, closePrice, filter, options);
+    }
+    prev.macd.push(macd);
+    prev.shortEma.push(shortEma);
+    prev.longEma.push(longEma);
+    const historyLength = 10;
+    if(prev.shortEma.length > historyLength && prev.longEma.length > historyLength && prev.macd.length > historyLength) {
+      prev.macd = prev.macd.slice(-historyLength);
+      prev.shortEma = prev.shortEma.slice(-historyLength);
+      prev.longEma = prev.longEma.slice(-historyLength);
+    }
     consoleLogger.print();
     consoleLogger.flush();
   } catch (error: any) {

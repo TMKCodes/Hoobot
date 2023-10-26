@@ -83,13 +83,11 @@ const main = async () => {
     });
 
     const symbolCandlesticks: SymbolCandlesticks = {};
-    console.log(options.symbols);
     if(options.mode === "algorithmic") {
       // Check if options.symbol is an array or a single string
       if (Array.isArray(options.symbols)) {
         // If options.symbol is an array, listen for candlesticks for each symbol separately
         for (const symbol of options.symbols) {
-          console.log(symbol);
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
