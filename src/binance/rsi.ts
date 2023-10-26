@@ -26,25 +26,27 @@
 
 import { ConsoleLogger } from './consoleLogger';
 
-export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number) {
-  consoleLogger.push(`RSI`, rsi.toFixed(2));
-  if (rsi > 80) {
+export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[]) {
+  const rsiFixed = rsi.slice(-10).map((rsi) => rsi.toFixed(2));
+  consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 2).join(", "));
+  consoleLogger.push(`RSI current`, rsi[rsi.length - 1].toFixed(2));
+  if (rsi[rsi.length - 1] > 80) {
     consoleLogger.push(`RSI condition`, `Extremely Overbought`);
-  } else if (rsi < 20) {
+  } else if (rsi[rsi.length - 1] < 20) {
     consoleLogger.push(`RSI condition`, `Extremely Oversold`);
-  } else if (rsi > 70) {
+  } else if (rsi[rsi.length - 1] > 70) {
     consoleLogger.push(`RSI condition`, `Overbought`);
-  } else if (rsi < 30) {
+  } else if (rsi[rsi.length - 1] < 30) {
     consoleLogger.push(`RSI condition`, `Oversold`);
-  } else if (rsi < 50) {
+  } else if (rsi[rsi.length - 1] < 50) {
     consoleLogger.push(`RSI signal`, `Bullish`);
-  } else if(rsi > 50) {
+  } else if(rsi[rsi.length - 1] > 50) {
     consoleLogger.push(`RSI signal`, `Bearish`);
   }
 }
 
 // Calculate RSI
-export function calculateRSI(candles: any[], length: number = 14, source: string = 'close'): number {
+export function calculateRSI(candles: any[], length: number = 14, source: string = 'close'): number[] {
   if (candles.length < length) {
     throw new Error('Insufficient data to calculate RSI');
   }
@@ -107,5 +109,5 @@ export function calculateRSI(candles: any[], length: number = 14, source: string
     rsArray.push(rsi);
   }
 
-  return rsArray[rsArray.length - 1]; 
+  return rsArray; 
 }

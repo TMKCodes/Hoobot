@@ -81,7 +81,7 @@ export const tradeDirection = async (
   shortEma: number, 
   longEma: number, 
   macd: { macdLine: number; signalLine: number; histogram: number; }, 
-  rsi: number, 
+  rsi: number[], 
   tradeHistory: order[], 
   options: ConfigOptions
 ) => {
@@ -173,15 +173,15 @@ export const tradeDirection = async (
   }
   
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
-    if (rsi > 55) {
+    if (rsi[rsi.length - 2] > 55) {
       rsiCheck = 'SELL';
-    } else if (rsi < 45) {
+    } else if (rsi[rsi.length - 2] < 45) {
       rsiCheck = 'BUY';
     }
   } else {
-    if (rsi > options.overboughtTreshold) {
+    if (rsi[rsi.length - 2] > options.overboughtTreshold) {
       rsiCheck = 'SELL';
-    } else if (rsi < options.oversoldTreshold) {
+    } else if (rsi[rsi.length - 2] < options.oversoldTreshold) {
       rsiCheck = 'BUY';
     }
   }

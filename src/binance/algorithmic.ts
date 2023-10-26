@@ -54,7 +54,7 @@ async function placeTrade(
   tradeHistory: order[],
   shortEma: number,
   longEma: number,
-  rsi: number,
+  rsi: number[],
   macd: { macdLine: number; signalLine: number; histogram: number; },
   balances: Balances,
   orderBook: any,
@@ -72,7 +72,7 @@ async function placeTrade(
     return false;
   } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0];
+    let price = orderBookAsks[0] + parseFloat(filter.tickSize);
     const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
@@ -110,7 +110,7 @@ async function placeTrade(
               await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
             }
           } while(openOrders.length > 0);
-          await delay(getSecondsFromInterval(options.candlestickInterval));
+          await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error));
           if (error.msg !== undefined) {
@@ -128,7 +128,7 @@ async function placeTrade(
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1];
+    let price = orderBookBids[orderBookBids.length - 1] - parseFloat(filter.tickSize);
     const quantityInQuote = (baseBalance / price) * 0.999;
     const quantityInBase = baseBalance * 0.999
     let maxQuantityInQuote = quantityInQuote;
@@ -171,7 +171,7 @@ async function placeTrade(
               await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
             }
           } while(openOrders.length > 0);
-          await delay(getSecondsFromInterval(options.candlestickInterval));
+          await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         } catch (error: any) {
           console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
