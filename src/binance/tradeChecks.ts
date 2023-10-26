@@ -82,6 +82,11 @@ export const tradeDirection = async (
   longEma: number, 
   macd: { macdLine: number; signalLine: number; histogram: number; }, 
   rsi: number[], 
+  prev: {
+    macd: { macdLine: number; signalLine: number; histogram: number; },
+    shortEma: number,
+    longEma: number,
+  },
   tradeHistory: order[], 
   options: ConfigOptions
 ) => {
@@ -166,10 +171,16 @@ export const tradeDirection = async (
     emaCheck = 'SELL';
   }
 
-  if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
+  if(prev.macd.histogram < 0 && macd.histogram > 0) {
     macdCheck = `BUY`;
-  } else if (macd.macdLine < macd.signalLine && macd.histogram < 0 && macd.macdLine > 0) {
+  } else if (prev.macd.histogram > 0 && macd.histogram < 0) {
     macdCheck = `SELL`;
+  } else {
+    if (macd.macdLine > macd.signalLine && macd.histogram > 0) {
+      macdCheck = `BUY`;
+    } else if (macd.macdLine < macd.signalLine && macd.histogram < 0) {
+      macdCheck = `SELL`;
+    }
   }
   
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {

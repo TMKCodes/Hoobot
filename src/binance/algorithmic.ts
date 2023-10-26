@@ -56,16 +56,20 @@ async function placeTrade(
   longEma: number,
   rsi: number[],
   macd: { macdLine: number; signalLine: number; histogram: number; },
+  prev: previous,
   balances: Balances,
   orderBook: any,
   closePrice: number,
   filter: filter,
   options: ConfigOptions,
 ) {
+  if(prev.macd === undefined || prev.longEma == undefined || prev.shortEma.undefined) {
+    return false;
+  }
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const lastTrade = tradeHistory[0];
-  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, tradeHistory, options);
+  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, prev, tradeHistory, options);
   consoleLogger.push(`Trade direction`, direction);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
@@ -253,7 +257,7 @@ export async function algorithmic(
     logMACDSignals(consoleLogger, macd, prev.macd);
     logRSISignals(consoleLogger, rsi);
     const lastOrder = await getLastCompletedOrder(binance, symbol);
-    await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, balances, orderBook, closePrice, filter, options);
+    await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, prev, balances, orderBook, closePrice, filter, options);
     prev.macd = macd;
     prev.shortEma = shortEma;
     prev.longEma = longEma;
