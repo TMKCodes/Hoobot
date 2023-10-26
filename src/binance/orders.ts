@@ -96,7 +96,7 @@ export const handleOpenOrders = async (
     } else if (orderAgeSeconds > options.maxOrderAge) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
-      const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to exceeding max age ${options.maxOrderAge} seconds.`;
+      const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, cryptoChannelID, orderMsg);
       consoleLogger.push("order-msg", orderMsg);
       return "canceled";
@@ -107,7 +107,7 @@ export const handleOpenOrders = async (
         const diff = Math.abs(calculatePercentageDifference(bid, price));
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${bid} bid and current ${price} order price ${diff.toFixed(4)}.`;
+          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${bid} bid and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";
@@ -118,7 +118,7 @@ export const handleOpenOrders = async (
         const diff = Math.abs(calculatePercentageDifference(ask, price));
         if (diff > options.riskPercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${ask} ask and current ${price} order price ${diff.toFixed(4)}.`;
+          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${ask} ask and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";

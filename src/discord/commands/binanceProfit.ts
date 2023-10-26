@@ -94,9 +94,9 @@ export default {
         totalProfit = totalProfit - (newTradeHistory.length * 0.075);
 
         // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-        await interaction.reply(`Total profit for ${pair}: ${totalProfit.toFixed(2)} %, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
+        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**, since ${(new Date(lastTime).toLocaleString("fi-FI"))}`);
       } else {
-        await interaction.reply(`Total profit for ${pair}: Can not calculate percentage, less than two trades.`);
+        await interaction.reply(`Total profit for **${pair}**: Can not calculate percentage, less than two trades.`);
       }
     } catch (error) {
       console.error('Error fetching trade history:', error);
