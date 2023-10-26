@@ -168,30 +168,17 @@ export const tradeDirection = async (
     emaCheck = 'SELL';
   }
 
-  const histograms = 5; // Set histograms to the number of previous histograms you want to consider
 
-  let positiveHistograms = 0;
-  let negativeHistograms = 0;
-
-  // Count the number of positive and negative histograms in prev.macd
-  for (let i = prev.macd.length - histograms; i < prev.macd.length; i++) {
-    if (prev.macd[i].histogram > 0) {
-      positiveHistograms++;
-    } else if (prev.macd[i].histogram < 0) {
-      negativeHistograms++;
-    }
-  }
-
-  if (prev.macd[prev.macd.length - 1].histogram < 0 && macd.histogram > 0 
-    && macd.macdLine > macd.signalLine
-    && macd.signalLine < macd.histogram 
-    && negativeHistograms === histograms) {
+  if(prev.macd[prev.macd.length - 1].histogram < 0 && macd.histogram > 0 && macd.signalLine < macd.histogram) {
     macdCheck = `BUY`;
-  } else if (prev.macd[prev.macd.length - 1].histogram > 0 && macd.histogram < 0 
-    && macd.signalLine > macd.histogram 
-    && macd.macdLine < macd.signalLine
-    && positiveHistograms === histograms) {
+  } else if (prev.macd[prev.macd.length - 1].histogram > 0 && macd.histogram < 0 && macd.signalLine > macd.histogram) {
     macdCheck = `SELL`;
+  } else {
+    if (macd.macdLine > macd.signalLine && macd.signalLine < macd.histogram && macd.histogram > 0) {
+      macdCheck = `BUY`;
+    } else if (macd.macdLine < macd.signalLine && macd.signalLine > macd.histogram && macd.histogram < 0) {
+      macdCheck = `SELL`;
+    }
   }
   
   if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
