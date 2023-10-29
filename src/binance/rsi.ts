@@ -25,10 +25,11 @@
 * the use of this software.
 * ===================================================================== */
 
+import { ConfigOptions } from './args';
 import { ConsoleLogger } from './consoleLogger';
 
-export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[]) {
-  const rsiFixed = rsi.slice(-10).map((rsi) => rsi.toFixed(2));
+export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
+  const rsiFixed = rsi.slice(-options.rsiHistoryLength).map((rsi) => rsi.toFixed(2));
   consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 2).join(", "));
   consoleLogger.push(`RSI current`, rsi[rsi.length - 1].toFixed(2));
   if (rsi[rsi.length - 1] > 80) {

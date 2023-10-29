@@ -70,6 +70,8 @@ export default {
       let trades = 0;
       let shortingProfit = 0;
       let shorts = 0;
+      let longProfit = 0;
+      let longs = 0;
       let lastTrade: any = undefined;
       let lastTime = "";
       if(newTradeHistory.length >= 2) {
@@ -85,14 +87,16 @@ export default {
               const oldPrice = parseFloat(lastTrade.price);
               const profit = calculatePercentageDifference(oldPrice, newPrice);
               totalProfit += reverseSign(profit);
+              shortingProfit += profit;
+              shorts++;
             } else {
               // Calculate profit for the sell trade
               const newPrice = parseFloat(trade.price);
               const oldPrice = parseFloat(lastTrade.price);
               const profit = calculatePercentageDifference(oldPrice, newPrice); 
               totalProfit += profit;
-              shortingProfit += profit;
-              shorts++;
+              longProfit += profit;
+              longs++;
             }
             trades++;
             lastTrade = trade; // Update lastTrade for the next iteration
@@ -100,7 +104,7 @@ export default {
         }
 
         // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nShorting profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from sales.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\nReminder, these calculations do not include trade fees.`);
+        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\Long profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\nReminder, these calculations do not include trade fees.`);
       } else {
         await interaction.reply(`Total profit for **${pair}**: Can not calculate percentage, less than two trades.`);
       }

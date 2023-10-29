@@ -287,7 +287,7 @@ export async function algorithmic(
     if(prev.shortEma.length > 2 && prev.longEma.length > 2 && prev.macd.length > 2) {
       logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma[prev.shortEma.length - 1], prev.longEma[prev.shortEma.length - 1]);
       logMACDSignals(consoleLogger, macd, prev.macd[prev.macd.length - 1]);
-      logRSISignals(consoleLogger, rsi);
+      logRSISignals(consoleLogger, rsi, options);
       const lastOrder = await getLastCompletedOrder(binance, symbol);
       await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, prev, balances, orderBook, closePrice, filter, options);
     }

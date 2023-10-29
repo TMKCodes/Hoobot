@@ -53,6 +53,8 @@ Below is an explanation of the various configuration values present in the `.env
 - `SLOW_MACD`: The time period for the slow-term MACD.
 - `SIGNAL_MACD`: The time period for the MACD signal.
 - `RSI_LENGTH`: The time period for the RSI calculation.
+- `RSI_SMOOTHING`: The time period for the RSI SMA Smoothing.
+- `RSI_HISTORY_LENGTH`: The length of historical RSI values considered for trading.
 - `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
 - `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
 - `MAX_AMOUNT`: The maximum amount of cryptocurrency the bot can use for trading (0 means no limit), limits the base asset amount in buy orders.

@@ -31,6 +31,7 @@ import { ConsoleLogger } from "./consoleLogger";
 import { logToFile } from "./logToFile";
 import { calculatePercentageDifference, order } from "./orders";
 import { macd, history } from "./algorithmic";
+import { sign } from "crypto";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -170,42 +171,44 @@ export const tradeDirection = async (
   }
   
   const prevHistogram = prev.macd[prev.macd.length - 1].histogram;
-  const currentHistogram = macd.histogram;
-  const macdLine = macd.macdLine;
-  const signalLine = macd.signalLine;
 
-  const isHistogramPositive = currentHistogram > 0;
-  const isHistogramNegative = currentHistogram < 0;
-  const isMacdLineAboveSignalLine = macdLine > signalLine;
-  const isSignalLineAboveHistogram = signalLine > currentHistogram;
-  const isSignalLineBelowHistogram = signalLine < currentHistogram;
-  const isMacdLineAboveZero = macdLine > 0;
-  const isSignalLineAboveZero = signalLine > 0;
+  const isPrevHistogramPositive = prevHistogram > 0;
+  const isPrevHistogramNegative = prevHistogram < 0;
+  const isHistogramPositive = macd.histogram > 0;
+  const isHistogramNegative = macd.histogram < 0;
+  const isMacdLineAboveSignalLine = macd.macdLine > macd.signalLine
+  const isMacdLineBelowSignalLine = macd.macdLine < macd.signalLine
+  const isSignalLineAboveHistogram = macd.signalLine > macd.histogram;
+  const isSignalLineBelowHistogram = macd.signalLine < macd.histogram
+  const isMacdLineAboveHistogram = macd.macdLine > macd.histogram;
+  const isMacdLineBelowHstogram = macd.macdLine < macd.histogram;
 
-
-  if (prevHistogram < 0 && isHistogramPositive) {
+  if(isPrevHistogramNegative && isHistogramPositive) {
     macdCheck = 'BUY';
-  } else if (prevHistogram > 0 && isHistogramNegative) {
+  } else if (isPrevHistogramPositive && isHistogramNegative) {
     macdCheck = 'SELL';
-  } else if (isMacdLineAboveZero && isSignalLineAboveZero && isMacdLineAboveSignalLine && isSignalLineBelowHistogram && isHistogramPositive) {
-    macdCheck = 'BUY';
-  } else if (!isMacdLineAboveZero && !isSignalLineAboveZero && isMacdLineAboveSignalLine && isSignalLineAboveHistogram && isHistogramNegative) {
-    macdCheck = 'SELL';
+  } else {
+    if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineAboveSignalLine) {
+      macdCheck = 'BUY';
+    } else if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineBelowSignalLine) {
+      macdCheck = 'SELL';
+    }
   }
+  
 
-
+  const slicedRSI = rsi.slice(-options.rsiHistoryLength);
   const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
   const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
-  for (let i = rsi.length - 1; i >= 0; i--) {
-    const prevRsi = rsi[i];
+  for (let i = slicedRSI.length - 1; i >= 0; i--) {
+    const prevRsi = slicedRSI[i];
     if (prevRsi > overboughtTreshold) {
       rsiCheck = 'SELL';
       break;
     }
   }
   if(rsiCheck === "HOLD") {
-    for (let i = rsi.length - 1; i >= 0; i--) {
-      const prevRsi = rsi[i];
+    for (let i = slicedRSI.length - 1; i >= 0; i--) {
+      const prevRsi = slicedRSI[i];
       if(prevRsi < oversoldTreshold) {
         rsiCheck = 'BUY';
         break;

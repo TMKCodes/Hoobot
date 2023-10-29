@@ -62,7 +62,7 @@ export async function hilow(
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const rsi = calculateRSI(candlesticks, options.rsiLength);
-    logRSISignals(consoleLogger, rsi);
+    logRSISignals(consoleLogger, rsi, options);
     const lastOrder = await getLastCompletedOrder(binance, symbol);
 
     //await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, rsi, balances, orderBook, closePrice, filter, options);
