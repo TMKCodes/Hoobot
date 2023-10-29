@@ -263,7 +263,7 @@ export async function algorithmic(
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const shortEma = calculateEMA(candlesticks, options.shortEma, options.source);
     const longEma = calculateEMA(candlesticks, options.longEma, options.source);
-    const rsi = calculateRSI(candlesticks, options.rsiLength, options.source);
+    const rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothing, options.source);
     const macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
     if(prev.shortEma.length > 2 && prev.longEma.length > 2 && prev.macd.length > 2) {
       logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma[prev.shortEma.length - 1], prev.longEma[prev.shortEma.length - 1]);

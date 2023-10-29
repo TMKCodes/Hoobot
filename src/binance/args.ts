@@ -64,6 +64,7 @@ export interface ConfigOptions {
   signalMacd: number;
   source: string;
   rsiLength: number;
+  rsiSmoothing: number;
   useEMA: boolean; 
   useMACD: boolean; 
   useRSI: boolean; 
@@ -100,7 +101,8 @@ export function parseArgs(args: string[]): ConfigOptions {
     slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
     signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
     source: process.env.SOURCE,
-    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 14,
+    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
+    rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
     useEMA: process.env.USE_EMA === "true" ? true : false,
     useMACD: process.env.USE_MACD === "true" ? true : false,
     useRSI: process.env.USE_RSI === "true" ? true : false,

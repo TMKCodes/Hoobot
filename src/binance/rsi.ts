@@ -46,7 +46,7 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[]) {
 }
 
 // Calculate RSI
-export function calculateRSI(candles: any[], length: number = 14, source: string = 'close'): number[] {
+export function calculateRSI(candles: any[], length: number = 14, smoothing: number = 1, source: string = 'close'): number[] {
   if (candles.length < length) {
     throw new Error('Insufficient data to calculate RSI');
   }
@@ -72,7 +72,7 @@ export function calculateRSI(candles: any[], length: number = 14, source: string
   const gains: number[] = [];
   const losses: number[] = [];
   for (const change of priceChanges) {
-    if (change > 0) { // Modified this line to fix the issue
+    if (change > 0) {
       gains.push(change);
       losses.push(0);
     } else {
@@ -91,8 +91,6 @@ export function calculateRSI(candles: any[], length: number = 14, source: string
   let avgGain = sumGains / length;
   let avgLoss = sumLosses / length;
 
-  //console.log(`Initial avgGain: ${avgGain}, avgLoss: ${avgLoss}`);
-
   // Calculate the RSI itself
   const rsArray: number[] = [];
   for (let i = length; i <= closePrices.length; i++) {
@@ -105,8 +103,18 @@ export function calculateRSI(candles: any[], length: number = 14, source: string
     const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
     const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
 
-    //console.log(`Iteration ${i}, avgGain: ${avgGain}, avgLoss: ${avgLoss}, rs: ${rs}, rsi: ${rsi}`);
     rsArray.push(rsi);
+  }
+
+  // Apply smoothing
+  if (smoothing > 1) {
+    for (let i = smoothing - 1; i < rsArray.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < smoothing; j++) {
+        sum += rsArray[i - j];
+      }
+      rsArray[i] = sum / smoothing;
+    }
   }
 
   return rsArray; 
