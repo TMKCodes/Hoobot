@@ -168,33 +168,51 @@ export const tradeDirection = async (
   } else if (shortEma < longEma) {
     emaCheck = 'SELL';
   }
+  
+  const prevHistogram = prev.macd[prev.macd.length - 1].histogram;
+  const currentHistogram = macd.histogram;
+  const macdLine = macd.macdLine;
+  const signalLine = macd.signalLine;
+
+  const isHistogramPositive = currentHistogram > 0;
+  const isHistogramNegative = currentHistogram < 0;
+  const isMacdLineAboveSignalLine = macdLine > signalLine;
+  const isSignalLineAboveHistogram = signalLine > currentHistogram;
+  const isSignalLineBelowHistogram = signalLine < currentHistogram;
+  const isMacdLineAboveZero = macdLine > 0;
+  const isSignalLineAboveZero = signalLine > 0;
 
 
-  if(prev.macd[prev.macd.length - 1].histogram < 0 && macd.histogram > 0) {
-    macdCheck = `BUY`;
-  } else if (prev.macd[prev.macd.length - 1].histogram > 0 && macd.histogram < 0) {
-    macdCheck = `SELL`;
-  } else {
-    if (macd.macdLine > macd.signalLine) {
-      macdCheck = `BUY`;
-    } else if (macd.macdLine < macd.signalLine) {
-      macdCheck = `SELL`;
+  if (prevHistogram < 0 && isHistogramPositive) {
+    macdCheck = 'BUY';
+  } else if (prevHistogram > 0 && isHistogramNegative) {
+    macdCheck = 'SELL';
+  } else if (isMacdLineAboveZero && isSignalLineAboveZero && isMacdLineAboveSignalLine && isSignalLineBelowHistogram && isHistogramPositive) {
+    macdCheck = 'BUY';
+  } else if (!isMacdLineAboveZero && !isSignalLineAboveZero && isMacdLineAboveSignalLine && isSignalLineAboveHistogram && isHistogramNegative) {
+    macdCheck = 'SELL';
+  }
+
+
+  const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
+  const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
+  for (let i = rsi.length - 1; i >= 0; i--) {
+    const prevRsi = rsi[i];
+    if (prevRsi > overboughtTreshold) {
+      rsiCheck = 'SELL';
+      break;
+    }
+  }
+  if(rsiCheck === "HOLD") {
+    for (let i = rsi.length - 1; i >= 0; i--) {
+      const prevRsi = rsi[i];
+      if(prevRsi < oversoldTreshold) {
+        rsiCheck = 'BUY';
+        break;
+      }
     }
   }
   
-  if (options.overboughtTreshold === undefined || options.oversoldTreshold === undefined) {
-    if (rsi[rsi.length - 2] > 55) {
-      rsiCheck = 'SELL';
-    } else if (rsi[rsi.length - 2] < 45) {
-      rsiCheck = 'BUY';
-    }
-  } else {
-    if (rsi[rsi.length - 2] > options.overboughtTreshold) {
-      rsiCheck = 'SELL';
-    } else if (rsi[rsi.length - 2] < options.oversoldTreshold) {
-      rsiCheck = 'BUY';
-    }
-  }
 
   let tradeDirection = 'HOLD';
   if (nextTradeCheck === 'SELL' && balanceCheck === 'SELL') {
