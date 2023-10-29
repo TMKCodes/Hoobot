@@ -88,12 +88,7 @@ export const handleOpenOrders = async (
     consoleLogger.push("Age seconds: ", orderAgeSeconds);
     // Get order status to determine if it's active, partially filled, or filled
     
-    if (status === 'PARTIALLY_FILLED') {
-      const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** is already partially filled..`;
-      sendMessageToChannel(discord, options.discordChannelID, statusMsg);
-      consoleLogger.push("status-msg", statusMsg);
-      return "partially filled";
-    } else if (orderAgeSeconds > options.maxOrderAge) {
+    if (orderAgeSeconds > options.maxOrderAge) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
       const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
