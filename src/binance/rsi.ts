@@ -29,9 +29,12 @@ import { ConfigOptions } from './args';
 import { ConsoleLogger } from './consoleLogger';
 
 export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
-  const rsiFixed = rsi.slice(-(options.rsiHistoryLength + 1)).map((rsi) => rsi.toFixed(2));
-  consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 2).join(", "));
-  consoleLogger.push(`RSI current`, rsi[rsi.length - 1].toFixed(2));
+  const rsiFixed = rsi.map((rsi) => rsi.toFixed(2));
+  if(rsiFixed.length === 1) {
+    consoleLogger.push("RSI history:", rsiFixed.join(", "));
+  } else {
+    consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 1).join(", "));
+  }
   if (rsi[rsi.length - 1] > 80) {
     consoleLogger.push(`RSI condition`, `Extremely Overbought`);
   } else if (rsi[rsi.length - 1] < 20) {
@@ -47,30 +50,28 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
   }
 }
 
-// Calculate RSI
-export function calculateRSI(candles: any[], length: number = 9, smoothing: number = 12, source: string = 'close'): number[] {
-  if (candles.length < length) {
+
+export function calculateRSI(candles: any[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
+  if (candles.length < (length + 1)) {
     throw new Error('Insufficient data to calculate RSI');
   }
-  // Get closing prices from candles
+
   let closePrices: number[] = [];
-  if(source == 'close') {
+  if (source === 'close') {
     closePrices = candles.map((candle) => parseFloat(candle.close));
-  } else if(source == 'open') {
+  } else if (source === 'open') {
     closePrices = candles.map((candle) => parseFloat(candle.open));
-  } else if(source == 'high') {
+  } else if (source === 'high') {
     closePrices = candles.map((candle) => parseFloat(candle.high));
-  } else if(source == 'low') {
+  } else if (source === 'low') {
     closePrices = candles.map((candle) => parseFloat(candle.low));
   }
 
-  // Calculate price changes
   const priceChanges: number[] = [];
   for (let i = 1; i < closePrices.length; i++) {
     priceChanges.push(closePrices[i] - closePrices[i - 1]);
   }
 
-  // Calculate gains and losses
   const gains: number[] = [];
   const losses: number[] = [];
   for (const change of priceChanges) {
@@ -83,41 +84,45 @@ export function calculateRSI(candles: any[], length: number = 9, smoothing: numb
     }
   }
 
-  // Calculate average gains and losses over the first 'length' data points
-  let sumGains = 0;
-  let sumLosses = 0;
-  for (let i = 0; i < length; i++) {
-    sumGains += gains[i];
-    sumLosses += losses[i];
-  }
-  let avgGain = sumGains / length;
-  let avgLoss = sumLosses / length;
+  let avgGain = gains.slice(0, length).reduce((a, b) => a + b) / length;
+  let avgLoss = losses.slice(0, length).reduce((a, b) => a + b) / length;
 
-  // Calculate the RSI itself
   const rsArray: number[] = [];
-  for (let i = length; i <= closePrices.length; i++) {
-    if (i < closePrices.length) {
-      avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
-      avgLoss = ((avgLoss * (length - 1)) + losses[i - 1]) / length;
-    }
+  for (let i = length; i < closePrices.length; i++) {
+    avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
+    avgLoss = ((avgLoss * (length - 1)) + losses[i - 1]) / length;
 
-    // Handle the case when average loss is 0
     const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-    const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
+    const rsi = 100 - (100 / (1 + rs));
 
     rsArray.push(rsi);
   }
 
-  // Apply smoothing
-  if (smoothing > 1) {
+  if(smoothingType == "SMA" && smoothing > 1) {
     for (let i = smoothing - 1; i < rsArray.length; i++) {
       let sum = 0;
       for (let j = 0; j < smoothing; j++) {
         sum += rsArray[i - j];
       }
-      rsArray[i] = sum / smoothing;
+      const smoothedRS = sum / smoothing;
+      rsArray[i] = smoothedRS;
+    }
+  } else if(smoothingType == "EMA" && smoothing > 1) {
+    for (let i = smoothing; i < rsArray.length; i++) {
+      const alpha = 2 / (smoothing + 1);
+      rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
+    }
+  } else if(smoothingType == "WMA" && smoothing > 1) {
+    for (let i = smoothing; i < rsArray.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < smoothing; j++) {
+        sum += rsArray[i - j];
+      }
+      const weightedAverage = sum / ((smoothing * (smoothing + 1)) / 2);
+      rsArray[i] = weightedAverage;
     }
   }
+  
 
-  return rsArray; 
+  return rsArray.slice(-amount);
 }

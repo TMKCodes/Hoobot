@@ -66,6 +66,7 @@ export interface ConfigOptions {
   source: string;
   rsiLength: number;
   rsiSmoothing: number;
+  rsiSmoothingType: string;
   rsiHistoryLength: number;
   useEMA: boolean; 
   useMACD: boolean; 
@@ -105,6 +106,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     source: process.env.SOURCE,
     rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
     rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
+    rsiSmoothingType: process.env.RSI_SMOOTHING_TYPE || "SMA",
     rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
     useEMA: process.env.USE_EMA === "true" ? true : false,
     useMACD: process.env.USE_MACD === "true" ? true : false,
