@@ -82,7 +82,6 @@ const main = async () => {
       // Possible to add discord notification if order has been fulfilled with websocket notification.
     });
 
-    console.log("WORKS?");
 
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
