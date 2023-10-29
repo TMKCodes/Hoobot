@@ -104,7 +104,7 @@ export default {
         }
 
         // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\Long profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\nReminder, these calculations do not include trade fees.`);
+        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nLong profit for **${pair}**:** ${longProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\nReminder, these calculations do not include trade fees.`);
       } else {
         await interaction.reply(`Total profit for **${pair}**: Can not calculate percentage, less than two trades.`);
       }
