@@ -87,7 +87,7 @@ export default {
               const oldPrice = parseFloat(lastTrade.price);
               const profit = calculatePercentageDifference(oldPrice, newPrice);
               totalProfit += reverseSign(profit);
-              shortingProfit += profit;
+              shortingProfit += reverseSign(profit);
               shorts++;
             } else {
               // Calculate profit for the sell trade

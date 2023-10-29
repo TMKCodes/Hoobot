@@ -188,15 +188,15 @@ export const tradeDirection = async (
   } else if (isPrevHistogramPositive && isHistogramNegative) {
     macdCheck = 'SELL';
   } else {
-    if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineAboveSignalLine) {
+    if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
       macdCheck = 'BUY';
-    } else if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineBelowSignalLine) {
+    } else if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
       macdCheck = 'SELL';
     }
   }
   
 
-  const slicedRSI = rsi.slice(-options.rsiHistoryLength);
+  const slicedRSI = rsi.slice(-(options.rsiHistoryLength + 1));
   const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
   const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
   for (let i = slicedRSI.length - 1; i >= 0; i--) {

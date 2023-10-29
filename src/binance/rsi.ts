@@ -29,7 +29,7 @@ import { ConfigOptions } from './args';
 import { ConsoleLogger } from './consoleLogger';
 
 export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
-  const rsiFixed = rsi.slice(-options.rsiHistoryLength).map((rsi) => rsi.toFixed(2));
+  const rsiFixed = rsi.slice(-(options.rsiHistoryLength + 1)).map((rsi) => rsi.toFixed(2));
   consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 2).join(", "));
   consoleLogger.push(`RSI current`, rsi[rsi.length - 1].toFixed(2));
   if (rsi[rsi.length - 1] > 80) {
@@ -48,7 +48,7 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 }
 
 // Calculate RSI
-export function calculateRSI(candles: any[], length: number = 14, smoothing: number = 1, source: string = 'close'): number[] {
+export function calculateRSI(candles: any[], length: number = 9, smoothing: number = 12, source: string = 'close'): number[] {
   if (candles.length < length) {
     throw new Error('Insufficient data to calculate RSI');
   }
