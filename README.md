@@ -1,6 +1,6 @@
-# Binance Trading Bot
+# Hoobot
 
-This repository contains a Binance trading bot designed for cryptocurrency trading. 
+This repository contains a Hoobot designed for cryptocurrency trading. 
 The bot allows you to automate trading strategies and execute trades on the Binance 
 exchange.
 
@@ -34,7 +34,7 @@ To start the trading bot, use the following command: `npm run start`
 
 ## .env Configuration Values
 
-Below is an explanation of the various configuration values present in the `.env` file for the Binance trading bot:
+Below is an explanation of the various configuration values present in the `.env` file for the Hoobot:
 
 ### Binance Bot Configuration
 
@@ -97,7 +97,7 @@ about Koinly and sign up through the following link: [Koinly - Cryptocurrency Ta
 
 ## Note
 
-Please note that this software is provided under the Binance Trading Bot - Proprietary License, and any unauthorized use, reproduction, 
+Please note that this software is provided under the Hoobot - Proprietary License, and any unauthorized use, reproduction, 
 or modification is strictly prohibited. By using this software, you agree to be bound by the terms of the license.
 
 The user of this software assumes all risks and responsibilities associated with its use. Hoosat Oy shall not be liable for any losses, 
@@ -105,7 +105,7 @@ damages, or liabilities arising from the use of this software.
 
 ## LICENSE
 
-Binance Trading Bot - Proprietary License
+Hoobot - Proprietary License
 Copyright (c) 2023 Hoosat Oy. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are not permitted without prior written permission 

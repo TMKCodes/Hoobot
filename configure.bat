@@ -124,4 +124,4 @@ if %ERRORLEVEL% EQU 0 (
 REM Install project dependencies with NPM
 call :install_dependencies
 
-echo Binance trading bot installation completed successfully.
+echo Hoobot installation completed successfully.

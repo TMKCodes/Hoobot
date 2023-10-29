@@ -1,5 +1,5 @@
 /* =====================================================================
-* Binance Trading Bot - Proprietary License
+* Hoobot - Proprietary License
 * Copyright (c) 2023 Hoosat Oy. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,7 @@ const main = async () => {
     if (await checkLicenseValidity(options.license) || options.debug === true) {
       console.log('License key is valid. Enjoy the trading with Hoobot!');
     } else {
-      console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Binance Trading bot. There are preventions to notice this if you remove this check.');
+      console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.');
     }
     let discord: any = undefined;
     if(process.env.DISCORD_ENABLED === "true") {

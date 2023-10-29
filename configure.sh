@@ -125,7 +125,7 @@ main() {
   # Install project dependencies with NPM
   install_dependencies
 
-  echo "Binance trading bot installation completed successfully."
+  echo "Hoobot installation completed successfully."
 }
 
 # Call the main function

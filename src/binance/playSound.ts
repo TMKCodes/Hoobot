@@ -1,5 +1,5 @@
 /* =====================================================================
-* Binance Trading Bot - Proprietary License
+* Hoobot - Proprietary License
 * Copyright (c) 2023 Hoosat Oy. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
