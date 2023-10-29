@@ -90,6 +90,8 @@ export const logMACDSignals = (
       consoleLogger.push(`MACD Signal`, 'Positive Histogram Divergence');
     } else if (isNegativeHistogramDivergence) {
       consoleLogger.push(`MACD Signal`, 'Negative Histogram Divergence');
+    } else {
+      consoleLogger.push(`MACD Signal`, 'Neutral');
     }
   }
 }
