@@ -69,6 +69,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `DISCORD_BOT_TOKEN`: The Discord bot token required for the bot to connect to your Discord server.
 - `DISCORD_APPLICATION_ID`: The application ID associated with the Discord bot.
 - `DISCORD_SERVER_ID`: The ID of the Discord server where the bot will operate.
+- `DISCORD_CHANNEL_ID`: The ID of the Discord channel where the bot will send status updates.
 
 ### force.json
 

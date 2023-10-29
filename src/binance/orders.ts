@@ -48,7 +48,6 @@ export interface order {
   tradeId: number;
 }
 
-const cryptoChannelID = "1133114701136547961"
 
 export const cancelOrder = async (binance: Binance, symbol: string, orderId: number) => {
   try {
@@ -90,14 +89,14 @@ export const handleOpenOrders = async (
     
     if (status === 'PARTIALLY_FILLED') {
       const statusMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** is already partially filled..`;
-      sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+      sendMessageToChannel(discord, options.discordChannelID, statusMsg);
       consoleLogger.push("status-msg", statusMsg);
       return "partially filled";
     } else if (orderAgeSeconds > options.maxOrderAge) {
       // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
       const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       consoleLogger.push("order-msg", orderMsg);
       return "canceled";
     } else {
@@ -108,7 +107,7 @@ export const handleOpenOrders = async (
         if (diff > options.closePercentage) {
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.closePercentage.toFixed(2)}%, difference between ${bid} bid and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";
         }
@@ -119,7 +118,7 @@ export const handleOpenOrders = async (
         if (diff > options.closePercentage) {
           await cancelOrder(binance, symbol, orderId);
           const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.closePercentage.toFixed(2)}%, difference between ${ask} ask and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";
         }

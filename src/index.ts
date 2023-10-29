@@ -25,20 +25,13 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { loginDiscord, sendMessageToChannel } from './discord/discord';
-import { SymbolCandlesticks, candlestick, getLastCandlesticks, listenForCandlesticks } from './binance/candlesticks';
-import { calculateEMA, logEMASignals } from './binance/ema';
-import { calculateMACD, logMACDSignals } from './binance/macd';
-import { calculateRSI, logRSISignals } from './binance/rsi';
-import { ConfigOptions, getSecondsFromInterval, parseArgs } from './binance/args';
+import { loginDiscord, } from './discord/discord';
+import { SymbolCandlesticks, candlestick, listenForCandlesticks } from './binance/candlesticks';
+import { ConfigOptions, parseArgs } from './binance/args';
 import { getBalancesFromWebsocket, getCurrentBalances } from './binance/balances';
-import { getLastCompletedOrder, handleOpenOrders, order } from './binance/orders';
-import { checkBeforeOrder, tradeDirection } from './binance/tradeChecks';
-import { play } from './binance/playSound';
-import { Client } from 'discord.js';
 import { consoleLogger } from './binance/consoleLogger';
-import { filter, filters, getFilters } from './binance/filters';
-import dotenv, { config } from 'dotenv';
+import { filters, getFilters } from './binance/filters';
+import dotenv from 'dotenv';
 import { algorithmic } from './binance/algorithmic';
 import { getTradeableSymbols } from './binance/symbols';
 import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';

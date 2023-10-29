@@ -79,7 +79,8 @@ export interface ConfigOptions {
   minimumProfitSell: number;
   minimumProfitBuy: number;
   license: string;
-  debug: boolean
+  debug: boolean;
+  discordChannelID: string;
   [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
@@ -116,6 +117,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
     license: process.env.LICENSE || "",
     debug: process.env.DEBUG === "true" ? true : false,
+    discordChannelID:  process.env.DISCORD_CHANNEL_ID || "",
   };
   if (args.length === 0) {
     // If no command-line arguments, read options from .env file

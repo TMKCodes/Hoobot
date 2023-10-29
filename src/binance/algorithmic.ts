@@ -17,7 +17,6 @@ import { readFileSync, writeFileSync } from "fs";
 
 
 const soundFile = './alarm.mp3'
-const cryptoChannelID = "1133114701136547961"
 
 export interface macd { 
   macdLine: number; 
@@ -111,7 +110,7 @@ async function placeTrade(
           writeFileSync("force.json", JSON.stringify(force));
           order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           consoleLogger.push(`sell-order`, {
             symbol: symbol.split("/").join(""),
             quantity: roundedQuantity,
@@ -133,16 +132,16 @@ async function placeTrade(
           } while(openOrders.length > 0);
           if (handleOpenOrderResult !== "canceled") {
             const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-            sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+            sendMessageToChannel(discord, options.discordChannelID, statusMsg);
             consoleLogger.push("status-msg", statusMsg);
             await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
             const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
-            sendMessageToChannel(discord, cryptoChannelID, resumeMsg);
+            sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
           }
         } catch (error: any) {
           console.error(JSON.stringify(error));
           if (error.msg !== undefined) {
-            sendMessageToChannel(discord, cryptoChannelID, error.msg);
+            sendMessageToChannel(discord, options.discordChannelID, error.msg);
           }
         }
         return order;
@@ -184,7 +183,7 @@ async function placeTrade(
           
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, cryptoChannelID, orderMsg);
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           consoleLogger.push(`buy-order`, {
             symbol: symbol.split("/").join(""),
             quantity: roundedQuantity,
@@ -206,16 +205,16 @@ async function placeTrade(
           } while(openOrders.length > 0);
           if (handleOpenOrderResult !== "canceled") {
             const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-            sendMessageToChannel(discord, cryptoChannelID, statusMsg);
+            sendMessageToChannel(discord, options.discordChannelID, statusMsg);
             consoleLogger.push("status-msg", statusMsg);
             await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
             const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
-            sendMessageToChannel(discord, cryptoChannelID, resumeMsg);
+            sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
           }
         } catch (error: any) {
           console.error(JSON.stringify(error.body));
           if (error.msg !== undefined) {
-            sendMessageToChannel(discord, cryptoChannelID, error.msg);
+            sendMessageToChannel(discord, options.discordChannelID, error.msg);
           }
         }
         return order;
