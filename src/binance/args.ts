@@ -59,7 +59,9 @@ export interface ConfigOptions {
   candlestickInterval: CandlestickInterval;
   shortEma: number;
   longEma: number;
-  macdLength: number;
+  fastMacd: number;
+  slowMacd: number;
+  signalMacd: number;
   source: string;
   rsiLength: number;
   useEMA: boolean; 
@@ -76,6 +78,7 @@ export interface ConfigOptions {
   holdUntilPositiveTrade?: boolean;
   minimumProfitSell: number;
   minimumProfitBuy: number;
+  license: string;
   [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
@@ -91,7 +94,9 @@ export function parseArgs(args: string[]): ConfigOptions {
       candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
       shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
       longEma: parseFloat(process.env.LONG_EMA!) || 26,
-      macdLength: parseFloat(process.env.MACD_LENGTH!) || 9,
+      fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
+      slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
+      signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
       source: process.env.SOURCE,
       rsiLength: parseFloat(process.env.RSI_LENGTH!) || 14,
       useEMA: process.env.USE_EMA === "true" ? true : false,
@@ -108,6 +113,7 @@ export function parseArgs(args: string[]): ConfigOptions {
       holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
       minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
       minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
+      license: process.env.LICENSE || "",
     };
   }
   // If command-line arguments provided, parse them
@@ -117,9 +123,11 @@ export function parseArgs(args: string[]): ConfigOptions {
     mode: 'algorithmic',
     symbols: '',
     candlestickInterval: "1m",
-    shortEma: 7,
-    longEma: 26,
-    macdLength: 9,
+    shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
+    longEma: parseFloat(process.env.LONG_EMA!) || 26,
+    fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
+    slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
+    signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
     source: 'close',
     rsiLength: 14,
     useEMA: true,
@@ -135,6 +143,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
     minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
     minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
+    license: process.env.LICENSE || "",
   };
   for (let i = 0; i < args.length; i += 2) {
     const argName = args[i].substring(2);

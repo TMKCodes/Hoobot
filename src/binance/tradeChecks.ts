@@ -99,12 +99,12 @@ export const tradeDirection = async (
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
 
   if(tradeHistory.length >= 2) {
-    if(tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
+    if(tradeHistory[0].isBuyer === true) { 
       const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
       lastProfit = profitLastTrade;
       const possibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), closePrice);
       nextPossibleProfit = possibleProfit;
-    } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
+    } else if(tradeHistory[0].isBuyer === false) { 
       const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
       lastProfit = profitLastTrade;
       const possibleProfit = calculatePercentageDifference(closePrice, parseFloat(tradeHistory[0].price));
@@ -114,7 +114,7 @@ export const tradeDirection = async (
 
   if(force[symbol]?.skip !== true) {
     if (tradeHistory.length >= 2) {
-      if (tradeHistory[0].isBuyer === true) { // SELL -> BUY and NEXT SELL
+      if (tradeHistory[0].isBuyer === true) { 
         if(options.holdUntilPositiveTrade === true) {
           if(nextPossibleProfit > options.minimumProfitSell) {
             profitCheck = "SELL";
@@ -124,7 +124,7 @@ export const tradeDirection = async (
         } else {
           profitCheck = "SELL"
         }
-      } else if(tradeHistory[0].isBuyer === false) { // BUY -> SELL and NEXT BUY
+      } else if(tradeHistory[0].isBuyer === false) { 
         if(options.holdUntilPositiveTrade === true) {
           if(nextPossibleProfit > options.minimumProfitBuy) {
             profitCheck = "BUY";
@@ -169,14 +169,14 @@ export const tradeDirection = async (
   }
 
 
-  if(prev.macd[prev.macd.length - 1].histogram < 0 && macd.histogram > 0 && macd.signalLine < macd.histogram) {
+  if(prev.macd[prev.macd.length - 1].histogram < 0 && macd.histogram > 0) {
     macdCheck = `BUY`;
-  } else if (prev.macd[prev.macd.length - 1].histogram > 0 && macd.histogram < 0 && macd.signalLine > macd.histogram) {
+  } else if (prev.macd[prev.macd.length - 1].histogram > 0 && macd.histogram < 0) {
     macdCheck = `SELL`;
   } else {
-    if (macd.macdLine > macd.signalLine && macd.signalLine < macd.histogram && macd.histogram > 0) {
+    if (macd.macdLine > macd.signalLine) {
       macdCheck = `BUY`;
-    } else if (macd.macdLine < macd.signalLine && macd.signalLine > macd.histogram && macd.histogram < 0) {
+    } else if (macd.macdLine < macd.signalLine) {
       macdCheck = `SELL`;
     }
   }

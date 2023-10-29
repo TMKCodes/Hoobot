@@ -43,6 +43,7 @@ import { algorithmic } from './binance/algorithmic';
 import { getTradeableSymbols } from './binance/symbols';
 import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';
 import { hilow } from './binance/hilow';
+import { checkLicenseValidity } from './binance/license';
 
 
 
@@ -55,7 +56,7 @@ const options = parseArgs(args) as ConfigOptions;
 const binance = new Binance().options({
   APIKEY: options.apiKey,
   APISECRET: options.apiSecret,
-  useServerTime: true, // This uses Binance server time for WebSocket requests
+  useServerTime: true, 
   family: 4,
 });
 
@@ -64,6 +65,11 @@ let tradingPairFilters: filters = {};
 
 const main = async () => {
   try {
+    if (await checkLicenseValidity(options.license)) {
+      console.log('License key is valid. Enjoy the trading with Hoobot!');
+    } else {
+      console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Binance Trading bot. There are preventions to notice this if you remove this check.');
+    }
     let discord: any = undefined;
     if(process.env.DISCORD_ENABLED === "true") {
       discord = loginDiscord(binance, options);
@@ -91,20 +97,22 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
-            algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
-          });
+          if (await checkLicenseValidity(options.license)) {
+            listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
+              algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+            });
+          }
         }
       } else {
         // If options.symbol is a single string, listen for candlesticks for that symbol only
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        //const candlestick = await getLastCandlesticks(binance, options.symbols as string, interval, 500);
-        //algorithmic(discord, binance, logger, options.symbols as string, balances, symbolCandlesticks[options.symbols as string].candles, filter, options)
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
-          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
-        });
+        if (await checkLicenseValidity(options.license)) {
+          listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
+            algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+          });
+        }
       }
     } else if (options.mode === "hilow") {
       if (Array.isArray(options.symbols)) {
@@ -113,17 +121,21 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
-            hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
-          });
+          if (await checkLicenseValidity(options.license)) {
+            listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
+              hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+            });
+          }
         }
       } else {
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
-          hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
-        });
+        if (await checkLicenseValidity(options.license)) {
+          listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
+            hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+          });
+        }
       }
     } else if (options.mode === "arbitrage") {
       const symbolInfo = await getTradeableSymbols(binance);

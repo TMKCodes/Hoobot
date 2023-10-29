@@ -75,6 +75,12 @@ async function placeTrade(
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const lastTrade = tradeHistory[0];
+  const currentTime = Date.now();
+  const timeDifferenceInSeconds = (currentTime - lastTrade.time) / 1000;
+  consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
+  if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
+    return false; // don't trade since the last trade was too new.
+  }
   const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, prev, tradeHistory, options);
   consoleLogger.push(`Trade direction`, direction);
   if (direction === "RECHECK BALANCES") {
@@ -82,7 +88,7 @@ async function placeTrade(
     return false;
   } else if (direction === 'SELL') {
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0] + parseFloat(filter.tickSize);
+    let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     const quantity = quoteBalance;
     let maxQuantity = quantity;
     if (options.maxAmount !== 0) {
@@ -150,7 +156,7 @@ async function placeTrade(
     }
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1] - parseFloat(filter.tickSize);
+    let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
     const quantityInQuote = (baseBalance / price) * 0.999;
     const quantityInBase = baseBalance * 0.999
     let maxQuantityInQuote = quantityInQuote;
@@ -259,7 +265,7 @@ export async function algorithmic(
     const shortEma = calculateEMA(candlesticks, options.shortEma, options.source);
     const longEma = calculateEMA(candlesticks, options.longEma, options.source);
     const rsi = calculateRSI(candlesticks, options.rsiLength, options.source);
-    const macd = calculateMACD(candlesticks, options.shortEma, options.longEma, options.macdLength, options.source);
+    const macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
     if(prev.shortEma.length > 2 && prev.longEma.length > 2 && prev.macd.length > 2) {
       logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma[prev.shortEma.length - 1], prev.longEma[prev.shortEma.length - 1]);
       logMACDSignals(consoleLogger, macd, prev.macd[prev.macd.length - 1]);
