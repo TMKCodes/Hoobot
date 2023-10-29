@@ -89,13 +89,9 @@ async function placeTrade(
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     const quantity = quoteBalance;
-    let maxQuantity = quantity;
-    if (options.maxAmount !== 0) {
-      maxQuantity = Math.min(quantity, options.maxAmount);
-    }
     const stopPrice = price * (1 - (options.closePercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
+    const roundedQuantity = binance.roundStep(quantity, filter.stepSize);
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
@@ -156,19 +152,15 @@ async function placeTrade(
   } else if (direction === 'BUY') {
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
-    const quantityInQuote = (baseBalance / price) * 0.999;
-    const quantityInBase = baseBalance * 0.999
-    let maxQuantityInQuote = quantityInQuote;
-    if (options.maxAmount !== 0) {
-      maxQuantityInQuote = Math.min(quantityInQuote, options.maxAmount);
-    }
+    const quantityInBase = baseBalance
     let maxQuantityInBase = quantityInBase;
     if (options.maxAmount !== 0) {
       maxQuantityInBase = Math.min(quantityInBase, options.maxAmount);
     }
+    const quantityInQuote = (maxQuantityInBase / price);
     const stopPrice = price * (1 + (options.closePercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
+    const roundedQuantity = binance.roundStep(quantityInQuote, filter.stepSize);
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {

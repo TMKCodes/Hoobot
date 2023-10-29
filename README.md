@@ -55,7 +55,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `RSI_LENGTH`: The time period for the RSI calculation.
 - `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
 - `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
-- `MAX_AMOUNT`: The maximum amount of cryptocurrency the bot can use for trading (0 means no limit).
+- `MAX_AMOUNT`: The maximum amount of cryptocurrency the bot can use for trading (0 means no limit), limits the base asset amount in buy orders.
 - `CLOSE_PERCENTAGE`: The percentage of the account balance the bot can risk for each trade.
 - `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
 - `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
