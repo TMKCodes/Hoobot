@@ -94,7 +94,7 @@ async function placeTrade(
     if (options.maxAmount !== 0) {
       maxQuantity = Math.min(quantity, options.maxAmount);
     }
-    const stopPrice = price * (1 - (options.riskPercentage / 100));
+    const stopPrice = price * (1 - (options.closePercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantity, filter.stepSize);
     const quoteQuantity = roundedQuantity * price;
@@ -167,7 +167,7 @@ async function placeTrade(
     if (options.maxAmount !== 0) {
       maxQuantityInBase = Math.min(quantityInBase, options.maxAmount);
     }
-    const stopPrice = price * (1 + (options.riskPercentage / 100));
+    const stopPrice = price * (1 + (options.closePercentage / 100));
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);

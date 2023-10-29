@@ -18,15 +18,15 @@ in crypto trading.
 
 ## NOTE: Currently only Algorithmic trading with EMA, MACD, RSI signals is available.
 
-## Installation
+## Configuration
 
 ### Windows
 
-1. Run `install.bat` to set up the required dependencies on Windows.
+1. Run `configure.bat` to set up the required dependencies on Windows.
 
 ### Linux
 
-1. Run `install.sh` to set up the required dependencies on Linux.
+1. Run `configure.sh` to set up the required dependencies on Linux.
 
 ## Usage
 
@@ -41,7 +41,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `API_KEY`: Your Binance API key, which allows the bot to access your Binance account for trading.
 - `API_SECRET`: Your Binance API secret, used to sign requests for enhanced security.
 - `MODE`: A string value to decide trading mode ("algorithmic", "hilow", "arbitage")
-- `PAIR`: The trading pair the bot will use, e.g., "BETH/USDT" for Ethereum against USDT (Tether).
+- `SYMBOL`: The trading pair the bot will use, e.g., "BETH/USDT" for Ethereum against USDT (Tether).
 - `CANDLESTICK_INTERVAL`: The interval used for fetching candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
 - `USE_EMA`: A boolean value ("true" or "false") indicating whether the bot should use Exponential Moving Average (EMA) in its strategy.
 - `USE_MACD`: A boolean value indicating whether the bot should use Moving Average Convergence Divergence (MACD) in its strategy.
@@ -56,7 +56,7 @@ Below is an explanation of the various configuration values present in the `.env
 - `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
 - `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
 - `MAX_AMOUNT`: The maximum amount of cryptocurrency the bot can use for trading (0 means no limit).
-- `RISK_PERCENTAGE`: The percentage of the account balance the bot can risk for each trade.
+- `CLOSE_PERCENTAGE`: The percentage of the account balance the bot can risk for each trade.
 - `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
 - `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
 - `HOLD_UNTIL_POSITIVE_TRADE`: `true` to not allow negative trades.

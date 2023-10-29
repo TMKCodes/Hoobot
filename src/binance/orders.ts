@@ -105,9 +105,9 @@ export const handleOpenOrders = async (
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
         const bid = orderBookBids[orderBookBids.length - 1];
         const diff = Math.abs(calculatePercentageDifference(bid, price));
-        if (diff > options.riskPercentage) {
+        if (diff > options.closePercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${bid} bid and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.closePercentage.toFixed(2)}%, difference between ${bid} bid and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";
@@ -116,9 +116,9 @@ export const handleOpenOrders = async (
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
         const ask = orderBookAsks[0];
         const diff = Math.abs(calculatePercentageDifference(ask, price));
-        if (diff > options.riskPercentage) {
+        if (diff > options.closePercentage) {
           await cancelOrder(binance, symbol, orderId);
-          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.riskPercentage.toFixed(2)}%, difference between ${ask} ask and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to price has changed over risk percentage ${options.closePercentage.toFixed(2)}%, difference between ${ask} ask and current ${price} order price ${diff.toFixed(4)}.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, cryptoChannelID, orderMsg);
           consoleLogger.push("order-msg", orderMsg);
           return "canceled";

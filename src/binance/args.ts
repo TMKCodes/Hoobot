@@ -68,7 +68,7 @@ export interface ConfigOptions {
   useMACD: boolean; 
   useRSI: boolean; 
   maxAmount: number;
-  riskPercentage: number;
+  closePercentage: number;
   overboughtTreshold: number;
   oversoldTreshold: number;
   maxOrderAge: number;
@@ -103,7 +103,7 @@ export function parseArgs(args: string[]): ConfigOptions {
       useMACD: process.env.USE_MACD === "true" ? true : false,
       useRSI: process.env.USE_RSI === "true" ? true : false,
       maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
-      riskPercentage: parseFloat(process.env.RISK_PERCENTAGE!) || 1,
+      closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
       overboughtTreshold: parseFloat(process.env.OVERBOUGHT_TRESHOLD!) || 70,
       oversoldTreshold: parseFloat(process.env.OVERSOLD_TRESHOLD!) || 30,
       maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
@@ -134,7 +134,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     useMACD: true,
     useRSI: true,
     maxAmount: 0,
-    riskPercentage: 1,
+    closePercentage: 1,
     overboughtTreshold: 70,
     oversoldTreshold: 30,
     maxOrderAge: 60,
