@@ -49,7 +49,9 @@ Below is an explanation of the various configuration values present in the `.env
 - `SHORT_EMA`: The time period for the short-term EMA.
 - `LONG_EMA`: The time period for the long-term EMA.
 - `SOURCE`: A string value ("close", "open", "high", "low") indicates which value is used in EMA calculations.
-- `MACD_LENGTH`: A number value indicating length for MACD signal EMA calculations.
+- `FAST_MACD`: The time period for the fast-term MACD.
+- `SLOW_MACD`: The time period for the slow-term MACD.
+- `SIGNAL_MACD`: The time period for the MACD signal.
 - `RSI_LENGTH`: The time period for the RSI calculation.
 - `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
 - `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
