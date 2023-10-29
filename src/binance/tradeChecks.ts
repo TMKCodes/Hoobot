@@ -160,13 +160,23 @@ export const tradeDirection = async (
       nextTradeCheck = 'BUY';
     }
   }
+  
   if (balanceCheck !== nextTradeCheck) {
     return "RECHECK BALANCES";
   }
 
-  if (shortEma > longEma) {
+  const prevShortEma = prev.shortEma[prev.shortEma.length - 1];
+  const prevLongEma = prev.longEma[prev.longEma.length - 1];
+  const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
+  const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
+  const isUpwardDirection = shortEma > prevShortEma && longEma > prevLongEma;
+  const isDownwardDirection = shortEma < prevShortEma && longEma < prevLongEma;
+  const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+
+
+  if (isBullishCrossover) {
     emaCheck = 'BUY';
-  } else if (shortEma < longEma) {
+  } else if (isBearishCrossover) {
     emaCheck = 'SELL';
   }
   
@@ -195,20 +205,18 @@ export const tradeDirection = async (
     }
   }
   
-
-  const slicedRSI = rsi.slice(-(options.rsiHistoryLength + 1));
   const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
   const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
-  for (let i = slicedRSI.length - 1; i >= 0; i--) {
-    const prevRsi = slicedRSI[i];
+  for (let i = rsi.length - 1; i >= 0; i--) {
+    const prevRsi = rsi[i];
     if (prevRsi > overboughtTreshold) {
       rsiCheck = 'SELL';
       break;
     }
   }
   if(rsiCheck === "HOLD") {
-    for (let i = slicedRSI.length - 1; i >= 0; i--) {
-      const prevRsi = slicedRSI[i];
+    for (let i = rsi.length - 1; i >= 0; i--) {
+      const prevRsi = rsi[i];
       if(prevRsi < oversoldTreshold) {
         rsiCheck = 'BUY';
         break;
