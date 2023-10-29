@@ -79,72 +79,48 @@ export interface ConfigOptions {
   minimumProfitSell: number;
   minimumProfitBuy: number;
   license: string;
+  debug: boolean
   [key: string]: string | string[] | number | boolean | undefined; // Index signature
 }
 
 // Parse command-line arguments and return options object
 export function parseArgs(args: string[]): ConfigOptions {
-  if (args.length === 0) {
-    // If no command-line arguments, read options from .env file
-    return {
-      apiKey: process.env.API_KEY || '',
-      apiSecret: process.env.API_SECRET || '',
-      mode: process.env.MODE as BotMode || 'algorithmic',
-      symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
-      candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
-      shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
-      longEma: parseFloat(process.env.LONG_EMA!) || 26,
-      fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
-      slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
-      signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
-      source: process.env.SOURCE,
-      rsiLength: parseFloat(process.env.RSI_LENGTH!) || 14,
-      useEMA: process.env.USE_EMA === "true" ? true : false,
-      useMACD: process.env.USE_MACD === "true" ? true : false,
-      useRSI: process.env.USE_RSI === "true" ? true : false,
-      maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
-      closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
-      overboughtTreshold: parseFloat(process.env.OVERBOUGHT_TRESHOLD!) || 70,
-      oversoldTreshold: parseFloat(process.env.OVERSOLD_TRESHOLD!) || 30,
-      maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
-      tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
-      pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
-      pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
-      holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
-      minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
-      minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
-      license: process.env.LICENSE || "",
-    };
-  }
+  
   // If command-line arguments provided, parse them
   const options: ConfigOptions = {
-    apiKey: '',
-    apiSecret: '',
-    mode: 'algorithmic',
-    symbols: '',
-    candlestickInterval: "1m",
+    apiKey: process.env.API_KEY || '',
+    apiSecret: process.env.API_SECRET || '',
+    mode: process.env.MODE as BotMode || 'algorithmic',
+    symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
+    candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
     shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
     longEma: parseFloat(process.env.LONG_EMA!) || 26,
     fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
     slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
     signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
-    source: 'close',
-    rsiLength: 14,
-    useEMA: true,
-    useMACD: true,
-    useRSI: true,
-    maxAmount: 0,
-    closePercentage: 1,
-    overboughtTreshold: 70,
-    oversoldTreshold: 30,
-    maxOrderAge: 60,
-    tradeFee: 0.075,
+    source: process.env.SOURCE,
+    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 14,
+    useEMA: process.env.USE_EMA === "true" ? true : false,
+    useMACD: process.env.USE_MACD === "true" ? true : false,
+    useRSI: process.env.USE_RSI === "true" ? true : false,
+    maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
+    closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
+    overboughtTreshold: parseFloat(process.env.OVERBOUGHT_TRESHOLD!) || 70,
+    oversoldTreshold: parseFloat(process.env.OVERSOLD_TRESHOLD!) || 30,
+    maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
+    tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
+    holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
     minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
     minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
     license: process.env.LICENSE || "",
+    debug: process.env.DEBUG === "true" ? true : false,
   };
+  if (args.length === 0) {
+    // If no command-line arguments, read options from .env file
+    return options;
+  }
   for (let i = 0; i < args.length; i += 2) {
     const argName = args[i].substring(2);
     const argValue = args[i + 1];

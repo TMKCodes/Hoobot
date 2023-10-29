@@ -38,7 +38,7 @@ import { play } from './binance/playSound';
 import { Client } from 'discord.js';
 import { consoleLogger } from './binance/consoleLogger';
 import { filter, filters, getFilters } from './binance/filters';
-import dotenv from 'dotenv';
+import dotenv, { config } from 'dotenv';
 import { algorithmic } from './binance/algorithmic';
 import { getTradeableSymbols } from './binance/symbols';
 import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';
@@ -65,7 +65,7 @@ let tradingPairFilters: filters = {};
 
 const main = async () => {
   try {
-    if (await checkLicenseValidity(options.license)) {
+    if (await checkLicenseValidity(options.license) && options.debug === false) {
       console.log('License key is valid. Enjoy the trading with Hoobot!');
     } else {
       console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Binance Trading bot. There are preventions to notice this if you remove this check.');
