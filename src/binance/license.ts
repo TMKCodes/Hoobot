@@ -39,7 +39,7 @@ export const checkLicenseValidity = async (licenseKey: string): Promise<boolean>
     });
 
     if (!response.ok) {
-      throw new Error('License check failed. Please try again later.');
+      return false;
     }
 
     const data = await response.json();
