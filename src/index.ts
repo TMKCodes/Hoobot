@@ -88,6 +88,8 @@ const main = async () => {
       // Possible to add discord notification if order has been fulfilled with websocket notification.
     });
 
+    console.log("WORKS?");
+
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
       // Check if options.symbol is an array or a single string
@@ -97,22 +99,18 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          if (await checkLicenseValidity(options.license)) {
-            listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
-              algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
-            });
-          }
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
+            algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+          });
         }
       } else {
         // If options.symbol is a single string, listen for candlesticks for that symbol only
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        if (await checkLicenseValidity(options.license)) {
-          listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
-            algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
-          });
-        }
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
+          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+        });
       }
     } else if (options.mode === "hilow") {
       if (Array.isArray(options.symbols)) {
@@ -121,21 +119,17 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          if (await checkLicenseValidity(options.license)) {
-            listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
-              hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
-            });
-          }
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 500, (candlesticks: candlestick[]) => {
+            hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+          });
         }
       } else {
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        if (await checkLicenseValidity(options.license)) {
-          listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
-            hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
-          });
-        }
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  500, (candlesticks: candlestick[]) => {
+          hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+        });
       }
     } else if (options.mode === "arbitrage") {
       const symbolInfo = await getTradeableSymbols(binance);
