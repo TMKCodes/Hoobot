@@ -110,7 +110,7 @@ Copyright (c) 2023 Hoosat Oy. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are not permitted without prior written permission 
 from Hoosat Oy. Unauthorized reproduction, copying, or use of this software, in whole or in part, is strictly prohibited. All 
-modifications in sorce or binary must be submitted to Hoosat Oy in source format.
+modifications in source or binary must be submitted to Hoosat Oy in source format.
 
 THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY 
