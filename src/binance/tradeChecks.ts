@@ -198,9 +198,9 @@ export const tradeDirection = async (
   } else if (isPrevHistogramPositive && isHistogramNegative) {
     macdCheck = 'SELL';
   } else {
-    if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
+    if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
       macdCheck = 'BUY';
-    } else if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
+    } else if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
       macdCheck = 'SELL';
     }
   }
