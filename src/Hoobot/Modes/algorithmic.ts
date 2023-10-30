@@ -41,6 +41,10 @@ import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
 import { candlestick } from "../Binance/candlesticks";
 import { readFileSync, writeFileSync } from "fs";
 import { calculateSMA, logSMASignals } from "../Indicators/SMA";
+import { start } from "repl";
+import { calculateATR } from "../Indicators/ATR";
+import { calculateBollingerBands } from "../Indicators/BollingerBands";
+import { calculateStochasticOscillator } from "../Indicators/StochasticOscillator";
 
 
 const soundFile = './alarm.mp3'
@@ -48,10 +52,11 @@ const soundFile = './alarm.mp3'
 export interface Indicators {
   sma?: number[];
   ema: ema;
-  shortEma?: number[];
-  longEma?: number[];
   macd?: macd;
   rsi?: number[];
+  atr?: number[];
+  bollingerBands: [number[], number[], number[]];
+  stochasticOscillator: number[];
 }
 
 function delay(ms: number) {
@@ -264,11 +269,15 @@ export async function algorithmic(
     // Log the symbol
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
+    const startTime = Date.now();
     // Calculate Indicators.
     const indicators: Indicators = {
       sma: undefined,
       ema: undefined,
-      macd: undefined
+      macd: undefined,
+      atr: undefined,
+      bollingerBands: undefined,
+      stochasticOscillator: undefined,
     };
     indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
     if (options.useSMA) {
@@ -279,7 +288,7 @@ export async function algorithmic(
       long: calculateEMA(candlesticks, options.longEma, options.source),
     }
     if (options.useEMA) {
-      logEMASignals(consoleLogger, indicators.shortEma, indicators.longEma);
+      logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
     }
     if (options.useRSI) {
       indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
@@ -289,7 +298,18 @@ export async function algorithmic(
       indicators.macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
       logMACDSignals(consoleLogger, indicators.macd);
     }
+    if (options.useATR) {
+      indicators.atr = calculateATR(candlesticks, options.atrLength, options.source);
+    }
+    if (options.useBollingerBands) {
+      indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+    }
+    if (options.useStochasticOscillator) {
+      indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
+    }
     await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
+    const stopTime = Date.now();
+    consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
     consoleLogger.print();
     consoleLogger.flush();
   } catch (error: any) {

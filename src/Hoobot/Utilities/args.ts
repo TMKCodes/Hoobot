@@ -59,6 +59,12 @@ export interface ConfigOptions {
   symbols: string | string[];
   candlestickInterval: CandlestickInterval;
   smaLength: number;
+  atrLength: number;
+  bollingerBandsLength: number;
+  bollingerBandsMultiplier: number;
+  kPeriod: number;
+  dPeriod: number;
+  stochasticOscillatorSmoothing: number;
   shortEma: number;
   longEma: number;
   fastMacd: number;
@@ -90,7 +96,7 @@ export interface ConfigOptions {
   license: string;
   debug: boolean;
   discordChannelID: string;
-  [key: string]: string | string[] | number | boolean | undefined; // Index signature
+  [key: string]: string | string[] | number | boolean | undefined | number; // Index signature
 }
 
 // Parse command-line arguments and return options object
@@ -111,11 +117,17 @@ export function parseArgs(args: string[]): ConfigOptions {
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     smaLength: parseFloat(process.env.SMA_LENGTH) || 7,
-    shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
-    longEma: parseFloat(process.env.LONG_EMA!) || 26,
-    fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
-    slowMacd: parseFloat(process.env.SLOW_MACD!) || 26,
-    signalMacd: parseFloat(process.env.SIGNAL_MACD!) || 9,
+    atrLength: parseFloat(process.env.ATR_LENGTH) || 7,
+    bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
+    bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
+    kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 7,
+    dPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 7,
+    stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 7,
+    shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
+    longEma: parseFloat(process.env.EMA_LONG!) || 26,
+    fastMacd: parseFloat(process.env.MACD_FAST!) || 7,
+    slowMacd: parseFloat(process.env.MACD_SLOW!) || 26,
+    signalMacd: parseFloat(process.env.MACD_SIGNAL!) || 9,
     source: process.env.SOURCE,
     rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
     rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
@@ -123,8 +135,8 @@ export function parseArgs(args: string[]): ConfigOptions {
     rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
     maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
-    overboughtTreshold: parseFloat(process.env.OVERBOUGHT_TRESHOLD!) || 70,
-    oversoldTreshold: parseFloat(process.env.OVERSOLD_TRESHOLD!) || 30,
+    overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
+    oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
     maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
     tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,

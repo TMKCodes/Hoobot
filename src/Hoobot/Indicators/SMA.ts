@@ -29,6 +29,9 @@ import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 export function calculateSMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
+  if (candles.length > 250) {
+    candles = candles.slice(-(250))
+  }
   const smaValues: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {

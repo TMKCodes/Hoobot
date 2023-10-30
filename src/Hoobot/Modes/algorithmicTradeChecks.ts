@@ -155,60 +155,66 @@ export const tradeDirection = async (
   if (balanceCheck !== nextTradeCheck) {
     return "RECHECK BALANCES";
   }
-  const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];
-  const currentLongEma = indicators.ema.long[indicators.ema.long.length - 1];
-  const prevShortEma = indicators.ema.short[indicators.ema.short.length - 2];
-  const prevLongEma = indicators.ema.long[indicators.ema.long.length - 2];
-  const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
-  const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
-  const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
-  const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
-  const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-  if (isBullishCrossover) {
-    emaCheck = 'BUY';
-  } else if (isBearishCrossover) {
-    emaCheck = 'SELL';
+  if (options.useEMA) {
+    const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];
+    const currentLongEma = indicators.ema.long[indicators.ema.long.length - 1];
+    const prevShortEma = indicators.ema.short[indicators.ema.short.length - 2];
+    const prevLongEma = indicators.ema.long[indicators.ema.long.length - 2];
+    const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
+    const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
+    const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
+    const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
+    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+    if (isBullishCrossover) {
+      emaCheck = 'BUY';
+    } else if (isBearishCrossover) {
+      emaCheck = 'SELL';
+    }
   }
-  const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
-  const prevHistogram = indicators.macd.histogram[indicators.macd.histogram.length - 2];
-  const currentMacdLine = indicators.macd.macdLine[indicators.macd.macdLine.length -1];
-  const currentSignalLine = indicators.macd.signalLine[indicators.macd.signalLine.length -1];
-  const isPrevHistogramPositive = prevHistogram > 0;
-  const isPrevHistogramNegative = prevHistogram < 0;
-  const isHistogramPositive = currentHistogram > 0;
-  const isHistogramNegative = currentHistogram < 0;
-  const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
-  const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
-  const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
-  const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
-  const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
-  const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
-  if(isPrevHistogramNegative && isHistogramPositive) {
-    macdCheck = 'BUY';
-  } else if (isPrevHistogramPositive && isHistogramNegative) {
-    macdCheck = 'SELL';
-  } else {
-    if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
+  if (options.useMACD) {
+    const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
+    const prevHistogram = indicators.macd.histogram[indicators.macd.histogram.length - 2];
+    const currentMacdLine = indicators.macd.macdLine[indicators.macd.macdLine.length -1];
+    const currentSignalLine = indicators.macd.signalLine[indicators.macd.signalLine.length -1];
+    const isPrevHistogramPositive = prevHistogram > 0;
+    const isPrevHistogramNegative = prevHistogram < 0;
+    const isHistogramPositive = currentHistogram > 0;
+    const isHistogramNegative = currentHistogram < 0;
+    const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
+    const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
+    const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
+    const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
+    const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
+    const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
+    if(isPrevHistogramNegative && isHistogramPositive) {
       macdCheck = 'BUY';
-    } else if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
+    } else if (isPrevHistogramPositive && isHistogramNegative) {
       macdCheck = 'SELL';
+    } else {
+      if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
+        macdCheck = 'BUY';
+      } else if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
+        macdCheck = 'SELL';
+      }
     }
   }
-  const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
-  const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
-  for (let i = indicators.rsi.length - 1; i >= 0; i--) {
-    const prevRsi = indicators.rsi[i];
-    if (prevRsi > overboughtTreshold) {
-      rsiCheck = 'SELL';
-      break;
-    }
-  }
-  if(rsiCheck === "HOLD") {
+  if (options.useRSI) {
+    const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
+    const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
     for (let i = indicators.rsi.length - 1; i >= 0; i--) {
       const prevRsi = indicators.rsi[i];
-      if(prevRsi < oversoldTreshold) {
-        rsiCheck = 'BUY';
+      if (prevRsi > overboughtTreshold) {
+        rsiCheck = 'SELL';
         break;
+      }
+    }
+    if(rsiCheck === "HOLD") {
+      for (let i = indicators.rsi.length - 1; i >= 0; i--) {
+        const prevRsi = indicators.rsi[i];
+        if(prevRsi < oversoldTreshold) {
+          rsiCheck = 'BUY';
+          break;
+        }
       }
     }
   }

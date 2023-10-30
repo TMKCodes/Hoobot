@@ -41,6 +41,9 @@ export function calculateEMA(candles: candlestick[], length: number, source: str
 
 
 export function calculateEMAArray(candles: candlestick[], length: number, source: string = 'close'): number[] {
+  if (candles.length > 250) {
+    candles = candles.slice(-(250))
+  }
   const emaValues: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {

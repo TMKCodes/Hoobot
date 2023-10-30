@@ -29,6 +29,9 @@ import { candlestick } from "../Binance/candlesticks";
 import { calculateSMA } from "./SMA";
 
 export function calculateStochasticOscillator(candles: any[], kPeriod: number = 14, dPeriod: number = 3, smoothing: number = 3, source: string = 'close'): number[] {
+  if (candles.length > 250) {
+    candles = candles.slice(-(250))
+  }
   const stochasticValues: candlestick[] = [];
   for (let i = kPeriod - 1; i < candles.length; i++) {
     const slice = candles.slice(i - kPeriod + 1, i + 1);

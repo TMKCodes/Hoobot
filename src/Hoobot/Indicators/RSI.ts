@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { start } from 'repl';
 import { candlestick } from '../Binance/candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
@@ -53,8 +54,8 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 
 
 export function calculateRSI(candles: candlestick[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
-  if (candles.length < (length + 1)) {
-    throw new Error('Insufficient data to calculate RSI');
+  if (candles.length > 100) {
+    candles = candles.slice(-(100))
   }
 
   let closePrices: number[] = [];
@@ -124,6 +125,5 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
     }
   }
   
-
   return rsArray.slice(-amount);
 }
