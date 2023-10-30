@@ -49,7 +49,7 @@ export async function hilow(
   options: ConfigOptions) {
     const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
     consoleLogger.push(`Candlestick time`, candleTime);
-    const closePrice = parseFloat(candlesticks[candlesticks.length - 1].close);
+    const closePrice = candlesticks[candlesticks.length - 1].close;
     consoleLogger.push(`Last close price`, closePrice.toFixed(7));
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);

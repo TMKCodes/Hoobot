@@ -28,14 +28,15 @@
 import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
+
+export interface ema {
+  short: number[];
+  long: number[];
+}
+
 // Calculate Exponential Moving Average (EMA)
-export function calculateEMA(candles: candlestick[], length: number, source: string = 'close'): number {
-  // const prices = candles.slice(-length).map((candle) => parseFloat(candle.close));
-  // const sum = prices.reduce((total, price) => total + price);
-  // const ema = sum / length;
-  // return ema;
-  const ema = calculateEMAArray(candles, length, source);
-  return ema[ema.length - 1];
+export function calculateEMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
+  return calculateEMAArray(candles, length, source);
 }
 
 
@@ -64,22 +65,23 @@ export function calculateEMAArray(candles: candlestick[], length: number, source
     const currentEMA = (prices[i] - emaValues[i - length]) * smoothingFactor + emaValues[i - length];
     emaValues.push(currentEMA);
   }
-
   return emaValues;
 }
 
 export const logEMASignals = (
   consoleLogger: ConsoleLogger,
-  shortEma: number,
-  longEma: number,
-  prevShortEma: number | undefined,
-  prevLongEma: number | undefined
+  shortEma: number[],
+  longEma: number[],
 ) => {
-  consoleLogger.push(`EMA A`, shortEma.toFixed(7));
-  consoleLogger.push(`EMA B`, longEma.toFixed(7));
-  consoleLogger.push(`EMA Difference`, (shortEma - longEma).toFixed(7));
+  const currentShortEma = shortEma[shortEma.length - 1];
+  const currentLongEma = longEma[longEma.length - 1];
+  const prevShortEma = shortEma[shortEma.length - 2];
+  const prevLongEma = longEma[longEma.length - 2];
+  consoleLogger.push(`EMA A`, currentShortEma.toFixed(7));
+  consoleLogger.push(`EMA B`, currentLongEma.toFixed(7));
+  consoleLogger.push(`EMA Difference`, (currentShortEma - currentLongEma).toFixed(7));
 
-  const emaDiff = shortEma - longEma;
+  const emaDiff = currentShortEma - currentLongEma;
 
   if (emaDiff > 0) {
     consoleLogger.push(`EMA Signal`, `Bullish`);
@@ -92,8 +94,8 @@ export const logEMASignals = (
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
     const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
     const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
-    const isUpwardDirection = shortEma > prevShortEma && longEma > prevLongEma;
-    const isDownwardDirection = shortEma < prevShortEma && longEma < prevLongEma;
+    const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
+    const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
 
     if (isBullishCrossover) {

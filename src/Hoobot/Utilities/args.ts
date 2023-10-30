@@ -58,6 +58,7 @@ export interface ConfigOptions {
   mode: BotMode;
   symbols: string | string[];
   candlestickInterval: CandlestickInterval;
+  smaLength: number;
   shortEma: number;
   longEma: number;
   fastMacd: number;
@@ -68,9 +69,13 @@ export interface ConfigOptions {
   rsiSmoothing: number;
   rsiSmoothingType: string;
   rsiHistoryLength: number;
+  useSMA: boolean;
   useEMA: boolean; 
   useMACD: boolean; 
-  useRSI: boolean; 
+  useRSI: boolean;
+  useATR: boolean;
+  useBollingerBands: boolean;
+  useStochasticOscillator: boolean;
   maxAmount: number;
   closePercentage: number;
   overboughtTreshold: number;
@@ -98,6 +103,14 @@ export function parseArgs(args: string[]): ConfigOptions {
     mode: process.env.MODE as BotMode || 'algorithmic',
     symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
     candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
+    useEMA: process.env.USE_EMA === "true" ? true : false,
+    useMACD: process.env.USE_MACD === "true" ? true : false,
+    useRSI: process.env.USE_RSI === "true" ? true : false,
+    useSMA: process.env.USE_SMA === "true" ? true : false,
+    useATR: process.env.USE_ATR === "true" ? true : false,
+    useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
+    useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
+    smaLength: parseFloat(process.env.SMA_LENGTH) || 7,
     shortEma: parseFloat(process.env.SHORT_EMA!) || 7,
     longEma: parseFloat(process.env.LONG_EMA!) || 26,
     fastMacd: parseFloat(process.env.FAST_MACD!) || 7,
@@ -108,9 +121,6 @@ export function parseArgs(args: string[]): ConfigOptions {
     rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
     rsiSmoothingType: process.env.RSI_SMOOTHING_TYPE || "SMA",
     rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
-    useEMA: process.env.USE_EMA === "true" ? true : false,
-    useMACD: process.env.USE_MACD === "true" ? true : false,
-    useRSI: process.env.USE_RSI === "true" ? true : false,
     maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
     overboughtTreshold: parseFloat(process.env.OVERBOUGHT_TRESHOLD!) || 70,

@@ -29,80 +29,75 @@ import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMAArray } from "./EMA";
 
+export interface macd { 
+  macdLine: number[]; 
+  signalLine: number[]; 
+  histogram: number[]; 
+}
+
 export const logMACDSignals = (
   consoleLogger: ConsoleLogger,
-  macd: {
-    macdLine: number;
-    signalLine: number;
-    histogram: number;
-  }, prevMacd: {
-    macdLine: number;
-    signalLine: number;
-    histogram: number;
-  } | undefined
+  macd: macd,
 ) => {
-  const { macdLine, signalLine, histogram } = macd;
+  const macdLine = macd.macdLine[macd.macdLine.length - 1];
+  const signalLine = macd.signalLine[macd.signalLine.length - 1];
+  const histogram = macd.histogram[macd.histogram.length - 1];
+  const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
+  const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
+  const prevHistogram = macd.histogram[macd.histogram.length - 2];
 
   consoleLogger.push(`MACD Line`, macdLine.toFixed(7));
   consoleLogger.push(`MACD Signal Line`, signalLine.toFixed(7));
   consoleLogger.push(`MACD Histogram`, histogram.toFixed(7));
 
-  if (!prevMacd) {
-    if (macdLine > signalLine && histogram > 0) {
-      consoleLogger.push(`MACD Signal`, 'Bullish');
-    } else if (macdLine < signalLine && histogram < 0) {
-      consoleLogger.push(`MACD Signal`, 'Bearish');
-    }
-  } else {
-    const isBullishCrossover = macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine;
-    const isBearishCrossover = macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine;
-    const isBullishDivergence = macdLine > prevMacd.macdLine && histogram > prevMacd.histogram;
-    const isBearishDivergence = macdLine < prevMacd.macdLine && histogram < prevMacd.histogram;
-    const isBullishZeroLineCrossover = macdLine > 0 && prevMacd.macdLine <= 0;
-    const isBearishZeroLineCrossover = macdLine < 0 && prevMacd.macdLine >= 0;
-    const isBullishCenterlineCrossover = macdLine > signalLine && prevMacd.macdLine <= prevMacd.signalLine;
-    const isBearishCenterlineCrossover = macdLine < signalLine && prevMacd.macdLine >= prevMacd.signalLine;
-    const isStrongBullishTrend = macdLine > 100 && prevMacd.macdLine <= 100;
-    const isStrongBearishTrend = macdLine < -100 && prevMacd.macdLine >= -100;
-    const isPositiveHistogramDivergence = histogram > 0 && prevMacd.histogram < 0;
-    const isNegativeHistogramDivergence = histogram < 0 && prevMacd.histogram > 0;
+  const isBullishCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
+  const isBearishCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
+  const isBullishDivergence = macdLine > prevMacdLine && histogram > prevHistogram;
+  const isBearishDivergence = macdLine < prevMacdLine && histogram < prevHistogram;
+  const isBullishZeroLineCrossover = macdLine > 0 && prevMacdLine <= 0;
+  const isBearishZeroLineCrossover = macdLine < 0 && prevMacdLine >= 0;
+  const isBullishCenterlineCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
+  const isBearishCenterlineCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
+  const isStrongBullishTrend = macdLine > 100 && prevMacdLine <= 100;
+  const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
+  const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
+  const isNegativeHistogramDivergence = histogram < 0 && prevHistogram > 0;
 
-    if (isBullishCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bullish Line Crossover');
-    } else if (isBearishCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bearish Line Crossover');
-    } else if (isBullishDivergence) {
-      consoleLogger.push(`MACD Signal`, 'Bullish Divergence');
-    } else if (isBearishDivergence) {
-      consoleLogger.push(`MACD Signal`, 'Bearish Divergence');
-    } else if (isBullishZeroLineCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bullish Zero Line Crossover');
-    } else if (isBearishZeroLineCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bearish Zero Line Crossover');
-    } else if (isBullishCenterlineCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bullish Centerline Crossover');
-    } else if (isBearishCenterlineCrossover) {
-      consoleLogger.push(`MACD Signal`, 'Bearish Centerline Crossover');
-    } else if (isStrongBullishTrend) {
-      consoleLogger.push(`MACD Signal`, 'Strong Bullish Trend');
-    } else if (isStrongBearishTrend) {
-      consoleLogger.push(`MACD Signal`, 'Strong Bearish Trend');
-    } else if (isPositiveHistogramDivergence) {
-      consoleLogger.push(`MACD Signal`, 'Positive Histogram Divergence');
-    } else if (isNegativeHistogramDivergence) {
-      consoleLogger.push(`MACD Signal`, 'Negative Histogram Divergence');
-    } else {
-      consoleLogger.push(`MACD Signal`, 'Neutral');
-    }
+  if (isBullishCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bullish Line Crossover');
+  } else if (isBearishCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bearish Line Crossover');
+  } else if (isBullishDivergence) {
+    consoleLogger.push(`MACD Signal`, 'Bullish Divergence');
+  } else if (isBearishDivergence) {
+    consoleLogger.push(`MACD Signal`, 'Bearish Divergence');
+  } else if (isBullishZeroLineCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bullish Zero Line Crossover');
+  } else if (isBearishZeroLineCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bearish Zero Line Crossover');
+  } else if (isBullishCenterlineCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bullish Centerline Crossover');
+  } else if (isBearishCenterlineCrossover) {
+    consoleLogger.push(`MACD Signal`, 'Bearish Centerline Crossover');
+  } else if (isStrongBullishTrend) {
+    consoleLogger.push(`MACD Signal`, 'Strong Bullish Trend');
+  } else if (isStrongBearishTrend) {
+    consoleLogger.push(`MACD Signal`, 'Strong Bearish Trend');
+  } else if (isPositiveHistogramDivergence) {
+    consoleLogger.push(`MACD Signal`, 'Positive Histogram Divergence');
+  } else if (isNegativeHistogramDivergence) {
+    consoleLogger.push(`MACD Signal`, 'Negative Histogram Divergence');
+  } else {
+    consoleLogger.push(`MACD Signal`, 'Neutral');
   }
 }
 
 export const calculateMACD = (candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) => {
   const macd = calculateMACDArray(candles, shortEMA, longEMA, signalLength, source);
   return {
-    macdLine: macd.macdLine[macd.macdLine.length - 1],
-    signalLine: macd.signalLine[macd.signalLine.length - 1],
-    histogram: macd.histogram[macd.histogram.length - 1],
+    macdLine: macd.macdLine,
+    signalLine: macd.signalLine,
+    histogram: macd.histogram,
   }
 }
 

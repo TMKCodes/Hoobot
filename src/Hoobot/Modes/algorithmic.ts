@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getLastCompletedOrder, handleOpenOrders, order } from "../Binance/orders";
+import { handleOpenOrders } from "../Binance/orders";
 import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { checkBeforeOrder, tradeDirection } from "./algorithmicTradeChecks";
@@ -35,32 +35,23 @@ import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { play } from "../Utilities/playSound";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Balances, getCurrentBalances } from "../Binance/balances";
-import { calculateEMA, logEMASignals } from "../Indicators/EMA";
+import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
 import { calculateRSI, logRSISignals } from "../Indicators/RSI";
-import { calculateMACD, logMACDSignals } from "../Indicators/MACD";
+import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
 import { candlestick } from "../Binance/candlesticks";
-import { dir } from "console";
 import { readFileSync, writeFileSync } from "fs";
+import { calculateSMA, logSMASignals } from "../Indicators/SMA";
 
 
 const soundFile = './alarm.mp3'
 
-export interface macd { 
-  macdLine: number; 
-  signalLine: number; 
-  histogram: number; 
-}
-
-export interface history {
-  macd: macd[] | undefined;
-  shortEma: number[] | undefined;
-  longEma: number[] | undefined;
-}
-
-const prev: history = {
-  macd: [],
-  shortEma: [],
-  longEma: [],
+export interface Indicators {
+  sma?: number[];
+  ema: ema;
+  shortEma?: number[];
+  longEma?: number[];
+  macd?: macd;
+  rsi?: number[];
 }
 
 function delay(ms: number) {
@@ -83,31 +74,22 @@ async function placeTrade(
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  tradeHistory: order[],
-  shortEma: number,
-  longEma: number,
-  rsi: number[],
-  macd: macd,
-  prev: history,
+  candlesticks: candlestick[],
+  indicators: Indicators,
   balances: Balances,
   orderBook: any,
-  closePrice: number,
   filter: filter,
   options: ConfigOptions,
 ) {
-  if(prev.macd === undefined || prev.longEma === undefined || prev.shortEma === undefined) {
-    return false;
-  }
-  const quoteBalance = balances[symbol.split("/")[0]];
-  const baseBalance = balances[symbol.split("/")[1]];
-  const lastTrade = tradeHistory[0];
-  const currentTime = Date.now();
-  const timeDifferenceInSeconds = (currentTime - lastTrade.time) / 1000;
+  const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
+  const timeDifferenceInSeconds = (Date.now() - tradeHistory[0].time) / 1000;
   consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
   if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
     return false; // don't trade since the last trade was too new.
   }
-  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, closePrice, shortEma, longEma, macd, rsi, prev, tradeHistory, options);
+  const quoteBalance = balances[symbol.split("/")[0]];
+  const baseBalance = balances[symbol.split("/")[1]];
+  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, tradeHistory, options);
   consoleLogger.push(`Trade direction`, direction);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
@@ -122,7 +104,7 @@ async function placeTrade(
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    const percentageChange = calculatePercentageDifference(parseFloat(lastTrade.price), roundedPrice) - 0.075;
+    const percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - 0.075;
     if (checkBefore === true) {
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
@@ -191,7 +173,7 @@ async function placeTrade(
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastTrade.price), roundedPrice)) - 0.075;
+      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - 0.075;
       let order: any = false;
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
@@ -263,43 +245,52 @@ export async function algorithmic(
   options: ConfigOptions) {
   try {
     const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
+    console.log("works1");
+    // Push candlestick time and last closeprice.
     consoleLogger.push(`Candlestick time`, candleTime);
-    const closePrice = parseFloat(candlesticks[candlesticks.length - 1].close);
-    consoleLogger.push(`Last close price`, closePrice.toFixed(7));
+    consoleLogger.push(`Last close price`, candlesticks[candlesticks.length - 1].close.toFixed(7));
+    // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
     const orderBook = await binance.depth(symbol.split("/").join(""));
+    // Check if there are open orders, before going further.
     let openOrders: any[] = [];
     openOrders = await binance.openOrders(symbol.split("/").join(""));
-    if(openOrders.length > 0) {
+    if (openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
       return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
     }
-    const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
+    // Log the symbol
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
-    const shortEma = calculateEMA(candlesticks, options.shortEma, options.source);
-    const longEma = calculateEMA(candlesticks, options.longEma, options.source);
-    const rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-    const macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
-    if(prev.shortEma.length > 2 && prev.longEma.length > 2 && prev.macd.length > 2) {
-      logEMASignals(consoleLogger, shortEma, longEma, prev.shortEma[prev.shortEma.length - 1], prev.longEma[prev.shortEma.length - 1]);
-      logMACDSignals(consoleLogger, macd, prev.macd[prev.macd.length - 1]);
-      logRSISignals(consoleLogger, rsi, options);
-      const lastOrder = await getLastCompletedOrder(binance, symbol);
-      await placeTrade(discord, binance, consoleLogger, symbol, tradeHistory, shortEma, longEma, rsi, macd, prev, balances, orderBook, closePrice, filter, options);
+    // Calculate Indicators.
+    const indicators: Indicators = {
+      sma: undefined,
+      ema: undefined,
+      macd: undefined
+    };
+    indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
+    if (options.useSMA) {
+      logSMASignals(consoleLogger, indicators.sma); 
     }
-    prev.macd.push(macd);
-    prev.shortEma.push(shortEma);
-    prev.longEma.push(longEma);
-    const historyLength = 10;
-    if(prev.shortEma.length > historyLength && prev.longEma.length > historyLength && prev.macd.length > historyLength) {
-      prev.macd = prev.macd.slice(-historyLength);
-      prev.shortEma = prev.shortEma.slice(-historyLength);
-      prev.longEma = prev.longEma.slice(-historyLength);
+    indicators.ema = {
+      short: calculateEMA(candlesticks, options.shortEma, options.source),
+      long: calculateEMA(candlesticks, options.longEma, options.source),
     }
+    if (options.useEMA) {
+      logEMASignals(consoleLogger, indicators.shortEma, indicators.longEma);
+    }
+    if (options.useRSI) {
+      indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+      logRSISignals(consoleLogger, indicators.rsi, options);
+    }
+    if (options.useMACD) {
+      indicators.macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
+      logMACDSignals(consoleLogger, indicators.macd);
+    }
+    await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
     consoleLogger.print();
     consoleLogger.flush();
   } catch (error: any) {

@@ -152,7 +152,7 @@ export const arbitrageProfit = (
 
   // Calculate for the inner pairs, skip the first pair and do not calculate last pair.
   for (let i = 1; i < symbols.length - 1; i++) {
-    const close = parseFloat(symbolCandles[symbols[i]].candles[symbolCandles[symbols[i]].candles.length - 1].close);
+    const close = symbolCandles[symbols[i]].candles[symbolCandles[symbols[i]].candles.length - 1].close;
     const prevSymbol = symbols[i - 1];
     if (symbols[i].indexOf(curBaseAsset) === 0) {
       // If the current symbol starts with the curBaseAsset, it means the currentAsset is the quote asset.
@@ -167,7 +167,7 @@ export const arbitrageProfit = (
   }
 
   // Now calculate the last pair trade.
-  const lastClose = parseFloat(symbolCandles[symbols[symbols.length - 1]].candles[symbolCandles[symbols[symbols.length - 1]].candles.length - 1].close);
+  const lastClose = symbolCandles[symbols[symbols.length - 1]].candles[symbolCandles[symbols[symbols.length - 1]].candles.length - 1].close;
   if (symbols[symbols.length - 1].indexOf(curBaseAsset) === 0) {
     // If the last symbol starts with the curBaseAsset, it means the lastAsset is the quote asset.
     // So, we need to divide the current balance by the close value to get the new base amount.

@@ -30,8 +30,8 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { calculatePercentageDifference, order } from "../Binance/orders";
-import { macd, history } from "./algorithmic";
-import { sign } from "crypto";
+import { Indicators } from "./algorithmic";
+import { candlestick } from "../Binance/candlesticks";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -75,17 +75,14 @@ export const checkBeforeOrder = (
 };
 
 
+
 export const tradeDirection = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   balanceBase: number, 
   balanceQuote: number, 
-  closePrice: number, 
-  shortEma: number, 
-  longEma: number, 
-  macd: macd, 
-  rsi: number[], 
-  prev: history,
+  candlesticks: candlestick[], 
+  indicators: Indicators,
   tradeHistory: order[], 
   options: ConfigOptions
 ) => {
@@ -97,9 +94,8 @@ export const tradeDirection = async (
   let emaCheck: string = `HOLD`;
   let macdCheck: string = `HOLD`;
   let rsiCheck: string = `HOLD`;
-
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
-
+  const closePrice = candlesticks[candlesticks.length - 1].close;
   if(tradeHistory.length >= 2) {
     if(tradeHistory[0].isBuyer === true) { 
       const profitLastTrade = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
@@ -113,7 +109,6 @@ export const tradeDirection = async (
       nextPossibleProfit = possibleProfit;
     }
   }
-
   if(force[symbol]?.skip !== true) {
     if (tradeHistory.length >= 2) {
       if (tradeHistory[0].isBuyer === true) { 
@@ -143,14 +138,11 @@ export const tradeDirection = async (
   } else {
     profitCheck = "SKIP";
   }
-  
-
   if(balanceBase < (balanceQuote / closePrice)) {
     balanceCheck = 'BUY';
   } else {
     balanceCheck = 'SELL';
   }
-  
   if (tradeHistory[0] === undefined) {
     nextTradeCheck = balanceCheck;
   } else {
@@ -160,39 +152,37 @@ export const tradeDirection = async (
       nextTradeCheck = 'BUY';
     }
   }
-  
   if (balanceCheck !== nextTradeCheck) {
     return "RECHECK BALANCES";
   }
-
-  const prevShortEma = prev.shortEma[prev.shortEma.length - 1];
-  const prevLongEma = prev.longEma[prev.longEma.length - 1];
-  const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
-  const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
-  const isUpwardDirection = shortEma > prevShortEma && longEma > prevLongEma;
-  const isDownwardDirection = shortEma < prevShortEma && longEma < prevLongEma;
+  const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];
+  const currentLongEma = indicators.ema.long[indicators.ema.long.length - 1];
+  const prevShortEma = indicators.ema.short[indicators.ema.short.length - 2];
+  const prevLongEma = indicators.ema.long[indicators.ema.long.length - 2];
+  const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
+  const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
+  const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
+  const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
   const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-
-
   if (isBullishCrossover) {
     emaCheck = 'BUY';
   } else if (isBearishCrossover) {
     emaCheck = 'SELL';
   }
-  
-  const prevHistogram = prev.macd[prev.macd.length - 1].histogram;
-
+  const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
+  const prevHistogram = indicators.macd.histogram[indicators.macd.histogram.length - 2];
+  const currentMacdLine = indicators.macd.macdLine[indicators.macd.macdLine.length -1];
+  const currentSignalLine = indicators.macd.signalLine[indicators.macd.signalLine.length -1];
   const isPrevHistogramPositive = prevHistogram > 0;
   const isPrevHistogramNegative = prevHistogram < 0;
-  const isHistogramPositive = macd.histogram > 0;
-  const isHistogramNegative = macd.histogram < 0;
-  const isMacdLineAboveSignalLine = macd.macdLine > macd.signalLine
-  const isMacdLineBelowSignalLine = macd.macdLine < macd.signalLine
-  const isSignalLineAboveHistogram = macd.signalLine > macd.histogram;
-  const isSignalLineBelowHistogram = macd.signalLine < macd.histogram
-  const isMacdLineAboveHistogram = macd.macdLine > macd.histogram;
-  const isMacdLineBelowHstogram = macd.macdLine < macd.histogram;
-
+  const isHistogramPositive = currentHistogram > 0;
+  const isHistogramNegative = currentHistogram < 0;
+  const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
+  const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
+  const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
+  const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
+  const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
+  const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
   if(isPrevHistogramNegative && isHistogramPositive) {
     macdCheck = 'BUY';
   } else if (isPrevHistogramPositive && isHistogramNegative) {
@@ -204,27 +194,24 @@ export const tradeDirection = async (
       macdCheck = 'SELL';
     }
   }
-  
   const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
   const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
-  for (let i = rsi.length - 1; i >= 0; i--) {
-    const prevRsi = rsi[i];
+  for (let i = indicators.rsi.length - 1; i >= 0; i--) {
+    const prevRsi = indicators.rsi[i];
     if (prevRsi > overboughtTreshold) {
       rsiCheck = 'SELL';
       break;
     }
   }
   if(rsiCheck === "HOLD") {
-    for (let i = rsi.length - 1; i >= 0; i--) {
-      const prevRsi = rsi[i];
+    for (let i = indicators.rsi.length - 1; i >= 0; i--) {
+      const prevRsi = indicators.rsi[i];
       if(prevRsi < oversoldTreshold) {
         rsiCheck = 'BUY';
         break;
       }
     }
   }
-  
-
   let tradeDirection = 'HOLD';
   if (nextTradeCheck === 'SELL' && balanceCheck === 'SELL') {
     let signal = 'SELL'

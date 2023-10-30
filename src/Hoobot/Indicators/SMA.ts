@@ -26,6 +26,7 @@
 * ===================================================================== */
 
 import { candlestick } from "../Binance/candlesticks";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 export function calculateSMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
   const smaValues: number[] = [];
@@ -46,3 +47,25 @@ export function calculateSMA(candles: candlestick[], length: number, source: str
   }
   return smaValues;
 }
+export const logSMASignals = (
+  consoleLogger: ConsoleLogger,
+  smaValues: number[]
+) => {
+  const currentSMA = smaValues[smaValues.length - 1];
+  const prevSMA = smaValues[smaValues.length - 2];
+  consoleLogger.push(`SMA Value`, currentSMA.toFixed(7));
+  if (currentSMA > prevSMA) {
+    consoleLogger.push(`SMA Signal`, `Bullish`);
+  } else if (currentSMA < prevSMA) {
+    consoleLogger.push(`SMA Signal`, `Bearish`);
+  } else {
+    consoleLogger.push(`SMA Signal`, `Neutral`);
+  }
+  const isBullishCrossover = currentSMA > prevSMA;
+  const isBearishCrossover = currentSMA < prevSMA;
+  if (isBullishCrossover) {
+    consoleLogger.push(`SMA Signal`, `Bullish Crossover`);
+  } else if (isBearishCrossover) {
+    consoleLogger.push(`SMA Signal`, `Bearish Crossover`);
+  }
+};
