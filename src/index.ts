@@ -59,7 +59,7 @@ let tradingPairFilters: filters = {};
 
 const main = async () => {
   try {
-    if (await checkLicenseValidity(options.license) || options.debug === true) {
+    if (await checkLicenseValidity(options.license)) {
       console.log('License key is valid. Enjoy the trading with Hoobot!');
     } else {
       console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.');

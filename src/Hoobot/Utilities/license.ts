@@ -27,24 +27,25 @@
 
 
 // Function to check if the provided license key is valid
-export const checkLicenseValidity = async (licenseKey: string): Promise<boolean> => {
-  const url = 'https://hoosat.fi/api/hoobot/license-check';
+export const checkLicenseValidity = async (license: string): Promise<boolean> => {
+  const url = `https://crm.hoosat.fi/api/hoobot/license/${license}`;
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ licenseKey }),
     });
-
     if (!response.ok) {
       return false;
     }
-
     const data = await response.json();
-    return data.isValid; 
+    if (data.license.license === license) {
+      return true;
+    } else {
+      return false;
+    }
   } catch (error) {
     console.error('License check failed:', error.message);
     return false; // Return false if there was an error during the license check
