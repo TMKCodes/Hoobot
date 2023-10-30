@@ -25,8 +25,9 @@
 * the use of this software.
 * ===================================================================== */
 
+import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { calculateEMAArray } from "./ema";
+import { calculateEMAArray } from "./EMA";
 
 export const logMACDSignals = (
   consoleLogger: ConsoleLogger,
@@ -96,7 +97,7 @@ export const logMACDSignals = (
   }
 }
 
-export const calculateMACD = (candles: any[], shortEMA: number, longEMA: number, signalLength = 9, source: string) => {
+export const calculateMACD = (candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) => {
   const macd = calculateMACDArray(candles, shortEMA, longEMA, signalLength, source);
   return {
     macdLine: macd.macdLine[macd.macdLine.length - 1],
@@ -105,7 +106,7 @@ export const calculateMACD = (candles: any[], shortEMA: number, longEMA: number,
   }
 }
 
-export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
+export function calculateMACDArray(candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
   
   let shortEMAs = calculateEMAArray(candles, shortEMA, source);
   let longEMAs = calculateEMAArray(candles, longEMA, source);
@@ -121,7 +122,7 @@ export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: nu
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
   
-  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value.toString() })), signalLength, source);
+  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalLength, source);
 
   if(signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);

@@ -32,9 +32,9 @@ import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { Balances } from "../Binance/balances";
 import { getLastCompletedOrder, handleOpenOrders } from "../Binance/orders";
-import { calculateEMA, logEMASignals } from "../Indicators/ema";
-import { calculateRSI, logRSISignals } from "../Indicators/rsi";
-import { calculateMACD, logMACDSignals } from "../Indicators/macd";
+import { calculateEMA, logEMASignals } from "../Indicators/EMA";
+import { calculateRSI, logRSISignals } from "../Indicators/RSI";
+import { calculateMACD, logMACDSignals } from "../Indicators/MACD";
 
 
 

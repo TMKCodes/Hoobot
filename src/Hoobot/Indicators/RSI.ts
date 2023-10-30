@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { candlestick } from '../Binance/candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 
@@ -51,20 +52,20 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 }
 
 
-export function calculateRSI(candles: any[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
+export function calculateRSI(candles: candlestick[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
   if (candles.length < (length + 1)) {
     throw new Error('Insufficient data to calculate RSI');
   }
 
   let closePrices: number[] = [];
   if (source === 'close') {
-    closePrices = candles.map((candle) => parseFloat(candle.close));
+    closePrices = candles.map((candle) => candle.close);
   } else if (source === 'open') {
-    closePrices = candles.map((candle) => parseFloat(candle.open));
+    closePrices = candles.map((candle) => candle.open);
   } else if (source === 'high') {
-    closePrices = candles.map((candle) => parseFloat(candle.high));
+    closePrices = candles.map((candle) => candle.high);
   } else if (source === 'low') {
-    closePrices = candles.map((candle) => parseFloat(candle.low));
+    closePrices = candles.map((candle) => candle.low);
   }
 
   const priceChanges: number[] = [];

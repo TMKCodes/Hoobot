@@ -25,10 +25,11 @@
 * the use of this software.
 * ===================================================================== */
 
+import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 // Calculate Exponential Moving Average (EMA)
-export function calculateEMA(candles: any[], length: number, source: string = 'close'): number {
+export function calculateEMA(candles: candlestick[], length: number, source: string = 'close'): number {
   // const prices = candles.slice(-length).map((candle) => parseFloat(candle.close));
   // const sum = prices.reduce((total, price) => total + price);
   // const ema = sum / length;
@@ -38,17 +39,17 @@ export function calculateEMA(candles: any[], length: number, source: string = 'c
 }
 
 
-export function calculateEMAArray(candles: any[], length: number, source: string = 'close'): number[] {
+export function calculateEMAArray(candles: candlestick[], length: number, source: string = 'close'): number[] {
   const emaValues: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {
-    prices = candles.map((candle) => parseFloat(candle.close));
+    prices = candles.map((candle) => candle.close);
   } else if(source == 'open') {
-    prices = candles.map((candle) => parseFloat(candle.open));
+    prices = candles.map((candle) => candle.open);
   } else if(source == 'high') {
-    prices = candles.map((candle) => parseFloat(candle.high));
+    prices = candles.map((candle) => candle.high);
   } else if(source == 'low') {
-    prices = candles.map((candle) => parseFloat(candle.low));
+    prices = candles.map((candle) => candle.low);
   }
 
   let sum = 0;

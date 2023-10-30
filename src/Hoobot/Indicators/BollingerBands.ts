@@ -25,8 +25,12 @@
 * the use of this software.
 * ===================================================================== */
 
-export function calculateSMA(candles: any[], length: number, source: string = 'close'): number[] {
-  const smaValues: number[] = [];
+import { calculateSMA } from './SMA';
+
+export function calculateBollingerBands(candles: any[], period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
+  const smaValues = calculateSMA(candles, period, source);
+  const standardDeviations: number[] = [];
+
   let prices: number[] = [];
   if(source == 'close') {
     prices = candles.map((candle) => parseFloat(candle.close));
@@ -37,10 +41,16 @@ export function calculateSMA(candles: any[], length: number, source: string = 'c
   } else if(source == 'low') {
     prices = candles.map((candle) => parseFloat(candle.low));
   }
-  for (let i = length - 1; i < candles.length; i++) {
-    const sum = prices.slice(i - length + 1, i + 1).reduce((acc, val) => acc + val, 0);
-    const sma = sum / length;
-    smaValues.push(sma);
+
+  for (let i = period - 1; i < prices.length; i++) {
+      const slice = prices.slice(i - period + 1, i + 1);
+      const variance = slice.reduce((acc, val) => acc + Math.pow(val - smaValues[i - period + 1], 2), 0) / period;
+      const stdDev = Math.sqrt(variance);
+      standardDeviations.push(stdDev);
   }
-  return smaValues;
+
+  const upperBands = smaValues.map((sma, i) => sma + (standardDeviations[i] * multiplier));
+  const lowerBands = smaValues.map((sma, i) => sma - (standardDeviations[i] * multiplier));
+
+  return [smaValues, upperBands, lowerBands];
 }
