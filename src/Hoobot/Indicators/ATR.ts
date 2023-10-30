@@ -25,28 +25,21 @@
 * the use of this software.
 * ===================================================================== */
 
-import { calculateSMA } from './SMA';
+import { candlestick } from "../Binance/candlesticks";
+import { calculateSMA } from "./SMA";
 
-export function calculateBollingerBands(candles: any[], period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
-  const smaValues = calculateSMA(candles, period, source);
-  const standardDeviations: number[] = [];
-  let prices: number[] = [];
-  if(source == 'close') {
-    prices = candles.map((candle) => parseFloat(candle.close));
-  } else if(source == 'open') {
-    prices = candles.map((candle) => parseFloat(candle.open));
-  } else if(source == 'high') {
-    prices = candles.map((candle) => parseFloat(candle.high));
-  } else if(source == 'low') {
-    prices = candles.map((candle) => parseFloat(candle.low));
+export function calculateATR(candles: candlestick[], period: number = 14, source: string = 'close'): number[] {
+  const atrValues: number[] = [];
+  for (let i = period; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevClose = candles[i - 1].close;
+
+    const trueRange = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    atrValues.push(trueRange);
   }
-  for (let i = period - 1; i < prices.length; i++) {
-      const slice = prices.slice(i - period + 1, i + 1);
-      const variance = slice.reduce((acc, val) => acc + Math.pow(val - smaValues[i - period + 1], 2), 0) / period;
-      const stdDev = Math.sqrt(variance);
-      standardDeviations.push(stdDev);
-  }
-  const upperBands = smaValues.map((sma, i) => sma + (standardDeviations[i] * multiplier));
-  const lowerBands = smaValues.map((sma, i) => sma - (standardDeviations[i] * multiplier));
-  return [smaValues, upperBands, lowerBands];
+  const atrSMA = calculateSMA(atrValues.map(atr => ({ close: atr})), period, source);
+  return atrSMA;
 }
+
+

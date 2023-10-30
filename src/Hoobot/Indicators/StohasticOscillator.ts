@@ -30,7 +30,6 @@ import { calculateSMA } from "./SMA";
 
 export function calculateStochasticOscillator(candles: any[], kPeriod: number = 14, dPeriod: number = 3, smoothing: number = 3, source: string = 'close'): number[] {
   const stochasticValues: candlestick[] = [];
-
   for (let i = kPeriod - 1; i < candles.length; i++) {
     const slice = candles.slice(i - kPeriod + 1, i + 1);
     const closePrices = slice.map(candle => candle.close);
@@ -42,19 +41,15 @@ export function calculateStochasticOscillator(candles: any[], kPeriod: number = 
     const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
     stochasticValues.push({ close: kValue, high: kValue, low: kValue, open: kValue });
   }
-
   // Apply smoothing (SMA) to %K values
   const smoothedKValues = calculateSMA(stochasticValues, smoothing, source);
-
   // Calculate %D values using smoothed %K values
   const dValues = calculateSMA(smoothedKValues.map((val) => ({ close: val })), dPeriod, source);
-
   return dValues;
 }
 
 export function calculateStochasticRSI(rsiValues: number[], kPeriod: number = 14, dPeriod: number = 3, smoothing: number = 3,  source: string = 'close'): [number[], number[]] {
     const stochasticValues: candlestick[] = [];
-
     for (let i = kPeriod - 1; i < rsiValues.length; i++) {
         const slice = rsiValues.slice(i - kPeriod + 1, i + 1);
 
@@ -66,8 +61,6 @@ export function calculateStochasticRSI(rsiValues: number[], kPeriod: number = 14
         stochasticValues.push({ close: kValue, high: kValue, low: kValue, open: kValue });
     }
     const smoothedKValues = calculateSMA(stochasticValues, smoothing, source);
-
     const dValues = calculateSMA(smoothedKValues.map((val) => ({ close: val })), dPeriod, source);
-
     return [stochasticValues.map((candle) => candle.close ), dValues];
 }
