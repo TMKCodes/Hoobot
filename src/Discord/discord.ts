@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel } from 'discord.js'; 
-import { deployCommands } from './commands/deploy';
+import { deployCommands } from './Commands/deploy';
 
 const deployable: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 interface command {
@@ -38,35 +38,35 @@ const commands: command[] = [];
 // Import your commands. 
 // Push your command data as json to deployable commands.
 // Push your command name and execute to commands.
-import ping from './commands/ping';
+import ping from './Commands/ping';
 deployable.push(ping.builder.toJSON());
 commands.push({name: ping.builder.name, execute: ping.execute});
 
-import binanceBalance from './commands/binanceBalance';
+import binanceBalance from './Commands/binanceBalance';
 deployable.push(binanceBalance.builder.toJSON());
 commands.push({name: binanceBalance.builder.name, execute: binanceBalance.execute});
 
-import binanceProfit from './commands/binanceProfit';
+import binanceProfit from './Commands/binanceProfit';
 deployable.push(binanceProfit.builder.toJSON());
 commands.push({name: binanceProfit.builder.name, execute: binanceProfit.execute});
 
-import binancePossibleProfit from './commands/binancePossibleProfit';
+import binancePossibleProfit from './Commands/binancePossibleProfit';
 deployable.push(binancePossibleProfit.builder.toJSON());
 commands.push({name: binancePossibleProfit.builder.name, execute: binancePossibleProfit.execute});
 
-import binanceLastTrades from './commands/binanceLastTrades';
+import binanceLastTrades from './Commands/binanceLastTrades';
 deployable.push(binanceLastTrades.builder.toJSON());
 commands.push({name: binanceLastTrades.builder.name, execute: binanceLastTrades.execute});
 
-import avatar from './commands/avatar';
+import avatar from './Commands/avatar';
 deployable.push(avatar.builder.toJSON());
 commands.push({name: avatar.builder.name, execute: avatar.execute});
 
-import server from './commands/server';
+import server from './Commands/server';
 deployable.push(server.builder.toJSON());
 commands.push({name: server.builder.name, execute: server.execute});
 
-import fkick from './commands/fkick';
+import fkick from './Commands/fkick';
 import { ConfigOptions } from '../Hoobot/Utilities/args';
 import Binance from 'node-binance-api';
 deployable.push(fkick.builder.toJSON());

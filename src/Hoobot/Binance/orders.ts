@@ -27,7 +27,7 @@
 
 import Binance from "node-binance-api";
 import { play } from "../Utilities/playSound";
-import { sendMessageToChannel } from "../../discord/discord";
+import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";

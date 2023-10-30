@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { loginDiscord, } from './discord/discord';
+import { loginDiscord, } from './Discord/discord';
 import { SymbolCandlesticks, candlestick, listenForCandlesticks } from './Hoobot/Binance/candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/balances';

@@ -33,7 +33,7 @@ import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { checkBeforeOrder, tradeDirection } from "./algorithmicTradeChecks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { play } from "../Utilities/playSound";
-import { sendMessageToChannel } from "../../discord/discord";
+import { sendMessageToChannel } from "../../Discord/discord";
 import { Balances, getCurrentBalances } from "../Binance/balances";
 import { calculateEMA, logEMASignals } from "../Indicators/ema";
 import { calculateRSI, logRSISignals } from "../Indicators/rsi";
