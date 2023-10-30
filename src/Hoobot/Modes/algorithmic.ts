@@ -245,7 +245,6 @@ export async function algorithmic(
   options: ConfigOptions) {
   try {
     const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
-    console.log("works1");
     // Push candlestick time and last closeprice.
     consoleLogger.push(`Candlestick time`, candleTime);
     consoleLogger.push(`Last close price`, candlesticks[candlesticks.length - 1].close.toFixed(7));
