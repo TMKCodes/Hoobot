@@ -26,7 +26,14 @@
 * ===================================================================== */
 
 import { candlestick } from "../Binance/candlesticks";
+import { Indicators } from "../Modes/algorithmic";
+import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
+
+export interface sma {
+  short: number[];
+  long: number[];
+}
 
 export function calculateSMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
   if (candles.length > 250) {
@@ -52,10 +59,10 @@ export function calculateSMA(candles: candlestick[], length: number, source: str
 }
 export const logSMASignals = (
   consoleLogger: ConsoleLogger,
-  smaValues: number[]
+  sma: number[]
 ) => {
-  const currentSMA = smaValues[smaValues.length - 1];
-  const prevSMA = smaValues[smaValues.length - 2];
+  const currentSMA = sma[sma.length - 1];
+  const prevSMA = sma[sma.length - 2];
   consoleLogger.push(`SMA Value`, currentSMA.toFixed(7));
   if (currentSMA > prevSMA) {
     consoleLogger.push(`SMA Signal`, `Bullish`);
@@ -72,3 +79,23 @@ export const logSMASignals = (
     consoleLogger.push(`SMA Signal`, `Bearish Crossover`);
   }
 };
+
+export const checkSMASignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+  let check = 'HOLD';
+  if (options.useSMA) {
+    const currentSMA = indicators.sma[indicators.sma.length - 1];
+    const prevSMA = indicators.sma[indicators.sma.length - 2];
+    const isBullishCrossover = currentSMA > prevSMA;
+    const isBearishCrossover = currentSMA < prevSMA;
+    const isFlatDirection = currentSMA == prevSMA;
+    if (isBullishCrossover) {
+      check = 'BUY';
+    } else if (isBearishCrossover) {
+      check = 'SELL';
+    } else if (isFlatDirection) {
+      check = 'HOLD'
+    }
+    consoleLogger.push("SMA Check", check);
+  }
+  return check;
+}

@@ -30,7 +30,7 @@ import Binance from "node-binance-api";
 import { handleOpenOrders } from "../Binance/orders";
 import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
-import { checkBeforeOrder, tradeDirection } from "./algorithmicTradeChecks";
+import { checkBeforeOrder, tradeDirection } from "./tradeDirection";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { play } from "../Utilities/playSound";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -40,11 +40,10 @@ import { calculateRSI, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
 import { candlestick } from "../Binance/candlesticks";
 import { readFileSync, writeFileSync } from "fs";
-import { calculateSMA, logSMASignals } from "../Indicators/SMA";
-import { start } from "repl";
+import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR } from "../Indicators/ATR";
 import { calculateBollingerBands } from "../Indicators/BollingerBands";
-import { calculateStochasticOscillator } from "../Indicators/StochasticOscillator";
+import { calculateStochasticOscillator, calculateStochasticRSI } from "../Indicators/StochasticOscillator";
 
 
 const soundFile = './alarm.mp3'
@@ -55,8 +54,9 @@ export interface Indicators {
   macd?: macd;
   rsi?: number[];
   atr?: number[];
-  bollingerBands: [number[], number[], number[]];
-  stochasticOscillator: number[];
+  bollingerBands?: [number[], number[], number[]];
+  stochasticOscillator?: number[];
+  stochasticRSI?: [number[], number[]];
 }
 
 function delay(ms: number) {
@@ -95,7 +95,7 @@ async function placeTrade(
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, tradeHistory, options);
-  consoleLogger.push(`Trade direction`, direction);
+  
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
@@ -278,6 +278,7 @@ export async function algorithmic(
       atr: undefined,
       bollingerBands: undefined,
       stochasticOscillator: undefined,
+      stochasticRSI: undefined,
     };
     indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
     if (options.useSMA) {
@@ -306,6 +307,12 @@ export async function algorithmic(
     }
     if (options.useStochasticOscillator) {
       indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
+    }
+    if (options.useStochasticRSI) {
+      if(options.useRSI !== true) { // Calculate RSI for stochasticRSI if RSI is not enabled, but Stochastic RSI is.
+        indicators.rsi = calculateRSI(candlesticks, options.stochasticRSILengthRSI, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+      }
+      indicators.stochasticRSI = calculateStochasticRSI(indicators.rsi, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.source);
     }
     await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
     const stopTime = Date.now();

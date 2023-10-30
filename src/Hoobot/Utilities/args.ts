@@ -65,6 +65,14 @@ export interface ConfigOptions {
   kPeriod: number;
   dPeriod: number;
   stochasticOscillatorSmoothing: number;
+  stochasticOscillatorOverboughtTreshold: number;
+  stochasticOscillatorOversoldTreshold: number;
+  stochasticRSIOverboughtTreshold: number;
+  stochasticRSIOversoldTreshold: number;
+  stochasticRSILengthRSI: number;
+  stochasticRSILengthStoch: number;
+  stochasticRSISmoothK: number;
+  stochasticRSISmoothD: number;
   shortEma: number;
   longEma: number;
   fastMacd: number;
@@ -82,6 +90,7 @@ export interface ConfigOptions {
   useATR: boolean;
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
+  useStochasticRSI: boolean;
   maxAmount: number;
   closePercentage: number;
   overboughtTreshold: number;
@@ -116,13 +125,22 @@ export function parseArgs(args: string[]): ConfigOptions {
     useATR: process.env.USE_ATR === "true" ? true : false,
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
+    useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
     smaLength: parseFloat(process.env.SMA_LENGTH) || 7,
     atrLength: parseFloat(process.env.ATR_LENGTH) || 7,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
-    kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 7,
-    dPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 7,
-    stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 7,
+    kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
+    dPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 1,
+    stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 3,
+    stochasticOscillatorOverboughtTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD) || 80,
+    stochasticOscillatorOversoldTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD) || 20,
+    stochasticRSILengthRSI: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_RSI) || 14,
+    stochasticRSILengthStoch: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_STOCHASTIC) || 14,
+    stochasticRSISmoothK: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_K) || 3,
+    stochasticRSISmoothD: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_D) || 3,
+    stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGH_TRESHOLD) || 80,
+    stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
     shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
     longEma: parseFloat(process.env.EMA_LONG!) || 26,
     fastMacd: parseFloat(process.env.MACD_FAST!) || 7,

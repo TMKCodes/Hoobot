@@ -29,6 +29,7 @@ import { start } from 'repl';
 import { candlestick } from '../Binance/candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
+import { Indicators } from '../Modes/algorithmic';
 
 export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
   const rsiFixed = rsi.map((rsi) => rsi.toFixed(2));
@@ -54,8 +55,8 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 
 
 export function calculateRSI(candles: candlestick[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
-  if (candles.length > 100) {
-    candles = candles.slice(-(100))
+  if (candles.length > 50) {
+    candles = candles.slice(-(50))
   }
 
   let closePrices: number[] = [];
@@ -126,4 +127,30 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
   }
   
   return rsArray.slice(-amount);
+}
+
+export const checkRSISignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+  let check = 'HOLD';
+  if (options.useRSI) {
+    const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
+    const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
+    for (let i = indicators.rsi.length - 1; i >= 0; i--) {
+      const prevRsi = indicators.rsi[i];
+      if (prevRsi > overboughtTreshold) {
+        check = 'SELL';
+        break;
+      }
+    }
+    if(check === "HOLD") {
+      for (let i = indicators.rsi.length - 1; i >= 0; i--) {
+        const prevRsi = indicators.rsi[i];
+        if(prevRsi < oversoldTreshold) {
+          check = 'BUY';
+          break;
+        }
+      }
+    }
+    consoleLogger.push("RSI Check", check);
+  }
+  return check;
 }

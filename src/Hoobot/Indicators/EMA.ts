@@ -26,6 +26,8 @@
 * ===================================================================== */
 
 import { candlestick } from "../Binance/candlesticks";
+import { Indicators } from "../Modes/algorithmic";
+import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 
@@ -117,43 +119,26 @@ export const logEMASignals = (
   }
 };
 
-interface EMAData {
-  shortEma: number[];
-  longEma: number[];
-}
-
-export const findEMACrossovers = (candlesticks: any[], shortEmaLength: number, longEmaLength: number): EMAData => {
-  const emaData: EMAData = {
-    shortEma: [],
-    longEma: [],
-  };
-
-  // Calculate EMA arrays for both lengths
-  const shortEmaArray = calculateEMAArray(candlesticks, shortEmaLength);
-  const longEmaArray = calculateEMAArray(candlesticks, longEmaLength);
-
-  // Add calculated EMA values to the emaData
-  emaData.shortEma = shortEmaArray;
-  emaData.longEma = longEmaArray;
-
-  // Find EMA crossovers
-  const crossovers: number[] = [];
-  for (let i = longEmaLength; i < shortEmaArray.length; i++) {
-    if (shortEmaArray[i] > longEmaArray[i] && shortEmaArray[i - 1] < longEmaArray[i - 1]) {
-      // EMA A crossed above EMA B (Bullish crossover)
-      crossovers.push(i);
-    } else if (shortEmaArray[i] < longEmaArray[i] && shortEmaArray[i - 1] > longEmaArray[i - 1]) {
-      // EMA A crossed below EMA B (Bearish crossover)
-      crossovers.push(i);
+export const checkEMASignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+  let check = 'HOLD';
+  if (options.useEMA) {
+    const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];
+    const currentLongEma = indicators.ema.long[indicators.ema.long.length - 1];
+    const prevShortEma = indicators.ema.short[indicators.ema.short.length - 2];
+    const prevLongEma = indicators.ema.long[indicators.ema.long.length - 2];
+    const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
+    const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
+    const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
+    const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
+    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+    if (isBullishCrossover) {
+      check = 'BUY';
+    } else if (isBearishCrossover) {
+      check = 'SELL';
+    } else if (isFlatDirection) {
+      check = 'HOLD'
     }
+    consoleLogger.push("EMA Check", check);
   }
-
-  // Log the dates of EMA crossovers based on candlestick data
-  console.log('EMA Crossovers:');
-  crossovers.forEach((index) => {
-    const crossoverDate = new Date(candlesticks[index].time);
-    console.log(crossoverDate.toISOString(), 'EMA A:', shortEmaArray[index], 'EMA B:', longEmaArray[index]);
-  });
-
-  return emaData;
+  return check;
 }

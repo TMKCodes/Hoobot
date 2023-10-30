@@ -26,6 +26,8 @@
 * ===================================================================== */
 
 import { candlestick } from "../Binance/candlesticks";
+import { Indicators } from "../Modes/algorithmic";
+import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMAArray } from "./EMA";
 
@@ -92,16 +94,7 @@ export const logMACDSignals = (
   }
 }
 
-export const calculateMACD = (candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) => {
-  const macd = calculateMACDArray(candles, shortEMA, longEMA, signalLength, source);
-  return {
-    macdLine: macd.macdLine,
-    signalLine: macd.signalLine,
-    histogram: macd.histogram,
-  }
-}
-
-export function calculateMACDArray(candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
+export function calculateMACD(candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
   if (candles.length > 200) {
     candles = candles.slice(-(200))
   }
@@ -137,6 +130,39 @@ export function calculateMACDArray(candles: candlestick[], shortEMA: number, lon
     signalLine,
     histogram,
   };
+}
+
+export const checkMACDSignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+  let check = 'HOLD';
+  if (options.useMACD) {
+    const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
+    const prevHistogram = indicators.macd.histogram[indicators.macd.histogram.length - 2];
+    const currentMacdLine = indicators.macd.macdLine[indicators.macd.macdLine.length -1];
+    const currentSignalLine = indicators.macd.signalLine[indicators.macd.signalLine.length -1];
+    const isPrevHistogramPositive = prevHistogram > 0;
+    const isPrevHistogramNegative = prevHistogram < 0;
+    const isHistogramPositive = currentHistogram > 0;
+    const isHistogramNegative = currentHistogram < 0;
+    const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
+    const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
+    const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
+    const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
+    const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
+    const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
+    if(isPrevHistogramNegative && isHistogramPositive) {
+      check = 'BUY';
+    } else if (isPrevHistogramPositive && isHistogramNegative) {
+      check = 'SELL';
+    } else {
+      if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
+        check = 'BUY';
+      } else if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
+        check = 'SELL';
+      }
+    }
+    consoleLogger.push("MACD Check", check);
+  }
+  return check;
 }
 
 
