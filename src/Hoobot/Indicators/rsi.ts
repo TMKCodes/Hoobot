@@ -25,8 +25,8 @@
 * the use of this software.
 * ===================================================================== */
 
-import { ConfigOptions } from './args';
-import { ConsoleLogger } from './consoleLogger';
+import { ConfigOptions } from '../Utilities/args';
+import { ConsoleLogger } from '../Utilities/consoleLogger';
 
 export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
   const rsiFixed = rsi.map((rsi) => rsi.toFixed(2));

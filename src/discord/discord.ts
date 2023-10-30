@@ -67,7 +67,7 @@ deployable.push(server.builder.toJSON());
 commands.push({name: server.builder.name, execute: server.execute});
 
 import fkick from './commands/fkick';
-import { ConfigOptions } from '../binance/args';
+import { ConfigOptions } from '../Hoobot/Utilities/args';
 import Binance from 'node-binance-api';
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});

@@ -27,7 +27,7 @@
 
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../binance/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
 export default {
   builder: new SlashCommandBuilder()

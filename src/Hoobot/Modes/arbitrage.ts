@@ -25,9 +25,9 @@
 * the use of this software.
 * ===================================================================== */
 import fs from 'fs';
-import { SymbolCandlesticks } from "./candlesticks";
-import { SymbolInfo } from "./symbols";
-import { logToFile } from './logToFile';
+import { SymbolCandlesticks } from "../Binance/candlesticks";
+import { SymbolInfo } from "../Binance/symbols";
+import { logToFile } from '../Utilities/logToFile';
 
 
 interface ProfitInfo {

@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { ConsoleLogger } from "./consoleLogger";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 // Calculate Exponential Moving Average (EMA)
 export function calculateEMA(candles: any[], length: number, source: string = 'close'): number {

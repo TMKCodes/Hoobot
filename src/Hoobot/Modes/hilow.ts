@@ -26,15 +26,15 @@
 * ===================================================================== */
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { ConsoleLogger } from "./consoleLogger";
-import { candlestick } from "./candlesticks";
-import { filter } from "./filters";
-import { ConfigOptions, getSecondsFromInterval } from "./args";
-import { Balances } from "./balances";
-import { getLastCompletedOrder, handleOpenOrders } from "./orders";
-import { calculateEMA, logEMASignals } from "./ema";
-import { calculateRSI, logRSISignals } from "./rsi";
-import { calculateMACD, logMACDSignals } from "./macd";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { candlestick } from "../Binance/candlesticks";
+import { filter } from "../Binance/filters";
+import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
+import { Balances } from "../Binance/balances";
+import { getLastCompletedOrder, handleOpenOrders } from "../Binance/orders";
+import { calculateEMA, logEMASignals } from "../Indicators/ema";
+import { calculateRSI, logRSISignals } from "../Indicators/rsi";
+import { calculateMACD, logMACDSignals } from "../Indicators/macd";
 
 
 

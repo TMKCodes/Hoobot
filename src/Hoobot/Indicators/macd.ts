@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { ConsoleLogger } from "./consoleLogger";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMAArray } from "./ema";
 
 export const logMACDSignals = (
@@ -121,7 +121,7 @@ export function calculateMACDArray(candles: any[], shortEMA: number, longEMA: nu
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
   
-  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalLength, source);
+  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value.toString() })), signalLength, source);
 
   if(signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);

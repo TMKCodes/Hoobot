@@ -26,11 +26,11 @@
 * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { play } from "./playSound";
-import { sendMessageToChannel } from "../discord/discord";
+import { play } from "../Utilities/playSound";
+import { sendMessageToChannel } from "../../discord/discord";
 import { Client } from "discord.js";
-import { ConfigOptions } from "./args";
-import { ConsoleLogger } from "./consoleLogger";
+import { ConfigOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 const soundFile = './alarm.mp3'
 

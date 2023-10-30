@@ -27,17 +27,17 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './discord/discord';
-import { SymbolCandlesticks, candlestick, listenForCandlesticks } from './binance/candlesticks';
-import { ConfigOptions, parseArgs } from './binance/args';
-import { getBalancesFromWebsocket, getCurrentBalances } from './binance/balances';
-import { consoleLogger } from './binance/consoleLogger';
-import { filters, getFilters } from './binance/filters';
+import { SymbolCandlesticks, candlestick, listenForCandlesticks } from './Hoobot/Binance/candlesticks';
+import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
+import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/balances';
+import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
+import { filters, getFilters } from './Hoobot/Binance/filters';
 import dotenv from 'dotenv';
-import { algorithmic } from './binance/algorithmic';
-import { getTradeableSymbols } from './binance/symbols';
-import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './binance/arbitrage';
-import { hilow } from './binance/hilow';
-import { checkLicenseValidity } from './binance/license';
+import { algorithmic } from './Hoobot/Modes/algorithmic';
+import { getTradeableSymbols } from './Hoobot/Binance/symbols';
+import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './Hoobot/Modes/arbitrage';
+import { hilow } from './Hoobot/Modes/hilow';
+import { checkLicenseValidity } from './Hoobot/Utilities/license';
 
 
 

@@ -27,18 +27,18 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getLastCompletedOrder, handleOpenOrders, order } from "./orders";
-import { filter } from "./filters";
-import { ConfigOptions, getSecondsFromInterval } from "./args";
-import { checkBeforeOrder, tradeDirection } from "./tradeChecks";
-import { ConsoleLogger } from "./consoleLogger";
-import { play } from "./playSound";
-import { sendMessageToChannel } from "../discord/discord";
-import { Balances, getCurrentBalances } from "./balances";
-import { calculateEMA, logEMASignals } from "./ema";
-import { calculateRSI, logRSISignals } from "./rsi";
-import { calculateMACD, logMACDSignals } from "./macd";
-import { candlestick } from "./candlesticks";
+import { getLastCompletedOrder, handleOpenOrders, order } from "../Binance/orders";
+import { filter } from "../Binance/filters";
+import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
+import { checkBeforeOrder, tradeDirection } from "./algorithmicTradeChecks";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { play } from "../Utilities/playSound";
+import { sendMessageToChannel } from "../../discord/discord";
+import { Balances, getCurrentBalances } from "../Binance/balances";
+import { calculateEMA, logEMASignals } from "../Indicators/ema";
+import { calculateRSI, logRSISignals } from "../Indicators/rsi";
+import { calculateMACD, logMACDSignals } from "../Indicators/macd";
+import { candlestick } from "../Binance/candlesticks";
 import { dir } from "console";
 import { readFileSync, writeFileSync } from "fs";
 

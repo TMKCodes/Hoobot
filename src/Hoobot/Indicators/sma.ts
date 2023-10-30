@@ -25,26 +25,22 @@
 * the use of this software.
 * ===================================================================== */
 
-import { SlashCommandBuilder } from 'discord.js';
-import { Balances, getCurrentBalances } from '../../Hoobot/Binance/balances';
-import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
-
-export default {
-  builder: new SlashCommandBuilder()
-                .setName("balances")
-                .setDescription("Replices with Binance balances!"),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, config: ConfigOptions) => {
-    
-
-    const balances = await getCurrentBalances(binance);
-    const newBalances: Balances = {}
-    const symbols = Object.keys(balances);
-    for (const symbol of symbols) {
-      if(balances[symbol] > 0) {
-        newBalances[symbol] = balances[symbol];
-      }
-    }
-    await interaction.reply(`${JSON.stringify(newBalances, null, 4)}`);
+export function calculateSMA(candles: any[], length: number, source: string = 'close'): number[] {
+  const smaValues: number[] = [];
+  let prices: number[] = [];
+  if(source == 'close') {
+    prices = candles.map((candle) => parseFloat(candle.close));
+  } else if(source == 'open') {
+    prices = candles.map((candle) => parseFloat(candle.open));
+  } else if(source == 'high') {
+    prices = candles.map((candle) => parseFloat(candle.high));
+  } else if(source == 'low') {
+    prices = candles.map((candle) => parseFloat(candle.low));
   }
+  for (let i = length - 1; i < candles.length; i++) {
+      const sum = prices.slice(i - length + 1, i + 1).reduce((acc, val) => acc + val, 0);
+      const sma = sum / length;
+      smaValues.push(sma);
+  }
+  return smaValues;
 }

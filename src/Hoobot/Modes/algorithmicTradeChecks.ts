@@ -26,10 +26,10 @@
 * ===================================================================== */
 
 import { readFileSync } from "fs";
-import { ConfigOptions } from "./args";
-import { ConsoleLogger } from "./consoleLogger";
-import { logToFile } from "./logToFile";
-import { calculatePercentageDifference, order } from "./orders";
+import { ConfigOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { logToFile } from "../Utilities/logToFile";
+import { calculatePercentageDifference, order } from "../Binance/orders";
 import { macd, history } from "./algorithmic";
 import { sign } from "crypto";
 
