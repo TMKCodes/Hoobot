@@ -1,1 +1,0 @@
-PLACING ORDER WAS FAILURE AT: [object Object], Amount too low.

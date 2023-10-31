@@ -113,11 +113,19 @@ export function parseArgs(args: string[]): ConfigOptions {
   
   // If command-line arguments provided, parse them
   const options: ConfigOptions = {
+    
+    // Binance
     apiKey: process.env.API_KEY || '',
     apiSecret: process.env.API_SECRET || '',
+
+    // Hoobot
+    license: process.env.LICENSE || "",
     mode: process.env.MODE as BotMode || 'algorithmic',
     symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
     candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
+    source: process.env.SOURCE,
+    
+    // Indicators to use
     useEMA: process.env.USE_EMA === "true" ? true : false,
     useMACD: process.env.USE_MACD === "true" ? true : false,
     useRSI: process.env.USE_RSI === "true" ? true : false,
@@ -126,7 +134,20 @@ export function parseArgs(args: string[]): ConfigOptions {
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
+    
+    // Indicator parameters
     smaLength: parseFloat(process.env.SMA_LENGTH) || 7,
+    shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
+    longEma: parseFloat(process.env.EMA_LONG!) || 26,
+    fastMacd: parseFloat(process.env.MACD_FAST!) || 7,
+    slowMacd: parseFloat(process.env.MACD_SLOW!) || 26,
+    signalMacd: parseFloat(process.env.MACD_SIGNAL!) || 9,
+    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
+    rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
+    rsiSmoothingType: process.env.RSI_SMOOTHING_TYPE || "SMA",
+    rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
+    overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
+    oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
     atrLength: parseFloat(process.env.ATR_LENGTH) || 7,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
@@ -139,32 +160,31 @@ export function parseArgs(args: string[]): ConfigOptions {
     stochasticRSILengthStoch: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_STOCHASTIC) || 14,
     stochasticRSISmoothK: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_K) || 3,
     stochasticRSISmoothD: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_D) || 3,
-    stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGH_TRESHOLD) || 80,
+    stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD) || 80,
     stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
-    shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
-    longEma: parseFloat(process.env.EMA_LONG!) || 26,
-    fastMacd: parseFloat(process.env.MACD_FAST!) || 7,
-    slowMacd: parseFloat(process.env.MACD_SLOW!) || 26,
-    signalMacd: parseFloat(process.env.MACD_SIGNAL!) || 9,
-    source: process.env.SOURCE,
-    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
-    rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
-    rsiSmoothingType: process.env.RSI_SMOOTHING_TYPE || "SMA",
-    rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
+    
+    // Limits
     maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
-    overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
-    oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
     maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
     tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
-    pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
-    pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
     holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
     minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
     minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
-    license: process.env.LICENSE || "",
-    debug: process.env.DEBUG === "true" ? true : false,
+    
+    // Discord
+    discordEnabled: process.env.DISCORD_ENABLED === "true" ? true : false || false,
+    discordBotToken: process.env.DISCORD_BOT_TOKEN || "",
+    discordApplicationID: process.env.DISCORD_APPLICATION_ID || "",
+    discordServerID: process.env.DISCORD_SERVER_ID || "",
     discordChannelID:  process.env.DISCORD_CHANNEL_ID || "",
+
+    // Developer
+    debug: process.env.DEBUG === "true" ? true : false || false,
+
+    // Arbitrage
+    pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
+    pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
   };
   if (args.length === 0) {
     // If no command-line arguments, read options from .env file

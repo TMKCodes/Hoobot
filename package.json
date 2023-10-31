@@ -5,8 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
-    "start": "NODE_OPTIONS=--experimental-vm-modules ts-node -r dotenv/config src/index.ts",
-    "thinking": "NODE_OPTIONS=--experimental-vm-modules ts-node -r dotenv/config src/binance/thinking.ts"
+    "start": "NODE_OPTIONS=--experimental-vm-modules ts-node -r dotenv/config src/index.ts"
   },
   "author": "Toni Lukkaroinen",
   "license": "ISC",
@@ -18,11 +17,9 @@
     "ts-jest": "^29.1.1"
   },
   "dependencies": {
-    "binance-api-node": "^0.12.6",
     "discord.js": "^14.11.0",
     "dotenv": "^16.3.1",
     "node-binance-api": "^0.13.1",
-    "play-sound": "^1.1.5",
-    "react-dom": "^18.2.0"
+    "play-sound": "^1.1.5"
   }
 }

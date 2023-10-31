@@ -64,7 +64,6 @@ EOF
   echo "Configuration saved to .env file."
 }
 
-
 # Main script
 main() {
   # Check if Node.js is installed

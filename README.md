@@ -1,78 +1,189 @@
 # Hoobot
 
-This repository contains a Hoobot designed for cryptocurrency trading. 
-The bot allows you to automate trading strategies and execute trades on the Binance 
-exchange.
-
-## What is Binance.com and Crypto Trading?
-
-[Binance.com](https://www.binance.com) is one of the world's leading cryptocurrency exchanges, offering a platform for users to buy, 
-sell, and trade various cryptocurrencies. It provides a wide range of services, including spot trading, futures trading, staking, 
-savings accounts, and more.
+Hoobot is reactive algorithmic cryptocurrency trading bot. It supports multiple different indicators such as EMA, MACD and RSI for algorithmic trading.
 
 **Crypto trading** involves buying and selling cryptocurrencies with the aim of making a profit. Traders analyze market trends, 
 price charts, and various technical indicators to make informed decisions about when to buy or sell a particular cryptocurrency. 
 Binance provides a user-friendly interface and robust trading tools that allow both beginners and experienced traders to engage 
 in crypto trading.
 
+## Crypto Exchanges
 
-## NOTE: Currently only Algorithmic trading with EMA, MACD, RSI signals is available.
+### Binance
 
-## Configuration
+[Binance.com](https://www.binance.com/en/activity/referral-entry/CPA/together?ref=CPA_00QH6HTWLZ) is one of the world's leading cryptocurrency exchanges, offering a platform for users to buy, 
+sell, and trade various cryptocurrencies. It provides a wide range of services, including spot trading, futures trading, staking, 
+savings accounts, and more. 
 
-### Windows
+## How to use Hoobot
 
-1. Run `configure.bat` to set up the required dependencies on Windows.
+Hoobot has been programmed with Typescript on top of Node. So the requirements are node version manager (nvm), node package manager (npm) and at least Node version 18.17.0. 
 
-### Linux
+Here is a list of npm packages that are required:
 
-1. Run `configure.sh` to set up the required dependencies on Linux.
+- `discord.js`
+- `dotenv`
+- `node-binance-api`
+- `play-sound`
 
-## Usage
+### With Windows
 
-To start the trading bot, use the following command: `npm run start`
+#### Configuration and dependencies
+
+1. Open Command Prompt with administrator privileges by searching for "cmd" in the Start menu, right-clicking on "Command Prompt," and selecting "Run as administrator."
+2. Navigate to the Hoobot directory with `cd`.
+3. Run the script `configure-windows.bat` to set up the required dependencies on Windows.
+4. Run `npm run start` to start Hoobot.
+5. Wait for profit!
+
+#### Updating
+
+1. Open Command Prompt with administrator privileges by searching for "cmd" in the Start menu, right-clicking on "Command Prompt," and selecting "Run as administrator."
+2. Navigate to the Hoobot directory with cd.
+3. Run the script update-windows.bat to check for updates and apply them if available.
+4. Restart Hoobot.
+5. Continue trading and monitoring for profit!
+
+### With Linux
+
+#### Configuration and dependencies
+
+1. Open terminal
+2. Navigate to the Hoobot directory with `cd`.
+3. Change file mode `sudo chmod +x configure-linux.sh`.
+4. Run `sudo ./configure-linux.sh` to set up the required dependencies on Linux.
+3. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
+6. Run `npm run start` to start Hoobot.
+7. Wait for profit!
+
+#### Updating
+
+1. Open terminal
+2. Navigate to the Hoobot directory with `cd`.
+3. RChange the file mode `sudo chmod +x update-linux.sh`.
+3. Run the script `sudo ./update-linux.sh` to check for updates and apply them if available.
+4. Restart Hoobot.
+5. Continue trading and monitoring for profit!
+
+### With OS X 
+
+#### Configuration and dependencies
+
+1. Open terminal
+2. Navigate to the Hoobot directory with `cd`.
+3. Change file ode `sudo chmod +x configure-osx.sh`
+4. Run `sudo ./configure-osx.sh` to set up the required dependencies on OS X.
+5. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
+6. Run `npm run start` to start Hoobot.
+7. Wait for profit!
+
+#### Updating
+
+1. Open terminal
+2. Navigate to the Hoobot directory with `cd`.
+3. RChange the file mode `sudo chmod +x update-osx.sh`.
+3. Run the script `sudo ./update-osx.sh` to check for updates and apply them if available.
+4. Restart Hoobot.
+5. Continue trading and monitoring for profit!
 
 ## .env Configuration Values
 
 Below is an explanation of the various configuration values present in the `.env` file for the Hoobot:
 
-### Binance Bot Configuration
+### API Keys
+- `API_KEY`: Your Binance API key.
+- `API_SECRET`: Your Binance API secret.
 
-- `API_KEY`: Your Binance API key, which allows the bot to access your Binance account for trading.
-- `API_SECRET`: Your Binance API secret, used to sign requests for enhanced security.
-- `MODE`: A string value to decide trading mode ("algorithmic", "hilow", "arbitage")
-- `SYMBOL`: The trading pair the bot will use, e.g., "BETH/USDT" for Ethereum against USDT (Tether).
-- `CANDLESTICK_INTERVAL`: The interval used for fetching candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
-- `USE_EMA`: A boolean value ("true" or "false") indicating whether the bot should use Exponential Moving Average (EMA) in its strategy.
-- `USE_MACD`: A boolean value indicating whether the bot should use Moving Average Convergence Divergence (MACD) in its strategy.
-- `USE_RSI`: A boolean value indicating whether the bot should use Relative Strength Index (RSI) in its strategy.
-- `SHORT_EMA`: The time period for the short-term EMA.
-- `LONG_EMA`: The time period for the long-term EMA.
-- `SOURCE`: A string value ("close", "open", "high", "low") indicates which value is used in EMA calculations.
-- `FAST_MACD`: The time period for the fast-term MACD.
-- `SLOW_MACD`: The time period for the slow-term MACD.
-- `SIGNAL_MACD`: The time period for the MACD signal.
-- `RSI_LENGTH`: The time period for the RSI calculation.
-- `RSI_SMOOTHING`: The time period for the RSI Smoothing.
-- `RSI_SMOOTHING_TYPE`: The type of smoothing used for RSI "SMA" | "EMA" | "WMA"
-- `RSI_HISTORY_LENGTH`: The length of historical RSI values considered for trading.
-- `OVERBOUGHT_THRESHOLD`: The RSI threshold for considering a cryptocurrency overbought.
-- `OVERSOLD_THRESHOLD`: The RSI threshold for considering a cryptocurrency oversold.
-- `MAX_AMOUNT`: The maximum amount of cryptocurrency the bot can use for trading (0 means no limit), limits the base asset amount in buy orders.
-- `CLOSE_PERCENTAGE`: The percentage of the account balance the bot can risk for each trade.
-- `MAX_ORDER_AGE_SECONDS`: The maximum age (in seconds) of an open order before it is canceled.
-- `TRADE_FEE_PERCENTAGE`: The trading fee percentage incurred on each trade.
-- `HOLD_UNTIL_POSITIVE_TRADE`: `true` to not allow negative trades.
-- `MINIMUM_PROFIT_SELL`: A number value to indicate minimum profit on sale, if hold until positive trade is enabled. Can be negative value.
-- `MINIMUM_PROFIT_BUY`: A number value to indicate minimum profit on buy, if hold until positive trade is enabled. Can be negative value.
+### License
+- `LICENSE`: License key for the bot.
+
+### Mode, Symbols, and Candlestick Interval
+- `MODE`: Trading mode (e.g., "algorithmic").
+- `SYMBOLS`: Comma-separated list of trading pairs (e.g., "ETH/TUSD, BNB/USDT").
+- `CANDLESTICK_INTERVAL`: Time interval for candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
+
+### Source Price for Indicators
+- `SOURCE`: Source price for indicators. Allowed values "open", "close", "high", "low"
+
+### Indicators
+- `USE_EMA`: Use Exponential Moving Average (true/false).
+- `USE_MACD`: Use Moving Average Convergence Divergence (true/false).
+- `USE_RSI`: Use Relative Strength Index (true/false).
+- `USE_SMA`: Use Simple Moving Average (true/false).
+- `USE_ATR`: Use Average True Range (true/false).
+- `USE_BOLLINGER_BANDS`: Use Bollinger Bands (true/false).
+- `USE_STOCHASTIC_OSCILLATOR`: Use Stochastic Oscillator (true/false).
+- `USE_STOCHASTIC_RSI`: Use Stochastic RSI (true/false).
+
+### SMA Parameters
+- `SMA_LENGTH`: Length of Simple Moving Average.
+
+### EMA Parameters
+- `EMA_SHORT`: Length of Short Exponential Moving Average.
+- `EMA_LONG`: Length of Long Exponential Moving Average.
+
+### MACD Parameters
+- `MACD_FAST`: Fast length for Moving Average Convergence Divergence.
+- `MACD_SLOW`: Slow length for Moving Average Convergence Divergence.
+- `MACD_SIGNAL`: Signal length for Moving Average Convergence Divergence.
+
+### RSI Parameters
+- `RSI_LENGTH`: Length of Relative Strength Index.
+- `RSI_SMOOTHING`: Smoothing factor for RSI.
+- `RSI_SMOOTHING_TYPE`: Type of smoothing for RSI.
+- `RSI_HISTORY_LENGTH`: Length of RSI history.
+- `RSI_OVERBOUGHT_TRESHOLD`: RSI overbought threshold.
+- `RSI_OVERSOLD_TRESHOLD`: RSI oversold threshold.
+
+### ATR Parameters
+- `ATR_LENGTH`: Length of Average True Range.
+
+### Bollinger Bands Parameters
+- `BOLLINGER_BANDS_LENGTH`: Length of Bollinger Bands.
+- `BOLLINGER_BANDS_MULTIPLIER`: Multiplier for Bollinger Bands.
+
+### Stochastic Oscillator Parameters
+- `STOCHASTIC_OSCILLATOR_KPERIOD`: K period for Stochastic Oscillator.
+- `STOCHASTIC_OSCILLATOR_DPERIOD`: D period for Stochastic Oscillator.
+- `STOCHASTIC_OSCILLATOR_SMOOTHING`: Smoothing factor for Stochastic Oscillator.
+- `STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD`: Stochastic Oscillator overbought threshold.
+- `STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD`: Stochastic Oscillator oversold threshold.
+
+### Stochastic RSI Parameters
+- `STOCHASTIC_RSI_LENGTH_RSI`: Length of RSI for Stochastic RSI.
+- `STOCHASTIC_RSI_LENGTH_STOCHASTIC`: Length of Stochastic for Stochastic RSI.
+- `STOCHASTIC_RSI_SMOOTH_K`: Smoothing factor for Stochastic RSI K.
+- `STOCHASTIC_RSI_SMOOTH_D`: Smoothing factor for Stochastic RSI D.
+- `STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD`: Stochastic RSI overbought threshold.
+- `STOCHASTIC_RSI_OVERSOLD_TRESHOLD`: Stochastic RSI oversold threshold.
+
+### Trading Limits
+- `MAX_AMOUNT`: Maximum amount to trade (0 for unlimited).
+- `CLOSE_PERCENTAGE`: Percentage to close a position.
+- `MAX_ORDER_AGE_SECONDS`: Maximum age of an order in seconds.
+- `TRADE_FEE_PERCENTAGE`: Trading fee percentage.
+- `HOLD_UNTIL_POSITIVE_TRADE`: Hold position until it's profitable (true/false).
+- `MINIMUM_PROFIT_SELL`: Minimum profit percentage to sell.
+- `MINIMUM_PROFIT_BUY`: Minimum profit percentage to buy.
 
 ### Discord Configuration
+- `DISCORD_ENABLED`: Enable Discord notifications (true/false).
+- `DISCORD_BOT_TOKEN`: Discord bot token.
+- `DISCORD_APPLICATION_ID`: Discord application ID.
+- `DISCORD_SERVER_ID`: Discord server ID.
+- `DISCORD_CHANNEL_ID`: Discord channel ID.
 
-- `DISCORD_ENABLED`: A boolean value indicating whether Discord integration is enabled ("true" or "false").
-- `DISCORD_BOT_TOKEN`: The Discord bot token required for the bot to connect to your Discord server.
-- `DISCORD_APPLICATION_ID`: The application ID associated with the Discord bot.
-- `DISCORD_SERVER_ID`: The ID of the Discord server where the bot will operate.
-- `DISCORD_CHANNEL_ID`: The ID of the Discord channel where the bot will send status updates.
+### Developer
+- `DEBUG`: Enable debugging mode (true/false).
+
+### Arbitrage
+- `PAIR_MIN_VOLUME`: Minimum trading volume for arbitrage.
+- `PAIR_MIN_PRICE_CHANGE`: Minimum price change for arbitrage.
+
+## Usage
+1. Copy the provided `.env` file and fill in the necessary values for the parameters.
+2. Save the file in your project directory.
+3. Use the configuration in your bot code.
 
 ### force.json
 
