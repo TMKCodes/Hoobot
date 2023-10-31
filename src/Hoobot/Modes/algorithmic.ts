@@ -237,8 +237,56 @@ async function placeTrade(
   }
 }
 
-// Rebalancing function (adjust this function based on your rebalancing strategy)
-// 
+export async function calculateIndicators(
+  consoleLogger: ConsoleLogger,
+  candlesticks: candlestick[],
+  options: ConfigOptions) {
+  const indicators: Indicators = {
+    sma: undefined,
+    ema: undefined,
+    macd: undefined,
+    atr: undefined,
+    bollingerBands: undefined,
+    stochasticOscillator: undefined,
+    stochasticRSI: undefined,
+  };
+  indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
+  if (options.useSMA) {
+    logSMASignals(consoleLogger, indicators.sma); 
+  }
+  indicators.ema = {
+    short: calculateEMA(candlesticks, options.shortEma, options.source),
+    long: calculateEMA(candlesticks, options.longEma, options.source),
+  }
+  if (options.useEMA) {
+    logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
+  }
+  if (options.useRSI) {
+    indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+    logRSISignals(consoleLogger, indicators.rsi, options);
+  }
+  if (options.useMACD) {
+    indicators.macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
+    logMACDSignals(consoleLogger, indicators.macd);
+  }
+  if (options.useATR) {
+    indicators.atr = calculateATR(candlesticks, options.atrLength, options.source);
+  }
+  if (options.useBollingerBands) {
+    indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+  }
+  if (options.useStochasticOscillator) {
+    indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
+  }
+  if (options.useStochasticRSI) {
+    if(options.useRSI !== true) { // Calculate RSI for stochasticRSI if RSI is not enabled, but Stochastic RSI is.
+      indicators.rsi = calculateRSI(candlesticks, options.stochasticRSILengthRSI, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+    }
+    indicators.stochasticRSI = calculateStochasticRSI(indicators.rsi, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.source);
+  }
+  return indicators;
+}
+
 export async function algorithmic(
   discord: Client, 
   binance: Binance, 
@@ -270,50 +318,7 @@ export async function algorithmic(
     consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();
-    // Calculate Indicators.
-    const indicators: Indicators = {
-      sma: undefined,
-      ema: undefined,
-      macd: undefined,
-      atr: undefined,
-      bollingerBands: undefined,
-      stochasticOscillator: undefined,
-      stochasticRSI: undefined,
-    };
-    indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
-    if (options.useSMA) {
-      logSMASignals(consoleLogger, indicators.sma); 
-    }
-    indicators.ema = {
-      short: calculateEMA(candlesticks, options.shortEma, options.source),
-      long: calculateEMA(candlesticks, options.longEma, options.source),
-    }
-    if (options.useEMA) {
-      logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
-    }
-    if (options.useRSI) {
-      indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-      logRSISignals(consoleLogger, indicators.rsi, options);
-    }
-    if (options.useMACD) {
-      indicators.macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
-      logMACDSignals(consoleLogger, indicators.macd);
-    }
-    if (options.useATR) {
-      indicators.atr = calculateATR(candlesticks, options.atrLength, options.source);
-    }
-    if (options.useBollingerBands) {
-      indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-    }
-    if (options.useStochasticOscillator) {
-      indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
-    }
-    if (options.useStochasticRSI) {
-      if(options.useRSI !== true) { // Calculate RSI for stochasticRSI if RSI is not enabled, but Stochastic RSI is.
-        indicators.rsi = calculateRSI(candlesticks, options.stochasticRSILengthRSI, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-      }
-      indicators.stochasticRSI = calculateStochasticRSI(indicators.rsi, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.source);
-    }
+    const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
     await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
