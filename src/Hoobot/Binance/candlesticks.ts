@@ -115,17 +115,20 @@ export const listenForCandlesticks = async (binance: Binance, symbol: string, in
       // Check if the previous candlestick was final.
       if (candleStore[symbol] === undefined || candleStore[symbol].candles === undefined) {
         candleStore[symbol] = { candles: [newCandlestick] }
-      } else if (candleStore[symbol].candles.length === 0) {
-        // Push new since candles do not exist.
-        candleStore[symbol].candles.push(newCandlestick);
-      } else if (candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal === true) {
-        // Push new since it was final
-        candleStore[symbol].candles.push(newCandlestick);
       } else {
-        // Update since it was not final
-        candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal = true;
-        candleStore[symbol].candles[candleStore[symbol].candles.length - 1] = newCandlestick;
+        candleStore[symbol].candles.push(newCandlestick);
       }
+      // } else if (candleStore[symbol].candles.length === 0) {
+      //   // Push new since candles do not exist.
+      //   candleStore[symbol].candles.push(newCandlestick);
+      // } else if (candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal === true) {
+      //   // Push new since it was final
+      //   candleStore[symbol].candles.push(newCandlestick);
+      // } else {
+      //   // Update since it was not final
+      //   candleStore[symbol].candles[candleStore[symbol].candles.length - 1].isFinal = true;
+      //   candleStore[symbol].candles[candleStore[symbol].candles.length - 1] = newCandlestick;
+      // }
 
       // Check if the array length exceeds the maximum allowed size
       if (candleStore[symbol]?.candles?.length > maxCandlesticks) {

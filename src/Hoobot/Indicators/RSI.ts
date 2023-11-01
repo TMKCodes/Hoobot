@@ -55,8 +55,14 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 
 
 export function calculateRSI(candles: candlestick[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
-  if (candles.length > 50) {
-    candles = candles.slice(-(50))
+  const requiredCandlesRSI = (length + amount + 1);
+  if (candles.length > requiredCandlesRSI && smoothing <= 1) {
+    candles = candles.slice(-requiredCandlesRSI)
+  } else {
+    const requiredCandlesRSISmoothed = requiredCandlesRSI + smoothing;
+    if (candles.length > requiredCandlesRSI + smoothing) {
+      candles = candles.slice(-requiredCandlesRSISmoothed);
+    }
   }
 
   let closePrices: number[] = [];

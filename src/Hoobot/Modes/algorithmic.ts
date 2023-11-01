@@ -43,7 +43,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR } from "../Indicators/ATR";
 import { calculateBollingerBands } from "../Indicators/BollingerBands";
-import { calculateStochasticOscillator, calculateStochasticRSI } from "../Indicators/StochasticOscillator";
+import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
 
 
 const soundFile = './alarm.mp3'
@@ -55,7 +55,7 @@ export interface Indicators {
   rsi?: number[];
   atr?: number[];
   bollingerBands?: [number[], number[], number[]];
-  stochasticOscillator?: number[];
+  stochasticOscillator?: [number[], number[]];
   stochasticRSI?: [number[], number[]];
 }
 
@@ -277,12 +277,14 @@ export async function calculateIndicators(
   }
   if (options.useStochasticOscillator) {
     indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
+    logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator);
   }
   if (options.useStochasticRSI) {
     if(options.useRSI !== true) { // Calculate RSI for stochasticRSI if RSI is not enabled, but Stochastic RSI is.
       indicators.rsi = calculateRSI(candlesticks, options.stochasticRSILengthRSI, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
     }
     indicators.stochasticRSI = calculateStochasticRSI(indicators.rsi, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.source);
+    logStochasticRSISignals(consoleLogger, indicators.stochasticRSI);
   }
   return indicators;
 }
@@ -297,10 +299,14 @@ export async function algorithmic(
   filter: filter, 
   options: ConfigOptions) {
   try {
-    const candleTime = (new Date(candlesticks[candlesticks.length - 1].time)).toLocaleString('fi-FI');
+    const latestCandle = candlesticks[candlesticks.length - 1];
+    const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     // Push candlestick time and last closeprice.
     consoleLogger.push(`Candlestick time`, candleTime);
-    consoleLogger.push(`Last close price`, candlesticks[candlesticks.length - 1].close.toFixed(7));
+    consoleLogger.push(`Low`, latestCandle.low.toFixed(7));
+    consoleLogger.push(`High`, latestCandle.high.toFixed(7));
+    consoleLogger.push(`Open`, latestCandle.open.toFixed(7));
+    consoleLogger.push(`Close`, latestCandle.close.toFixed(7));
     // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);

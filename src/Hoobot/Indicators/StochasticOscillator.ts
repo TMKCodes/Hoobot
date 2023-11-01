@@ -31,26 +31,42 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
-export function calculateStochasticOscillator(candles: any[], kPeriod: number = 14, dPeriod: number = 3, smoothing: number = 3, source: string = 'close'): number[] {
-  if (candles.length > 250) {
-    candles = candles.slice(-(250))
+export function calculateStochasticOscillator(candles: candlestick[], kPeriod: number = 14, dPeriod: number = 1, smoothing: number = 3, source: string = 'close'): [number[], number[]]  {
+  const requiredCandles = (kPeriod + dPeriod + 50);
+  if (candles.length > requiredCandles && smoothing <= 1) {
+    candles = candles.slice(-requiredCandles);
   }
-  const stochasticValues: candlestick[] = [];
+  const kValues: number[] = [];
+  const dValues: number[] = [];
+
   for (let i = kPeriod - 1; i < candles.length; i++) {
-    const slice = candles.slice(i - kPeriod + 1, i + 1);
-    const closePrices = slice.map(candle => candle.close);
+      const slice = candles.slice(i - kPeriod + 1, i + 1);
 
-    const highestHigh = Math.max(...slice.map(candle => candle.high));
-    const lowestLow = Math.min(...slice.map(candle => candle.low));
+      const highestHigh = Math.max(...slice.map(candle => candle.high));
+      const lowestLow = Math.min(...slice.map(candle => candle.low));
 
-    const currentClose = closePrices[closePrices.length - 1];
-    const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-    stochasticValues.push({ close: kValue, high: kValue, low: kValue, open: kValue });
+      const currentClose = candles[i].close;
+      const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
+
+      kValues.push(kValue);
+
+      if (kValues.length >= dPeriod) {
+          const dSlice = kValues.slice(kValues.length - dPeriod);
+          const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dPeriod;
+          dValues.push(dValue);
+      }
   }
-  const smoothedKValues = calculateSMA(stochasticValues, smoothing, source);
-  const dValues = calculateSMA(smoothedKValues.map((val) => ({ close: val })), dPeriod, source);
-  return dValues;
+  if (smoothing > 1) {
+      for (let i = smoothing - 1; i < dValues.length; i++) {
+          const slice = dValues.slice(i - smoothing + 1, i + 1);
+          const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / smoothing;
+          dValues[i] = smoothedValue;
+      }
+  }
+
+  return [ kValues.slice(-5), dValues.slice(-5) ];
 }
+
 
 export function calculateStochasticRSI(rsiValues: number[], lengthStochastic: number = 14, kSmooth: number = 3, dSmooth: number = 3, source: string = 'close'): [number[], number[]] {
   const stochasticValues: candlestick[] = [];
@@ -66,49 +82,61 @@ export function calculateStochasticRSI(rsiValues: number[], lengthStochastic: nu
   }
   const smoothedKValues = calculateSMA(stochasticValues, kSmooth, source);
   const dValues = calculateSMA(smoothedKValues.map((val) => ({ close: val })), dSmooth, source);
-  return [stochasticValues.map((candle) => candle.close ), dValues];
+  return [smoothedKValues.slice(-5), dValues.slice(-5)];
 }
 
-export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, stochasticOscillator: number[], options: ConfigOptions) {
-  const stochasticOscillatorFixed = stochasticOscillator.map((value) => value.toFixed(2));
-  if(stochasticOscillatorFixed.length === 1) {
-    consoleLogger.push("Stochastic Oscillator history:", stochasticOscillatorFixed.join(", "));
+export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, stochasticOscillator: [number[], number[]]) {
+  const kValuesFixed = stochasticOscillator[0].map((value) => parseFloat(value.toFixed(2)));
+  const dValuesFixed = stochasticOscillator[1].map((value) => parseFloat(value.toFixed(2)));
+
+  if (kValuesFixed.length === 1) {
+    consoleLogger.push("Stochastic Oscillator %K history:", kValuesFixed.join(", "));
   } else {
-    consoleLogger.push("Stochastic Oscillator history:", stochasticOscillatorFixed.slice(0, stochasticOscillatorFixed.length - 1).join(", "));
+    consoleLogger.push("Stochastic Oscillator %K history:", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
-  if (stochasticOscillator[stochasticOscillator.length - 1] > 80) {
+
+  if (dValuesFixed.length === 1) {
+    consoleLogger.push("Stochastic Oscillator %D history:", dValuesFixed.join(", "));
+  } else {
+    consoleLogger.push("Stochastic Oscillator %D history:", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
+  }
+
+  const lastKValue = kValuesFixed[kValuesFixed.length - 1];
+  const lastDValue = dValuesFixed[dValuesFixed.length - 1];
+
+  if (lastKValue > 80 || lastDValue > 80) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Overbought`);
-  } else if (stochasticOscillator[stochasticOscillator.length - 1] < 20) {
+  } else if (lastKValue < 20 || lastDValue < 20) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Oversold`);
-  } else if (stochasticOscillator[stochasticOscillator.length - 1] > 70) {
+  } else if (lastKValue > 70 || lastDValue > 70) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Overbought (Approaching)`);
-  } else if (stochasticOscillator[stochasticOscillator.length - 1] < 30) {
+  } else if (lastKValue < 30 || lastDValue < 30) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Oversold (Approaching)`);
-  } else if (stochasticOscillator[stochasticOscillator.length - 1] < 50) {
+  } else if (lastKValue < 50 || lastDValue < 50) {
     consoleLogger.push(`Stochastic Oscillator signal`, `Bullish`);
-  } else if(stochasticOscillator[stochasticOscillator.length - 1] > 50) {
+  } else if (lastKValue > 50 || lastDValue > 50) {
     consoleLogger.push(`Stochastic Oscillator signal`, `Bearish`);
   }
 }
 
-export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochasticRSI: number[], options: ConfigOptions) {
-  const stochasticRSIFixed = stochasticRSI.map((value) => value.toFixed(2));
+export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochasticRSI: [number[], number[]]) {
+  const stochasticRSIFixed = stochasticRSI[1].map((value) => value.toFixed(2));
   if(stochasticRSIFixed.length === 1) {
     consoleLogger.push("Stochastic RSI history:", stochasticRSIFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic RSI history:", stochasticRSIFixed.slice(0, stochasticRSIFixed.length - 1).join(", "));
   }
-  if (stochasticRSI[stochasticRSI.length - 1] > 80) {
+  if (stochasticRSI[1][stochasticRSI[1].length - 1] > 80) {
     consoleLogger.push(`Stochastic RSI condition`, `Overbought`);
-  } else if (stochasticRSI[stochasticRSI.length - 1] < 20) {
+  } else if (stochasticRSI[1][stochasticRSI[1].length - 1] < 20) {
     consoleLogger.push(`Stochastic RSI condition`, `Oversold`);
-  } else if (stochasticRSI[stochasticRSI.length - 1] > 70) {
+  } else if (stochasticRSI[1][stochasticRSI[1].length - 1] > 70) {
     consoleLogger.push(`Stochastic RSI condition`, `Overbought (Approaching)`);
-  } else if (stochasticRSI[stochasticRSI.length - 1] < 30) {
+  } else if (stochasticRSI[1][stochasticRSI[1].length - 1] < 30) {
     consoleLogger.push(`Stochastic RSI condition`, `Oversold (Approaching)`);
-  } else if (stochasticRSI[stochasticRSI.length - 1] < 50) {
+  } else if (stochasticRSI[1][stochasticRSI[1].length - 1] < 50) {
     consoleLogger.push(`Stochastic RSI signal`, `Bullish`);
-  } else if(stochasticRSI[stochasticRSI.length - 1] > 50) {
+  } else if(stochasticRSI[1][stochasticRSI[1].length - 1] > 50) {
     consoleLogger.push(`Stochastic RSI signal`, `Bearish`);
   }
 }
@@ -119,7 +147,7 @@ export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, i
     const overboughtTreshold = options.stochasticOscillatorOverboughtTreshold !== undefined ? options.stochasticOscillatorOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticOscillatorOversoldTreshold !== undefined ? options.stochasticOscillatorOversoldTreshold : 20; 
     for (let i = indicators.stochasticOscillator.length - 1; i >= 0; i--) {
-      const prevStochasticOscillator = indicators.stochasticOscillator[i];
+      const prevStochasticOscillator = indicators.stochasticOscillator[1][i];
       if (prevStochasticOscillator > overboughtTreshold) {
         check = 'SELL';
         break;
@@ -127,7 +155,7 @@ export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, i
     }
     if(check === "HOLD") {
       for (let i = indicators.stochasticOscillator.length - 1; i >= 0; i--) {
-        const prevStochasticOscillator = indicators.stochasticOscillator[i];
+        const prevStochasticOscillator = indicators.stochasticOscillator[1][i];
         if(prevStochasticOscillator < oversoldTreshold) {
           check = 'BUY';
           break;
