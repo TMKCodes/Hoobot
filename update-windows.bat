@@ -5,6 +5,12 @@ set ZIP_URL=https://hoosat.fi/hoobot/hoobot-latest.zip
 set TMP_DIR=C:\Temp\hoobot
 set ZIP_FILE=hoobot-latest.zip
 
+REM Create a backup of .env file
+if exist .env (
+    copy .env .env_backup >nul
+    echo .env file backed up as .env_backup
+)
+
 :: Step 1: Download the zip folder
 powershell -command "& { (New-Object Net.WebClient).DownloadFile('%ZIP_URL%', '%ZIP_FILE%') }"
 
