@@ -4,8 +4,8 @@
   "description": "Binance Bot to trade based on EMA calculations.",
   "main": "src/index.ts",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
-    "start": "NODE_OPTIONS=--experimental-vm-modules ts-node -r dotenv/config src/index.ts"
+    "test": "npx jest",
+    "start": "ts-node -r dotenv/config src/index.ts"
   },
   "author": "Toni Lukkaroinen",
   "license": "ISC",
@@ -20,6 +20,7 @@
     "discord.js": "^14.11.0",
     "dotenv": "^16.3.1",
     "node-binance-api": "^0.13.1",
-    "play-sound": "^1.1.5"
+    "play-sound": "^1.1.5",
+    "ts-node": "^10.9.1"
   }
 }
