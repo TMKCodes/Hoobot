@@ -34,3 +34,4 @@ public/bundle.js*
 node_modules/
 package-lock.json
 .env
+.env_backup
