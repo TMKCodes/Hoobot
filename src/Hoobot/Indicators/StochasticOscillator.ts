@@ -32,10 +32,6 @@ import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
 export function calculateStochasticOscillator(candles: candlestick[], kPeriod: number = 14, dPeriod: number = 1, smoothing: number = 3, source: string = 'close'): [number[], number[]]  {
-  const requiredCandles = (kPeriod + dPeriod + 50);
-  if (candles.length > requiredCandles && smoothing <= 1) {
-    candles = candles.slice(-requiredCandles);
-  }
   const kValues: number[] = [];
   const dValues: number[] = [];
 
