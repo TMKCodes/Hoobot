@@ -95,8 +95,8 @@ export const logMACDSignals = (
 }
 
 export function calculateMACD(candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
-  if (candles.length > 200) {
-    candles = candles.slice(-(200))
+  if (candles.length > 100) {
+    candles = candles.slice(-(100))
   }
   
   let shortEMAs = calculateEMAArray(candles, shortEMA, source);

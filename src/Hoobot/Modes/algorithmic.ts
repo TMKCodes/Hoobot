@@ -304,10 +304,11 @@ export async function algorithmic(
     // Push candlestick time and last closeprice.
     consoleLogger.push(`Amount of candles`, candlesticks.length);
     consoleLogger.push(`Candlestick time`, candleTime);
-    consoleLogger.push(`Low`, latestCandle.low.toFixed(7));
-    consoleLogger.push(`High`, latestCandle.high.toFixed(7));
-    consoleLogger.push(`Open`, latestCandle.open.toFixed(7));
-    consoleLogger.push(`Close`, latestCandle.close.toFixed(7));
+    consoleLogger.push(`Candlestick type`, latestCandle.isFinal === true ? "Final" : "Update")
+    consoleLogger.push(`Candlestick Open`, latestCandle.open.toFixed(7));
+    consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
+    consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
+    consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
     // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
