@@ -28,10 +28,16 @@
 import { Indicators } from '../Modes/algorithmic';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
+import { calculateEMA } from './EMA';
 import { calculateSMA } from './SMA';
 
-export function calculateBollingerBands(candles: any[], period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
-  const smaValues = calculateSMA(candles, period, source);
+export function calculateBollingerBands(candles: any[], average: string = "SMA", period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
+  let values: number[] = [];
+  if (average === "SMA") {
+    values = calculateSMA(candles, period, source);
+  } else if(average === "EMA") {
+    values = calculateEMA(candles, period, source);
+  }
   const standardDeviations: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {
@@ -45,37 +51,37 @@ export function calculateBollingerBands(candles: any[], period: number, multipli
   }
   for (let i = period - 1; i < prices.length; i++) {
       const slice = prices.slice(i - period + 1, i + 1);
-      const variance = slice.reduce((acc, val) => acc + Math.pow(val - smaValues[i - period + 1], 2), 0) / period;
+      const variance = slice.reduce((acc, val) => acc + Math.pow(val - values[i - period + 1], 2), 0) / period;
       const stdDev = Math.sqrt(variance);
       standardDeviations.push(stdDev);
   }
-  const upperBands = smaValues.map((sma, i) => sma + (standardDeviations[i] * multiplier));
-  const lowerBands = smaValues.map((sma, i) => sma - (standardDeviations[i] * multiplier));
-  return [smaValues, upperBands, lowerBands];
+  const upperBands = values.map((sma, i) => sma + (standardDeviations[i] * multiplier));
+  const lowerBands = values.map((sma, i) => sma - (standardDeviations[i] * multiplier));
+  return [values, upperBands, lowerBands];
 }
 
 export function logBollingerBandsSignals(
   consoleLogger: ConsoleLogger,
-  ema: { short: number[], long: number[] },
+  average: { short: number[], long: number[] } | number[],
   bollingerBands: [number[], number[], number[]]
 ) {
-  const currentEMAShort = ema.short[ema.short.length - 1];
+  const currentAverage = bollingerBands[0][bollingerBands[0].length - 1];
   const currentUpperBand = bollingerBands[1][bollingerBands[1].length - 1];
-  const currentLowerBand = bollingerBands[2][bollingerBands[0].length - 1];
+  const currentLowerBand = bollingerBands[2][bollingerBands[2].length - 1];
 
   consoleLogger.push(`Bollinger Bands Upper Value`, currentUpperBand.toFixed(7));
   consoleLogger.push(`Bollinger Bands Lower Value`, currentLowerBand.toFixed(7));
 
-  if (currentEMAShort > currentUpperBand) {
+  if (currentAverage > currentUpperBand) {
     consoleLogger.push(`Bollinger Bands Signal`, `Above Upper Band (Bearish)`);
-  } else if (currentEMAShort < currentLowerBand) {
+  } else if (currentAverage < currentLowerBand) {
     consoleLogger.push(`Bollinger Bands Signal`, `Below Lower Band (Bullish)`);
-  } else if (currentEMAShort >= currentLowerBand && currentEMAShort <= currentUpperBand) {
+  } else if (currentAverage >= currentLowerBand && currentAverage <= currentUpperBand) {
     consoleLogger.push(`Bollinger Bands Signal`, `Within Bands (Neutral)`);
   }
 
-  const isBullishBBSignal = currentEMAShort > currentLowerBand;
-  const isBearishBBSignal = currentEMAShort < currentUpperBand;
+  const isBullishBBSignal = currentAverage > currentLowerBand;
+  const isBearishBBSignal = currentAverage < currentUpperBand;
 
   if (isBullishBBSignal) {
     consoleLogger.push(`Bollinger Bands Signal`, `Bullish Signal`);
@@ -92,14 +98,13 @@ export const checkBollingerBandsSignals = (
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
-  
   if (options.useBollingerBands) {
-    const currentEMAShort = indicators.ema.short[indicators.ema.short.length - 1];
+    const currentAverage = indicators.bollingerBands[0][indicators.bollingerBands[0].length - 1];
     const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - 1];
     const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - 1];
     
-    const isAboveUpperBand = currentEMAShort > currentUpperBand;
-    const isBelowLowerBand = currentEMAShort < currentLowerBand;
+    const isAboveUpperBand = currentAverage > currentUpperBand;
+    const isBelowLowerBand = currentAverage < currentLowerBand;
     
     if (isAboveUpperBand) {
       check = 'SELL';

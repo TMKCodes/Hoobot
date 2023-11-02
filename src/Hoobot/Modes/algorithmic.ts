@@ -280,7 +280,7 @@ export async function calculateIndicators(
     logATRSignals(consoleLogger, indicators.atr);
   }
   if (options.useBollingerBands) {
-    indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+    indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
     logBollingerBandsSignals(consoleLogger, indicators.ema, indicators.bollingerBands);
   }
   if (options.useStochasticOscillator) {
