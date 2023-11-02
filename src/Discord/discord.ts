@@ -54,6 +54,10 @@ import binancePossibleProfit from './Commands/binancePossibleProfit';
 deployable.push(binancePossibleProfit.builder.toJSON());
 commands.push({name: binancePossibleProfit.builder.name, execute: binancePossibleProfit.execute});
 
+import binanceROI from './Commands/binanceROI';
+deployable.push(binanceROI.builder.toJSON());
+commands.push({name: binanceROI.builder.name, execute: binanceROI.execute});
+
 import binanceLastTrades from './Commands/binanceLastTrades';
 deployable.push(binanceLastTrades.builder.toJSON());
 commands.push({name: binanceLastTrades.builder.name, execute: binanceLastTrades.execute});

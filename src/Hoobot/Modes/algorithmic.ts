@@ -280,10 +280,7 @@ export async function calculateIndicators(
     logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator);
   }
   if (options.useStochasticRSI) {
-    if(options.useRSI !== true) { // Calculate RSI for stochasticRSI if RSI is not enabled, but Stochastic RSI is.
-      indicators.rsi = calculateRSI(candlesticks, options.stochasticRSILengthRSI, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-    }
-    indicators.stochasticRSI = calculateStochasticRSI(indicators.rsi, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.source);
+    indicators.stochasticRSI = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD);
     logStochasticRSISignals(consoleLogger, indicators.stochasticRSI);
   }
   return indicators;
@@ -300,11 +297,25 @@ export async function algorithmic(
   options: ConfigOptions) {
   try {
     const latestCandle = candlesticks[candlesticks.length - 1];
+    const prevCandle = candlesticks[candlesticks.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     // Push candlestick time and last closeprice.
     consoleLogger.push(`Amount of candles`, candlesticks.length);
     consoleLogger.push(`Candlestick time`, candleTime);
-    consoleLogger.push(`Candlestick type`, latestCandle.isFinal === true ? "Final" : "Update")
+    if (latestCandle.close > latestCandle.open) {
+      consoleLogger.push(`Candlestick Color`, "Green");
+    } else {
+        consoleLogger.push(`Candlestick Color`, "Red");
+    }
+    if (prevCandle) {
+      if (latestCandle.close > prevCandle.close) {
+        consoleLogger.push(`Candlesticks Direction`, "Rising");
+      } else if (latestCandle.close < prevCandle.close) {
+        consoleLogger.push(`Candlesticks Direction`, "Dropping");
+      } else {
+        consoleLogger.push(`Candlesticks Direction`, "Stagnant");
+      }
+    }
     consoleLogger.push(`Candlestick Open`, latestCandle.open.toFixed(7));
     consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
@@ -323,8 +334,8 @@ export async function algorithmic(
       return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
     }
     // Log the symbol
-    consoleLogger.push(symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
-    consoleLogger.push(symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
+    consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
+    consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();
     const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
     await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
