@@ -86,12 +86,17 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
   let lastProfit: number = 0;
   let nextPossibleProfit: number = 0;
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
-  if(tradeHistory?.length > 1) {
+  if(tradeHistory?.length > 0) {
+    if(tradeHistory?.length > 1) {
+      if(tradeHistory[0].isBuyer === true) { 
+        lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
+      } else if(tradeHistory[0].isBuyer === false) { 
+        lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
+      }
+    }
     if(tradeHistory[0].isBuyer === true) { 
-      lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
       nextPossibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), lastCandlestick.close);
     } else if(tradeHistory[0].isBuyer === false) { 
-      lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
       nextPossibleProfit = calculatePercentageDifference(lastCandlestick.close, parseFloat(tradeHistory[0].price));
     }
     if(force[symbol]?.skip !== true) {
