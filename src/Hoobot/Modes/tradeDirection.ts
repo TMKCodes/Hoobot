@@ -187,7 +187,7 @@ export const tradeDirection = async (
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, indicators, options);
   let tradeDirection = 'HOLD';
-  if (profitCheck === 'SELL' && balanceCheck === 'SELL') {
+  if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && balanceCheck === 'SELL') {
     let signal = 'SELL'
     if(options.useEMA === true && (emaCheck === 'BUY' || emaCheck === 'HOLD')) {
       signal = 'HOLD';
@@ -225,7 +225,7 @@ export const tradeDirection = async (
       bollingerBandsCheck = 'DISABLED';
     }
     tradeDirection = signal;
-  } else if(profitCheck == 'BUY' && balanceCheck === 'BUY') {
+  } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && balanceCheck === 'BUY') {
     let signal = 'BUY'
     if(options.useEMA === true && (emaCheck === 'SELL' || emaCheck === 'HOLD')) {
       signal = 'HOLD';
