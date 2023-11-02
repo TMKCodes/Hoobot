@@ -41,7 +41,7 @@ import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
 import { candlestick } from "../Binance/candlesticks";
 import { readFileSync, writeFileSync } from "fs";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
-import { calculateATR } from "../Indicators/ATR";
+import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
 
@@ -271,6 +271,7 @@ export async function calculateIndicators(
   }
   if (options.useATR) {
     indicators.atr = calculateATR(candlesticks, options.atrLength, options.source);
+    logATRSignals(consoleLogger, indicators.atr);
   }
   if (options.useBollingerBands) {
     indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);

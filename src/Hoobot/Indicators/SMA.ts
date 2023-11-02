@@ -54,6 +54,7 @@ export function calculateSMA(candles: candlestick[], length: number, source: str
   }
   return smaValues;
 }
+
 export const logSMASignals = (
   consoleLogger: ConsoleLogger,
   sma: number[]

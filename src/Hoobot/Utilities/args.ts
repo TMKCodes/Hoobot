@@ -152,7 +152,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
     overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
     oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
-    atrLength: parseFloat(process.env.ATR_LENGTH) || 7,
+    atrLength: parseFloat(process.env.ATR_LENGTH) || 14,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
     kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
