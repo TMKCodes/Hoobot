@@ -39,38 +39,34 @@ export default {
         await interaction.reply('Invalid duration. Please use 1D, 1W, or 1M.');
         return;
     }
-
-    console.log(historicalData);
-
+    const slicedTradeHistory = tradeHistory.slice(0, tradeHistory.length - historicalData.length);
+    let lastTrade = slicedTradeHistory[slicedTradeHistory.length - 1];
     // Calculate ROI based on the historical data
     let totalProfit = 0;
     let trades = 0;
-    let lastTrade: any = undefined;
-    if(historicalData.length >= 2) {
-      for (const trade of historicalData) {
-        if (lastTrade === undefined) {
-          // Set last trade since it was undefined.
-          lastTrade = trade;
+    for (const trade of historicalData) {
+      if (lastTrade === undefined) {
+        // Set last trade since it was undefined.
+        lastTrade = trade;
+      } else {
+        if (trade.isBuyer) {
+          // Calculate profit for the buy trade
+          const oldPrice = parseFloat(lastTrade.price);
+          const newPrice = parseFloat(trade.price);
+          const profit = calculatePercentageDifference(oldPrice, newPrice);
+          totalProfit += reverseSign(profit);
         } else {
-          if (trade.isBuyer) {
-            // Calculate profit for the buy trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice);
-            totalProfit += reverseSign(profit);
-          } else {
-            // Calculate profit for the sell trade
-            const newPrice = parseFloat(trade.price);
-            const oldPrice = parseFloat(lastTrade.price);
-            const profit = calculatePercentageDifference(oldPrice, newPrice); 
-            totalProfit += profit;
-          }
-          trades++;
-          lastTrade = trade; // Update lastTrade for the next iteration
+          // Calculate profit for the sell trade
+          const oldPrice = parseFloat(lastTrade.price);
+          const newPrice = parseFloat(trade.price);
+          const profit = calculatePercentageDifference(oldPrice, newPrice); 
+          totalProfit += profit;
         }
+        trades++;
+        lastTrade = trade; // Update lastTrade for the next iteration
       }
     }
-    await interaction.reply(`ROI for ${symbol} over ${duration}: ${totalProfit.toFixed(2)}%\nTrades in duration: ${trades}`);
+    await interaction.reply(`ROI for ${symbol} over ${duration.toUpperCase()}: ${totalProfit.toFixed(2)}%\nTrades in duration: ${trades}`);
   },
 };
 
@@ -87,8 +83,8 @@ function getHistoricalDataForDuration(symbol: string, duration: string, newTrade
 function getTargetTimestamp(duration: string) {
   const now = Math.floor(new Date().getTime() / 1000);
 
-  switch (duration) {
-    case '1D':
+  switch (duration.toUpperCase()) {
+    case '1D' :
       return now - (24 * 60 * 60); // 1 day in seconds
     case '1W':
       return now - (7 * 24 * 60 * 60); // 1 week in seconds

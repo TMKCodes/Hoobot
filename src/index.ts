@@ -82,7 +82,7 @@ const main = async () => {
       // Possible to add discord notification if order has been fulfilled with websocket notification.
     });
 
-
+    const candlesticksToPreload = 500;
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
       // Check if options.symbol is an array or a single string
@@ -92,7 +92,7 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 50, (candlesticks: candlestick[]) => {
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: candlestick[]) => {
             algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
           });
         }
@@ -101,7 +101,7 @@ const main = async () => {
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  50, (candlesticks: candlestick[]) => {
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
           algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
         });
       }
@@ -112,7 +112,7 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, 50, (candlesticks: candlestick[]) => {
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: candlestick[]) => {
             hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
           });
         }
@@ -120,7 +120,7 @@ const main = async () => {
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  50, (candlesticks: candlestick[]) => {
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
           hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
         });
       }
