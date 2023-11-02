@@ -109,7 +109,7 @@ async function placeTrade(
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    const percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - 0.075;
+    const percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
     if (checkBefore === true) {
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
@@ -178,7 +178,7 @@ async function placeTrade(
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - 0.075;
+      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
       let order: any = false;
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
@@ -302,6 +302,7 @@ export async function algorithmic(
     const latestCandle = candlesticks[candlesticks.length - 1];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     // Push candlestick time and last closeprice.
+    consoleLogger.push(`Amount of candles`, candlesticks.length);
     consoleLogger.push(`Candlestick time`, candleTime);
     consoleLogger.push(`Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`High`, latestCandle.high.toFixed(7));
