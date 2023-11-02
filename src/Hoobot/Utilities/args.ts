@@ -104,7 +104,11 @@ export interface ConfigOptions {
   minimumProfitBuy: number;
   license: string;
   debug: boolean;
-  discordChannelID: string;
+  discordEnabled: boolean,
+  discordBotToken: string,
+  discordApplicationID: string,
+  discordServerID: string,
+  discordChannelID:  string,
   [key: string]: string | string[] | number | boolean | undefined | number; // Index signature
 }
 

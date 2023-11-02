@@ -65,7 +65,7 @@ const main = async () => {
       console.log('Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.');
     }
     let discord: any = undefined;
-    if(options.dicordEnabled === "true") {
+    if(options.discordEnabled === true) {
       discord = loginDiscord(binance, options);
     }
 

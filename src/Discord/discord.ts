@@ -74,7 +74,7 @@ commands.push({name: fkick.builder.name, execute: fkick.execute});
 
 
 export const loginDiscord = (binance: Binance, options: ConfigOptions): Client => {
-  const token = process.env.DISCORD_BOT_TOKEN;
+  const token = options.discordBotToken;
   const client = new Client({ intents: [GatewayIntentBits.Guilds]});
   if(token === undefined) {
     console.log("Discord bot token has not been set.");
