@@ -97,10 +97,11 @@ Below is an explanation of the various configuration values present in the `.env
 ### License
 - `LICENSE`: License key for the bot.
 
-### Mode, Symbols, and Candlestick Interval
+### Mode, Symbols, and Candlestick Interval, Console Update
 - `MODE`: Trading mode (e.g., "algorithmic").
 - `SYMBOLS`: Comma-separated list of trading pairs (e.g., "ETH/TUSD, BNB/USDT").
 - `CANDLESTICK_INTERVAL`: Time interval for candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
+- `CONSOLE_UPDATE` The interval how often console should be updated with candlesticks. "update" once every candlestick update, "final" only final candlesticks.
 
 ### Source Price for Indicators
 - `SOURCE`: Source price for indicators. Allowed values "open", "close", "high", "low"
@@ -141,6 +142,7 @@ Below is an explanation of the various configuration values present in the `.env
 ### Bollinger Bands Parameters
 - `BOLLINGER_BANDS_LENGTH`: Length of Bollinger Bands.
 - `BOLLINGER_BANDS_MULTIPLIER`: Multiplier for Bollinger Bands.
+- `BOLLINGER_BANDS_AVERAGE_TYPE`: Type of average for Bollinger Bands, Allowed options "SMA" | "EMA"
 
 ### Stochastic Oscillator Parameters
 - `STOCHASTIC_OSCILLATOR_KPERIOD`: K period for Stochastic Oscillator.

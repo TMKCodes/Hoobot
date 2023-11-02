@@ -58,6 +58,7 @@ export interface ConfigOptions {
   mode: BotMode;
   symbols: string | string[];
   candlestickInterval: CandlestickInterval;
+  consoleUpdate: string;
   smaLength: number;
   atrLength: number;
   bollingerBandsLength: number;
@@ -128,6 +129,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
     candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
     source: process.env.SOURCE || "close",
+    consoleUpdate: process.env.CONSOLE_UPDATE || "final",
     
     // Indicators to use
     useEMA: process.env.USE_EMA === "true" ? true : false,

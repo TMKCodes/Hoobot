@@ -349,8 +349,15 @@ export async function algorithmic(
     await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
-    consoleLogger.print();
-    consoleLogger.flush();
+    if (options.consoleUpdate === "final" && latestCandle.isFinal === true) {
+      consoleLogger.print();
+      consoleLogger.flush();
+    } else if(options.consoleUpdate === "final" && latestCandle.isFinal === false) {
+      consoleLogger.flush();
+    } else {
+      consoleLogger.print();
+      consoleLogger.flush();
+    }
   } catch (error: any) {
     console.error(JSON.stringify(error));
   }
