@@ -38,6 +38,7 @@ import { checkRSISignals } from "../Indicators/RSI";
 import { sign } from "crypto";
 import { checkSMASignals } from "../Indicators/SMA";
 import { checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../Indicators/StochasticOscillator";
+import { checkBollingerBandsSignals } from "../Indicators/BollingerBands";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -85,7 +86,7 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
   let lastProfit: number = 0;
   let nextPossibleProfit: number = 0;
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
-  if(tradeHistory.length >= 2) {
+  if(tradeHistory?.length > 1) {
     if(tradeHistory[0].isBuyer === true) { 
       lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
       nextPossibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), lastCandlestick.close);
@@ -93,12 +94,10 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
       lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
       nextPossibleProfit = calculatePercentageDifference(lastCandlestick.close, parseFloat(tradeHistory[0].price));
     }
-  }
-  if(force[symbol]?.skip !== true) {
-    if (tradeHistory.length >= 2) {
+    if(force[symbol]?.skip !== true) {
       if (tradeHistory[0].isBuyer === true) { 
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > options.minimumProfitSell) {
+          if(nextPossibleProfit > (options.minimumProfitSell + options.tradeFee)) {
             check = "SELL";
           } else {
             check = "HOLD";
@@ -108,7 +107,7 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
         }
       } else if(tradeHistory[0].isBuyer === false) { 
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > options.minimumProfitBuy) {
+          if(nextPossibleProfit > (options.minimumProfitBuy + options.tradeFee)) {
             check = "BUY";
           } else {
             check = "HOLD";
@@ -123,26 +122,30 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
   } else {
     check = "SKIP";
   }
+  
   consoleLogger.push("PROFIT Previous: ", lastProfit);
   consoleLogger.push("PROFIT Next: ", nextPossibleProfit);
   consoleLogger.push("PROFIT Check: ", check);
   return check;
 }
 
-const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, balanceQuote: number, closePrice: number, isBuyer: boolean) => {
+const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, balanceQuote: number, closePrice: number, tradeHistory: order[]) => {
   let check = 'HOLD';
   if(balanceBase < (balanceQuote / closePrice)) {
     check = 'BUY';
   } else {
     check = 'SELL';
   }
-  if (check !== ((isBuyer === true) ? 'SELL' : 'BUY')) {
-    consoleLogger.push("BALANCE check: ", 'RECHECK BALANCES');
-    return "RECHECK BALANCES";
-  } else {
-    consoleLogger.push("BALANCE Check: ", check);
-    return check;
+  if (tradeHistory?.length > 0) {
+    if (check !== ((tradeHistory[0].isBuyer === true) ? 'SELL' : 'BUY')) {
+      consoleLogger.push("BALANCE check: ", 'RECHECK BALANCES');
+      return "RECHECK BALANCES";
+    } else {
+      consoleLogger.push("BALANCE Check: ", check);
+      return check;
+    }  
   }
+  return check;
 }
 
 export const tradeDirection = async (
@@ -161,17 +164,23 @@ export const tradeDirection = async (
   let macdCheck: string = 'HOLD';
   let rsiCheck: string = 'HOLD';
   let smaCheck: string = 'HOLD';
+  let stochCheck: string = 'HOLD';
+  let stochRSICheck: string = 'HOLD';
   let stochasticOscillatorCheck: string = 'HOLD';
   let stochasticRSICheck: string = 'HOLD';
+  let bollingerBandsCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
   profitCheck = checkProfitSignals(consoleLogger, symbol, tradeHistory, lastCandlestick, options);
-  balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, tradeHistory[0].isBuyer);
+  balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, tradeHistory);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);
   rsiCheck = checkRSISignals(consoleLogger, indicators, options);
+  stochCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
+  stochRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   stochasticOscillatorCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
+  bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, indicators, options);
   let tradeDirection = 'HOLD';
   if (profitCheck === 'SELL' && balanceCheck === 'SELL') {
     let signal = 'SELL'
@@ -205,6 +214,11 @@ export const tradeDirection = async (
     } else if(options.useStochasticRSI === false) {
       stochasticRSICheck = 'DISABLED';
     }
+    if(options.useBollingerBands === true && (bollingerBandsCheck === 'BUY' || bollingerBandsCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.useBollingerBands === false) {
+      bollingerBandsCheck = 'DISABLED';
+    }
     tradeDirection = signal;
   } else if(profitCheck == 'BUY' && balanceCheck === 'BUY') {
     let signal = 'BUY'
@@ -237,6 +251,11 @@ export const tradeDirection = async (
       signal = 'HOLD';
     } else if(options.useStochasticRSI === false) {
       stochasticRSICheck = 'DISABLED';
+    }
+    if(options.useBollingerBands === true && (bollingerBandsCheck === 'SELL' || bollingerBandsCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.useBollingerBands === false) {
+      bollingerBandsCheck = 'DISABLED';
     }
     tradeDirection = signal;
   } else {

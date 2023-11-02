@@ -79,8 +79,8 @@ export const logEMASignals = (
   const currentLongEma = longEma[longEma.length - 1];
   const prevShortEma = shortEma[shortEma.length - 2];
   const prevLongEma = longEma[longEma.length - 2];
-  consoleLogger.push(`EMA A`, currentShortEma.toFixed(7));
-  consoleLogger.push(`EMA B`, currentLongEma.toFixed(7));
+  consoleLogger.push(`EMA Short`, currentShortEma.toFixed(7));
+  consoleLogger.push(`EMA Long`, currentLongEma.toFixed(7));
   consoleLogger.push(`EMA Difference`, (currentShortEma - currentLongEma).toFixed(7));
 
   const emaDiff = currentShortEma - currentLongEma;

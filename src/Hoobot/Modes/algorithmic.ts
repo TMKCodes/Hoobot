@@ -42,7 +42,7 @@ import { candlestick } from "../Binance/candlesticks";
 import { readFileSync, writeFileSync } from "fs";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
-import { calculateBollingerBands } from "../Indicators/BollingerBands";
+import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
 
 
@@ -87,15 +87,17 @@ async function placeTrade(
   options: ConfigOptions,
 ) {
   const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
-  const timeDifferenceInSeconds = (Date.now() - tradeHistory[0].time) / 1000;
-  consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
-  if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
-    return false; // don't trade since the last trade was too new.
+  if (tradeHistory?.length > 0) {
+    const timeDifferenceInSeconds = (Date.now() - tradeHistory[0].time) / 1000;
+    consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
+    if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
+      return false; // don't trade since the last trade was too new.
+    }
   }
+  
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, tradeHistory, options);
-  
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
@@ -109,7 +111,10 @@ async function placeTrade(
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    const percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
+    let percentageChange = 0;
+    if (tradeHistory?.length > 0) {
+      percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
+    }
     if (checkBefore === true) {
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
@@ -178,7 +183,10 @@ async function placeTrade(
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
+      let percentageChange = 0;
+      if (tradeHistory?.length > 0) {
+        percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
+      }
       let order: any = false;
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
@@ -258,9 +266,7 @@ export async function calculateIndicators(
     short: calculateEMA(candlesticks, options.shortEma, options.source),
     long: calculateEMA(candlesticks, options.longEma, options.source),
   }
-  if (options.useEMA) {
-    logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
-  }
+  logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
   if (options.useRSI) {
     indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
     logRSISignals(consoleLogger, indicators.rsi, options);
@@ -275,6 +281,7 @@ export async function calculateIndicators(
   }
   if (options.useBollingerBands) {
     indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+    logBollingerBandsSignals(consoleLogger, indicators.ema, indicators.bollingerBands);
   }
   if (options.useStochasticOscillator) {
     indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);

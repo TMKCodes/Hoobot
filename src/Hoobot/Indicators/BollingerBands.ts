@@ -25,6 +25,9 @@
 * the use of this software.
 * ===================================================================== */
 
+import { Indicators } from '../Modes/algorithmic';
+import { ConfigOptions } from '../Utilities/args';
+import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { calculateSMA } from './SMA';
 
 export function calculateBollingerBands(candles: any[], period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
@@ -50,3 +53,62 @@ export function calculateBollingerBands(candles: any[], period: number, multipli
   const lowerBands = smaValues.map((sma, i) => sma - (standardDeviations[i] * multiplier));
   return [smaValues, upperBands, lowerBands];
 }
+
+export function logBollingerBandsSignals(
+  consoleLogger: ConsoleLogger,
+  ema: { short: number[], long: number[] },
+  bollingerBands: [number[], number[], number[]]
+) {
+  const currentEMAShort = ema.short[ema.short.length - 1];
+  const currentUpperBand = bollingerBands[1][bollingerBands[1].length - 1];
+  const currentLowerBand = bollingerBands[2][bollingerBands[0].length - 1];
+
+  consoleLogger.push(`Bollinger Bands Upper Value`, currentUpperBand.toFixed(7));
+  consoleLogger.push(`Bollinger Bands Lower Value`, currentLowerBand.toFixed(7));
+
+  if (currentEMAShort > currentUpperBand) {
+    consoleLogger.push(`Bollinger Bands Signal`, `Above Upper Band (Bearish)`);
+  } else if (currentEMAShort < currentLowerBand) {
+    consoleLogger.push(`Bollinger Bands Signal`, `Below Lower Band (Bullish)`);
+  } else if (currentEMAShort >= currentLowerBand && currentEMAShort <= currentUpperBand) {
+    consoleLogger.push(`Bollinger Bands Signal`, `Within Bands (Neutral)`);
+  }
+
+  const isBullishBBSignal = currentEMAShort > currentLowerBand;
+  const isBearishBBSignal = currentEMAShort < currentUpperBand;
+
+  if (isBullishBBSignal) {
+    consoleLogger.push(`Bollinger Bands Signal`, `Bullish Signal`);
+  }
+
+  if (isBearishBBSignal) {
+    consoleLogger.push(`Bollinger Bands Signal`, `Bearish Signal`);
+  }
+}
+
+export const checkBollingerBandsSignals = (
+  consoleLogger: ConsoleLogger,
+  indicators: Indicators,
+  options: ConfigOptions
+) => {
+  let check = 'HOLD';
+  
+  if (options.useBollingerBands) {
+    const currentEMAShort = indicators.ema.short[indicators.ema.short.length - 1];
+    const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - 1];
+    const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - 1];
+    
+    const isAboveUpperBand = currentEMAShort > currentUpperBand;
+    const isBelowLowerBand = currentEMAShort < currentLowerBand;
+    
+    if (isAboveUpperBand) {
+      check = 'SELL';
+    } else if (isBelowLowerBand) {
+      check = 'BUY';
+    }
+    
+    consoleLogger.push("Bollinger Bands Check", check);
+  }
+
+  return check;
+};
