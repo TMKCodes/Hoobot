@@ -86,6 +86,22 @@ Here is a list of npm packages that are required:
 4. Restart Hoobot.
 5. Continue trading and monitoring for profit!
 
+### Manually
+
+1. Install NVM (Node Version Manager) from sh script, brew, nvm_windows, etc.
+2. Download Hoobot and extract Hoobot source code from the .zip
+3. Open console of your choice.
+4. While in console, change directory `cd` to the extracted Hoobot folder.
+5. Install Node with command `nvm install 18.17.0`
+6. Use the node version with command `nvm use 18.17.0`
+7. Install Hoobot dependancies with command `npm install`
+8. Copy `.env_default` to `.env`, notice no `.txt` or such at the end of .env file. 
+9. Open `.env` with text editor 
+10. Add your Binance API keys and Hoobot License and if you want Discord API keys
+11. Change Hoobot settings how you want in the .env file.
+12. Save and close the file.
+13. Run command `npm run start` to start Hoobot. 
+
 ## .env Configuration Values
 
 Below is an explanation of the various configuration values present in the `.env` file for the Hoobot:
