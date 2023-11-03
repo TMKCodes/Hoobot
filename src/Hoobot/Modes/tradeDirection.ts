@@ -185,7 +185,7 @@ export const tradeDirection = async (
   stochRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   stochasticOscillatorCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
-  bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, indicators, options);
+  bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options);
   let tradeDirection = 'HOLD';
   if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && balanceCheck === 'SELL') {
     let signal = 'SELL'
