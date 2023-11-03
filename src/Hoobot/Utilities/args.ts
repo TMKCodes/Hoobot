@@ -63,6 +63,7 @@ export interface ConfigOptions {
   atrLength: number;
   bollingerBandsLength: number;
   bollingerBandsMultiplier: number;
+  bollingerBandsAverageType: string;
   kPeriod: number;
   dPeriod: number;
   stochasticOscillatorSmoothing: number;
@@ -157,6 +158,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     atrLength: parseFloat(process.env.ATR_LENGTH) || 14,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
+    bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
     kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
     dPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 1,
     stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 3,
