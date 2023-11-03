@@ -281,7 +281,7 @@ export async function calculateIndicators(
   }
   if (options.useBollingerBands) {
     indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-    logBollingerBandsSignals(consoleLogger, indicators.ema, indicators.bollingerBands);
+    logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands);
   }
   if (options.useStochasticOscillator) {
     indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
