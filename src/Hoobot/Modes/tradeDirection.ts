@@ -146,11 +146,9 @@ const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, 
     if (check !== ((tradeHistory[0].isBuyer === true) ? 'SELL' : 'BUY')) {
       consoleLogger.push("BALANCE check: ", 'RECHECK BALANCES');
       return "RECHECK BALANCES";
-    } else {
-      consoleLogger.push("BALANCE Check: ", check);
-      return check;
-    }  
+    } 
   }
+  consoleLogger.push("BALANCE Check: ", check);
   return check;
 }
 
