@@ -35,7 +35,6 @@ import { candlestick } from "../Binance/candlesticks";
 import { checkEMASignals } from "../Indicators/EMA";
 import { checkMACDSignals } from "../Indicators/MACD";
 import { checkRSISignals } from "../Indicators/RSI";
-import { sign } from "crypto";
 import { checkSMASignals } from "../Indicators/SMA";
 import { checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../Indicators/StochasticOscillator";
 import { checkBollingerBandsSignals } from "../Indicators/BollingerBands";

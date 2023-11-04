@@ -120,10 +120,6 @@ async function placeTrade(
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
         try {
-          play(soundFile);
-          const force = JSON.parse(readFileSync("force.json", "utf-8"));
-          force[symbol.split("/").join("")].skip = false;
-          writeFileSync("force.json", JSON.stringify(force));
           order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, options.discordChannelID, orderMsg);
@@ -133,6 +129,10 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          const force = JSON.parse(readFileSync("force.json", "utf-8"));
+          force[symbol.split("/").join("")].skip = false;
+          writeFileSync("force.json", JSON.stringify(force));
+          play(soundFile);
           let openOrders: any[] = [];
           let handleOpenOrderResult: string = "";
           do {
@@ -191,11 +191,6 @@ async function placeTrade(
       let order: any = false;
       if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
         try {
-          play(soundFile);
-          const force = JSON.parse(readFileSync("force.json", "utf-8"));
-          force[symbol.split("/").join("")].skip = false;
-          writeFileSync("force.json", JSON.stringify(force));
-          
           order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
           const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, options.discordChannelID, orderMsg);
@@ -205,6 +200,10 @@ async function placeTrade(
             price: roundedPrice,
             stopPrice: roundedStopPrice,
           });
+          const force = JSON.parse(readFileSync("force.json", "utf-8"));
+          force[symbol.split("/").join("")].skip = false;
+          writeFileSync("force.json", JSON.stringify(force));
+          play(soundFile);
           let openOrders: any[] = [];
           let handleOpenOrderResult: String = "";
           do {

@@ -36,3 +36,4 @@ package-lock.json
 .env
 force.json
 .env_backup
+logs.txt
