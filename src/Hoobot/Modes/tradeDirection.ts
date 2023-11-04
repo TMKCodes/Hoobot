@@ -279,6 +279,9 @@ export const tradeDirection = async (
   } else {
     tradeDirection = 'HOLD'
   }
+  if (options.openaiOverwrite === true) {
+    tradeDirection = gptCheck;
+  }
   consoleLogger.push(`TRADE Direction`, tradeDirection);
   return tradeDirection;
 }

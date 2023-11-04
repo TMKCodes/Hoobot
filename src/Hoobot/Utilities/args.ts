@@ -114,6 +114,7 @@ export interface ConfigOptions {
   openaiApiKey: string,
   openaiModel: string,
   openaiHistoryLength: number,
+  openaiOverwrite: boolean,
   [key: string]: string | string[] | number | boolean | undefined | number; // Index signature
 }
 
@@ -194,6 +195,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
     openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
     openaiHistoryLength: parseFloat(process.env.OPENAI_HISTORY_LENGTH!) || 5,
+    openaiOverwrite:  process.env.OPENAI_OVERWRITE === "true" ? true : false || false,
     
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,

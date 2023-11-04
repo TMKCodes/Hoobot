@@ -194,7 +194,8 @@ Below is an explanation of the various configuration values present in the `.env
 ### OpenAI GPT Configuration
 - `OPENAI_API_KEY`: Enable GPT trade decisions when this is not undefined.
 - `OPENAI_MODEL`: GPT Model "gpt-4.0" | "gpt-3.5-turbo".
-- `OPENAI_HISTORY_LENGTH`: Length of history sent to GPT.
+- `OPENAI_HISTORY_LENGTH`: Length of indicator history sent to GPT.
+- `OPENAI_OVERWRITE`: Overwrite indicator checks with GPT decision.
 
 ### Developer
 - `DEBUG`: Enable debugging mode (true/false).
