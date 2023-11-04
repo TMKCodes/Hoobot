@@ -82,6 +82,7 @@ export const checkGPTSignals = async (consoleLogger: ConsoleLogger, candlesticks
       console.log(JSON.stringify(chatCompletion, null, 2));
     }
   }
+  consoleLogger.push("GPT Check", check);
   return check;
 }
 
