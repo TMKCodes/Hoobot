@@ -107,8 +107,8 @@ export const checkBollingerBandsSignals = (
     const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - 1];
     const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - 1];
     
-    const isAboveUpperBand = currentLow > currentUpperBand;
-    const isBelowLowerBand = currentHigh < currentLowerBand;
+    const isAboveUpperBand = currentHigh > currentUpperBand;
+    const isBelowLowerBand = currentLow < currentLowerBand;
     
     if (isAboveUpperBand) {
       check = 'SELL';
