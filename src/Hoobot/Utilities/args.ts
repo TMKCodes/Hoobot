@@ -131,7 +131,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     // Hoobot
     license: process.env.LICENSE || "",
     mode: process.env.MODE as BotMode || 'algorithmic',
-    symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(" ", "").split(",") : [],
+    symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(/ /g, "").split(",") : [],
     candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
     source: process.env.SOURCE || "close",
     consoleUpdate: process.env.CONSOLE_UPDATE || "final",
