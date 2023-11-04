@@ -1,7 +1,7 @@
 {
-  "name": "binance-node-bot",
-  "version": "1.1.4",
-  "description": "Binance Bot to trade based on EMA calculations.",
+  "name": "hoobot",
+  "version": "1.2.0",
+  "description": "Hoobot is reactive algorithmic crypto trading bot with suport for OpenAI GPT and many other indicators.",
   "main": "src/index.ts",
   "scripts": {
     "test": "npx jest",

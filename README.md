@@ -191,6 +191,11 @@ Below is an explanation of the various configuration values present in the `.env
 - `DISCORD_SERVER_ID`: Discord server ID.
 - `DISCORD_CHANNEL_ID`: Discord channel ID.
 
+### OpenAI GPT Configuration
+- `OPENAI_API_KEY`: Enable GPT trade decisions when this is not undefined.
+- `OPENAI_MODEL`: GPT Model "gpt-4.0" | "gpt-3.5-turbo".
+- `OPENAI_HISTORY_LENGTH`: Length of history sent to GPT.
+
 ### Developer
 - `DEBUG`: Enable debugging mode (true/false).
 
