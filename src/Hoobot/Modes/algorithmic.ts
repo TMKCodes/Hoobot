@@ -44,6 +44,7 @@ import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
+import { checkGPTSignals } from "../Indicators/GPT";
 
 
 const soundFile = './alarm.mp3'

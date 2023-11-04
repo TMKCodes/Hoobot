@@ -39,6 +39,7 @@ import { sign } from "crypto";
 import { checkSMASignals } from "../Indicators/SMA";
 import { checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../Indicators/StochasticOscillator";
 import { checkBollingerBandsSignals } from "../Indicators/BollingerBands";
+import { checkGPTSignals } from "../Indicators/GPT";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -174,6 +175,7 @@ export const tradeDirection = async (
   let stochasticOscillatorCheck: string = 'HOLD';
   let stochasticRSICheck: string = 'HOLD';
   let bollingerBandsCheck: string = 'HOLD';
+  let gptCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
   profitCheck = checkProfitSignals(consoleLogger, symbol, tradeHistory, lastCandlestick, options);
   balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, tradeHistory);
@@ -186,6 +188,7 @@ export const tradeDirection = async (
   stochasticOscillatorCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options);
+  gptCheck = await checkGPTSignals(consoleLogger, candlesticks, indicators, options);
   let tradeDirection = 'HOLD';
   if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && balanceCheck === 'SELL') {
     let signal = 'SELL'
@@ -224,6 +227,11 @@ export const tradeDirection = async (
     } else if(options.useBollingerBands === false) {
       bollingerBandsCheck = 'DISABLED';
     }
+    if(options.openaiApiKey !== undefined && (gptCheck === 'BUY' || gptCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.openaiApiKey === undefined) {
+      bollingerBandsCheck = 'DISABLED';
+    }
     tradeDirection = signal;
   } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && balanceCheck === 'BUY') {
     let signal = 'BUY'
@@ -260,6 +268,11 @@ export const tradeDirection = async (
     if(options.useBollingerBands === true && (bollingerBandsCheck === 'SELL' || bollingerBandsCheck === 'HOLD')) {
       signal = 'HOLD';
     } else if(options.useBollingerBands === false) {
+      bollingerBandsCheck = 'DISABLED';
+    }
+    if(options.openaiApiKey !== undefined && (gptCheck === 'SELL' || gptCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.openaiApiKey === undefined) {
       bollingerBandsCheck = 'DISABLED';
     }
     tradeDirection = signal;

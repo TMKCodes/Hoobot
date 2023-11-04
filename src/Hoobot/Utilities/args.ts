@@ -111,6 +111,9 @@ export interface ConfigOptions {
   discordApplicationID: string,
   discordServerID: string,
   discordChannelID:  string,
+  openaiApiKey: string,
+  openaiModel: string,
+  openaiHistoryLength: number,
   [key: string]: string | string[] | number | boolean | undefined | number; // Index signature
 }
 
@@ -187,6 +190,11 @@ export function parseArgs(args: string[]): ConfigOptions {
     discordServerID: process.env.DISCORD_SERVER_ID || "",
     discordChannelID:  process.env.DISCORD_CHANNEL_ID || "",
 
+    // OpenAI
+    openaiApiKey: process.env.OPENAI_API_KEY || undefined,
+    openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+    openaiHistoryLength: parseFloat(process.env.OPENAI_HISTORY_LENGTH!) || 5,
+    
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,
 

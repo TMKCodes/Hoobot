@@ -61,7 +61,7 @@ export function calculateStochasticOscillator(candles: candlestick[], kPeriod: n
       }
   }
 
-  return [ kValues.slice(-5), dValues.slice(-5) ];
+  return [ kValues, dValues ];
 }
 
 export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number = 14, lengthStoch: number = 14, kSmoothing: number = 3, dSmoothing: number = 3): [number[], number[]] {
@@ -104,12 +104,12 @@ export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number
     }
   }
 
-  return [kValues.slice(-5), dValues.slice(-5)];
+  return [kValues, dValues];
 }
 
 export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, stochasticOscillator: [number[], number[]]) {
-  const kValuesFixed = stochasticOscillator[0].map((value) => parseFloat(value.toFixed(2)));
-  const dValuesFixed = stochasticOscillator[1].map((value) => parseFloat(value.toFixed(2)));
+  const kValuesFixed = stochasticOscillator[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
+  const dValuesFixed = stochasticOscillator[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
 
   if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic Oscillator %K history:", kValuesFixed.join(", "));
@@ -142,8 +142,8 @@ export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, sto
 }
 
 export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochasticRSI: [number[], number[]]) {
-  const kValuesFixed = stochasticRSI[0].map((value) => parseFloat(value.toFixed(2)));
-  const dValuesFixed = stochasticRSI[1].map((value) => parseFloat(value.toFixed(2)));
+  const kValuesFixed = stochasticRSI[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
+  const dValuesFixed = stochasticRSI[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
 
   if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic RSI %K history:", kValuesFixed.join(", "));
@@ -178,18 +178,19 @@ export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochastic
 export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
   let check = 'HOLD';
   if (options.useStochasticOscillator) {
+    const dValues = indicators.stochasticOscillator[1].slice(-5);
     const overboughtTreshold = options.stochasticOscillatorOverboughtTreshold !== undefined ? options.stochasticOscillatorOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticOscillatorOversoldTreshold !== undefined ? options.stochasticOscillatorOversoldTreshold : 20; 
-    for (let i = indicators.stochasticOscillator.length - 1; i >= 0; i--) {
-      const prevStochasticOscillator = indicators.stochasticOscillator[1][i];
+    for (let i = dValues.length - 1; i >= 0; i--) {
+      const prevStochasticOscillator = dValues[i];
       if (prevStochasticOscillator > overboughtTreshold) {
         check = 'SELL';
         break;
       }
     }
     if(check === "HOLD") {
-      for (let i = indicators.stochasticOscillator.length - 1; i >= 0; i--) {
-        const prevStochasticOscillator = indicators.stochasticOscillator[1][i];
+      for (let i = dValues.length - 1; i >= 0; i--) {
+        const prevStochasticOscillator = dValues[i];
         if(prevStochasticOscillator < oversoldTreshold) {
           check = 'BUY';
           break;
@@ -204,18 +205,19 @@ export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, i
 export const checkStochasticRSISignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
   let check = 'HOLD';
   if (options.useStochasticRSI) {
+    const dValues = indicators.stochasticRSI[1].slice(-5);
     const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
-    for (let i = indicators.stochasticRSI[0].length - 1; i >= 0; i--) {
-      const prevStochasticRSI = indicators.stochasticRSI[0][i];
+    for (let i = dValues.length - 1; i >= 0; i--) {
+      const prevStochasticRSI = dValues[i];
       if (prevStochasticRSI > overboughtTreshold) {
         check = 'SELL';
         break;
       }
     }
     if(check === "HOLD") {
-      for (let i = indicators.stochasticRSI[0].length - 1; i >= 0; i--) {
-        const prevStochasticRSI = indicators.stochasticRSI[0][i];
+      for (let i = dValues.length - 1; i >= 0; i--) {
+        const prevStochasticRSI = dValues[i];
         if(prevStochasticRSI < oversoldTreshold) {
           check = 'BUY';
           break;
