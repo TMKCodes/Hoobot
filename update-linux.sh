@@ -32,4 +32,6 @@ rsync -av $EXTRACTED_DIR/ .
 rm $ZIP_FILE
 rm -r $TMP_DIR
 
+npm install
+
 echo "Update completed successfully."

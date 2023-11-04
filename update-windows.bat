@@ -30,4 +30,8 @@ xcopy /Y /S /E "%TMP_DIR%\hoobot\*" .\
 del %ZIP_FILE%
 rmdir /S /Q %TMP_DIR%
 
+REM Install project dependencies with NPM
+echo Installing project dependencies...
+npm install
+
 echo Update completed successfully.
