@@ -79,9 +79,8 @@ async function placeTrade(
   filter: filter,
   options: ConfigOptions,
 ) {
-  const tradeHistory = (await binance.trades(symbol.split("/").join(""))).reverse().slice(0, 3);
-  if (tradeHistory?.length > 0) {
-    const timeDifferenceInSeconds = (Date.now() - tradeHistory[0].time) / 1000;
+  if (options.tradeHistory?.length > 0) {
+    const timeDifferenceInSeconds = (Date.now() - options.tradeHistory[options.tradeHistory.length - 1].time) / 1000;
     consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
       return false; // don't trade since the last trade was too new.
@@ -89,14 +88,14 @@ async function placeTrade(
   }
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
-  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, tradeHistory, options);
+  const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, options);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
   } else if (direction === 'SELL') {
-    sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance, tradeHistory);
+    sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance);
   } else if (direction === 'BUY') {
-    buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance, tradeHistory)
+    buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance)
   } else {
     return false;
   }
@@ -151,6 +150,38 @@ export async function calculateIndicators(
   return indicators;
 }
 
+
+function calculateROI(tradeHistory: any[]) {
+  let lastTrade = tradeHistory[0];
+  tradeHistory = tradeHistory.slice(1, tradeHistory.length);
+  // Calculate ROI based on the historical data
+  let totalProfit = 0;
+  let trades = 0;
+  for (const trade of tradeHistory) {
+    if (lastTrade === undefined) {
+      // Set last trade since it was undefined.
+      lastTrade = trade;
+    } else {
+      if (trade.isBuyer) {
+        // Calculate profit for the buy trade
+        const oldPrice = parseFloat(lastTrade.price);
+        const newPrice = parseFloat(trade.price);
+        const profit = calculatePercentageDifference(oldPrice, newPrice);
+        totalProfit += reverseSign(profit);
+      } else {
+        // Calculate profit for the sell trade
+        const oldPrice = parseFloat(lastTrade.price);
+        const newPrice = parseFloat(trade.price);
+        const profit = calculatePercentageDifference(oldPrice, newPrice); 
+        totalProfit += profit;
+      }
+      trades++;
+      lastTrade = trade; // Update lastTrade for the next iteration
+    }
+  }
+  return [ totalProfit, trades ];
+} 
+
 export async function algorithmic(
   discord: Client, 
   binance: Binance, 
@@ -185,8 +216,14 @@ export async function algorithmic(
     consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
-    consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + symbol.split("/")[0]);
-    consoleLogger.push("Max sell amount", options.startingMaxSellAmount + symbol.split("/")[1]);
+    consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[0]);
+    consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
+    if (options.tradeHistory.length === 0) {
+      options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
+    }
+    const roi = calculateROI(options.tradeHistory);
+    consoleLogger.push("Return of investment", roi[0].toFixed(2));
+    consoleLogger.push("Trades", roi[1]);
     // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);

@@ -50,7 +50,6 @@ export async function sell(
   filter: filter,
   options: ConfigOptions,
   quoteBalance: number,
-  tradeHistory: any,
 ) {
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
@@ -65,6 +64,7 @@ export async function sell(
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
     let percentageChange = 0;
+    const tradeHistory = options.tradeHistory.reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
     }
@@ -86,6 +86,7 @@ export async function sell(
           force[symbol.split("/").join("")].skip = false;
           writeFileSync("force.json", JSON.stringify(force));
           play(soundFile);
+          options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
         }
         return order;
       } else {
@@ -107,7 +108,6 @@ export async function buy(
   filter: filter,
   options: ConfigOptions,
   baseBalance: number,
-  tradeHistory: any,
 ) {
   const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
   let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
@@ -123,6 +123,7 @@ export async function buy(
   const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
   if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
     let percentageChange = 0;
+    const tradeHistory = options.tradeHistory.reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
     }
@@ -143,6 +144,7 @@ export async function buy(
         force[symbol.split("/").join("")].skip = false;
         writeFileSync("force.json", JSON.stringify(force));
         play(soundFile);
+        options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
       }
       return order;
     } else {

@@ -158,7 +158,6 @@ export const tradeDirection = async (
   balanceQuote: number, 
   candlesticks: candlestick[], 
   indicators: Indicators,
-  tradeHistory: order[], 
   options: ConfigOptions
 ) => {
   let profitCheck: string = 'HOLD';
@@ -174,8 +173,8 @@ export const tradeDirection = async (
   let bollingerBandsCheck: string = 'HOLD';
   let gptCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
-  profitCheck = checkProfitSignals(consoleLogger, symbol, tradeHistory, lastCandlestick, options);
-  balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, tradeHistory);
+  profitCheck = checkProfitSignals(consoleLogger, symbol, options.tradeHistory.reverse().slice(0, 3), lastCandlestick, options);
+  balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, options.tradeHistory.reverse().slice(0, 3));
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);

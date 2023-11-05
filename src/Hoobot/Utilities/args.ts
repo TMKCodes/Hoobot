@@ -25,6 +25,8 @@
 * the use of this software.
 * ===================================================================== */
 
+import { order } from "../Binance/orders";
+
 
 export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
 
@@ -117,7 +119,8 @@ export interface ConfigOptions {
   openaiModel: string,
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
-  [key: string]: string | string[] | number | boolean | undefined | number; // Index signature
+  tradeHistory?: order[],
+  [key: string]: string | string[] | number | boolean | undefined | number | order[]; // Index signature
 }
 
 // Parse command-line arguments and return options object
@@ -208,6 +211,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     // Arbitrage
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
+    tradeHistory: [],
   };
   if (args.length === 0) {
     // If no command-line arguments, read options from .env file
