@@ -42,6 +42,7 @@ import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
 import { buy, sell } from "../Binance/trade";
 import { tradeDirection } from "./tradeDirection";
+import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 
 
 
@@ -54,6 +55,7 @@ export interface Indicators {
   bollingerBands?: [number[], number[], number[]];
   stochasticOscillator?: [number[], number[]];
   stochasticRSI?: [number[], number[]];
+  obv?: number[];
 }
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
@@ -146,6 +148,10 @@ export async function calculateIndicators(
   if (options.useStochasticRSI) {
     indicators.stochasticRSI = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
     logStochasticRSISignals(consoleLogger, indicators.stochasticRSI);
+  }
+  if (options.useOBV) {
+    indicators.obv = calculateOBV(candlesticks);
+    logOBVSignals(consoleLogger, candlesticks, indicators.obv);
   }
   return indicators;
 }

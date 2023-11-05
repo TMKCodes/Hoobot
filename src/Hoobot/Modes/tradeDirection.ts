@@ -40,6 +40,7 @@ import { checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../
 import { checkBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
+import { checkOBVSignals } from "../Indicators/OBV";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -191,6 +192,7 @@ export const tradeDirection = async (
   let stochasticRSICheck: string = 'HOLD';
   let bollingerBandsCheck: string = 'HOLD';
   let gptCheck: string = 'HOLD';
+  let obvCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
   profitCheck = checkProfitSignals(consoleLogger, symbol, lastCandlestick, options);
   balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, balanceBase, balanceQuote, lastCandlestick.close, options);
@@ -204,6 +206,7 @@ export const tradeDirection = async (
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options);
   gptCheck = await checkGPTSignals(consoleLogger, candlesticks, indicators, options);
+  obvCheck = checkOBVSignals(consoleLogger, candlesticks, indicators, options);
   let tradeDirection = 'HOLD';
   if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && balanceCheck === 'SELL') {
     let signal = 'SELL'
@@ -247,6 +250,11 @@ export const tradeDirection = async (
     } else if(options.openaiApiKey === undefined) {
       bollingerBandsCheck = 'DISABLED';
     }
+    if(options.useOBV === true && (obvCheck === 'BUY' || obvCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.useOBV === false) {
+      obvCheck = 'DISABLED';
+    }
     tradeDirection = signal;
   } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && balanceCheck === 'BUY') {
     let signal = 'BUY'
@@ -289,6 +297,11 @@ export const tradeDirection = async (
       signal = 'HOLD';
     } else if(options.openaiApiKey === undefined) {
       bollingerBandsCheck = 'DISABLED';
+    }
+    if(options.useOBV === true && (obvCheck === 'sell' || obvCheck === 'HOLD')) {
+      signal = 'HOLD';
+    } else if(options.useOBV === false) {
+      obvCheck = 'DISABLED';
     }
     tradeDirection = signal;
   } else {

@@ -97,3 +97,5 @@ export const checkSMASignals = (consoleLogger: ConsoleLogger, indicators: Indica
   }
   return check;
 }
+
+

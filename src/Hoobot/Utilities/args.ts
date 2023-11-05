@@ -97,6 +97,7 @@ export interface ConfigOptions {
   useMACD: boolean; 
   useRSI: boolean;
   useATR: boolean;
+  useOBV: boolean;
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
@@ -151,6 +152,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     useRSI: process.env.USE_RSI === "true" ? true : false,
     useSMA: process.env.USE_SMA === "true" ? true : false,
     useATR: process.env.USE_ATR === "true" ? true : false,
+    useOBV: process.env.USE_OBV === "true" ? true : false,
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,

@@ -76,7 +76,6 @@ export const findPossiblePairs = async (binance: Binance, options: ConfigOptions
       const baseAsset = symbolObj.symbol.substr(-validSymbols[0].length);
       return validSymbols.includes(baseAsset);
     });
-    console.log(symbols.length);
 
     // Task 2: Remove symbols with no volume
     symbols = symbols.filter(symbolObj => parseFloat(symbolObj.volume) > 0);
