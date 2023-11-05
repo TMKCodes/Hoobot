@@ -118,15 +118,15 @@ export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, sto
   const dValuesFixed = stochasticOscillator[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
 
   if (kValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic Oscillator %K history:", kValuesFixed.join(", "));
+    consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.join(", "));
   } else {
-    consoleLogger.push("Stochastic Oscillator %K history:", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
+    consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
 
   if (dValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic Oscillator %D history:", dValuesFixed.join(", "));
+    consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.join(", "));
   } else {
-    consoleLogger.push("Stochastic Oscillator %D history:", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
+    consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
   }
 
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];
@@ -152,15 +152,15 @@ export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochastic
   const dValuesFixed = stochasticRSI[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
 
   if (kValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic RSI %K history:", kValuesFixed.join(", "));
+    consoleLogger.push("Stochastic RSI %K history", kValuesFixed.join(", "));
   } else {
-    consoleLogger.push("Stochastic RSI %K history:", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
+    consoleLogger.push("Stochastic RSI %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
 
   if (dValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic RSI %D history:", dValuesFixed.join(", "));
+    consoleLogger.push("Stochastic RSI %D history", dValuesFixed.join(", "));
   } else {
-    consoleLogger.push("Stochastic RSI %D history:", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
+    consoleLogger.push("Stochastic RSI %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
   }
 
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];

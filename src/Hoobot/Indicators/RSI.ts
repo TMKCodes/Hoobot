@@ -34,9 +34,9 @@ import { Indicators } from '../Modes/algorithmic';
 export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
   const rsiFixed = rsi.slice(-5).map((rsi) => rsi.toFixed(2));
   if(rsiFixed.length === 1) {
-    consoleLogger.push("RSI history:", rsiFixed.slice(-5).join(", "));
+    consoleLogger.push("RSI history", rsiFixed.slice(-5).join(", "));
   } else {
-    consoleLogger.push("RSI history:", rsiFixed.slice(0, rsiFixed.length - 1).join(", "));
+    consoleLogger.push("RSI history", rsiFixed.slice(0, rsiFixed.length - 1).join(", "));
   }
   if (rsi[rsi.length - 1] > 80) {
     consoleLogger.push(`RSI condition`, `Extremely Overbought`);

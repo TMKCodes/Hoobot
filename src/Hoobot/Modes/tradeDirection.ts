@@ -128,9 +128,9 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
     check = "SKIP";
   }
   
-  consoleLogger.push("PROFIT Previous: ", lastProfit);
-  consoleLogger.push("PROFIT Next: ", nextPossibleProfit);
-  consoleLogger.push("PROFIT Check: ", check);
+  consoleLogger.push("PROFIT Previous", lastProfit);
+  consoleLogger.push("PROFIT Next", nextPossibleProfit);
+  consoleLogger.push("PROFIT Check", check);
   return check;
 }
 
@@ -143,11 +143,11 @@ const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, 
   }
   if (tradeHistory?.length > 0) {
     if (check !== ((tradeHistory[0].isBuyer === true) ? 'SELL' : 'BUY')) {
-      consoleLogger.push("BALANCE check: ", 'RECHECK BALANCES');
+      consoleLogger.push("BALANCE check", 'RECHECK BALANCES');
       return "RECHECK BALANCES";
     } 
   }
-  consoleLogger.push("BALANCE Check: ", check);
+  consoleLogger.push("BALANCE Check", check);
   return check;
 }
 
