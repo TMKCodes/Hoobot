@@ -169,26 +169,35 @@ function calculateROI(tradeHistory: any[]) {
   // Calculate ROI based on the historical data
   let totalProfit = 0;
   let trades = 0;
-  for (const trade of tradeHistory) {
+  for (let i = 0; i < tradeHistory.length - 1; i++) {
     if (lastTrade === undefined) {
       // Set last trade since it was undefined.
-      lastTrade = trade;
+      lastTrade = tradeHistory[i];
     } else {
-      if (trade.isBuyer) {
+      if (tradeHistory[i].isBuyer) {
         // Calculate profit for the buy trade
         const oldPrice = parseFloat(lastTrade.price);
-        const newPrice = parseFloat(trade.price);
+        const newPrice = parseFloat(tradeHistory[i].price);
         const profit = calculatePercentageDifference(oldPrice, newPrice);
-        totalProfit += reverseSign(profit);
+        if (tradeHistory[i].price > tradeHistory[i + 1]?.price) {
+          totalProfit += reverseSign(profit);
+        } // if next sale order price is higher, don't count this as profit.
       } else {
         // Calculate profit for the sell trade
         const oldPrice = parseFloat(lastTrade.price);
-        const newPrice = parseFloat(trade.price);
+        const newPrice = parseFloat(tradeHistory[i].price);
         const profit = calculatePercentageDifference(oldPrice, newPrice); 
         totalProfit += profit;
       }
+      if (parseFloat(tradeHistory[i].commission) > 0) {
+        if (tradeHistory[i].commissionAsset === "BNB") {
+          totalProfit -= 0.075
+        } else {
+          totalProfit -= 0.1
+        }
+      }
       trades++;
-      lastTrade = trade; // Update lastTrade for the next iteration
+      lastTrade = tradeHistory[i]; // Update lastTrade for the next iteration
     }
   }
   return [ totalProfit, trades ];

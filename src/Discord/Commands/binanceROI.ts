@@ -41,29 +41,39 @@ export default {
     }
     const slicedTradeHistory = tradeHistory.slice(0, tradeHistory.length - historicalData.length);
     let lastTrade = slicedTradeHistory[slicedTradeHistory.length - 1];
+    console.log(JSON.stringify(lastTrade, null, 2));
     // Calculate ROI based on the historical data
     let totalProfit = 0;
     let trades = 0;
-    for (const trade of historicalData) {
+    for (let i = 0; i < historicalData.length - 1; i++)  {
       if (lastTrade === undefined) {
         // Set last trade since it was undefined.
-        lastTrade = trade;
+        lastTrade = historicalData[i];
       } else {
-        if (trade.isBuyer) {
+        if (historicalData[i].isBuyer) {
           // Calculate profit for the buy trade
           const oldPrice = parseFloat(lastTrade.price);
-          const newPrice = parseFloat(trade.price);
+          const newPrice = parseFloat(historicalData[i].price);
           const profit = calculatePercentageDifference(oldPrice, newPrice);
-          totalProfit += reverseSign(profit);
+          if (historicalData[i].price > historicalData[i + 1]?.price) {
+            totalProfit += reverseSign(profit);
+          }
         } else {
           // Calculate profit for the sell trade
           const oldPrice = parseFloat(lastTrade.price);
-          const newPrice = parseFloat(trade.price);
+          const newPrice = parseFloat(historicalData[i].price);
           const profit = calculatePercentageDifference(oldPrice, newPrice); 
           totalProfit += profit;
         }
+        if (parseFloat(historicalData[i].commission) > 0) {
+          if (historicalData[i].commissionAsset === "BNB") {
+            totalProfit -= 0.075
+          } else {
+            totalProfit -= 0.1
+          }
+        }
         trades++;
-        lastTrade = trade; // Update lastTrade for the next iteration
+        lastTrade = historicalData[i]; // Update lastTrade for the next iteration
       }
     }
     await interaction.reply(`ROI for ${symbol} over ${duration.toUpperCase()}: ${totalProfit.toFixed(2)}%\nTrades in duration: ${trades}`);

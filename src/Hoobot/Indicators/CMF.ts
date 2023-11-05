@@ -38,20 +38,25 @@ export const calculateCMF = (candlesticks: candlestick[], period: number): numbe
     const sumMFVolume = candlesticks
       .slice(i - period + 1, i + 1)
       .reduce((sum, candle) => {
-        const mfMultiplier = ((candle.close - candle.low) - (candle.high - candle.close)) / (candle.high - candle.low);
+        const range = candle.high - candle.low;
+        if (range === 0) return sum; 
+        const mfMultiplier = ((candle.close - candle.low) - (candle.high - candle.close)) / range;
         return sum + (mfMultiplier * candle.volume);
       }, 0);
 
     const sumVolume = candlesticks
       .slice(i - period + 1, i + 1)
       .reduce((sum, candle) => sum + candle.volume, 0);
-
-    const cmf = sumMFVolume / sumVolume;
-    cmfValues.push(cmf);
+    if (sumVolume === 0) {
+      cmfValues.push(0); 
+    } else {
+      const cmf = sumMFVolume / sumVolume;
+      cmfValues.push(cmf);
+    }
   }
-
   return cmfValues;
 };
+
 
 export const logCMFSignals = (
   consoleLogger: ConsoleLogger,

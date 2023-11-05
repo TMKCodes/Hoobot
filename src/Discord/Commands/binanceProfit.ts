@@ -75,31 +75,52 @@ export default {
       let lastTrade: any = undefined;
       let lastTime = "";
       if(newTradeHistory.length >= 2) {
-        for (const trade of newTradeHistory) {
+        for (let i = 0; i < newTradeHistory.length - 1; i++) {
           if (lastTrade === undefined) {
             // Set last trade since it was undefined.
-            lastTrade = trade;
-            lastTime = trade.time;
+            lastTrade = newTradeHistory[i];
+            lastTime = newTradeHistory[i].time;
           } else {
-            if (trade.isBuyer) {
+            if (newTradeHistory[i].isBuyer) {
               // Calculate profit for the buy trade
-              const newPrice = parseFloat(trade.price);
+              const newPrice = parseFloat(newTradeHistory[i].price);
               const oldPrice = parseFloat(lastTrade.price);
               const profit = calculatePercentageDifference(oldPrice, newPrice);
-              totalProfit += reverseSign(profit);
               shortingProfit += reverseSign(profit);
               shorts++;
+              if (newTradeHistory[i].price > newTradeHistory[i + 1]?.price) {
+                totalProfit += reverseSign(profit);
+              }
+              if (parseFloat(newTradeHistory[i].commission) > 0) {
+                if (newTradeHistory[i].commissionAsset === "BNB") {
+                  totalProfit -= 0.075
+                  shortingProfit -= 0.07
+                } else {
+                  totalProfit -= 0.1
+                  shortingProfit - 0.1
+                }
+              }
             } else {
               // Calculate profit for the sell trade
-              const newPrice = parseFloat(trade.price);
+              const newPrice = parseFloat(newTradeHistory[i].price);
               const oldPrice = parseFloat(lastTrade.price);
               const profit = calculatePercentageDifference(oldPrice, newPrice); 
               totalProfit += profit;
               longProfit += profit;
               longs++;
+              if (parseFloat(newTradeHistory[i].commission) > 0) {
+                if (newTradeHistory[i].commissionAsset === "BNB") {
+                  totalProfit -= 0.075
+                  longProfit -= 0.07
+                } else {
+                  totalProfit -= 0.1
+                  longProfit - 0.1
+                }
+              }
             }
+            
             trades++;
-            lastTrade = trade; // Update lastTrade for the next iteration
+            lastTrade = newTradeHistory[i]; // Update lastTrade for the next iteration
           }
         }
 
