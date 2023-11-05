@@ -64,8 +64,9 @@ export interface ConfigOptions {
   bollingerBandsLength: number;
   bollingerBandsMultiplier: number;
   bollingerBandsAverageType: string;
-  kPeriod: number;
-  dPeriod: number;
+  bollingerBAndsHistoryLength: number;
+  stochasticOscillatorKPeriod: number;
+  stochasticOscillatorDPeriod: number;
   stochasticOscillatorSmoothing: number;
   stochasticOscillatorOverboughtTreshold: number;
   stochasticOscillatorOversoldTreshold: number;
@@ -93,7 +94,8 @@ export interface ConfigOptions {
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
-  maxAmount: number;
+  startingMaxBuyAmount: number;
+  startingMaxSellAmount: number;
   closePercentage: number;
   overboughtTreshold: number;
   oversoldTreshold: number;
@@ -163,8 +165,10 @@ export function parseArgs(args: string[]): ConfigOptions {
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
     bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
-    kPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
-    dPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 1,
+    bollingerBAndsHistoryLength: parseFloat(process.env.BOLLINGER_BANDS_HISTORY_LENGTH) || 5,
+
+    stochasticOscillatorKPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
+    stochasticOscillatorDPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 1,
     stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 3,
     stochasticOscillatorOverboughtTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD) || 80,
     stochasticOscillatorOversoldTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD) || 20,
@@ -176,7 +180,8 @@ export function parseArgs(args: string[]): ConfigOptions {
     stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
     
     // Limits
-    maxAmount: parseFloat(process.env.MAX_AMOUNT!) || 0,
+    startingMaxBuyAmount: parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0,
+    startingMaxSellAmount: parseFloat(process.env.STARTING_MAX_SELL_AMOUNT!) || 0,
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
     maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
     tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,

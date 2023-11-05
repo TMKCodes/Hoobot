@@ -30,24 +30,20 @@ import Binance from "node-binance-api";
 import { handleOpenOrders } from "../Binance/orders";
 import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
-import { checkBeforeOrder, tradeDirection } from "./tradeDirection";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { play } from "../Utilities/playSound";
-import { sendMessageToChannel } from "../../Discord/discord";
 import { Balances, getCurrentBalances } from "../Binance/balances";
 import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
 import { calculateRSI, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
 import { candlestick } from "../Binance/candlesticks";
-import { readFileSync, writeFileSync } from "fs";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { checkGPTSignals } from "../Indicators/GPT";
+import { buy, sell } from "../Binance/trade";
+import { tradeDirection } from "./tradeDirection";
 
 
-const soundFile = './alarm.mp3'
 
 export interface Indicators {
   sma?: number[];
@@ -58,10 +54,6 @@ export interface Indicators {
   bollingerBands?: [number[], number[], number[]];
   stochasticOscillator?: [number[], number[]];
   stochasticRSI?: [number[], number[]];
-}
-
-function delay(ms: number) {
-  return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
@@ -95,7 +87,6 @@ async function placeTrade(
       return false; // don't trade since the last trade was too new.
     }
   }
-  
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
   const direction = await tradeDirection(consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, tradeHistory, options);
@@ -103,143 +94,9 @@ async function placeTrade(
     balances = await getCurrentBalances(binance);
     return false;
   } else if (direction === 'SELL') {
-    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-    const quantity = quoteBalance;
-    const stopPrice = price * (1 - (options.closePercentage / 100));
-    const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(quantity, filter.stepSize);
-    const quoteQuantity = roundedQuantity * price;
-    const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-    const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    let percentageChange = 0;
-    if (tradeHistory?.length > 0) {
-      percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
-    }
-    if (checkBefore === true) {
-      let order: any = false;
-      if(quoteQuantity > parseFloat(filter.minNotional)) {
-        try {
-          order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-          const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-          consoleLogger.push(`sell-order`, {
-            symbol: symbol.split("/").join(""),
-            quantity: roundedQuantity,
-            price: roundedPrice,
-            stopPrice: roundedStopPrice,
-          });
-          const force = JSON.parse(readFileSync("force.json", "utf-8"));
-          force[symbol.split("/").join("")].skip = false;
-          writeFileSync("force.json", JSON.stringify(force));
-          play(soundFile);
-          let openOrders: any[] = [];
-          let handleOpenOrderResult: string = "";
-          do {
-            openOrders = await binance.openOrders(symbol.split("/").join(""));
-            if(openOrders.length > 0) {
-              consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-              handleOpenOrderResult = await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
-              if (handleOpenOrderResult === "canceled") {
-                break;
-              }
-            }
-            await delay(1500);
-          } while(openOrders.length > 0);
-          if (handleOpenOrderResult !== "canceled") {
-            const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-            sendMessageToChannel(discord, options.discordChannelID, statusMsg);
-            consoleLogger.push("status-msg", statusMsg);
-            await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
-            const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
-            sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
-          }
-        } catch (error: any) {
-          console.error(JSON.stringify(error));
-          if (error.msg !== undefined) {
-            sendMessageToChannel(discord, options.discordChannelID, error.msg);
-          }
-        }
-        return order;
-      } else {
-        consoleLogger.push("error", `\r\nFailed check: ${quoteQuantity} > ${parseFloat(filter.minNotional)}\r\n`);
-        return false;
-      }
-    } else {
-      consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
-      return false;
-    }
+    sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance, tradeHistory);
   } else if (direction === 'BUY') {
-    const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
-    const quantityInBase = baseBalance
-    let maxQuantityInBase = quantityInBase;
-    if (options.maxAmount !== 0) {
-      maxQuantityInBase = Math.min(quantityInBase, options.maxAmount);
-    }
-    const quantityInQuote = (maxQuantityInBase / price);
-    const stopPrice = price * (1 + (options.closePercentage / 100));
-    const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(quantityInQuote, filter.stepSize);
-    const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
-    const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      let percentageChange = 0;
-      if (tradeHistory?.length > 0) {
-        percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
-      }
-      let order: any = false;
-      if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
-        try {
-          order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-          const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-          consoleLogger.push(`buy-order`, {
-            symbol: symbol.split("/").join(""),
-            quantity: roundedQuantity,
-            price: roundedPrice,
-            stopPrice: roundedStopPrice,
-          });
-          const force = JSON.parse(readFileSync("force.json", "utf-8"));
-          force[symbol.split("/").join("")].skip = false;
-          writeFileSync("force.json", JSON.stringify(force));
-          play(soundFile);
-          let openOrders: any[] = [];
-          let handleOpenOrderResult: String = "";
-          do {
-            openOrders = await binance.openOrders(symbol.split("/").join(""));
-            if(openOrders.length > 0) {
-              consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-              handleOpenOrderResult = await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
-              if (handleOpenOrderResult === "canceled") {
-                break;
-              }
-            }
-            await delay(1500);
-          } while(openOrders.length > 0);
-          if (handleOpenOrderResult !== "canceled") {
-            const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-            sendMessageToChannel(discord, options.discordChannelID, statusMsg);
-            consoleLogger.push("status-msg", statusMsg);
-            await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
-            const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
-            sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
-          }
-        } catch (error: any) {
-          console.error(JSON.stringify(error.body));
-          if (error.msg !== undefined) {
-            sendMessageToChannel(discord, options.discordChannelID, error.msg);
-          }
-        }
-        return order;
-      } else {
-        consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
-        return false;
-      }
-    } else {
-      consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
-      return false;
-    }
+    buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance, tradeHistory)
   } else {
     return false;
   }
@@ -284,7 +141,7 @@ export async function calculateIndicators(
     logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands);
   }
   if (options.useStochasticOscillator) {
-    indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.kPeriod, options.dPeriod, options.stochasticOscillatorSmoothing, options.source);
+    indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
     logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator);
   }
   if (options.useStochasticRSI) {

@@ -102,18 +102,20 @@ export const checkBollingerBandsSignals = (
 ) => {
   let check = 'HOLD';
   if (options.useBollingerBands) {
-    const currentLow = candlesticks[candlesticks.length - 1].low;
-    const currentHigh = candlesticks[candlesticks.length - 1].high;    
-    const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - 1];
-    const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - 1];
-    
-    const isAboveUpperBand = currentHigh > currentUpperBand;
-    const isBelowLowerBand = currentLow < currentLowerBand;
-    
-    if (isAboveUpperBand) {
-      check = 'SELL';
-    } else if (isBelowLowerBand) {
-      check = 'BUY';
+    for(let i = 0; i < options.bollingerBAndsHistoryLength; i++) {
+      const currentLow = candlesticks[candlesticks.length - i].low;
+      const currentHigh = candlesticks[candlesticks.length - i].high;    
+      const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - i];
+      const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - i];
+      
+      const isAboveUpperBand = currentHigh > currentUpperBand;
+      const isBelowLowerBand = currentLow < currentLowerBand;
+      
+      if (isAboveUpperBand) {
+        check = 'SELL';
+      } else if (isBelowLowerBand) {
+        check = 'BUY';
+      }
     }
     
     consoleLogger.push("Bollinger Bands Check", check);
