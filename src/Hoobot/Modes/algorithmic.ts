@@ -222,11 +222,9 @@ export async function algorithmic(
     if (options.startingMaxSellAmount === 0) {
       consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
     }
-    console.log(symbol.split("/").join(""));
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
       options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
     }
-    console.log(symbol.split("/").join(""));
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Return of investment", roi[0].toFixed(2));
     consoleLogger.push("Trades", roi[1]);

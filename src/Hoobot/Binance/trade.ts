@@ -41,6 +41,18 @@ function delay(ms: number) {
   return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
+function updateForce(symbol: string) {
+  const force = JSON.parse(readFileSync("force.json", "utf-8"));
+  if(force[symbol.split("/").join("")] === undefined) {
+    force[symbol.split("/").join("")] = {
+      skip: false,
+    }
+  } else {
+    force[symbol.split("/").join("")].skip = false;
+  }
+  writeFileSync("force.json", JSON.stringify(force));
+}
+
 export async function sell(
   discord: Client,
   binance: Binance,
@@ -82,9 +94,7 @@ export async function sell(
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
           const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
           sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
-          const force = JSON.parse(readFileSync("force.json", "utf-8"));
-          force[symbol.split("/").join("")].skip = false;
-          writeFileSync("force.json", JSON.stringify(force));
+          updateForce(symbol);
           play(soundFile);
           options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
         }
@@ -132,7 +142,6 @@ export async function buy(
       order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
       const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      const force = JSON.parse(readFileSync("force.json", "utf-8"));
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {
         options.startingMaxSellAmount = Math.max(roundedQuantity, options.startingMaxSellAmount);
@@ -141,8 +150,7 @@ export async function buy(
         await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
         sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
-        force[symbol.split("/").join("")].skip = false;
-        writeFileSync("force.json", JSON.stringify(force));
+        updateForce(symbol);
         play(soundFile);
         options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
       }
