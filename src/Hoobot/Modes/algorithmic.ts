@@ -196,6 +196,7 @@ export async function algorithmic(
     const prevCandle = candlesticks[candlesticks.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     // Push candlestick time and last closeprice.
+    consoleLogger.push("Symbol", symbol);
     consoleLogger.push(`Amount of candles`, candlesticks.length);
     consoleLogger.push(`Candlestick time`, candleTime);
     if (latestCandle.close > latestCandle.open) {
@@ -217,10 +218,10 @@ export async function algorithmic(
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
     if (options.startingMaxBuyAmount > 0 && options.startingMaxBuyAmount !== undefined) {
-      consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[0]);
+      consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[1]);
     }
     if (options.startingMaxSellAmount > 0 && options.startingMaxBuyAmount !== undefined) {
-      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
+      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[0]);
     }
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
       options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
