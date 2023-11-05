@@ -87,7 +87,9 @@ export async function sell(
         sendMessageToChannel(discord, options.discordChannelID, orderMsg);
         const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
         if (openedOrder !== "canceled") {
-          options.startingMaxBuyAmount = Math.max(roundedQuantity * roundedPrice, options.startingMaxBuyAmount);
+          if (options.startingMaxBuyAmount > 0) {
+            options.startingMaxBuyAmount = Math.max(roundedQuantity * roundedPrice, options.startingMaxBuyAmount);
+          }
           const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
           sendMessageToChannel(discord, options.discordChannelID, statusMsg);
           await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
@@ -144,7 +146,9 @@ export async function buy(
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {
-        options.startingMaxSellAmount = Math.max(roundedQuantity, options.startingMaxSellAmount);
+        if (options.startingMaxSellAmount > 0) {
+          options.startingMaxSellAmount = Math.max(roundedQuantity, options.startingMaxSellAmount);
+        }
         const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
         sendMessageToChannel(discord, options.discordChannelID, statusMsg);
         await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
