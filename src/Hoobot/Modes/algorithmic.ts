@@ -43,6 +43,7 @@ import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOsc
 import { buy, sell } from "../Binance/trade";
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
+import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
 
 
 
@@ -56,6 +57,7 @@ export interface Indicators {
   stochasticOscillator?: [number[], number[]];
   stochasticRSI?: [number[], number[]];
   obv?: number[];
+  cmf?: number[];
 }
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
@@ -152,6 +154,10 @@ export async function calculateIndicators(
   if (options.useOBV) {
     indicators.obv = calculateOBV(candlesticks);
     logOBVSignals(consoleLogger, candlesticks, indicators.obv);
+  }
+  if (options.useCMF) {
+    indicators.cmf = calculateCMF(candlesticks, options.cmfLength);
+    logCMFSignals(consoleLogger, indicators.cmf);
   }
   return indicators;
 }

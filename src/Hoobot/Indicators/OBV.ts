@@ -54,9 +54,9 @@ export const logOBVSignals = (
 ) => {
   const currentOBV = obvValues[obvValues.length - 1];
   const prevOBV = obvValues[obvValues.length - 2];
+  const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50, 'close'); 
   consoleLogger.push(`OBV Value`, currentOBV.toFixed(7));
-
-  const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50); 
+  consoleLogger.push(`OBV Smoothed`, obvSMA[obvSMA.length - 1].toFixed(7));
   const isBullish = currentOBV > prevOBV;
   const isBearish = currentOBV < prevOBV;
   const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - 1] && prevOBV < obvSMA[obvSMA.length - 1];
@@ -67,14 +67,14 @@ export const logOBVSignals = (
     consoleLogger.push(`OBV Signal`, `Bullish Crossover`);
   } else if (isBearishCrossover) {
     consoleLogger.push(`OBV Signal`, `Bearish Crossover`);
-  } else if (isBullish) {
-    consoleLogger.push(`OBV Signal`, `Bullish`);
-  } else if (isBearish) {
-    consoleLogger.push(`OBV Signal`, `Bearish`);
   } else if (isBullishDivergence) {
     consoleLogger.push(`OBV Signal`, `Bullish Divergence`);
   } else if (isBearishDivergence) {
     consoleLogger.push(`OBV Signal`, `Bearish Divergence`);
+  } else if (isBullish) {
+    consoleLogger.push(`OBV Signal`, `Bullish`);
+  } else if (isBearish) {
+    consoleLogger.push(`OBV Signal`, `Bearish`);
   } else {
     consoleLogger.push(`OBV Signal`, `Neutral`);
   }
@@ -84,28 +84,26 @@ export const logOBVSignals = (
 export const checkOBVSignals = (consoleLogger: ConsoleLogger, candlesticks: candlestick[], indicators: Indicators, options: ConfigOptions) => {
   let check = 'HOLD';
   if (options.useOBV) {
-    // Extract necessary data from indicators (e.g., obvValues)
     const obvValues = indicators.obv;
-    const currentOBV = obvValues[obvValues.length - 1];
-    const prevOBV = obvValues[obvValues.length - 2];
-    const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50); 
-    const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - 1] && prevOBV < obvSMA[obvSMA.length - 1];
-    const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - 1] && prevOBV > obvSMA[obvSMA.length - 1];
-    const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - 1].close < candlesticks[candlesticks.length - 2].close;
-    const isBearishDivergence = currentOBV < prevOBV && candlesticks[candlesticks.length - 1].close > candlesticks[candlesticks.length - 2].close;
-    if (isBullishCrossover) {
-      check = 'BUY';
-    } else if (isBearishCrossover) {
-      check = 'SELL';
-    } else if (isBullishDivergence) {
-      check = 'BUY'; 
-    } else if (isBearishDivergence) {
-      check = 'SELL'; 
-    } else {
-      check = 'HOLD';
+    for(let i = 1; i < (options.obvHistoryLength + 1); i++) {
+      const currentOBV = obvValues[obvValues.length - i];
+      const prevOBV = obvValues[obvValues.length - (i + 1)];
+      const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50, 'close'); 
+      const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
+      const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
+      const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;
+      const isBearishDivergence = currentOBV < prevOBV && candlesticks[candlesticks.length - i].close > candlesticks[candlesticks.length - (i + 1)].close;
+      if (isBullishCrossover) {
+        check = 'BUY';
+      } else if (isBearishCrossover) {
+        check = 'SELL';
+      } else if (isBullishDivergence) {
+        check = 'BUY'; 
+      } else if (isBearishDivergence) {
+        check = 'SELL'; 
+      }
     }
     consoleLogger.push("OBV Check", check);
   }
-
   return check;
 }

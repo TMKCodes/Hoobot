@@ -67,6 +67,9 @@ export interface ConfigOptions {
   consoleUpdate: string;
   smaLength: number;
   atrLength: number;
+  cmfLength: number;
+  cmfHistoryLength: number;
+  obvHistoryLength: number;
   bollingerBandsLength: number;
   bollingerBandsMultiplier: number;
   bollingerBandsAverageType: string;
@@ -98,6 +101,7 @@ export interface ConfigOptions {
   useRSI: boolean;
   useATR: boolean;
   useOBV: boolean;
+  useCMF: boolean;
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
@@ -153,6 +157,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     useSMA: process.env.USE_SMA === "true" ? true : false,
     useATR: process.env.USE_ATR === "true" ? true : false,
     useOBV: process.env.USE_OBV === "true" ? true : false,
+    useCMF: process.env.USE_CMF === "true" ? true : false,
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
@@ -171,6 +176,9 @@ export function parseArgs(args: string[]): ConfigOptions {
     overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
     oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
     atrLength: parseFloat(process.env.ATR_LENGTH) || 14,
+    cmfLength: parseFloat(process.env.CMF_LENGTH) || 20,
+    cmfHistoryLength: parseFloat(process.env.CMF_HISTORY_LENGTH) || 5,
+    obvHistoryLength: parseFloat(process.env.OBV_HISTORY_LENGTH) || 5,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
     bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
