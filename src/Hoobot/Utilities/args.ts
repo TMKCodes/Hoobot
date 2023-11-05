@@ -53,6 +53,10 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
   return intervalToSeconds[interval];
 }
 
+export interface TradeHistory {
+  [symbol: string]: order[];
+}
+
 // Configuration options interface
 export interface ConfigOptions {
   apiKey: string;
@@ -119,8 +123,8 @@ export interface ConfigOptions {
   openaiModel: string,
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
-  tradeHistory?: order[],
-  [key: string]: string | string[] | number | boolean | undefined | number | order[]; // Index signature
+  tradeHistory?: TradeHistory,
+  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory; // Index signature
 }
 
 // Parse command-line arguments and return options object
@@ -211,7 +215,7 @@ export function parseArgs(args: string[]): ConfigOptions {
     // Arbitrage
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
-    tradeHistory: [],
+    tradeHistory: {},
   };
   if (args.length === 0) {
     // If no command-line arguments, read options from .env file

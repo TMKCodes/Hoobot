@@ -79,8 +79,8 @@ async function placeTrade(
   filter: filter,
   options: ConfigOptions,
 ) {
-  if (options.tradeHistory?.length > 0) {
-    const timeDifferenceInSeconds = (Date.now() - options.tradeHistory[options.tradeHistory.length - 1].time) / 1000;
+  if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+    const timeDifferenceInSeconds = (Date.now() - options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time) / 1000;
     consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
       return false; // don't trade since the last trade was too new.
@@ -216,12 +216,18 @@ export async function algorithmic(
     consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
-    consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[0]);
-    consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
-    if (options.tradeHistory.length === 0) {
-      options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
+    if (options.startingMaxBuyAmount === 0) {
+      consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[0]);
     }
-    const roi = calculateROI(options.tradeHistory);
+    if (options.startingMaxSellAmount === 0) {
+      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
+    }
+    console.log(symbol.split("/").join(""));
+    if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
+      options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
+    }
+    console.log(symbol.split("/").join(""));
+    const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Return of investment", roi[0].toFixed(2));
     consoleLogger.push("Trades", roi[1]);
     // confirm that there are more candlesticks than longEma time period is.

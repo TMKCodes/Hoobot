@@ -64,7 +64,7 @@ export async function sell(
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
     const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
     let percentageChange = 0;
-    const tradeHistory = options.tradeHistory.reverse().slice(0, 3);
+    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
     }
@@ -123,7 +123,7 @@ export async function buy(
   const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
   if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
     let percentageChange = 0;
-    const tradeHistory = options.tradeHistory.reverse().slice(0, 3);
+    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
     }
