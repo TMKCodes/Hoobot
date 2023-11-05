@@ -88,7 +88,7 @@ export default {
               const profit = calculatePercentageDifference(oldPrice, newPrice);
               shortingProfit += reverseSign(profit);
               shorts++;
-              if (newTradeHistory[i].price > newTradeHistory[i + 1]?.price) {
+              if (newTradeHistory[i].price < newTradeHistory[i + 1]?.price) {
                 totalProfit += reverseSign(profit);
               }
               if (parseFloat(newTradeHistory[i].commission) > 0) {
@@ -97,7 +97,7 @@ export default {
                   shortingProfit -= 0.07
                 } else {
                   totalProfit -= 0.1
-                  shortingProfit - 0.1
+                  shortingProfit -= 0.1
                 }
               }
             } else {
@@ -114,7 +114,7 @@ export default {
                   longProfit -= 0.07
                 } else {
                   totalProfit -= 0.1
-                  longProfit - 0.1
+                  longProfit -= 0.1
                 }
               }
             }

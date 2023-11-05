@@ -55,7 +55,7 @@ export default {
           const oldPrice = parseFloat(lastTrade.price);
           const newPrice = parseFloat(historicalData[i].price);
           const profit = calculatePercentageDifference(oldPrice, newPrice);
-          if (historicalData[i].price > historicalData[i + 1]?.price) {
+          if (historicalData[i].price < historicalData[i + 1]?.price) {
             totalProfit += reverseSign(profit);
           }
         } else {

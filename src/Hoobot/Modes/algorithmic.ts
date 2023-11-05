@@ -179,7 +179,7 @@ function calculateROI(tradeHistory: any[]) {
         const oldPrice = parseFloat(lastTrade.price);
         const newPrice = parseFloat(tradeHistory[i].price);
         const profit = calculatePercentageDifference(oldPrice, newPrice);
-        if (tradeHistory[i].price > tradeHistory[i + 1]?.price) {
+        if (tradeHistory[i].price < tradeHistory[i + 1]?.price) {
           totalProfit += reverseSign(profit);
         } // if next sale order price is higher, don't count this as profit.
       } else {
