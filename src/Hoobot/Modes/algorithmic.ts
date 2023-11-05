@@ -185,6 +185,8 @@ export async function algorithmic(
     consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
+    consoleLogger.push("Max buy amount: ", options.startingMaxBuyAmount);
+    consoleLogger.push("Max sell amount: ", options.startingMaxSellAmount);
     // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
