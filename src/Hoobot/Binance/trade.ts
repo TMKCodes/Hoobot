@@ -66,7 +66,7 @@ export async function sell(
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInQuote = quoteBalance;
-    if (options.startingMaxBuyAmount > 0) {
+    if (options.startingMaxSellAmount > 0) {
       maxQuantityInQuote = Math.min(quoteBalance, options.startingMaxSellAmount);
     }
     const stopPrice = price * (1 - (options.closePercentage / 100));
@@ -74,13 +74,12 @@ export async function sell(
     const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
     const quoteQuantity = roundedQuantity * price;
     const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-    const checkBefore = checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook);
-    let percentageChange = 0;
-    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
-    if (tradeHistory?.length > 0) {
-      percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
-    }
-    if (checkBefore === true) {
+    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
+      let percentageChange = 0;
+      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+      if (tradeHistory?.length > 0) {
+        percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
+      }
       let order: any = false;
       if(quoteQuantity > parseFloat(filter.minNotional)) {
         order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
@@ -131,6 +130,7 @@ export async function buy(
   const roundedQuantity = binance.roundStep(quantityInQuote, filter.stepSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
   const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
+  console.log(roundedQuantity);
   if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
     let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);

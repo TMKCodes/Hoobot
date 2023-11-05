@@ -88,14 +88,14 @@ async function placeTrade(
   }
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
-  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, candlesticks, indicators, options);
+  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), baseBalance, quoteBalance, candlesticks, indicators, options);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
   } else if (direction === 'SELL') {
-    sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance);
+    return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance);
   } else if (direction === 'BUY') {
-    buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance)
+    return buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance)
   } else {
     return false;
   }
@@ -216,10 +216,10 @@ export async function algorithmic(
     consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
     consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
     consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
-    if (options.startingMaxBuyAmount === 0) {
+    if (options.startingMaxBuyAmount > 0 && options.startingMaxBuyAmount !== undefined) {
       consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[0]);
     }
-    if (options.startingMaxSellAmount === 0) {
+    if (options.startingMaxSellAmount > 0 && options.startingMaxBuyAmount !== undefined) {
       consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
     }
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {

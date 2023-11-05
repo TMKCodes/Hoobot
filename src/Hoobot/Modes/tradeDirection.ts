@@ -49,7 +49,7 @@ export const checkBeforeOrder = (
   candleTime: string,
 ) => {
   const logFailure = (message: string) => {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${candleTime}, ${message}`);
+    logToFile(`PLACING ORDER WAS FAILURE AT: ${quantity}, ${price}, ${candleTime}, ${message}`);
     return false;
   };
 
