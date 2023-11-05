@@ -102,7 +102,7 @@ export const checkBollingerBandsSignals = (
 ) => {
   let check = 'HOLD';
   if (options.useBollingerBands) {
-    for(let i = 0; i < options.bollingerBAndsHistoryLength; i++) {
+    for(let i = 1; i < options.bollingerBandsHistoryLength + 1; i++) {
       const currentLow = candlesticks[candlesticks.length - i].low;
       const currentHigh = candlesticks[candlesticks.length - i].high;    
       const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - i];
@@ -113,8 +113,10 @@ export const checkBollingerBandsSignals = (
       
       if (isAboveUpperBand) {
         check = 'SELL';
+        break;
       } else if (isBelowLowerBand) {
         check = 'BUY';
+        break;
       }
     }
     
