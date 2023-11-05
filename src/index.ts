@@ -82,7 +82,7 @@ const main = async () => {
       // Possible to add discord notification if order has been fulfilled with websocket notification.
     });
 
-    const candlesticksToPreload = 500;
+    const candlesticksToPreload = 1000;
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
       // Check if options.symbol is an array or a single string

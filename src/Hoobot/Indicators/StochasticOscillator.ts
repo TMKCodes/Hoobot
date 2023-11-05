@@ -36,72 +36,77 @@ import { calculateSMA } from "./SMA";
 export function calculateStochasticOscillator(candles: candlestick[], kPeriod: number = 14, dPeriod: number = 1, smoothing: number = 3, source: string = 'close'): [number[], number[]]  {
   const kValues: number[] = [];
   const dValues: number[] = [];
-
   for (let i = kPeriod - 1; i < candles.length; i++) {
-      const slice = candles.slice(i - kPeriod + 1, i + 1);
-
-      const highestHigh = Math.max(...slice.map(candle => candle.high));
-      const lowestLow = Math.min(...slice.map(candle => candle.low));
-
-      const currentClose = candles[i].close;
-      const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-
-      kValues.push(kValue);
-
-      if (kValues.length >= dPeriod) {
-          const dSlice = kValues.slice(kValues.length - dPeriod);
-          const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dPeriod;
-          dValues.push(dValue);
-      }
+    const slice = candles.slice(i - kPeriod + 1, i + 1);
+    const highestHigh = Math.max(...slice.map(candle => candle.high));
+    const lowestLow = Math.min(...slice.map(candle => candle.low));
+    const currentClose = candles[i].close;
+    const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
+    kValues.push(kValue);
+    if (kValues.length >= dPeriod) {
+      const dSlice = kValues.slice(kValues.length - dPeriod);
+      const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dPeriod;
+      dValues.push(dValue);
+    }
   }
   if (smoothing > 1) {
-      for (let i = smoothing - 1; i < dValues.length; i++) {
-          const slice = dValues.slice(i - smoothing + 1, i + 1);
-          const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / smoothing;
-          dValues[i] = smoothedValue;
-      }
+    for (let i = smoothing - 1; i < dValues.length; i++) {
+      const slice = dValues.slice(i - smoothing + 1, i + 1);
+      const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / smoothing;
+      dValues[i] = smoothedValue;
+    }
   }
 
   return [ kValues, dValues ];
 }
 
-export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number = 14, lengthStoch: number = 14, kSmoothing: number = 3, dSmoothing: number = 3): [number[], number[]] {
-  const rsiValues = calculateRSI(candles, lengthRSI, "SMA", 1, 'close');
-
+export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number = 14, lengthStoch: number = 14, kSmoothing: number = 3, dSmoothing: number = 3, rsiSmoothingType: string = "EMA", source: string = 'close'): [number[], number[]] {
+  const rsiValues = calculateRSI(candles, lengthRSI, rsiSmoothingType, 1, source);
   const kValues: number[] = [];
   const dValues: number[] = [];
-
   for (let i = lengthStoch - 1; i < rsiValues.length; i++) {
     const slice = rsiValues.slice(i - lengthStoch + 1, i + 1);
-
     const highestRSI = Math.max(...slice);
     const lowestRSI = Math.min(...slice);
-
     const currentRSI = rsiValues[i];
     const kValue = ((currentRSI - lowestRSI) / (highestRSI - lowestRSI)) * 100;
-
     kValues.push(kValue);
-
     if (kValues.length >= dSmoothing) {
       const dSlice = kValues.slice(kValues.length - dSmoothing);
       const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dSmoothing;
       dValues.push(dValue);
     }
   }
-
-  if (kSmoothing > 1) {
-    for (let i = kSmoothing - 1; i < kValues.length; i++) {
-      const slice = kValues.slice(i - kSmoothing + 1, i + 1);
-      const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / kSmoothing;
-      kValues[i] = smoothedValue;
+  if (rsiSmoothingType === "SMA") {
+    if (kSmoothing > 1) {
+      for (let i = kSmoothing - 1; i < kValues.length; i++) {
+        const slice = kValues.slice(i - kSmoothing + 1, i + 1);
+        const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / kSmoothing;
+        kValues[i] = smoothedValue;
+      }
+    }
+    if (dSmoothing > 1) {
+      for (let i = dSmoothing - 1; i < dValues.length; i++) {
+        const slice = dValues.slice(i - dSmoothing + 1, i + 1);
+        const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / dSmoothing;
+        dValues[i] = smoothedValue;
+      }
     }
   }
-
-  if (dSmoothing > 1) {
-    for (let i = dSmoothing - 1; i < dValues.length; i++) {
-      const slice = dValues.slice(i - dSmoothing + 1, i + 1);
-      const smoothedValue = slice.reduce((sum, value) => sum + value, 0) / dSmoothing;
-      dValues[i] = smoothedValue;
+  if (rsiSmoothingType === "EMA") {
+    if (kSmoothing > 1) {
+      let alpha = 2 / (kSmoothing + 1);
+      kValues[kSmoothing - 1] = kValues.slice(0, kSmoothing).reduce((sum, value) => sum + value, 0) / kSmoothing;
+      for (let i = kSmoothing; i < kValues.length; i++) {
+        kValues[i] = alpha * kValues[i] + (1 - alpha) * kValues[i - 1];
+      }
+    }  
+    if (dSmoothing > 1) {
+      let alpha = 2 / (dSmoothing + 1);
+      dValues[dSmoothing - 1] = dValues.slice(0, dSmoothing).reduce((sum, value) => sum + value, 0) / dSmoothing;
+      for (let i = dSmoothing; i < dValues.length; i++) {
+        dValues[i] = alpha * dValues[i] + (1 - alpha) * dValues[i - 1];
+      }
     }
   }
 

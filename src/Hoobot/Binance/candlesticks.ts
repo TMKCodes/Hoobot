@@ -81,7 +81,7 @@ export async function getLastCandlesticks(binance: Binance, pair: string, interv
 
 export const listenForCandlesticks = async (binance: Binance, symbol: string, interval: string, candleStore: SymbolCandlesticks, historyLength: number, callback: (candlesticks: candlestick[]) => void) => {
   symbol = symbol.split("/").join("");
-  const maxCandlesticks = 10000;
+  const maxCandlesticks = 5000;
   try {
     if (candleStore[symbol] === undefined) {
       if (historyLength === 0) {

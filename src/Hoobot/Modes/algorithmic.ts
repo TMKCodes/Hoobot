@@ -145,7 +145,7 @@ export async function calculateIndicators(
     logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator);
   }
   if (options.useStochasticRSI) {
-    indicators.stochasticRSI = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD);
+    indicators.stochasticRSI = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
     logStochasticRSISignals(consoleLogger, indicators.stochasticRSI);
   }
   return indicators;
