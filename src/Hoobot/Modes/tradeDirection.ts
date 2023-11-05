@@ -39,6 +39,7 @@ import { checkSMASignals } from "../Indicators/SMA";
 import { checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../Indicators/StochasticOscillator";
 import { checkBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { checkGPTSignals } from "../Indicators/GPT";
+import Binance from "node-binance-api";
 
 export const checkBeforeOrder = (
   quantity: number,
@@ -81,26 +82,33 @@ export const checkBeforeOrder = (
   return true;
 };
 
-const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeHistory: order[], lastCandlestick: candlestick, options: ConfigOptions) => {
+const checkProfitSignals = (
+  consoleLogger: ConsoleLogger, 
+  symbol: string, 
+  lastCandlestick: candlestick, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   let lastProfit: number = 0;
   let nextPossibleProfit: number = 0;
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
-  if(tradeHistory?.length > 0) {
-    if(tradeHistory?.length > 1) {
-      if(tradeHistory[0].isBuyer === true) { 
-        lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), parseFloat(tradeHistory[1].price));
-      } else if(tradeHistory[0].isBuyer === false) { 
-        lastProfit = calculatePercentageDifference(parseFloat(tradeHistory[1].price), parseFloat(tradeHistory[0].price));
+  if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+    const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
+    if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
+      if(lastTrade.isBuyer === true) { 
+        lastProfit = calculatePercentageDifference(parseFloat(lastTrade.price), parseFloat(olderTrade.price));
+      } else if(lastTrade.isBuyer === false) { 
+        lastProfit = calculatePercentageDifference(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
     }
-    if(tradeHistory[0].isBuyer === true) { 
-      nextPossibleProfit = calculatePercentageDifference(parseFloat(tradeHistory[0].price), lastCandlestick.close);
-    } else if(tradeHistory[0].isBuyer === false) { 
-      nextPossibleProfit = calculatePercentageDifference(lastCandlestick.close, parseFloat(tradeHistory[0].price));
+    if(lastTrade.isBuyer === true) { 
+      nextPossibleProfit = calculatePercentageDifference(parseFloat(lastTrade.price), lastCandlestick.close);
+    } else if(lastTrade.isBuyer === false) { 
+      nextPossibleProfit = calculatePercentageDifference(lastCandlestick.close, parseFloat(lastTrade.price));
     }
     if(force[symbol]?.skip !== true) {
-      if (tradeHistory[0].isBuyer === true) { 
+      if (lastTrade.isBuyer === true) { 
         if(options.holdUntilPositiveTrade === true) {
           if(nextPossibleProfit > (options.minimumProfitSell + options.tradeFee)) {
             check = "SELL";
@@ -110,7 +118,7 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
         } else {
           check = "SELL"
         }
-      } else if(tradeHistory[0].isBuyer === false) { 
+      } else if(lastTrade.isBuyer === false) { 
         if(options.holdUntilPositiveTrade === true) {
           if(nextPossibleProfit > (options.minimumProfitBuy + options.tradeFee)) {
             check = "BUY";
@@ -134,17 +142,27 @@ const checkProfitSignals = (consoleLogger: ConsoleLogger, symbol: string, tradeH
   return check;
 }
 
-const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, balanceQuote: number, closePrice: number, tradeHistory: order[]) => {
+const checkBalanceSignals = async (
+  binance: Binance,
+  consoleLogger: ConsoleLogger, 
+  symbol: string, 
+  balanceBase: number,
+  balanceQuote: number, 
+  closePrice: number,  
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if(balanceBase < (balanceQuote / closePrice)) {
     check = 'BUY';
   } else {
     check = 'SELL';
   }
-  if (tradeHistory?.length > 0) {
-    if (check !== ((tradeHistory[0].isBuyer === true) ? 'SELL' : 'BUY')) {
-      consoleLogger.push("BALANCE check", 'RECHECK BALANCES');
-      return "RECHECK BALANCES";
+  if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    let lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (check !== ((lastTrade.isBuyer === true) ? 'SELL' : 'BUY')) {
+      options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
+      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      check = lastTrade.isBuyer === true ? 'SELL': 'BUY';
     } 
   }
   consoleLogger.push("BALANCE Check", check);
@@ -152,6 +170,7 @@ const checkBalanceSignals = (consoleLogger: ConsoleLogger, balanceBase: number, 
 }
 
 export const tradeDirection = async (
+  binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
   balanceBase: number, 
@@ -173,8 +192,8 @@ export const tradeDirection = async (
   let bollingerBandsCheck: string = 'HOLD';
   let gptCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
-  profitCheck = checkProfitSignals(consoleLogger, symbol, options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3), lastCandlestick, options);
-  balanceCheck = checkBalanceSignals(consoleLogger, balanceBase, balanceQuote, lastCandlestick.close, options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3));
+  profitCheck = checkProfitSignals(consoleLogger, symbol, lastCandlestick, options);
+  balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, balanceBase, balanceQuote, lastCandlestick.close, options);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);
