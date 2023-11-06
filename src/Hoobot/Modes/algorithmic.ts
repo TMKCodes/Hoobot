@@ -165,7 +165,6 @@ export async function calculateIndicators(
 
 function calculateROI(tradeHistory: any[]) {
   let lastTrade = tradeHistory[0];
-  tradeHistory = tradeHistory.slice(1, tradeHistory.length);
   // Calculate ROI based on the historical data
   let totalProfit = 0;
   let trades = 0;
