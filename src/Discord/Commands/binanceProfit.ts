@@ -67,65 +67,64 @@ export default {
       const newTradeHistory = tradeHistory.filter((trade: { time: number }) => trade.time / 1000 >= targetTimestamp);
 
       let totalProfit = 0;
-      let trades = 0;
+      let trades = 1;
       let shortingProfit = 0;
-      let shorts = 0;
+      let shorts = newTradeHistory[0].isBuyer === true ? 1 : 0;
       let longProfit = 0;
-      let longs = 0;
-      let lastTrade: any = undefined;
-      let lastTime = "";
-      if(newTradeHistory.length >= 2) {
-        for (let i = 0; i < newTradeHistory.length - 1; i++) {
-          if (lastTrade === undefined) {
-            // Set last trade since it was undefined.
-            lastTrade = newTradeHistory[i];
-            lastTime = newTradeHistory[i].time;
-          } else {
-            if (newTradeHistory[i].isBuyer) {
-              // Calculate profit for the buy trade
-              const newPrice = parseFloat(newTradeHistory[i].price);
-              const oldPrice = parseFloat(lastTrade.price);
-              const profit = calculatePercentageDifference(oldPrice, newPrice);
-              shortingProfit += reverseSign(profit);
-              shorts++;
+      let longs = newTradeHistory[0].isBuyer === true ? 0 : 1;
+      let lastTrade = newTradeHistory[0];
+      let lastTime = newTradeHistory[0].time;
+      if(newTradeHistory.length > 2) {
+        for (let i = 1; i < newTradeHistory.length; i++) {
+          if (newTradeHistory[i].isBuyer) {
+            // Calculate profit for the buy trade
+            const newPrice = parseFloat(newTradeHistory[i].price);
+            const oldPrice = parseFloat(lastTrade.price);
+            const profit = calculatePercentageDifference(oldPrice, newPrice);
+            shorts++;
+            if (newTradeHistory[i + 1] !== undefined) {
               if (newTradeHistory[i].price < newTradeHistory[i + 1]?.price) {
                 totalProfit += reverseSign(profit);
-              }
-              if (parseFloat(newTradeHistory[i].commission) > 0) {
-                if (newTradeHistory[i].commissionAsset === "BNB") {
-                  totalProfit -= 0.075
-                  shortingProfit -= 0.07
-                } else {
-                  totalProfit -= 0.1
-                  shortingProfit -= 0.1
-                }
+                shortingProfit += reverseSign(profit);
               }
             } else {
-              // Calculate profit for the sell trade
-              const newPrice = parseFloat(newTradeHistory[i].price);
-              const oldPrice = parseFloat(lastTrade.price);
-              const profit = calculatePercentageDifference(oldPrice, newPrice); 
-              totalProfit += profit;
-              longProfit += profit;
-              longs++;
-              if (parseFloat(newTradeHistory[i].commission) > 0) {
-                if (newTradeHistory[i].commissionAsset === "BNB") {
-                  totalProfit -= 0.075
-                  longProfit -= 0.07
-                } else {
-                  totalProfit -= 0.1
-                  longProfit -= 0.1
-                }
+              totalProfit += reverseSign(profit);
+              shortingProfit += reverseSign(profit);
+            }
+            if (parseFloat(newTradeHistory[i].commission) > 0) {
+              if (newTradeHistory[i].commissionAsset === "BNB") {
+                totalProfit -= 0.075
+                shortingProfit -= 0.07
+              } else {
+                totalProfit -= 0.1
+                shortingProfit -= 0.1
               }
             }
-            
-            trades++;
-            lastTrade = newTradeHistory[i]; // Update lastTrade for the next iteration
+          } else {
+            // Calculate profit for the sell trade
+            const newPrice = parseFloat(newTradeHistory[i].price);
+            const oldPrice = parseFloat(lastTrade.price);
+            const profit = calculatePercentageDifference(oldPrice, newPrice); 
+            totalProfit += profit;
+            longProfit += profit;
+            longs++;
+            if (parseFloat(newTradeHistory[i].commission) > 0) {
+              if (newTradeHistory[i].commissionAsset === "BNB") {
+                totalProfit -= 0.075
+                longProfit -= 0.07
+              } else {
+                totalProfit -= 0.1
+                longProfit -= 0.1
+              }
+            }
           }
+          
+          trades++;
+          lastTrade = newTradeHistory[i]; // Update lastTrade for the next iteration
         }
 
         // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nLong profit for **${pair}**:** ${longProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\nReminder, these calculations do not include trade fees.`);
+        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nLong profit for **${pair}**:** ${longProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\n`);
       } else {
         await interaction.reply(`Total profit for **${pair}**: Can not calculate percentage, less than two trades.`);
       }

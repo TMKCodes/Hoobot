@@ -41,40 +41,43 @@ export default {
     }
     const slicedTradeHistory = tradeHistory.slice(0, tradeHistory.length - historicalData.length);
     let lastTrade = slicedTradeHistory[slicedTradeHistory.length - 1];
-    console.log(JSON.stringify(lastTrade, null, 2));
+    if (lastTrade === undefined) {
+      lastTrade = historicalData[0];
+    }
+    console.log(lastTrade);
     // Calculate ROI based on the historical data
     let totalProfit = 0;
-    let trades = 0;
-    for (let i = 0; i < historicalData.length - 1; i++)  {
-      if (lastTrade === undefined) {
-        // Set last trade since it was undefined.
-        lastTrade = historicalData[i];
-      } else {
-        if (historicalData[i].isBuyer) {
-          // Calculate profit for the buy trade
-          const oldPrice = parseFloat(lastTrade.price);
-          const newPrice = parseFloat(historicalData[i].price);
-          const profit = calculatePercentageDifference(oldPrice, newPrice);
+    let trades = 1;
+    for (let i = 1; i < historicalData.length; i++)  {
+      console.log(historicalData[i]);
+      if (historicalData[i].isBuyer) {
+        // Calculate profit for the buy trade
+        const oldPrice = parseFloat(lastTrade.price);
+        const newPrice = parseFloat(historicalData[i].price);
+        const profit = calculatePercentageDifference(oldPrice, newPrice);
+        if (historicalData[i + 1] !== undefined) {
           if (historicalData[i].price < historicalData[i + 1]?.price) {
             totalProfit += reverseSign(profit);
           }
         } else {
-          // Calculate profit for the sell trade
-          const oldPrice = parseFloat(lastTrade.price);
-          const newPrice = parseFloat(historicalData[i].price);
-          const profit = calculatePercentageDifference(oldPrice, newPrice); 
-          totalProfit += profit;
+          totalProfit += reverseSign(profit);
         }
-        if (parseFloat(historicalData[i].commission) > 0) {
-          if (historicalData[i].commissionAsset === "BNB") {
-            totalProfit -= 0.075
-          } else {
-            totalProfit -= 0.1
-          }
-        }
-        trades++;
-        lastTrade = historicalData[i]; // Update lastTrade for the next iteration
+      } else {
+        // Calculate profit for the sell trade
+        const oldPrice = parseFloat(lastTrade.price);
+        const newPrice = parseFloat(historicalData[i].price);
+        const profit = calculatePercentageDifference(oldPrice, newPrice); 
+        totalProfit += profit;
       }
+      if (parseFloat(historicalData[i].commission) > 0) {
+        if (historicalData[i].commissionAsset === "BNB") {
+          totalProfit -= 0.075
+        } else {
+          totalProfit -= 0.1
+        }
+      }
+      trades++;
+      lastTrade = historicalData[i]; 
     }
     await interaction.reply(`ROI for ${symbol} over ${duration.toUpperCase()}: ${totalProfit.toFixed(2)}%\nTrades in duration: ${trades}`);
   },
