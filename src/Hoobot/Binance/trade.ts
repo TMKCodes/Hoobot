@@ -64,50 +64,53 @@ export async function sell(
   quoteBalance: number,
 ) {
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-    let maxQuantityInQuote = quoteBalance;
-    if (options.startingMaxSellAmount > 0) {
-      maxQuantityInQuote = Math.min(quoteBalance, options.startingMaxSellAmount);
-    }
-    const stopPrice = price * (1 - (options.closePercentage / 100));
-    const roundedPrice = binance.roundStep(price, filter.tickSize);
-    const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
-    const quoteQuantity = roundedQuantity * price;
-    const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-    if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
-      let percentageChange = 0;
-      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
-      if (tradeHistory?.length > 0) {
-        percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
-      }
-      let order: any = false;
-      if(quoteQuantity > parseFloat(filter.minNotional)) {
-        order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-        const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-        const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
-        if (openedOrder !== "canceled") {
-          if (options.startingMaxBuyAmount > 0) {
-            options.startingMaxBuyAmount = Math.max(roundedQuantity * roundedPrice, options.startingMaxBuyAmount);
-          }
-          const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
-          sendMessageToChannel(discord, options.discordChannelID, statusMsg);
-          await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
-          const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
-          sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
-          updateForce(symbol);
-          play(soundFile);
-          options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
-        }
-        return order;
-      } else {
-        consoleLogger.push("error", `\r\nFailed check: ${quoteQuantity} > ${parseFloat(filter.minNotional)}\r\n`);
+  let price = orderBookAsks[0] - parseFloat(filter.tickSize);
+  let maxQuantityInQuote = quoteBalance;
+  if (options.startingMaxSellAmount > 0) {
+    maxQuantityInQuote = Math.min(quoteBalance, options.startingMaxSellAmount);
+  }
+  const stopPrice = price * (1 - (options.closePercentage / 100));
+  const roundedPrice = binance.roundStep(price, filter.tickSize);
+  const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
+  const quoteQuantity = roundedQuantity * price;
+  const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
+  if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
+    let percentageChange = 0;
+    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+    if (tradeHistory?.length > 0) {
+      percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
+      if (percentageChange < options.minimumProfitSell) {
         return false;
       }
+    }
+    let order: any = false;
+    if(quoteQuantity > parseFloat(filter.minNotional)) {
+      order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
+      const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+      const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
+      if (openedOrder !== "canceled") {
+        if (options.startingMaxBuyAmount > 0) {
+          options.startingMaxBuyAmount = Math.max(roundedQuantity * roundedPrice, options.startingMaxBuyAmount);
+        }
+        const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
+        sendMessageToChannel(discord, options.discordChannelID, statusMsg);
+        await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
+        const resumeMsg = `>>> Resuming trading for symbol **${symbol.split("/").join("")}**.\nTime now ${new Date().toLocaleString("fi-fi")}`;
+        sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
+        updateForce(symbol);
+        play(soundFile);
+        options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
+      }
+      return order;
     } else {
-      consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+      consoleLogger.push("error", `\r\nFailed check: ${quoteQuantity} > ${parseFloat(filter.minNotional)}\r\n`);
       return false;
     }
+  } else {
+    consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
+    return false;
+  }
 }
 
 export async function buy(
@@ -138,6 +141,9 @@ export async function buy(
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
+      if (percentageChange < options.minimumProfitBuy) {
+        return false;
+      }
     }
     let order: any = false;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {

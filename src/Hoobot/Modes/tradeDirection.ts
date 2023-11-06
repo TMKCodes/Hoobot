@@ -87,7 +87,7 @@ export const checkBeforeOrder = (
 const checkProfitSignals = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  lastCandlestick: candlestick, 
+  orderBook: any,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
@@ -96,8 +96,8 @@ const checkProfitSignals = (
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
   if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-    const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
+      const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
       if(lastTrade.isBuyer === true) { 
         lastProfit = calculatePercentageDifference(parseFloat(lastTrade.price), parseFloat(olderTrade.price));
       } else if(lastTrade.isBuyer === false) { 
@@ -105,9 +105,11 @@ const checkProfitSignals = (
       }
     }
     if(lastTrade.isBuyer === true) { 
-      nextPossibleProfit = calculatePercentageDifference(parseFloat(lastTrade.price), lastCandlestick.close);
+      const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+      nextPossibleProfit = calculatePercentageDifference(parseFloat(lastTrade.price), orderBookAsks[0]);
     } else if(lastTrade.isBuyer === false) { 
-      nextPossibleProfit = calculatePercentageDifference(lastCandlestick.close, parseFloat(lastTrade.price));
+      const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
+      nextPossibleProfit = calculatePercentageDifference(orderBookBids[0], parseFloat(lastTrade.price));
     }
     if(force[symbol]?.skip !== true) {
       if (lastTrade.isBuyer === true) { 
@@ -177,6 +179,7 @@ export const tradeDirection = async (
   symbol: string,
   balanceBase: number, 
   balanceQuote: number, 
+  orderBook: any,
   candlesticks: candlestick[], 
   indicators: Indicators,
   options: ConfigOptions
@@ -196,7 +199,7 @@ export const tradeDirection = async (
   let obvCheck: string = 'HOLD';
   let cmfCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
-  profitCheck = checkProfitSignals(consoleLogger, symbol, lastCandlestick, options);
+  profitCheck = checkProfitSignals(consoleLogger, symbol, orderBook, options);
   balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, balanceBase, balanceQuote, lastCandlestick.close, options);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);

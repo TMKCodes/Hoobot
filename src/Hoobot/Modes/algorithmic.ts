@@ -92,7 +92,7 @@ async function placeTrade(
   }
   const quoteBalance = balances[symbol.split("/")[0]];
   const baseBalance = balances[symbol.split("/")[1]];
-  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), baseBalance, quoteBalance, candlesticks, indicators, options);
+  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), baseBalance, quoteBalance, orderBook, candlesticks, indicators, options);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
