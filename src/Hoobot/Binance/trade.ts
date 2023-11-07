@@ -79,7 +79,7 @@ export async function sell(
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
       percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
-      if (percentageChange < options.minimumProfitSell) {
+      if (percentageChange > options.minimumProfitSell) {
         return false;
       }
     }
@@ -140,8 +140,8 @@ export async function buy(
     let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
-      percentageChange = reverseSign(calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice)) - options.tradeFee;
-      if (percentageChange < options.minimumProfitBuy) {
+      percentageChange = calculatePercentageDifference(roundedPrice, parseFloat(tradeHistory[0].price)) - options.tradeFee;
+      if (percentageChange > options.minimumProfitBuy) {
         return false;
       }
     }
