@@ -8,7 +8,6 @@ import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
-import { reverseSign } from "../Modes/algorithmic";
 
 const soundFile = './alarm.mp3'
 
@@ -80,20 +79,17 @@ export async function sell(
   orderBook: any,
   filter: filter,
   options: ConfigOptions,
-  quoteBalance: number,
+  baseBalance: number,
 ) {
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
   let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-  let maxQuantityInQuote = quoteBalance;
+  let maxQuantityInBase = baseBalance;
   if (options.startingMaxSellAmount > 0) {
-    maxQuantityInQuote = Math.min(quoteBalance, options.startingMaxSellAmount);
+    maxQuantityInBase = Math.min(baseBalance, options.startingMaxSellAmount);
   }
-  const stopPrice = price * (1 - (options.closePercentage / 100));
   const roundedPrice = binance.roundStep(price, filter.tickSize);
-  const roundedQuantity = binance.roundStep(maxQuantityInQuote, filter.stepSize);
-  const quoteQuantity = roundedQuantity * price;
-  const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-  if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
+  const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
+  if (checkBeforeOrder(roundedQuantityInBase, roundedPrice, filter, orderBook) === true) {
     let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
@@ -103,14 +99,14 @@ export async function sell(
       }
     }
     let order: any = false;
-    if(quoteQuantity > parseFloat(filter.minNotional)) {
-      order = await binance.sell(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-      const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+    if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
+      order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInBase}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {
         if (options.startingMaxBuyAmount > 0) {
-          options.startingMaxBuyAmount = Math.max(roundedQuantity * roundedPrice, options.startingMaxBuyAmount);
+          options.startingMaxBuyAmount = Math.max(roundedQuantityInBase * roundedPrice, options.startingMaxBuyAmount);
         }
         const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
         sendMessageToChannel(discord, options.discordChannelID, statusMsg);
@@ -123,7 +119,7 @@ export async function sell(
       }
       return order;
     } else {
-      consoleLogger.push("error", `\r\nFailed check: ${quoteQuantity} > ${parseFloat(filter.minNotional)}\r\n`);
+      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
       return false;
     }
   } else {
@@ -140,22 +136,20 @@ export async function buy(
   orderBook: any,
   filter: filter,
   options: ConfigOptions,
-  baseBalance: number,
+  quoteBalance: number,
 ) {
   const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
   let price = orderBookBids[0] + parseFloat(filter.tickSize);
-  let maxQuantityInBase = baseBalance;
+  let maxQuantityuInQuote = quoteBalance;
   if (options.startingMaxBuyAmount > 0) {
-    maxQuantityInBase = Math.min(baseBalance, options.startingMaxBuyAmount);
+    maxQuantityuInQuote = Math.min(quoteBalance, options.startingMaxBuyAmount);
   }
-  const quantityInQuote = (maxQuantityInBase / price);
-  const stopPrice = price * (1 + (options.closePercentage / 100));
+  const quantityInBase = (maxQuantityuInQuote / price);
   const roundedPrice = binance.roundStep(price, filter.tickSize);
-  const roundedQuantity = binance.roundStep(quantityInQuote, filter.stepSize);
-  const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
-  const roundedStopPrice = binance.roundStep(stopPrice, filter.tickSize);
-  console.log(roundedQuantity);
-  if (checkBeforeOrder(roundedQuantity, roundedPrice, roundedStopPrice, filter, orderBook) === true) {
+  const roundedQuantityInQuote = binance.roundStep(quantityInBase, filter.stepSize);
+  const roundedQuantityInBase = binance.roundStep(maxQuantityuInQuote, filter.stepSize);
+  console.log(roundedQuantityInQuote);
+  if (checkBeforeOrder(roundedQuantityInQuote, roundedPrice, filter, orderBook) === true) {
     let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     if (tradeHistory?.length > 0) {
@@ -166,13 +160,13 @@ export async function buy(
     }
     let order: any = false;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
-      order = await binance.buy(symbol.split("/").join(""), roundedQuantity, roundedPrice);
-      const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantity}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+      order = await binance.buy(symbol.split("/").join(""), roundedQuantityInQuote, roundedPrice);
+      const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {
         if (options.startingMaxSellAmount > 0) {
-          options.startingMaxSellAmount = Math.max(roundedQuantity, options.startingMaxSellAmount);
+          options.startingMaxSellAmount = Math.max(roundedQuantityInQuote, options.startingMaxSellAmount);
         }
         const statusMsg = `>>> Order ID **${order.orderId}** for symbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\nWaiting now ${getSecondsFromInterval(options.candlestickInterval)} seconds until trying next trade.`;
         sendMessageToChannel(discord, options.discordChannelID, statusMsg);
@@ -185,7 +179,7 @@ export async function buy(
       }
       return order;
     } else {
-      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
+      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
       return false;
     }
   } else {

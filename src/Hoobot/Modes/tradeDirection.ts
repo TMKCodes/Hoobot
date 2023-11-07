@@ -42,11 +42,11 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
+import { getTradeHistory } from "../Binance/trade";
 
 export const checkBeforeOrder = (
   quantity: number,
   price: number,
-  stopPrice: number,
   tradingPairFilters: any,
   candleTime: string,
 ) => {
@@ -74,8 +74,7 @@ export const checkBeforeOrder = (
   };
   
   if (
-    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), stopPrice, 'Limit price') ||
-    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Stop price') ||
+    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Limit price') ||
     !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity) 
   ) {
     return false;
@@ -150,21 +149,21 @@ const checkBalanceSignals = async (
   binance: Binance,
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  balanceBase: number,
-  balanceQuote: number, 
+  quoteBalance: number,
+  baseBalance: number, 
   closePrice: number,  
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
-  if(balanceBase < (balanceQuote / closePrice)) {
+  if(baseBalance < (quoteBalance / closePrice)) {
     check = 'BUY';
   } else {
     check = 'SELL';
   }
-  if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+  if (options.tradeHistory[symbol.split("/").join("")].length > 1) {
     let lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if (check !== ((lastTrade.isBuyer === true) ? 'SELL' : 'BUY')) {
-      options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
       check = lastTrade.isBuyer === true ? 'SELL': 'BUY';
     } 
@@ -177,8 +176,8 @@ export const tradeDirection = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  balanceBase: number, 
-  balanceQuote: number, 
+  quoteBalance: number, 
+  baseBalance: number, 
   orderBook: any,
   candlesticks: candlestick[], 
   indicators: Indicators,
@@ -200,7 +199,7 @@ export const tradeDirection = async (
   let cmfCheck: string = 'HOLD';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
   profitCheck = checkProfitSignals(consoleLogger, symbol, orderBook, options);
-  balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, balanceBase, balanceQuote, lastCandlestick.close, options);
+  balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, quoteBalance, baseBalance, lastCandlestick.close, options);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);

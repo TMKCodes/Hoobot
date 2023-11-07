@@ -90,16 +90,16 @@ async function placeTrade(
       return false; // don't trade since the last trade was too new.
     }
   }
-  const quoteBalance = balances[symbol.split("/")[0]];
-  const baseBalance = balances[symbol.split("/")[1]];
-  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), baseBalance, quoteBalance, orderBook, candlesticks, indicators, options);
+  const baseBalance = balances[symbol.split("/")[0]];
+  const quoteBalance = balances[symbol.split("/")[1]];
+  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options);
   if (direction === "RECHECK BALANCES") {
     balances = await getCurrentBalances(binance);
     return false;
   } else if (direction === 'SELL') {
-    return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance);
+    return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance);
   } else if (direction === 'BUY') {
-    return buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance)
+    return buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance)
   } else {
     return false;
   }
