@@ -40,7 +40,7 @@ import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, sell } from "../Binance/trade";
+import { buy, getTradeHistory, sell } from "../Binance/trade";
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
@@ -157,7 +157,7 @@ export async function calculateIndicators(
   }
   if (options.useCMF) {
     indicators.cmf = calculateCMF(candlesticks, options.cmfLength);
-    logCMFSignals(consoleLogger, indicators.cmf);
+    logCMFSignals(consoleLogger, indicators.cmf, options);
   }
   return indicators;
 }
@@ -243,7 +243,7 @@ export async function algorithmic(
       consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[0]);
     }
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-      options.tradeHistory[symbol.split("/").join("")] = (await binance.trades(symbol.split("/").join("")));
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
     }
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Return of investment", roi[0].toFixed(2));

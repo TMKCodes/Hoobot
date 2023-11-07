@@ -1,9 +1,9 @@
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
+import { ConfigOptions, TradeHistory, getSecondsFromInterval } from "../Utilities/args";
 import { filter } from "../Binance/filters";
-import { calculatePercentageDifference, handleOpenOrders } from "./orders";
+import { calculatePercentageDifference, handleOpenOrders, order } from "./orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
@@ -36,6 +36,25 @@ async function handleOpenedOrder (
   } while(openOrders.length > 0);
   return result;
 };
+
+export const getTradeHistory = async (binance: Binance, symbol: string) => {
+  const tradeHistory = (await binance.trades(symbol.split("/").join("")));
+  let compactedTradeHistory: order[] = [];
+  for(let i = 0; i < tradeHistory.length; i++) { 
+    let trade = tradeHistory[i];
+    trade.quantity = parseFloat(trade.quantity);
+    for (let x = i + 1; x < tradeHistory.legth; x++) { // Skip trades until the trade.id is different.
+      if(tradeHistory[x].orderId !== trade.orderId) {
+        i = x -1;
+        break;
+      } else {
+        trade.quantity = trade.quantity + parseFloat(tradeHistory[x].quantity) 
+      }
+    }
+    compactedTradeHistory.push(trade);
+  }
+  return compactedTradeHistory;
+}
 
 function delay(ms: number) {
   return new Promise( resolve => setTimeout(resolve, ms) );
@@ -100,7 +119,7 @@ export async function sell(
         sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
         updateForce(symbol);
         play(soundFile);
-        options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
+        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
       }
       return order;
     } else {
@@ -123,8 +142,8 @@ export async function buy(
   options: ConfigOptions,
   baseBalance: number,
 ) {
-  const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
-  let price = orderBookBids[orderBookBids.length - 1] + parseFloat(filter.tickSize);
+  const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+  let price = orderBookBids[0] + parseFloat(filter.tickSize);
   let maxQuantityInBase = baseBalance;
   if (options.startingMaxBuyAmount > 0) {
     maxQuantityInBase = Math.min(baseBalance, options.startingMaxBuyAmount);
@@ -162,7 +181,7 @@ export async function buy(
         sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
         updateForce(symbol);
         play(soundFile);
-        options.tradeHistory = (await binance.trades(symbol.split("/").join("")));
+        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
       }
       return order;
     } else {

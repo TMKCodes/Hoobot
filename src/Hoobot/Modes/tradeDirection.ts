@@ -108,7 +108,7 @@ const checkProfitSignals = (
       const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
       nextPossibleProfit = calculatePercentageDifference(parseFloat(lastTrade.price), orderBookAsks[0]);
     } else if(lastTrade.isBuyer === false) { 
-      const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => a - b);
+      const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
       nextPossibleProfit = calculatePercentageDifference(orderBookBids[0], parseFloat(lastTrade.price));
     }
     if(force[symbol]?.skip !== true) {

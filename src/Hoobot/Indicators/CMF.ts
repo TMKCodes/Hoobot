@@ -60,7 +60,8 @@ export const calculateCMF = (candlesticks: candlestick[], period: number): numbe
 
 export const logCMFSignals = (
   consoleLogger: ConsoleLogger,
-  cmfValues: number[]
+  cmfValues: number[],
+  options: ConfigOptions,
 ) => {
   const currentCMF = cmfValues[cmfValues.length - 1];
   const prevCMF = cmfValues[cmfValues.length - 2];
@@ -68,8 +69,8 @@ export const logCMFSignals = (
   const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value })), 50, 'close'); 
   const isBullishCrossover = currentCMF > cmfSMA[cmfSMA.length - 1] && prevCMF < cmfSMA[cmfSMA.length - 1];
   const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - 1] && prevCMF > cmfSMA[cmfSMA.length - 1];
-  const isOverbought = currentCMF > 0.8; 
-  const isOversold = currentCMF < -0.8; 
+  const isOverbought = currentCMF > options.cmfOverboughtTreshold; 
+  const isOversold = currentCMF < options.cmfOversoldTreshold; 
   if (isBullishCrossover) {
     consoleLogger.push(`CMF Signal`, `Bullish Crossover`);
   } else if (isBearishCrossover) {
