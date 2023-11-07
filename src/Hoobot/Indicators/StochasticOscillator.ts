@@ -40,13 +40,17 @@ export function calculateStochasticOscillator(candles: candlestick[], kPeriod: n
     const slice = candles.slice(i - kPeriod + 1, i + 1);
     const highestHigh = Math.max(...slice.map(candle => candle.high));
     const lowestLow = Math.min(...slice.map(candle => candle.low));
-    const currentClose = candles[i].close;
-    const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-    kValues.push(kValue);
-    if (kValues.length >= dPeriod) {
-      const dSlice = kValues.slice(kValues.length - dPeriod);
-      const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dPeriod;
-      dValues.push(dValue);
+    if (highestHigh !== lowestLow) { 
+      const currentClose = candles[i].close;
+      const kValue = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
+      kValues.push(kValue);
+      if (kValues.length >= dPeriod) {
+        const dSlice = kValues.slice(kValues.length - dPeriod);
+        const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dPeriod;
+        dValues.push(dValue);
+      }
+    } else {
+      kValues.push(50); 
     }
   }
   if (smoothing > 1) {
@@ -56,9 +60,9 @@ export function calculateStochasticOscillator(candles: candlestick[], kPeriod: n
       dValues[i] = smoothedValue;
     }
   }
-
-  return [ kValues, dValues ];
+  return [kValues, dValues];
 }
+
 
 export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number = 14, lengthStoch: number = 14, kSmoothing: number = 3, dSmoothing: number = 3, rsiSmoothingType: string = "EMA", source: string = 'close'): [number[], number[]] {
   const rsiValues = calculateRSI(candles, lengthRSI, rsiSmoothingType, 1, source);
@@ -68,13 +72,17 @@ export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number
     const slice = rsiValues.slice(i - lengthStoch + 1, i + 1);
     const highestRSI = Math.max(...slice);
     const lowestRSI = Math.min(...slice);
-    const currentRSI = rsiValues[i];
-    const kValue = ((currentRSI - lowestRSI) / (highestRSI - lowestRSI)) * 100;
-    kValues.push(kValue);
-    if (kValues.length >= dSmoothing) {
-      const dSlice = kValues.slice(kValues.length - dSmoothing);
-      const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dSmoothing;
-      dValues.push(dValue);
+    if (highestRSI !== lowestRSI) { 
+      const currentRSI = rsiValues[i];
+      const kValue = ((currentRSI - lowestRSI) / (highestRSI - lowestRSI)) * 100;
+      kValues.push(kValue);
+      if (kValues.length >= dSmoothing) {
+        const dSlice = kValues.slice(kValues.length - dSmoothing);
+        const dValue = dSlice.reduce((sum, value) => sum + value, 0) / dSmoothing;
+        dValues.push(dValue);
+      } else {
+        kValues.push(50);
+      }
     }
   }
   if (rsiSmoothingType === "SMA") {

@@ -85,6 +85,17 @@ const main = async () => {
     const candlesticksToPreload = 1000;
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
+      if (process.env.GO_CRAZY !== undefined) {
+        const symbolInfo = await getTradeableSymbols(binance);
+        const foundSymbols: string[] = [];
+        for (const symbol of symbolInfo) {
+          if (symbol.quote === process.env.GO_CRAZY) {
+            console.log(symbol);
+            foundSymbols.push(symbol.base + "/" + symbol.quote);
+          }
+        }
+        options.symbols = foundSymbols;
+      }
       // Check if options.symbol is an array or a single string
       if (Array.isArray(options.symbols)) {
         // If options.symbol is an array, listen for candlesticks for each symbol separately
