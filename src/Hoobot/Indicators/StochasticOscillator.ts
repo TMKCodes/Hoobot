@@ -206,7 +206,7 @@ export const checkStochasticOscillatorSignals = (
 ) => {
   let check = 'HOLD';
   if (options.useStochasticOscillator) {
-    const kValues = indicators.stochasticRSI[0].slice(-5);
+    const kValues = indicators.stochasticOscillator[0].slice(-5);
     const dValues = indicators.stochasticOscillator[1].slice(-5);
     const overboughtTreshold = options.stochasticOscillatorOverboughtTreshold !== undefined ? options.stochasticOscillatorOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticOscillatorOversoldTreshold !== undefined ? options.stochasticOscillatorOversoldTreshold : 20; 
@@ -236,8 +236,8 @@ export const checkStochasticRSISignals = (
 ) => {
   let check = 'HOLD';
   if (options.useStochasticRSI) {
-    const kValues = indicators.stochasticRSI[0].slice(-5);
-    const dValues = indicators.stochasticRSI[1].slice(-5);
+    const kValues = indicators.stochasticRSI[0].slice(-options.stochasticRSIHistoryLength);
+    const dValues = indicators.stochasticRSI[1].slice(-options.stochasticRSIHistoryLength);
     const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     for (let i = dValues.length - 1; i >= 0; i--) {

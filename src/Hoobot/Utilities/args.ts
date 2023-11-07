@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { parse } from "path";
 import { TradeHistory } from "../Binance/trade";
 
 
@@ -76,12 +77,14 @@ export interface ConfigOptions {
   stochasticOscillatorSmoothing: number;
   stochasticOscillatorOverboughtTreshold: number;
   stochasticOscillatorOversoldTreshold: number;
+  stochasticOscillatorHistoryLength: number;
   stochasticRSIOverboughtTreshold: number;
   stochasticRSIOversoldTreshold: number;
   stochasticRSILengthRSI: number;
   stochasticRSILengthStoch: number;
   stochasticRSISmoothK: number;
   stochasticRSISmoothD: number;
+  stochasticRSIHistoryLength: number;
   shortEma: number;
   longEma: number;
   fastMacd: number;
@@ -180,12 +183,14 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 3,
     stochasticOscillatorOverboughtTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD) || 80,
     stochasticOscillatorOversoldTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD) || 20,
+    stochasticOscillatorHistoryLength: parseFloat(process.env.STOCHASTIC_OSCILLATOR_HISTORY_LENGTH) || 5,
     stochasticRSILengthRSI: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_RSI) || 14,
     stochasticRSILengthStoch: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_STOCHASTIC) || 14,
     stochasticRSISmoothK: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_K) || 3,
     stochasticRSISmoothD: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_D) || 3,
     stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD) || 80,
     stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
+    stochasticRSIHistoryLength: parseFloat(process.env.STOCHASTIC_RSI_HISTORY_LENGTH) || 5,
     // Limits
     startingMaxBuyAmount: parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0,
     startingMaxSellAmount: parseFloat(process.env.STARTING_MAX_SELL_AMOUNT!) || 0,

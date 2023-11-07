@@ -44,8 +44,10 @@ import { buy, calculatePercentageDifference, getTradeHistory, sell } from "../Bi
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
+import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 
 export interface Indicators {
+  avg?: number;
   sma?: number[];
   ema: ema;
   macd?: macd;
@@ -111,6 +113,8 @@ export const calculateIndicators = async (
     stochasticOscillator: undefined,
     stochasticRSI: undefined,
   };
+  indicators.avg = calculateAverage(candlesticks);
+  logAverageSignals(consoleLogger, candlesticks, indicators.avg);
   indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
   if (options.useSMA) {
     logSMASignals(consoleLogger, indicators.sma); 

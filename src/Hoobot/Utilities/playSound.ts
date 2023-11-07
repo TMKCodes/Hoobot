@@ -36,7 +36,6 @@ export const play = (file: string): Promise<void> => {
           console.error('Error playing sound:', error);
           reject(error);
         } else {
-          console.log('Sound is playing...');
           resolve();
         }
       });

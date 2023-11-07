@@ -2,7 +2,8 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 import { reverseSign } from './binancePossibleProfit';
-import { calculatePercentageDifference } from '../../Hoobot/Binance/trade';
+import { calculatePercentageDifference, getTradeHistory } from '../../Hoobot/Binance/trade';
+import { Order } from '../../Hoobot/Binance/orders';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -22,7 +23,7 @@ export default {
 
     let historicalData = []; // Assuming you have historical data for the symbol
 
-    const tradeHistory = await binance.trades(symbol);
+    const tradeHistory = await getTradeHistory(binance, symbol);
 
     // Get the relevant data based on the selected duration
     switch (duration) {
@@ -44,7 +45,6 @@ export default {
     if (lastTrade === undefined) {
       lastTrade = historicalData[0];
     }
-    console.log(lastTrade);
     // Calculate ROI based on the historical data
     let totalProfit = 0;
     let trades = 1;
@@ -84,7 +84,7 @@ export default {
 };
 
 // Placeholder function for retrieving historical data
-function getHistoricalDataForDuration(symbol: string, duration: string, newTradeHistory: { time: number }[]) {
+export function getHistoricalDataForDuration(symbol: string, duration: string, newTradeHistory: Order[]) {
   // Filter data based on duration
   const targetTimestamp = getTargetTimestamp(duration);
   const filteredData = newTradeHistory.filter(trade => trade.time / 1000 >= targetTimestamp);
@@ -93,7 +93,7 @@ function getHistoricalDataForDuration(symbol: string, duration: string, newTrade
 }
 
 // Helper function to calculate target timestamp based on duration
-function getTargetTimestamp(duration: string) {
+export function getTargetTimestamp(duration: string) {
   const now = Math.floor(new Date().getTime() / 1000);
 
   switch (duration.toUpperCase()) {

@@ -86,9 +86,6 @@ export const checkGPTSignals = async (
       message += `Stochastic RSI %K history: ${JSON.stringify(indicators.stochasticRSI[0].slice(-slice), null, 2)}\n`;
       message += `Stochastic RSI %D history: ${JSON.stringify(indicators.stochasticRSI[1].slice(-slice), null, 2)}\n`;
     }
-    if (options.debug === true) {
-      console.log(message);
-    }
     const openai = new OpenAI({
       apiKey: options.openaiApiKey, 
     });

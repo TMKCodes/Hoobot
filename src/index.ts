@@ -85,7 +85,6 @@ const main = async () => {
         const foundSymbols: string[] = [];
         for (const symbol of symbolInfo) {
           if (symbol.quote === process.env.GO_CRAZY) {
-            console.log(symbol);
             foundSymbols.push(symbol.base + "/" + symbol.quote);
           }
         }

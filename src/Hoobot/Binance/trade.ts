@@ -75,21 +75,25 @@ export const getTradeHistory = async (
   binance: Binance, 
   symbol: string
 ) => {
-  const tradeHistory = (await binance.trades(symbol.split("/").join("")));
+  const tradeHistory: Order[] = (await binance.trades(symbol.split("/").join("")));
   let compactedTradeHistory: Order[] = [];
-  for(let i = 0; i < tradeHistory.length; i++) { 
-    let trade = tradeHistory[i];
-    trade.quantity = parseFloat(trade.quantity);
-    for (let x = i + 1; x < tradeHistory.legth; x++) { // Skip trades until the trade.id is different.
-      if(tradeHistory[x].orderId !== trade.orderId) {
-        i = x -1;
-        break;
-      } else {
-        trade.quantity = trade.quantity + parseFloat(tradeHistory[x].quantity) 
-      }
+  let currentTrade: Order | null = null;
+
+  for (const trade of tradeHistory) { 
+    if (currentTrade === null) {
+      currentTrade = trade;
+    } else if (currentTrade.isBuyer === trade.isBuyer) {
+      currentTrade.qty = (parseFloat(currentTrade.qty) + parseFloat(trade.qty)).toString();
+    } else {
+      compactedTradeHistory.push(currentTrade);
+      currentTrade = trade;
     }
-    compactedTradeHistory.push(trade);
   }
+
+  if (currentTrade !== null) {
+    compactedTradeHistory.push(currentTrade);
+  }
+
   return compactedTradeHistory;
 }
 

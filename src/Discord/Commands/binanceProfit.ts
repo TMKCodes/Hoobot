@@ -28,7 +28,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculatePercentageDifference } from '../../Hoobot/Binance/trade';
+import { calculatePercentageDifference, getTradeHistory } from '../../Hoobot/Binance/trade';
 
 
 export const getUnixTimestamp = (datetime: string): number => {
@@ -43,14 +43,14 @@ const reverseSign = (number: number) => {
 export default {
   builder: new SlashCommandBuilder()
     .setName("profit")
-    .setDescription("Replices with Binance profit on pair orders!")
+    .setDescription("Replices with Binance profit on symbol orders!")
     .addStringOption(option =>
-      option.setName('pair')
-        .setDescription('The pair to check')),
+      option.setName('symbol')
+        .setDescription('The symbol to check')),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, _config: ConfigOptions) => {
-    const pair = interaction.options.getString('pair').toUpperCase(); // Get the 'pair' value from the interaction options
-    if (!pair) {
-      await interaction.reply("Please provide a valid pair to check.");
+    const symbol = interaction.options.getString('symbol').toUpperCase(); // Get the 'symbol' value from the interaction options
+    if (!symbol) {
+      await interaction.reply("Please provide a valid symbol to check.");
       return;
     }
 
@@ -58,8 +58,8 @@ export default {
     const targetTimestamp = getUnixTimestamp(targetDatetime);
 
     try {
-      // Get the user's trade history for the given pair
-      const tradeHistory = await binance.trades(pair);
+      // Get the user's trade history for the given symbol
+    const tradeHistory = await getTradeHistory(binance, symbol);
       const newTradeHistory = tradeHistory.filter((trade: { time: number }) => trade.time / 1000 >= targetTimestamp);
 
       let totalProfit = 0;
@@ -120,9 +120,9 @@ export default {
         }
 
         // The totalProfit variable now contains the overall profit for all sell orders in the trade history
-        await interaction.reply(`Total profit for **${pair}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nLong profit for **${pair}**:** ${longProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${pair}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\n`);
+        await interaction.reply(`Total profit for **${symbol}**:** ${totalProfit.toFixed(2)}%**\nTrades done **${trades}**\nLong profit for **${symbol}**:** ${longProfit.toFixed(2)}%** (Profit from sales.)\nLongs done **${shorts}**\nShort profit for **${symbol}**:** ${shortingProfit.toFixed(2)}%** (Profit from buys.)\nShorts done **${shorts}**\nSince ${(new Date(lastTime).toLocaleString("fi-FI"))}\n`);
       } else {
-        await interaction.reply(`Total profit for **${pair}**: Can not calculate percentage, less than two trades.`);
+        await interaction.reply(`Total profit for **${symbol}**: Can not calculate percentage, less than two trades.`);
       }
     } catch (error) {
       console.error('Error fetching trade history:', error);

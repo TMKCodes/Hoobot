@@ -75,32 +75,24 @@ export const findPossiblePairs = async (
         }
       });
     });
-
     // Task 1: Remove symbols that are not USDT/TUSD/BUSD/FIAT
     const validSymbols = ['USDT', 'TUSD', 'BUSD',  'EUR'];
     symbols = symbols.filter(symbolObj => {
       const baseAsset = symbolObj.symbol.substr(-validSymbols[0].length);
       return validSymbols.includes(baseAsset);
     });
-
     // Task 2: Remove symbols with no volume
     symbols = symbols.filter(symbolObj => parseFloat(symbolObj.volume) > 0);
-
     // Task 3: Remove symbols with volume less than options.pairMinVolume
     const pairMinVolume = options.pairMinVolume;
     symbols = symbols.filter(symbolObj => parseFloat(symbolObj.volume) >= options.pairMinVolume!);
-
     // Task 4: Remove symbols with priceChangePercent less than options.pairMinPriceChange
     const pairMinPriceChange = options.pairMinPriceChange;
     symbols = symbols.filter(symbolObj => parseFloat(symbolObj.priceChangePercent) >= options.pairMinPriceChange!);
-
     // Task 5: Order the symbols based on volume from high to low
     symbols.sort((a, b) => parseFloat(b.volume) - parseFloat(a.volume));
-
     // Task 6: Order the symbols based on priceChangePercent
     symbols.sort((a, b) => parseFloat(b.priceChangePercent) - parseFloat(a.priceChangePercent));
-
-    console.log(symbols.length);
     return(symbols)
   } catch (error) {
     console.error('Error finding good coin pairs:', error);

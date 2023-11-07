@@ -58,6 +58,10 @@ import binanceROI from './Commands/binanceROI';
 deployable.push(binanceROI.builder.toJSON());
 commands.push({name: binanceROI.builder.name, execute: binanceROI.execute});
 
+import binancePNL from './Commands/binancePNL';
+deployable.push(binancePNL.builder.toJSON());
+commands.push({name: binancePNL.builder.name, execute: binancePNL.execute});
+
 import binanceLastTrades from './Commands/binanceLastTrades';
 deployable.push(binanceLastTrades.builder.toJSON());
 commands.push({name: binanceLastTrades.builder.name, execute: binanceLastTrades.execute});

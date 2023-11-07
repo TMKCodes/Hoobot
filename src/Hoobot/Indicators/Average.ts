@@ -25,20 +25,33 @@
 * the use of this software.
 * ===================================================================== */
 
-import fs from 'fs';
+import { candlestick } from "../Binance/candlesticks";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 
-const logFilePath = './logs.txt';
+export const calculateAverage = (
+  candlesticks: candlestick[]
+): number => {
+  if (candlesticks.length === 0) {
+    return 0;
+  }
+  let totalPrice = 0;
+  for (let i = 0; i < candlesticks.length; i++) {
+    totalPrice += (candlesticks[i].close + candlesticks[i].high + candlesticks[i].low + candlesticks[i].open) / 4;
+  }
+  return totalPrice / candlesticks.length;
+}
 
-// Log to file function
-export const logToFile = async (logMessage: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    fs.appendFile(logFilePath, `${logMessage}\n`, (err) => {
-      if (err) {
-        console.error('Error writing to log file:', err);
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
+export const logAverageSignals = (
+  consoleLogger: ConsoleLogger,
+  candlesticks: candlestick[], 
+  average: number
+) => {
+  consoleLogger.push("Average", average);
+  if (candlesticks[candlesticks.length - 1].high < average) {
+    consoleLogger.push("Average Signal", "Buy");
+  } else if (candlesticks[candlesticks.length -1].low > average) {
+    consoleLogger.push("Average Signal", "Sell");
+  } else {
+    consoleLogger.push("Average Signal", "Neutral");
+  }
 }
