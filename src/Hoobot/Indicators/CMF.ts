@@ -93,8 +93,8 @@ export const checkCMFSignals = (consoleLogger: ConsoleLogger, indicators: Indica
       const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value })), 50, 'close'); 
       const isBullishCrossover = currentCMF > cmfSMA[cmfSMA.length - i] && prevCMF < cmfSMA[cmfSMA.length - i];
       const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - i] && prevCMF > cmfSMA[cmfSMA.length - i];
-      const isOverbought = currentCMF > 0.8;
-      const isOversold = currentCMF < -0.8;
+      const isOverbought = currentCMF > options.cmfOverboughtTreshold;
+      const isOversold = currentCMF < options.cmfOversoldTreshold;
       if (isBullishCrossover) {
         check = 'BUY';
         break;

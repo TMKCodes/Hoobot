@@ -69,6 +69,8 @@ export interface ConfigOptions {
   atrLength: number;
   cmfLength: number;
   cmfHistoryLength: number;
+  cmfOverboughtTreshold: number;
+  cmfOversoldTreshold: number;
   obvHistoryLength: number;
   bollingerBandsLength: number;
   bollingerBandsMultiplier: number;
@@ -177,8 +179,10 @@ export function parseArgs(args: string[]): ConfigOptions {
     oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
     atrLength: parseFloat(process.env.ATR_LENGTH) || 14,
     cmfLength: parseFloat(process.env.CMF_LENGTH) || 20,
-    cmfHistoryLength: parseFloat(process.env.CMF_HISTORY_LENGTH) || 5,
     obvHistoryLength: parseFloat(process.env.OBV_HISTORY_LENGTH) || 5,
+    cmfHistoryLength: parseFloat(process.env.CMF_HISTORY_LENGTH) || 5,
+    cmfOverboughtTreshold: parseFloat(process.env.CMF_OVERBOUGHT_TRESHOLD) || 0.5,
+    cmfOversoldTreshold: parseFloat(process.env.CMF_OVERSOLD_TRESHOLD) || -0.5,
     bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH) || 20,
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
     bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
