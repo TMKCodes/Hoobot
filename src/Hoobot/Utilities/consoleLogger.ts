@@ -37,22 +37,18 @@ interface consoleData {
 
 export const consoleLogger = (): ConsoleLogger => {
   let DisplayData: consoleData = {};
-
   const push = (key: string, value: string | string[] | number | boolean | object | undefined) => {
     const updatedData = { ...DisplayData, [key]: value };
     DisplayData = createImmutableData(updatedData);
     return logger;
   };
-
   const print = () => {
     console.log(JSON.stringify(DisplayData, null, 4));
   };
-
   const flush = () => {
     DisplayData = {};
     return logger;
   };
-
   const createImmutableData = (data: consoleData) => {
     const immutableData: consoleData = {};
     for (const key in data) {
@@ -65,12 +61,10 @@ export const consoleLogger = (): ConsoleLogger => {
     }
     return Object.freeze(immutableData);
   };
-
   const logger: ConsoleLogger = {
     push,
     print,
     flush,
   };
-
   return logger;
 };

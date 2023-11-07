@@ -30,7 +30,7 @@ import fs from 'fs';
 const logFilePath = './logs.txt';
 
 // Log to file function
-export function logToFile(logMessage: string): Promise<void> {
+export const logToFile = async (logMessage: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     console.log(logMessage);
     fs.appendFile(logFilePath, `${logMessage}\n`, (err) => {

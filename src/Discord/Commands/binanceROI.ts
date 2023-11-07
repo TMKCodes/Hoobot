@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculatePercentageDifference } from './binanceProfit';
 import { reverseSign } from './binancePossibleProfit';
+import { calculatePercentageDifference } from '../../Hoobot/Binance/trade';
 
 export default {
   builder: new SlashCommandBuilder()

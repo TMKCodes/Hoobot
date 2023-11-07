@@ -29,7 +29,6 @@
 // Function to check if the provided license key is valid
 export const checkLicenseValidity = async (license: string): Promise<boolean> => {
   const url = `https://crm.hoosat.fi/api/hoobot/license/${license}`;
-
   try {
     const response = await fetch(url, {
       method: 'GET',

@@ -30,9 +30,12 @@ import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/algorithmic';
 import { ConfigOptions } from '../Utilities/args';
 
-
-
-export const checkGPTSignals = async (consoleLogger: ConsoleLogger, candlesticks: candlestick[], indicators: Indicators, options: ConfigOptions) => {
+export const checkGPTSignals = async (
+  consoleLogger: ConsoleLogger, 
+  candlesticks: candlestick[], 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = "HOLD";
   if(options.openaiApiKey !== undefined && options.openaiModel !== undefined) {
     const slice = options.openaiHistoryLength; 

@@ -35,7 +35,11 @@ export interface sma {
   long: number[];
 }
 
-export function calculateSMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
+export const calculateSMA = (
+  candles: candlestick[], 
+  length: number, 
+  source: string = 'close'
+): number[] => {
   const smaValues: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {
@@ -78,7 +82,11 @@ export const logSMASignals = (
   }
 };
 
-export const checkSMASignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkSMASignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useSMA) {
     const currentSMA = indicators.sma[indicators.sma.length - 1];

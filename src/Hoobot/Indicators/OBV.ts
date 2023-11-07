@@ -31,8 +31,9 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
-
-export const calculateOBV = (candlesticks: candlestick[]): number[] => {
+export const calculateOBV = (
+  candlesticks: candlestick[]
+): number[] => {
   const obvValues: number[] = [0]; 
   for (let i = 1; i < candlesticks.length; i++) {
     if (candlesticks[i].close > candlesticks[i - 1].close) {
@@ -81,7 +82,12 @@ export const logOBVSignals = (
 };
 
 
-export const checkOBVSignals = (consoleLogger: ConsoleLogger, candlesticks: candlestick[], indicators: Indicators, options: ConfigOptions) => {
+export const checkOBVSignals = (
+  consoleLogger: ConsoleLogger, 
+  candlesticks: candlestick[], 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useOBV) {
     const obvValues = indicators.obv;

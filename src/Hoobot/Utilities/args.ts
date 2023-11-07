@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { order } from "../Binance/orders";
+import { TradeHistory } from "../Binance/trade";
 
 
 export type CandlestickInterval =  "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
@@ -53,11 +53,6 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
   return intervalToSeconds[interval];
 }
 
-export interface TradeHistory {
-  [symbol: string]: order[];
-}
-
-// Configuration options interface
 export interface ConfigOptions {
   apiKey: string;
   apiSecret: string;
@@ -134,16 +129,11 @@ export interface ConfigOptions {
   [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory; // Index signature
 }
 
-// Parse command-line arguments and return options object
-export function parseArgs(args: string[]): ConfigOptions {
-  
-  // If command-line arguments provided, parse them
+export const parseArgs = (args: string[]): ConfigOptions => {
   const options: ConfigOptions = {
-    
-    // Binance
+        // Binance
     apiKey: process.env.API_KEY || '',
     apiSecret: process.env.API_SECRET || '',
-
     // Hoobot
     license: process.env.LICENSE || "",
     mode: process.env.MODE as BotMode || 'algorithmic',
@@ -151,7 +141,6 @@ export function parseArgs(args: string[]): ConfigOptions {
     candlestickInterval: process.env.CANDLESTICK_INTERVAL as CandlestickInterval || "1m",
     source: process.env.SOURCE || "close",
     consoleUpdate: process.env.CONSOLE_UPDATE || "final",
-    
     // Indicators to use
     useEMA: process.env.USE_EMA === "true" ? true : false,
     useMACD: process.env.USE_MACD === "true" ? true : false,
@@ -163,7 +152,6 @@ export function parseArgs(args: string[]): ConfigOptions {
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
-    
     // Indicator parameters
     smaLength: parseFloat(process.env.SMA_LENGTH) || 7,
     shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
@@ -187,7 +175,6 @@ export function parseArgs(args: string[]): ConfigOptions {
     bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER) || 2,
     bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
     bollingerBandsHistoryLength: parseFloat(process.env.BOLLINGER_BANDS_HISTORY_LENGTH) || 5,
-
     stochasticOscillatorKPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD) || 14,
     stochasticOscillatorDPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD) || 1,
     stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING) || 3,
@@ -199,7 +186,6 @@ export function parseArgs(args: string[]): ConfigOptions {
     stochasticRSISmoothD: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_D) || 3,
     stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD) || 80,
     stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
-    
     // Limits
     startingMaxBuyAmount: parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0,
     startingMaxSellAmount: parseFloat(process.env.STARTING_MAX_SELL_AMOUNT!) || 0,
@@ -209,30 +195,25 @@ export function parseArgs(args: string[]): ConfigOptions {
     holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
     minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
     minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
-    
     // Discord
     discordEnabled: process.env.DISCORD_ENABLED === "true" ? true : false || false,
     discordBotToken: process.env.DISCORD_BOT_TOKEN || "",
     discordApplicationID: process.env.DISCORD_APPLICATION_ID || "",
     discordServerID: process.env.DISCORD_SERVER_ID || "",
     discordChannelID:  process.env.DISCORD_CHANNEL_ID || "",
-
     // OpenAI
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
     openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
     openaiHistoryLength: parseFloat(process.env.OPENAI_HISTORY_LENGTH!) || 5,
     openaiOverwrite:  process.env.OPENAI_OVERWRITE === "true" ? true : false || false,
-    
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,
-
     // Arbitrage
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
     tradeHistory: {},
   };
   if (args.length === 0) {
-    // If no command-line arguments, read options from .env file
     return options;
   }
   for (let i = 0; i < args.length; i += 2) {

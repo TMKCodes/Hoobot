@@ -31,9 +31,11 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
-export const calculateCMF = (candlesticks: candlestick[], period: number): number[] => {
+export const calculateCMF = (
+  candlesticks: candlestick[], 
+  period: number
+): number[] => {
   const cmfValues: number[] = [];
-
   for (let i = period - 1; i < candlesticks.length; i++) {
     const sumMFVolume = candlesticks
       .slice(i - period + 1, i + 1)
@@ -43,7 +45,6 @@ export const calculateCMF = (candlesticks: candlestick[], period: number): numbe
         const mfMultiplier = ((candle.close - candle.low) - (candle.high - candle.close)) / range;
         return sum + (mfMultiplier * candle.volume);
       }, 0);
-
     const sumVolume = candlesticks
       .slice(i - period + 1, i + 1)
       .reduce((sum, candle) => sum + candle.volume, 0);
@@ -84,7 +85,11 @@ export const logCMFSignals = (
   } 
 };
 
-export const checkCMFSignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkCMFSignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useCMF) {
     const cmfValues = indicators.cmf;

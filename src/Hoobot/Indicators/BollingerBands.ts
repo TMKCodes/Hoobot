@@ -32,7 +32,13 @@ import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { calculateEMA } from './EMA';
 import { calculateSMA } from './SMA';
 
-export function calculateBollingerBands(candles: any[], average: string = "SMA", period: number, multiplier: number = 2, source: string = 'close'): [number[], number[], number[]] {
+export const calculateBollingerBands = (
+  candles: any[], 
+  average: string = "SMA", 
+  period: number, 
+  multiplier: number = 2, 
+  source: string = 'close'
+): [number[], number[], number[]] => {
   let values: number[] = [];
   if (average === "SMA") {
     values = calculateSMA(candles, period, source);
@@ -61,19 +67,17 @@ export function calculateBollingerBands(candles: any[], average: string = "SMA",
   return [values, upperBands, lowerBands];
 }
 
-export function logBollingerBandsSignals(
+export const logBollingerBandsSignals = (
   consoleLogger: ConsoleLogger,
   candlesticks: candlestick[],
   bollingerBands: [number[], number[], number[]]
-) {
+) => {
   const currentLow = candlesticks[candlesticks.length - 1].low;
   const currentHigh = candlesticks[candlesticks.length - 1].high;
   const currentUpperBand = bollingerBands[1][bollingerBands[1].length - 1];
   const currentLowerBand = bollingerBands[2][bollingerBands[2].length - 1];
-
   consoleLogger.push(`Bollinger Bands Upper Value`, currentUpperBand.toFixed(7));
   consoleLogger.push(`Bollinger Bands Lower Value`, currentLowerBand.toFixed(7));
-
   if (currentHigh > currentUpperBand) {
     consoleLogger.push(`Bollinger Bands Signal`, `Above Upper Band (Bearish)`);
   } else if (currentLow < currentLowerBand) {
@@ -81,14 +85,11 @@ export function logBollingerBandsSignals(
   } else if (currentLow >= currentLowerBand && currentHigh <= currentUpperBand) {
     consoleLogger.push(`Bollinger Bands Signal`, `Within Bands (Neutral)`);
   }
-
   const isBullishBBSignal = currentLow > currentLowerBand;
   const isBearishBBSignal = currentHigh < currentUpperBand;
-
   if (isBullishBBSignal) {
     consoleLogger.push(`Bollinger Bands Signal`, `Bullish Signal`);
   }
-
   if (isBearishBBSignal) {
     consoleLogger.push(`Bollinger Bands Signal`, `Bearish Signal`);
   }
@@ -107,10 +108,8 @@ export const checkBollingerBandsSignals = (
       const currentHigh = candlesticks[candlesticks.length - i].high;    
       const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - i];
       const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - i];
-      
       const isAboveUpperBand = currentHigh > currentUpperBand;
       const isBelowLowerBand = currentLow < currentLowerBand;
-      
       if (isAboveUpperBand) {
         check = 'SELL';
         break;
@@ -119,9 +118,7 @@ export const checkBollingerBandsSignals = (
         break;
       }
     }
-    
     consoleLogger.push("Bollinger Bands Check", check);
   }
-
   return check;
 };

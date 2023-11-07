@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { handleOpenOrders } from "../Binance/orders";
+import { Order, getOpenOrders, getOrderBook, handleOpenOrders } from "../Binance/orders";
 import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -40,12 +40,10 @@ import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, getTradeHistory, sell } from "../Binance/trade";
+import { buy, calculatePercentageDifference, getTradeHistory, sell } from "../Binance/trade";
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
-
-
 
 export interface Indicators {
   sma?: number[];
@@ -60,18 +58,12 @@ export interface Indicators {
   cmf?: number[];
 }
 
-export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = newNumber - oldNumber;
-  const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
-  return percentageDifference;
-}
-
 export const reverseSign = (number: number) => {
   return -number;
 }
 
 // Place buy or sell order based on EMA difference
-async function placeTrade(
+const placeTrade = async (
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
@@ -82,7 +74,7 @@ async function placeTrade(
   orderBook: any,
   filter: filter,
   options: ConfigOptions,
-) {
+) => {
   if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const timeDifferenceInSeconds = (Date.now() - options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time) / 1000;
     consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
@@ -105,10 +97,11 @@ async function placeTrade(
   }
 }
 
-export async function calculateIndicators(
+export const calculateIndicators = async (
   consoleLogger: ConsoleLogger,
   candlesticks: candlestick[],
-  options: ConfigOptions) {
+  options: ConfigOptions
+) => {
   const indicators: Indicators = {
     sma: undefined,
     ema: undefined,
@@ -163,14 +156,14 @@ export async function calculateIndicators(
 }
 
 
-function calculateROI(tradeHistory: any[]) {
+export const calculateROI = (
+  tradeHistory: any[]
+) => {
   let lastTrade = tradeHistory[0];
-  // Calculate ROI based on the historical data
   let totalProfit = 0;
   let trades = 0;
   for (let i = 1; i < tradeHistory.length; i++) {
     if (tradeHistory[i].isBuyer) {
-      // Calculate profit for the buy trade
       const oldPrice = parseFloat(lastTrade.price);
       const newPrice = parseFloat(tradeHistory[i].price);
       const profit = calculatePercentageDifference(oldPrice, newPrice);
@@ -182,7 +175,6 @@ function calculateROI(tradeHistory: any[]) {
         totalProfit += reverseSign(profit);
       }
     } else {
-      // Calculate profit for the sell trade
       const oldPrice = parseFloat(lastTrade.price);
       const newPrice = parseFloat(tradeHistory[i].price);
       const profit = calculatePercentageDifference(oldPrice, newPrice); 
@@ -196,12 +188,12 @@ function calculateROI(tradeHistory: any[]) {
       }
     }
     trades++;
-    lastTrade = tradeHistory[i]; // Update lastTrade for the next iteration
+    lastTrade = tradeHistory[i]; 
   }
   return [ totalProfit, trades ];
 } 
 
-export async function algorithmic(
+export const algorithmic = async (
   discord: Client, 
   binance: Binance, 
   consoleLogger: ConsoleLogger, 
@@ -209,12 +201,12 @@ export async function algorithmic(
   balances: Balances,
   candlesticks: candlestick[], 
   filter: filter, 
-  options: ConfigOptions) {
+  options: ConfigOptions
+) => {
   try {
     const latestCandle = candlesticks[candlesticks.length - 1];
     const prevCandle = candlesticks[candlesticks.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
-    // Push candlestick time and last closeprice.
     consoleLogger.push("Symbol", symbol);
     consoleLogger.push(`Amount of candles`, candlesticks.length);
     consoleLogger.push(`Candlestick time`, candleTime);
@@ -248,18 +240,15 @@ export async function algorithmic(
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Return of investment", roi[0].toFixed(2));
     consoleLogger.push("Trades", roi[1]);
-    // confirm that there are more candlesticks than longEma time period is.
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
-    const orderBook = await binance.depth(symbol.split("/").join(""));
-    // Check if there are open orders, before going further.
-    let openOrders: any[] = [];
-    openOrders = await binance.openOrders(symbol.split("/").join(""));
+    const orderBook = await getOrderBook(binance, symbol);
+    let openOrders: Order[] = await getOpenOrders(binance, symbol);
     if (openOrders.length > 0) {
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-      return await handleOpenOrders(discord, binance, symbol.split("/").join(""), openOrders, orderBook, options, consoleLogger);
+      return await handleOpenOrders(discord, binance, symbol, openOrders, orderBook, options, consoleLogger);
     }
     // Log the symbol
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));

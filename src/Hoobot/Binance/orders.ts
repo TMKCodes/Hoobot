@@ -26,15 +26,13 @@
 * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { play } from "../Utilities/playSound";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { calculatePercentageDifference } from "./trade";
 
-const soundFile = './alarm.mp3'
-
-export interface order {
+export interface Order {
   symbol: string;
   orderId: number;
   price: string;
@@ -49,8 +47,30 @@ export interface order {
   tradeId: number;
 }
 
+export interface OrderBook {
+  bids: [string, string][]; 
+  asks: [string, string][]; 
+}
 
-export const cancelOrder = async (binance: Binance, symbol: string, orderId: number) => {
+export const getOrderBook = async (
+  binance: Binance, 
+  symbol: string
+): Promise<OrderBook> => {
+  return await binance.depth(symbol.split("/").join(""))
+}
+
+export const getOpenOrders = async (
+  binance: Binance, 
+  symbol: string
+): Promise<Order[]> => {
+  return await binance.openOrders(symbol.split("/").join(""));
+}
+
+export const cancelOrder = async (
+  binance: Binance, 
+  symbol: string, 
+  orderId: number
+) => {
   try {
     const response = await binance.cancel(symbol, orderId);
     return response;
@@ -60,13 +80,6 @@ export const cancelOrder = async (binance: Binance, symbol: string, orderId: num
   }
 };
 
-export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = newNumber - oldNumber;
-  const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
-  return percentageDifference;
-}
-
-// Function to handle open orders with a max age time in seconds
 export const handleOpenOrders = async (
   discord: Client, 
   binance: Binance, 
@@ -79,17 +92,14 @@ export const handleOpenOrders = async (
   const currentTime = Date.now();
   for (const order of openOrders) {
     const { orderId, symbol, time, side, status, price } = order;
-    if (oSymbol !== symbol.split("/").join("")) {
+    if (oSymbol.split("/").join("") !== symbol.split("/").join("")) {
       continue;
     }
     const orderAgeSeconds = Math.floor((currentTime - time) / 1000);
     consoleLogger.push("Order ID: ", orderId);
     consoleLogger.push("Symbol: ", symbol);
     consoleLogger.push("Age seconds: ", orderAgeSeconds);
-    // Get order status to determine if it's active, partially filled, or filled
-    
     if (orderAgeSeconds > options.maxOrderAge) {
-      // If the order age exceeds the max age time, cancel it
       await cancelOrder(binance, symbol, orderId);
       const orderMsg = `>>> Order ID **${orderId}** for symbol **${symbol.split("/").join("")}** cancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
@@ -125,8 +135,7 @@ export const handleOpenOrders = async (
   consoleLogger.flush();
 };
 
-// Function to get the last completed order for a given trading pair
-export const getLastCompletedOrder = async (binance: Binance, pair: string): Promise<order> => {
+export const getLastCompletedOrder = async (binance: Binance, pair: string): Promise<Order> => {
   const tradeHistory = await binance.trades(pair.split("/").join(""));
   tradeHistory.sort((a: { time: number; }, b: { time: number; }) => b.time - a.time);
   return tradeHistory.length > 0 ? tradeHistory[0] : "LOL";

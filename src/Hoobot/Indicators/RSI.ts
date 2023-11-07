@@ -25,13 +25,16 @@
 * the use of this software.
 * ===================================================================== */
 
-import { start } from 'repl';
 import { candlestick } from '../Binance/candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/algorithmic';
 
-export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], options: ConfigOptions) {
+export const logRSISignals = (
+  consoleLogger: ConsoleLogger,
+  rsi: number[], 
+  options: ConfigOptions
+) => {
   const rsiFixed = rsi.slice(-5).map((rsi) => rsi.toFixed(2));
   if(rsiFixed.length === 1) {
     consoleLogger.push("RSI history", rsiFixed.slice(-5).join(", "));
@@ -54,7 +57,14 @@ export function logRSISignals(consoleLogger: ConsoleLogger, rsi: number[], optio
 }
 
 
-export function calculateRSI(candles: candlestick[], length: number = 9, smoothingType: string = "SMA", smoothing: number = 1, source: string = 'close', amount: number = 5): number[] {
+export const calculateRSI = (
+  candles: candlestick[], 
+  length: number = 9, 
+  smoothingType: string = "SMA", 
+  smoothing: number = 1, 
+  source: string = 'close', 
+  amount: number = 5
+): number[] => {
   let closePrices: number[] = [];
   if (source === 'close') {
     closePrices = candles.map((candle) => candle.close);
@@ -65,12 +75,10 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
   } else if (source === 'low') {
     closePrices = candles.map((candle) => candle.low);
   }
-
   const priceChanges: number[] = [];
   for (let i = 1; i < closePrices.length; i++) {
     priceChanges.push(closePrices[i] - closePrices[i - 1]);
   }
-
   const gains: number[] = [];
   const losses: number[] = [];
   for (const change of priceChanges) {
@@ -82,10 +90,8 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
       losses.push(Math.abs(change));
     }
   }
-
   let avgGain = gains.slice(0, length).reduce((a, b) => a + b) / length;
   let avgLoss = losses.slice(0, length).reduce((a, b) => a + b) / length;
-
   const rsArray: number[] = [];
   for (let i = length; i < closePrices.length; i++) {
     avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
@@ -96,7 +102,6 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
 
     rsArray.push(rsi);
   }
-
   if(smoothingType == "SMA" && smoothing > 1) {
     for (let i = smoothing - 1; i < rsArray.length; i++) {
       let sum = 0;
@@ -121,11 +126,14 @@ export function calculateRSI(candles: candlestick[], length: number = 9, smoothi
       rsArray[i] = weightedAverage;
     }
   }
-  
   return rsArray;
 }
 
-export const checkRSISignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkRSISignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+): string => {
   let check = 'HOLD';
   if (options.useRSI) {
     const rsiValues = indicators.rsi.slice(-options.rsiHistoryLength);

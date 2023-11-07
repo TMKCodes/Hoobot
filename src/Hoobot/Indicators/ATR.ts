@@ -29,7 +29,11 @@ import { candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
-export function calculateATR(candles: candlestick[], period: number = 14, source: string = 'close'): number[] {
+export const calculateATR = (
+  candles: candlestick[], 
+  period: number = 14, 
+  source: string = 'close'
+): number[] => {
   const atrValues: number[] = [];
   for (let i = period; i < candles.length; i++) {
     const high = candles[i].high;
@@ -43,12 +47,13 @@ export function calculateATR(candles: candlestick[], period: number = 14, source
   return atrSMA;
 }
 
-export function logATRSignals(consoleLogger: ConsoleLogger, atr: number[]) {
+export const logATRSignals = (
+  consoleLogger: ConsoleLogger, 
+  atr: number[]
+) => {
   const currentATR = atr[atr.length - 1];
   const prevATR = atr[atr.length - 2];
-
   consoleLogger.push(`ATR Value`, currentATR.toFixed(7));
-
   if (currentATR > prevATR) {
     consoleLogger.push(`ATR Signal`, `Increasing`);
   } else if (currentATR < prevATR) {
@@ -56,10 +61,8 @@ export function logATRSignals(consoleLogger: ConsoleLogger, atr: number[]) {
   } else {
     consoleLogger.push(`ATR Signal`, `Stable`);
   }
-
   const highVolatilityThreshold = 2.0; 
   const lowVolatilityThreshold = 0.5;
-
   if (currentATR > highVolatilityThreshold) {
     consoleLogger.push(`ATR Signal`, `High Volatility`);
   } else if (currentATR < lowVolatilityThreshold) {

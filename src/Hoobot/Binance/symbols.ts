@@ -34,7 +34,9 @@ export interface SymbolInfo {
 }
 
 // Function to get all symbols from Binance
-export const getTradeableSymbols = async (binance: Binance): Promise<SymbolInfo[]> => {
+export const getTradeableSymbols = async (
+  binance: Binance
+): Promise<SymbolInfo[]> => {
   try {
     if (!binance || typeof binance.exchangeInfo !== "function") {
       throw new Error("Invalid 'binance' object or missing 'exchangeInfo' function.");

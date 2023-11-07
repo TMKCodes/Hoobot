@@ -29,7 +29,6 @@ import { readFileSync } from "fs";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
-import { calculatePercentageDifference, order } from "../Binance/orders";
 import { Indicators } from "./algorithmic";
 import { candlestick } from "../Binance/candlesticks";
 import { checkEMASignals } from "../Indicators/EMA";
@@ -42,7 +41,7 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
-import { getTradeHistory } from "../Binance/trade";
+import { calculatePercentageDifference, getTradeHistory } from "../Binance/trade";
 
 export const checkBeforeOrder = (
   quantity: number,

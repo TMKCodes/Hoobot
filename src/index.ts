@@ -35,10 +35,7 @@ import { filters, getFilters } from './Hoobot/Binance/filters';
 import dotenv from 'dotenv';
 import { algorithmic } from './Hoobot/Modes/algorithmic';
 import { getTradeableSymbols } from './Hoobot/Binance/symbols';
-import { arbitrageProfit, findRoundTrips, roundTripsContainsSymbol, uniqueSymbolsOfRoundTrips } from './Hoobot/Modes/arbitrage';
-import { hilow } from './Hoobot/Modes/hilow';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
-
 
 
 // Get configuration options from command-line arguments and dotenv.
@@ -54,9 +51,7 @@ const binance = new Binance().options({
   family: 4,
 });
 
-// Place to store trading filters for pairs.
 let tradingPairFilters: filters = {};
-
 const main = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -96,9 +91,7 @@ const main = async () => {
         }
         options.symbols = foundSymbols;
       }
-      // Check if options.symbol is an array or a single string
       if (Array.isArray(options.symbols)) {
-        // If options.symbol is an array, listen for candlesticks for each symbol separately
         for (const symbol of options.symbols) {
           const filter = await getFilters(binance, symbol);
           tradingPairFilters[symbol.split("/").join("")] = filter;
@@ -108,56 +101,12 @@ const main = async () => {
           });
         }
       } else {
-        // If options.symbol is a single string, listen for candlesticks for that symbol only
         const filter = await getFilters(binance, options.symbols);
         tradingPairFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
         listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
           algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
         });
-      }
-    } else if (options.mode === "hilow") {
-      if (Array.isArray(options.symbols)) {
-        for (const symbol of options.symbols) {
-          console.log(symbol);
-          const filter = await getFilters(binance, symbol);
-          tradingPairFilters[symbol.split("/").join("")] = filter;
-          const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: candlestick[]) => {
-            hilow(discord, binance, logger, symbol, balances, candlesticks, filter, options)
-          });
-        }
-      } else {
-        const filter = await getFilters(binance, options.symbols);
-        tradingPairFilters[options.symbols.split("/").join("")] = filter;
-        const logger = consoleLogger();
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
-          hilow(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
-        });
-      }
-    } else if (options.mode === "arbitrage") {
-      const symbolInfo = await getTradeableSymbols(binance);
-      if (Array.isArray(options.symbols)) {
-        for (const symbol of options.symbols) {
-          console.log(`current symbol is there: ${JSON.stringify(symbolInfo.filter(info => info.symbol === symbol.split("/").join("")))}`);
-          const roundTrips = findRoundTrips(symbol, symbolInfo);
-          console.log(`RoundTrips found: ${roundTrips.length}`);
-          const uniqueSymbolsInTrips = uniqueSymbolsOfRoundTrips(roundTrips);
-          console.log(`Unique symbols found: ${uniqueSymbolsInTrips.length}`); 
-          for (const uniqueSymbol of uniqueSymbolsInTrips) {
-            listenForCandlesticks(binance, uniqueSymbol.symbol, options.candlestickInterval, symbolCandlesticks, 0, (candlesticks: candlestick[]) => {
-              console.log(`New candlestick for symbol ${uniqueSymbol.symbol}`);
-              const currentRoundTrips = roundTripsContainsSymbol(roundTrips, uniqueSymbol.symbol);
-              for(const currentRoundTrip of currentRoundTrips) {
-                const profit = arbitrageProfit(symbolCandlesticks, currentRoundTrip, 1000);
-                if (profit !== undefined) {
-                  console.log(currentRoundTrip)
-                  console.log(profit);
-                }
-              }
-            })
-          }
-        }
       }
     }
   } catch (error: any) {

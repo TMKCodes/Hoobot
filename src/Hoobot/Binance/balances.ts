@@ -26,33 +26,36 @@
 * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { ConfigOptions } from "../Utilities/args";
 
 export interface Balances { 
   [coin: string]: number 
 }
 
-// Get current balance
-export const getCurrentBalance = async (binance: Binance, coin: string) => {
+export const getCurrentBalance = async (
+  binance: Binance, 
+  symbol: string
+) => {
   try {
     const balance = await binance.balance();
-    return parseFloat(balance[coin].available || "0");
+    return parseFloat(balance[symbol].available || "0");
   } catch (error) {
     console.error('Error fetching balances:', error);
     throw error;
   }
 }
 
-export const getCurrentBalances = async (binance: Binance): Promise<Balances> => {
+export const getCurrentBalances = async (
+  binance: Binance
+): Promise<Balances> => {
   try {
     const balances = await binance.balance();
     const currentBalances = {};
-    for (const coin in balances) {
-      const { available, onOrder } = balances[coin];
+    for (const symbol in balances) {
+      const { available, onOrder } = balances[symbol];
       const availableBalance = parseFloat(available);
       const onOrderBalance = parseFloat(onOrder);
       const totalBalance = availableBalance + onOrderBalance;
-      currentBalances[coin] = totalBalance;
+      currentBalances[symbol] = totalBalance;
     }
     return currentBalances;
   } catch (error) {
@@ -66,17 +69,14 @@ export const getBalancesFromWebsocket = (data: any): Balances => {
     return {} as Balances;
   }
   const balances: Balances = {};
-
   for (let obj of data.B) {
     if (!obj.a || !obj.f || !obj.l) {
       console.error("Balance object is missing required properties (a, f, l).", obj);
       continue;
     }
     let { a: asset, f: available, l: onOrder } = obj;
-    // Convert available to a numeric value (assuming it is a string representing a float or number).
     available = parseFloat(available);
     if (available === 0) continue;
-    // Store the balance in the balances object or Map.
     balances[asset] = available;
   }
 

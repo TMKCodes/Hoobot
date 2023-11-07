@@ -36,13 +36,11 @@ export interface ema {
   long: number[];
 }
 
-// Calculate Exponential Moving Average (EMA)
-export function calculateEMA(candles: candlestick[], length: number, source: string = 'close'): number[] {
-  return calculateEMAArray(candles, length, source);
-}
-
-
-export function calculateEMAArray(candles: candlestick[], length: number, source: string = 'close'): number[] {
+export const calculateEMA = (
+  candles: candlestick[], 
+  length: number, 
+  source: string = 'close'
+): number[] => {
   const emaValues: number[] = [];
   let prices: number[] = [];
   if(source == 'close') {
@@ -54,14 +52,12 @@ export function calculateEMAArray(candles: candlestick[], length: number, source
   } else if(source == 'low') {
     prices = candles.map((candle) => candle.low);
   }
-
   let sum = 0;
   for (let i = 0; i < length; i++) {
     sum += prices[i];
   }
   const initialEMA = sum / length;
   emaValues.push(initialEMA);
-
   const smoothingFactor = 2 / (length + 1);
   for (let i = length; i < prices.length; i++) {
     const currentEMA = (prices[i] - emaValues[i - length]) * smoothingFactor + emaValues[i - length];
@@ -82,9 +78,7 @@ export const logEMASignals = (
   consoleLogger.push(`EMA Short`, currentShortEma.toFixed(7));
   consoleLogger.push(`EMA Long`, currentLongEma.toFixed(7));
   consoleLogger.push(`EMA Difference`, (currentShortEma - currentLongEma).toFixed(7));
-
   const emaDiff = currentShortEma - currentLongEma;
-
   if (emaDiff > 0) {
     consoleLogger.push(`EMA Signal`, `Bullish`);
   } else if (emaDiff < 0) {
@@ -92,20 +86,17 @@ export const logEMASignals = (
   } else {
     consoleLogger.push(`EMA Signal`, `Neutral`);
   }
-
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
     const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
     const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
     const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
     const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-
     if (isBullishCrossover) {
       consoleLogger.push(`EMA Signal`, `Bullish Crossover`);
     } else if (isBearishCrossover) {
       consoleLogger.push(`EMA Signal`, `Bearish Crossover`);
     }
-
     if (isUpwardDirection) {
       consoleLogger.push(`EMA Direction`, `Upward`);
     } else if (isDownwardDirection) {
@@ -116,7 +107,11 @@ export const logEMASignals = (
   }
 };
 
-export const checkEMASignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkEMASignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useEMA) {
     const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];

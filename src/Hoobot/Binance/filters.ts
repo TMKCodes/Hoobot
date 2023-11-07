@@ -46,13 +46,12 @@ export interface filters {
   [pair: string]: filter;
 }
 
-
-
-// Function to fetch exchange info and get trading pair filters
-export const getFilters = async (binance: Binance, pair: string) => {
+export const getFilters = async (
+  binance: Binance, 
+  pair: string
+) => {
   const exchangeInfo = await binance.exchangeInfo();
   const symbolInfo = exchangeInfo.symbols.find((symbol: { symbol: string; }) => symbol.symbol === pair.split("/").join(""));
-  //console.log(symbolInfo);
   if (symbolInfo) {
     const priceFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "PRICE_FILTER");
     const lotSizeFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "LOT_SIZE");

@@ -1,9 +1,36 @@
+/* =====================================================================
+* Hoobot - Proprietary License
+* Copyright (c) 2023 Hoosat Oy. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are not permitted without prior written permission
+* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+* software, in whole or in part, is strictly prohibited. All 
+* modifications in source or binary must be submitted to Hoosat Oy in source format.
+*
+* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+* OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* The user of this software uses it at their own risk. Hoosat Oy shall
+* not be liable for any losses, damages, or liabilities arising from
+* the use of this software.
+* ===================================================================== */
+
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, TradeHistory, getSecondsFromInterval } from "../Utilities/args";
+import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
 import { filter } from "../Binance/filters";
-import { calculatePercentageDifference, handleOpenOrders, order } from "./orders";
+import { handleOpenOrders, Order } from "./orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
@@ -11,16 +38,24 @@ import { play } from "../Utilities/playSound";
 
 const soundFile = './alarm.mp3'
 
+export interface TradeHistory {
+  [symbol: string]: Order[];
+}
 
+export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
+  const difference = newNumber - oldNumber;
+  const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
+  return percentageDifference;
+}
 
-async function handleOpenedOrder (
+export const handleOpenedOrder = async (
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
   orderBook: any,
   options: ConfigOptions
-) {
+) => {
   let openOrders: any[] = [];
   let result: string = "";
   do {
@@ -36,9 +71,12 @@ async function handleOpenedOrder (
   return result;
 };
 
-export const getTradeHistory = async (binance: Binance, symbol: string) => {
+export const getTradeHistory = async (
+  binance: Binance, 
+  symbol: string
+) => {
   const tradeHistory = (await binance.trades(symbol.split("/").join("")));
-  let compactedTradeHistory: order[] = [];
+  let compactedTradeHistory: Order[] = [];
   for(let i = 0; i < tradeHistory.length; i++) { 
     let trade = tradeHistory[i];
     trade.quantity = parseFloat(trade.quantity);
@@ -55,11 +93,15 @@ export const getTradeHistory = async (binance: Binance, symbol: string) => {
   return compactedTradeHistory;
 }
 
-function delay(ms: number) {
+export const delay = (
+  ms: number
+) => {
   return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
-function updateForce(symbol: string) {
+export const updateForce = (
+  symbol: string
+) => {
   const force = JSON.parse(readFileSync("force.json", "utf-8"));
   if(force[symbol.split("/").join("")] === undefined) {
     force[symbol.split("/").join("")] = {
@@ -71,7 +113,7 @@ function updateForce(symbol: string) {
   writeFileSync("force.json", JSON.stringify(force));
 }
 
-export async function sell(
+export const sell = async (
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
@@ -80,7 +122,7 @@ export async function sell(
   filter: filter,
   options: ConfigOptions,
   baseBalance: number,
-) {
+): Promise<Order | boolean> => {
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
   let price = orderBookAsks[0] - parseFloat(filter.tickSize);
   let maxQuantityInBase = baseBalance;
@@ -98,7 +140,7 @@ export async function sell(
         return false;
       }
     }
-    let order: any = false;
+    let order: Order = undefined;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInBase}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
@@ -128,7 +170,7 @@ export async function sell(
   }
 }
 
-export async function buy(
+export const buy = async (
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
@@ -137,7 +179,7 @@ export async function buy(
   filter: filter,
   options: ConfigOptions,
   quoteBalance: number,
-) {
+): Promise<Order | boolean> => {
   const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
   let price = orderBookBids[0] + parseFloat(filter.tickSize);
   let maxQuantityuInQuote = quoteBalance;
@@ -158,7 +200,7 @@ export async function buy(
         return false;
       }
     }
-    let order: any = false;
+    let order: Order = undefined;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInQuote, roundedPrice);
       const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;

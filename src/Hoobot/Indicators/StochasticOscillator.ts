@@ -25,15 +25,19 @@
 * the use of this software.
 * ===================================================================== */
 
-import { isNamedImportBindings } from "typescript";
 import { candlestick } from "../Binance/candlesticks";
 import { Indicators } from "../Modes/algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateRSI } from "./RSI";
-import { calculateSMA } from "./SMA";
 
-export function calculateStochasticOscillator(candles: candlestick[], kPeriod: number = 14, dPeriod: number = 1, smoothing: number = 3, source: string = 'close'): [number[], number[]]  {
+export const calculateStochasticOscillator = (
+  candles: candlestick[], 
+  kPeriod: number = 14, 
+  dPeriod: number = 1, 
+  smoothing: number = 3, 
+  source: string = 'close'
+): [number[], number[]] => {
   const kValues: number[] = [];
   const dValues: number[] = [];
   for (let i = kPeriod - 1; i < candles.length; i++) {
@@ -64,7 +68,15 @@ export function calculateStochasticOscillator(candles: candlestick[], kPeriod: n
 }
 
 
-export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number = 14, lengthStoch: number = 14, kSmoothing: number = 3, dSmoothing: number = 3, rsiSmoothingType: string = "EMA", source: string = 'close'): [number[], number[]] {
+export const calculateStochasticRSI = (
+  candles: candlestick[], 
+  lengthRSI: number = 14, 
+  lengthStoch: number = 14, 
+  kSmoothing: number = 3, 
+  dSmoothing: number = 3, 
+  rsiSmoothingType: string = "EMA", 
+  source: string = 'close'
+): [number[], number[]] => {
   const rsiValues = calculateRSI(candles, lengthRSI, rsiSmoothingType, 1, source);
   const kValues: number[] = [];
   const dValues: number[] = [];
@@ -121,25 +133,24 @@ export function calculateStochasticRSI(candles: candlestick[], lengthRSI: number
   return [kValues, dValues];
 }
 
-export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, stochasticOscillator: [number[], number[]]) {
+export const logStochasticOscillatorSignals = (
+  consoleLogger: ConsoleLogger, 
+  stochasticOscillator: [number[], number[]]
+) => {
   const kValuesFixed = stochasticOscillator[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
   const dValuesFixed = stochasticOscillator[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-
   if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
-
   if (dValuesFixed.length === 1) {
     consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
   }
-
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];
   const lastDValue = dValuesFixed[dValuesFixed.length - 1];
-
   if (lastKValue > 80 || lastDValue > 80) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Overbought`);
   } else if (lastKValue < 20 || lastDValue < 20) {
@@ -155,25 +166,24 @@ export function logStochasticOscillatorSignals(consoleLogger: ConsoleLogger, sto
   }
 }
 
-export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochasticRSI: [number[], number[]]) {
+export const logStochasticRSISignals = (
+  consoleLogger: ConsoleLogger, 
+  stochasticRSI: [number[], number[]]
+) => {
   const kValuesFixed = stochasticRSI[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
   const dValuesFixed = stochasticRSI[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-
   if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic RSI %K history", kValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic RSI %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
-
   if (dValuesFixed.length === 1) {
     consoleLogger.push("Stochastic RSI %D history", dValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic RSI %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
   }
-
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];
   const lastDValue = dValuesFixed[dValuesFixed.length - 1];
-
   if (lastKValue > 80 || lastDValue > 80) {
     consoleLogger.push(`Stochastic RSI condition`, `Overbought`);
   } else if (lastKValue < 20 || lastDValue < 20) {
@@ -189,7 +199,11 @@ export function logStochasticRSISignals(consoleLogger: ConsoleLogger, stochastic
   }
 }
 
-export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkStochasticOscillatorSignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useStochasticOscillator) {
     const kValues = indicators.stochasticRSI[0].slice(-5);
@@ -210,11 +224,16 @@ export const checkStochasticOscillatorSignals = (consoleLogger: ConsoleLogger, i
         }
       }
     }
+    consoleLogger.push("Stochastic Oscillator Check", check);
   }
   return check;
 }
 
-export const checkStochasticRSISignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkStochasticRSISignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useStochasticRSI) {
     const kValues = indicators.stochasticRSI[0].slice(-5);

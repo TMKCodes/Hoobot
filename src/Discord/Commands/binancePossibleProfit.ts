@@ -28,12 +28,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { calculatePercentageDifference } from '../../Hoobot/Binance/trade';
 
-export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
-  const difference = newNumber - oldNumber;
-  const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
-  return percentageDifference;
-}
 
 export const reverseSign = (number: number) => {
   return -number;

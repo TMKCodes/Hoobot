@@ -29,12 +29,18 @@ import Binance from "node-binance-api";
 import { ConfigOptions } from "../Utilities/args";
 
 
-const getPrevDayPriceChange = async (binance: Binance, symbol: string) => {
+export const getPrevDayPriceChange = async (
+  binance: Binance, 
+  symbol: string
+) => {
   const prevDay = await binance.prevDay(symbol);
   return parseFloat(prevDay.percentChange);
 };
 
-export const findPossiblePairs = async (binance: Binance, options: ConfigOptions) => {
+export const findPossiblePairs = async (
+  binance: Binance, 
+  options: ConfigOptions
+) => {
   try {
     // Fetch all symbols and ticker data
     let symbols: any[] = await new Promise((resolve, reject) => {

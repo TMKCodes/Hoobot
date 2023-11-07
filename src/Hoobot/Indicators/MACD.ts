@@ -29,7 +29,7 @@ import { candlestick } from "../Binance/candlesticks";
 import { Indicators } from "../Modes/algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { calculateEMAArray } from "./EMA";
+import { calculateEMA } from "./EMA";
 
 export interface macd { 
   macdLine: number[]; 
@@ -47,11 +47,9 @@ export const logMACDSignals = (
   const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
   const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
   const prevHistogram = macd.histogram[macd.histogram.length - 2];
-
   consoleLogger.push(`MACD Line`, macdLine.toFixed(7));
   consoleLogger.push(`MACD Signal Line`, signalLine.toFixed(7));
   consoleLogger.push(`MACD Histogram`, histogram.toFixed(7));
-
   const isBullishCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
   const isBearishCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
   const isBullishDivergence = macdLine > prevMacdLine && histogram > prevHistogram;
@@ -64,7 +62,6 @@ export const logMACDSignals = (
   const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
   const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
   const isNegativeHistogramDivergence = histogram < 0 && prevHistogram > 0;
-
   if (isBullishCrossover) {
     consoleLogger.push(`MACD Signal`, 'Bullish Line Crossover');
   } else if (isBearishCrossover) {
@@ -94,11 +91,15 @@ export const logMACDSignals = (
   }
 }
 
-export function calculateMACD(candles: candlestick[], shortEMA: number, longEMA: number, signalLength = 9, source: string) {
-  
-  let shortEMAs = calculateEMAArray(candles, shortEMA, source);
-  let longEMAs = calculateEMAArray(candles, longEMA, source);
-  
+export const calculateMACD = (
+  candles: candlestick[], 
+  shortEMA: number, 
+  longEMA: number, 
+  signalLength = 9, 
+  source: string
+) => {
+  let shortEMAs = calculateEMA(candles, shortEMA, source);
+  let longEMAs = calculateEMA(candles, longEMA, source);
   if(longEMAs.length < shortEMAs.length) {
     shortEMAs = shortEMAs.slice(-longEMAs.length);
   }
@@ -108,10 +109,8 @@ export function calculateMACD(candles: candlestick[], shortEMA: number, longEMA:
   let macdLine: number[] = [];
   for(let i = 0; i < shortEMAs.length; i++) {
     macdLine.push(shortEMAs[i] - longEMAs[i]);
-  }
-  
-  let signalLine = calculateEMAArray(macdLine.map((value) => ({ close: value })), signalLength, source);
-
+  } 
+  let signalLine = calculateEMA(macdLine.map((value) => ({ close: value })), signalLength, source);
   if(signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
   }
@@ -129,7 +128,11 @@ export function calculateMACD(candles: candlestick[], shortEMA: number, longEMA:
   };
 }
 
-export const checkMACDSignals = (consoleLogger: ConsoleLogger, indicators: Indicators, options: ConfigOptions) => {
+export const checkMACDSignals = (
+  consoleLogger: ConsoleLogger, 
+  indicators: Indicators, 
+  options: ConfigOptions
+) => {
   let check = 'HOLD';
   if (options.useMACD) {
     const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
