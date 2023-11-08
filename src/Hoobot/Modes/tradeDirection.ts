@@ -96,9 +96,9 @@ const checkProfitSignals = (
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
-      if(lastTrade.isBuyer === true) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
-      } else { 
+      if(olderTrade.isBuyer) { 
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.qty), parseFloat(lastTrade.price));
+      } else if(!olderTrade.isBuyer) { 
         lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
       }
     }
@@ -174,8 +174,10 @@ const checkPanicProfit = (
         } else {
           options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
         }
+        consoleLogger.push("PANIC Current MAX PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")]);
+        consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
+        consoleLogger.push("PANIC Current PANIC PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop);
       }
-      consoleLogger.push("PANIC Current max", options.panicProfitCurrentMax[symbol.split("/").join("")]);
       consoleLogger.push("PANIC Check", check);
     }
   }
@@ -344,7 +346,7 @@ export const tradeDirection = async (
     } else if(options.openaiApiKey === undefined) {
       bollingerBandsCheck = 'DISABLED';
     }
-    if(options.useOBV === true && (obvCheck === 'sell' || obvCheck === 'HOLD')) {
+    if(options.useOBV === true && (obvCheck === 'SELL' || obvCheck === 'HOLD')) {
       signal = 'HOLD';
     } else if(options.useOBV === false) {
       obvCheck = 'DISABLED';

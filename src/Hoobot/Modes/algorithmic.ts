@@ -213,7 +213,6 @@ export const algorithmic = async (
       consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
       return await handleOpenOrders(discord, binance, symbol, openOrders, orderBook, options, consoleLogger);
     }
-    // Log the symbol
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();

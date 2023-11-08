@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { getTradeHistory } from '../../Hoobot/Binance/trade';
+import { buy, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
 import { Order } from '../../Hoobot/Binance/orders';
 
 export default {
@@ -24,35 +24,34 @@ export default {
     }
     let tradesInDuration: Order[] = await getHistoricalDataForDuration(binance, symbol, duration, options);
     let pnlPercentage = 0;
+    console.log(tradesInDuration);
     for (let i = 1; i < tradesInDuration.length; i++) {
-      const buyTrade = tradesInDuration[i];
-      if (buyTrade.isBuyer) {
-        const sellTrade = tradesInDuration.slice(i, tradesInDuration.length).find(trade => !trade.isBuyer);
-        if (sellTrade) {
-          let buyCommission = 0;
-          let sellCommission = 0;
-          if (parseFloat(buyTrade.commission) > 0) {
-            if (buyTrade.commissionAsset === "BNB") {
-              buyCommission += parseFloat(buyTrade.qty) * 0.075;
-            } else {
-              buyCommission += parseFloat(buyTrade.qty) * 0.1;
-            }
-          }
-          if (parseFloat(sellTrade.commission) > 0) {
-            if (sellTrade.commissionAsset === "BNB") {
-              sellCommission += parseFloat(sellTrade.qty) * 0.075;
-            } else {
-              sellCommission += parseFloat(sellTrade.qty) * 0.1;
-            }
-          }
-          const exitFee = (1 - (sellCommission / 100))
-          const exit = parseFloat(sellTrade.price) * parseFloat(sellTrade.qty) * exitFee;
-          const entryFee = (1 - (buyCommission / 100))
-          const entry = parseFloat(buyTrade.price) * parseFloat(buyTrade.qty) * entryFee;
-          const pnl =  (exit / entry - 1) * 100;
-          pnlPercentage += pnl;
+      let olderTrade: Order = tradesInDuration[i - 1];
+      let lastTrade: Order = tradesInDuration[i];
+      console.log(JSON.stringify(olderTrade));
+      console.log(JSON.stringify(lastTrade));
+      let lastPNL = 0;
+      let commission = 0;
+      if(olderTrade.isBuyer) { 
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.qty), parseFloat(lastTrade.price));
+      } else if(!olderTrade.isBuyer) { 
+        lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
+      }
+      if (parseFloat(olderTrade.commission) > 0) {
+        if (olderTrade.commissionAsset === "BNB") {
+          commission += 0.075;
+        } else {
+          commission += 0.1;
         }
       }
+      if (parseFloat(lastTrade.commission) > 0) {
+        if (lastTrade.commissionAsset === "BNB") {
+          commission += 0.075;
+        } else {
+          commission += 0.1;
+        }
+      }
+      pnlPercentage += lastPNL - commission;
     }
     return await interaction.reply(`PNL% for ${symbol} over ${duration.toUpperCase()}: ${pnlPercentage.toFixed(2)}%.`);
   },
@@ -64,7 +63,11 @@ export const getHistoricalDataForDuration = async (binance: Binance, symbol: str
   const tradesInDuration = tradeHistory.filter(trade => trade.time / 1000 >= targetTimestamp);
   const slicedTradeHistory = tradesInDuration.slice(0, tradesInDuration.length - tradesInDuration.length);
   let previousTradeBeforeDuration = slicedTradeHistory[slicedTradeHistory.length - 1];
-  return [previousTradeBeforeDuration, ...tradesInDuration];
+  if(previousTradeBeforeDuration === undefined) {
+    return tradesInDuration
+  } else {
+    return [previousTradeBeforeDuration, ...tradesInDuration];
+  }
 }
 
 export function getTargetTimestamp(duration: string) {
