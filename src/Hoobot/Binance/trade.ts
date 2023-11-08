@@ -73,13 +73,16 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
   return percentageDifference;
 }
 
-export const calculatePNLPercentageForLong = (entryQty: number, entryPrice: number, exitQty: number, exitPrice: number): number => {
-  return ((exitQty * exitPrice) - (entryQty * entryPrice)) / (entryQty * entryPrice) * 100;
+export const calculatePNLPercentageForLong = (entryQty: number, entryPrice: number, exitPrice: number): number => {
+  return ((exitPrice) - (entryPrice)) / (entryPrice) * 100;
 }
 
-export const calculatePNLPercentageForShort = (entryQty: number, entryPrice: number, exitQty: number, exitPrice: number): number => {
-  return ((entryQty * entryPrice) - (exitQty * exitPrice)) / (entryQty * entryPrice) * 100;
+
+export const calculatePNLPercentageForShort = (entryQty: number, entryPrice: number, exitPrice: number): number => {
+  return ((entryPrice) - (exitPrice)) / (entryPrice) * 100;
 }
+
+
 
 export const calculateUnrealizedPNLPercentageForLong = (entryQty: number, entryPrice: number, highestBidPrice: number): number => {
   return ((highestBidPrice - entryPrice) * entryQty / (entryPrice * entryQty)) * 100;

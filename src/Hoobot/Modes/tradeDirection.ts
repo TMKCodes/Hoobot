@@ -99,9 +99,9 @@ const checkProfitSignals = (
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
       if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price), parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price));
+        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
     }
     if (lastTrade.isBuyer === true) { 

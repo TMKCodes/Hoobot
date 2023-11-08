@@ -24,18 +24,15 @@ export default {
     }
     let tradesInDuration: Order[] = await getHistoricalDataForDuration(binance, symbol, duration, options);
     let pnlPercentage = 0;
-    console.log(tradesInDuration);
     for (let i = 1; i < tradesInDuration.length; i++) {
       let olderTrade: Order = tradesInDuration[i - 1];
       let lastTrade: Order = tradesInDuration[i];
-      console.log(JSON.stringify(olderTrade));
-      console.log(JSON.stringify(lastTrade));
       let lastPNL = 0;
       let commission = 0;
       if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price), parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price));
+        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
       if (parseFloat(olderTrade.commission) > 0) {
         if (olderTrade.commissionAsset === "BNB") {
