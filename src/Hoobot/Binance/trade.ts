@@ -139,12 +139,16 @@ export const getTradeHistory = async (
       currentTrade = trade;
     }
   }
-
-
   if (currentTrade !== null) {
     compactedTradeHistory.push(currentTrade);
   }
-
+  for (let i = 0; i < compactedTradeHistory.length - 1; i++) {
+    const currentTrade = compactedTradeHistory[i];
+    const nextTrade = compactedTradeHistory[i + 1];
+    if (currentTrade.isBuyer === nextTrade.isBuyer) {
+      console.log('Trade history is not in the expected order of 1 buy followed by 1 sell.');
+    }
+  }
   return compactedTradeHistory;
 }
 
