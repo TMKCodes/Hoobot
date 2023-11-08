@@ -28,7 +28,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculatePercentageDifference, getTradeHistory } from '../../Hoobot/Binance/trade';
+import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
 
 
 export const reverseSign = (number: number) => {
@@ -37,33 +37,29 @@ export const reverseSign = (number: number) => {
 
 export default {
   builder: new SlashCommandBuilder()
-    .setName("possible-profit")
-    .setDescription("Replices with Binance possible profit on symbol!")
+    .setName("ppnl")
+    .setDescription("Calculates current possible PNL% for next trade.")
     .addStringOption(option =>
       option.setName('symbol')
         .setDescription('The symbol to check')),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, _config: ConfigOptions) => {
-    const symbol = interaction.options.getString('symbol').toUpperCase(); // Get the 'symbol' value from the interaction options
+  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
+    const symbol = interaction.options.getString('symbol').toUpperCase();
     if (!symbol) {
       await interaction.reply("Please provide a valid symbol to check.");
       return;
     }
     try {
-      // Get the user's trade history for the given symbol
     const tradeHistory = await getTradeHistory(binance, symbol);
       const orderBook = await binance.depth(symbol);
-      // Find the last trade from the tradeHistory array
       const lastTrade = tradeHistory[tradeHistory.length - 1];
       if (lastTrade.isBuyer === true) {
-        // Calculate the percentage change to the current highest bid price
-        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); // Get the lowest bid price
-        const percentageChange = calculatePercentageDifference(parseFloat(lastTrade.price), currentHighestBidPrice) - 0.075;
-        await interaction.reply(`>>> Last order was **BUY** order at **${parseFloat(lastTrade.price).toFixed(2)}** price with symbol **${lastTrade.symbol}**.\r\nThe order amount in base asset was **${lastTrade.qty}**\r\nPercentage change to current highest bid **${currentHighestBidPrice}** price: **${percentageChange.toFixed(2)}%**`);
+        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
+        const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice) - options.tradeFee;
+        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **BUY** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentHighestBidPrice}** price: **${pnl.toFixed(2)}%**`);
       } else {
-        // Calculate the percentage change to the current lowest ask price
-        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); // Get the highest ask price
-        const percentageChange = reverseSign(calculatePercentageDifference(parseFloat(lastTrade.price), currentLowestAskPrice)) - 0.075;
-        await interaction.reply(`>>> Last order was **SELL** order at **${parseFloat(lastTrade.price).toFixed(2)}** price with symbol **${lastTrade.symbol}**.\r\nThe order amount in base asset was **${lastTrade.qty}**\r\nPercentage change to current lowest ask **${currentLowestAskPrice}** price: **${percentageChange.toFixed(2)}%**`);
+        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); 
+        const pnl = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentLowestAskPrice) - options.tradeFee;
+        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **SELL** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentLowestAskPrice}** price: **${pnl.toFixed(2)}%**`);
       }
 
     } catch (error) {

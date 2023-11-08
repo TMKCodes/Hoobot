@@ -35,6 +35,7 @@ import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
+import { json } from "stream/consumers";
 
 const soundFile = './alarm.mp3'
 
@@ -46,6 +47,22 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
   const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
+}
+
+export const calculatePNLPercentageForLong = (entryQty: number, entryPrice: number, exitQty: number, exitPrice: number): number => {
+  return ((exitQty * exitPrice) - (entryQty * entryPrice)) / (entryQty * entryPrice) * 100;
+}
+
+export const calculatePNLPercentageForShort = (entryQty: number, entryPrice: number, exitQty: number, exitPrice: number): number => {
+  return ((entryQty * entryPrice) - (exitQty * exitPrice)) / (entryQty * entryPrice) * 100;
+}
+
+export const calculateUnrealizedPNLPercentageForLong = (entryQty: number, entryPrice: number, highestBidPrice: number): number => {
+  return ((highestBidPrice - entryPrice) * entryQty / (entryPrice * entryQty)) * 100;
+}
+
+export const calculateUnrealizedPNLPercentageForShort = (entryQty: number, entryPrice: number, lowestAskPrice: number): number => {
+  return ((entryPrice - lowestAskPrice) * entryQty / (entryPrice * entryQty)) * 100;
 }
 
 export const handleOpenedOrder = async (
@@ -84,6 +101,9 @@ export const getTradeHistory = async (
       currentTrade = trade;
     } else if (currentTrade.isBuyer === trade.isBuyer) {
       currentTrade.qty = (parseFloat(currentTrade.qty) + parseFloat(trade.qty)).toString();
+      if(currentTrade.commissionAsset === trade.commissionAsset) {
+        currentTrade.commission = (parseFloat(currentTrade.commission) + parseFloat(trade.commission)).toString();
+      }
     } else {
       compactedTradeHistory.push(currentTrade);
       currentTrade = trade;
@@ -136,18 +156,18 @@ export const sell = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
   if (checkBeforeOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
-    let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+    let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
-      percentageChange = calculatePercentageDifference(parseFloat(tradeHistory[0].price), roundedPrice) - options.tradeFee;
-      if (percentageChange > options.minimumProfitSell) {
+      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice)
+      if (unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
         return false;
       }
     }
     let order: Order = undefined;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInBase}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+      const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInBase}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {
@@ -196,18 +216,18 @@ export const buy = async (
   const roundedQuantityInBase = binance.roundStep(maxQuantityuInQuote, filter.stepSize);
   console.log(roundedQuantityInQuote);
   if (checkBeforeOrder(roundedQuantityInQuote, roundedPrice, filter) === true) {
-    let percentageChange = 0;
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+    let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
-      percentageChange = calculatePercentageDifference(roundedPrice, parseFloat(tradeHistory[0].price)) - options.tradeFee;
-      if (percentageChange > options.minimumProfitBuy) {
+      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice)
+      if (unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
         return false;
       }
     }
     let order: Order = undefined;
     if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInQuote, roundedPrice);
-      const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${percentageChange.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+      const orderMsg = `>>> Placed **BUY** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       const openedOrder = await handleOpenedOrder(discord, binance, consoleLogger, symbol, orderBook, options);
       if (openedOrder !== "canceled") {

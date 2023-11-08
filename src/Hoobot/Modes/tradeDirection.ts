@@ -41,7 +41,7 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
-import { calculatePercentageDifference, getTradeHistory } from "../Binance/trade";
+import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from "../Binance/trade";
 import { OrderBook } from "../Binance/orders";
 
 export const checkBeforeOrder = (
@@ -85,34 +85,34 @@ export const checkBeforeOrder = (
 const checkProfitSignals = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  orderBook: any,
+  orderBook: OrderBook,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
-  let lastProfit: number = 0;
-  let nextPossibleProfit: number = 0;
+  let lastPNL: number = 0;
+  let unrealizedPNL: number = 0;
   const force = JSON.parse(readFileSync("./force.json", 'utf-8'));
   if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
       if(lastTrade.isBuyer === true) { 
-        lastProfit = calculatePercentageDifference(parseFloat(lastTrade.price), parseFloat(olderTrade.price));
-      } else if(lastTrade.isBuyer === false) { 
-        lastProfit = calculatePercentageDifference(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
+      } else { 
+        lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
       }
     }
     if(lastTrade.isBuyer === true) { 
-      const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-      nextPossibleProfit = calculatePercentageDifference(parseFloat(lastTrade.price), orderBookAsks[0]);
-    } else if(lastTrade.isBuyer === false) { 
       const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-      nextPossibleProfit = calculatePercentageDifference(orderBookBids[0], parseFloat(lastTrade.price));
+      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
+    } else { 
+      const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
     }
     if(force[symbol]?.skip !== true) {
       if (lastTrade.isBuyer === true) { 
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > (options.minimumProfitSell + options.tradeFee)) {
+          if(unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
             check = "SELL";
           } else {
             check = "HOLD";
@@ -120,9 +120,9 @@ const checkProfitSignals = (
         } else {
           check = "SELL"
         }
-      } else if(lastTrade.isBuyer === false) { 
+      } else { 
         if(options.holdUntilPositiveTrade === true) {
-          if(nextPossibleProfit > (options.minimumProfitBuy + options.tradeFee)) {
+          if(unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
             check = "BUY";
           } else {
             check = "HOLD";
@@ -138,8 +138,8 @@ const checkProfitSignals = (
     check = "SKIP";
   }
   
-  consoleLogger.push("PROFIT Previous", lastProfit);
-  consoleLogger.push("PROFIT Next", nextPossibleProfit);
+  consoleLogger.push("PROFIT PNL", lastPNL);
+  consoleLogger.push("PROFIT Unrealized PNL", unrealizedPNL);
   consoleLogger.push("PROFIT Check", check);
   return check;
 }

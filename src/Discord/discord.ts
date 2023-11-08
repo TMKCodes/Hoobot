@@ -46,17 +46,9 @@ import binanceBalance from './Commands/binanceBalance';
 deployable.push(binanceBalance.builder.toJSON());
 commands.push({name: binanceBalance.builder.name, execute: binanceBalance.execute});
 
-import binanceProfit from './Commands/binanceProfit';
-deployable.push(binanceProfit.builder.toJSON());
-commands.push({name: binanceProfit.builder.name, execute: binanceProfit.execute});
-
-import binancePossibleProfit from './Commands/binancePossibleProfit';
+import binancePossibleProfit from './Commands/binanceUPNL';
 deployable.push(binancePossibleProfit.builder.toJSON());
 commands.push({name: binancePossibleProfit.builder.name, execute: binancePossibleProfit.execute});
-
-import binanceROI from './Commands/binanceROI';
-deployable.push(binanceROI.builder.toJSON());
-commands.push({name: binanceROI.builder.name, execute: binanceROI.execute});
 
 import binancePNL from './Commands/binancePNL';
 deployable.push(binancePNL.builder.toJSON());
