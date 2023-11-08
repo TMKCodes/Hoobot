@@ -16,13 +16,13 @@ export default {
       option.setName('duration')
         .setDescription('The duration for PNL (1D, 1W, 1M)')
         .setRequired(true)),
-  execute: async (interaction, binance: Binance, _config: ConfigOptions) => {
+  execute: async (interaction, binance: Binance, options: ConfigOptions) => {
     const symbol = interaction.options.getString('symbol').toUpperCase();
     const duration = interaction.options.getString('duration').toLowerCase();
     if (duration.toUpperCase() !== '1D' && duration.toUpperCase() !== '1W' && duration.toUpperCase() !== '1M' && duration.toUpperCase() !== '1Y') {
       return await interaction.reply('Invalid duration. Please use 1D, 1W, 1M or 1Y.');
     }
-    let tradesInDuration: Order[] = await getHistoricalDataForDuration(binance, symbol, duration);
+    let tradesInDuration: Order[] = await getHistoricalDataForDuration(binance, symbol, duration, options);
     let pnlPercentage = 0;
     for (let i = 1; i < tradesInDuration.length; i++) {
       const buyTrade = tradesInDuration[i];
@@ -58,10 +58,8 @@ export default {
   },
 };
 
-
-
-export const getHistoricalDataForDuration = async (binance: Binance, symbol: string, duration: string) => {
-  const tradeHistory = await getTradeHistory(binance, symbol);
+export const getHistoricalDataForDuration = async (binance: Binance, symbol: string, duration: string, options: ConfigOptions) => {
+  const tradeHistory = await getTradeHistory(binance, symbol, options);
   const targetTimestamp = getTargetTimestamp(duration.toUpperCase());
   const tradesInDuration = tradeHistory.filter(trade => trade.time / 1000 >= targetTimestamp);
   const slicedTradeHistory = tradesInDuration.slice(0, tradesInDuration.length - tradesInDuration.length);

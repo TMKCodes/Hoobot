@@ -28,6 +28,9 @@
 import { parse } from "path";
 import { TradeHistory } from "../Binance/trade";
 
+export interface CurrentProfitMax {
+  [symbol: string]: number;
+}
 
 export type CandlestickInterval =  "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
 
@@ -129,7 +132,11 @@ export interface ConfigOptions {
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
   tradeHistory?: TradeHistory,
-  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory; // Index signature
+  startTimestamp?: string,
+  panicProfitMinimum?: number,
+  panicProfitMinimumDrop?: number,
+  panicProfitCurrentMax?: CurrentProfitMax,
+  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | CurrentProfitMax; // Index signature
 }
 
 export const parseArgs = (args: string[]): ConfigOptions => {
@@ -217,6 +224,10 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
     tradeHistory: {},
+    startTimestamp: process.env.START_TIMESTAMP || undefined,
+    panicProfitMinimum: parseFloat(process.env.PANIC_PROFIT_MINIMUM!) || 0,
+    panicProfitMinimumDrop: parseFloat(process.env.PANIC_PROFIT_MINIMUM_DROP!) || 0,
+    panicProfitCurrentMax: {},
   };
   if (args.length === 0) {
     return options;

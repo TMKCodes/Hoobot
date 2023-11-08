@@ -5,7 +5,7 @@
 * Redistribution and use in source and binary forms, with or without
 * modification, are not permitted without prior written permission
 * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
-* software, in whole or in part, is strictly prohibited. All 
+* software, in whole or in part, is strictly prohibited. All
 * modifications in source or binary must be submitted to Hoosat Oy in source format.
 *
 * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
@@ -35,12 +35,36 @@ import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
-import { json } from "stream/consumers";
+import { parse } from "path";
 
 const soundFile = './alarm.mp3'
 
 export interface TradeHistory {
   [symbol: string]: Order[];
+}
+
+export const calculateROI = (
+  tradeHistory: Order[]
+) => {
+  if (tradeHistory.length >= 2) {
+    let totalBase = 0;
+    let totalQuote = 0;
+    for (let i = 0; i < tradeHistory.length - 1; i++) {
+      const currentTrade = tradeHistory[i];
+      if (currentTrade.isBuyer) {
+        const nextSellTrade = tradeHistory.slice(i, tradeHistory.length).find((trade) => !trade.isBuyer);
+        totalBase += parseFloat(nextSellTrade.qty) - parseFloat(currentTrade.qty);
+        totalQuote += parseFloat(nextSellTrade.quoteQty) - parseFloat(currentTrade.quoteQty)
+      } else {
+        const nextBuyTrade = tradeHistory.slice(i, tradeHistory.length).find((trade) => trade.isBuyer);
+        totalBase += parseFloat(nextBuyTrade.qty) - parseFloat(currentTrade.qty);
+        totalQuote += parseFloat(nextBuyTrade.quoteQty) - parseFloat(currentTrade.quoteQty)
+      }
+    }
+    return [ totalBase, totalQuote ];
+  } else {
+    return [0, 0];
+  }
 }
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
@@ -89,14 +113,17 @@ export const handleOpenedOrder = async (
 };
 
 export const getTradeHistory = async (
-  binance: Binance, 
-  symbol: string
+  binance: Binance,
+  symbol: string,
+  options: ConfigOptions
 ) => {
-  const tradeHistory: Order[] = (await binance.trades(symbol.split("/").join("")));
+  let tradeHistory: Order[] = (await binance.trades(symbol.split("/").join("")));
   let compactedTradeHistory: Order[] = [];
   let currentTrade: Order | null = null;
-
-  for (const trade of tradeHistory) { 
+  if (options.startTimestamp !== undefined) {
+    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(options.startTimestamp));
+  }
+  for (const trade of tradeHistory) {
     if (currentTrade === null) {
       currentTrade = trade;
     } else if (currentTrade.isBuyer === trade.isBuyer) {
@@ -109,6 +136,7 @@ export const getTradeHistory = async (
       currentTrade = trade;
     }
   }
+
 
   if (currentTrade !== null) {
     compactedTradeHistory.push(currentTrade);
@@ -181,7 +209,8 @@ export const sell = async (
         sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
         updateForce(symbol);
         play(soundFile);
-        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
+        options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       }
       return order;
     } else {
@@ -241,7 +270,8 @@ export const buy = async (
         sendMessageToChannel(discord, options.discordChannelID, resumeMsg);
         updateForce(symbol);
         play(soundFile);
-        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
+        options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       }
       return order;
     } else {

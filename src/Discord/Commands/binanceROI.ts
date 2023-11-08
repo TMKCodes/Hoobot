@@ -28,12 +28,13 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
+import { calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
+
 
 
 export default {
   builder: new SlashCommandBuilder()
-    .setName("upnl")
+    .setName("roi")
     .setDescription("Calculates current possible PNL% for next trade.")
     .addStringOption(option =>
       option.setName('symbol')
@@ -45,19 +46,13 @@ export default {
       return;
     }
     try {
-    const tradeHistory = await getTradeHistory(binance, symbol, options);
-      const orderBook = await binance.depth(symbol);
-      const lastTrade = tradeHistory[tradeHistory.length - 1];
-      if (lastTrade.isBuyer === true) {
-        const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
-        const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice) - options.tradeFee;
-        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **BUY** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentHighestBidPrice}** price: **${pnl.toFixed(2)}%**`);
+      const tradeHistory = await getTradeHistory(binance, symbol, options);
+      const roi = calculateROI(tradeHistory);
+      if (symbol.split("/").length >= 2) {
+        return await interaction.reply(`ROI for ${symbol}: ${roi[0].toFixed(7)} ${symbol.split("/")[0]} / ${roi[1].toFixed(7)} ${symbol.split("/")[1]}.`);
       } else {
-        const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); 
-        const pnl = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentLowestAskPrice) - options.tradeFee;
-        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **SELL** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentLowestAskPrice}** price: **${pnl.toFixed(2)}%**`);
+        return await interaction.reply(`ROI for ${symbol}: ${roi[0].toFixed(7)} quote / ${roi[1].toFixed(7)} base.`);
       }
-
     } catch (error) {
       console.error('Error fetching trade history:', error);
       await interaction.reply('An error occurred while fetching trade history.');

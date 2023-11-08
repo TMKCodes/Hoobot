@@ -40,7 +40,7 @@ import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, calculatePercentageDifference, getTradeHistory, sell } from "../Binance/trade";
+import { buy, calculateROI, getTradeHistory, sell } from "../Binance/trade";
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
@@ -87,10 +87,7 @@ const placeTrade = async (
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
   const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options);
-  if (direction === "RECHECK BALANCES") {
-    balances = await getCurrentBalances(binance);
-    return false;
-  } else if (direction === 'SELL') {
+  if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance);
   } else if (direction === 'BUY') {
     return buy(discord, binance, consoleLogger, symbol, orderBook, filter, options, quoteBalance)
@@ -159,44 +156,6 @@ export const calculateIndicators = async (
   return indicators;
 }
 
-
-export const calculateROI = (
-  tradeHistory: any[]
-) => {
-  let lastTrade = tradeHistory[0];
-  let totalProfit = 0;
-  let trades = 0;
-  for (let i = 1; i < tradeHistory.length; i++) {
-    if (tradeHistory[i].isBuyer) {
-      const oldPrice = parseFloat(lastTrade.price);
-      const newPrice = parseFloat(tradeHistory[i].price);
-      const profit = calculatePercentageDifference(oldPrice, newPrice);
-      if (tradeHistory[i + 1] !== undefined) {
-        if (tradeHistory[i].price < tradeHistory[i + 1]?.price) {
-          totalProfit += reverseSign(profit);
-        }
-      } else {
-        totalProfit += reverseSign(profit);
-      }
-    } else {
-      const oldPrice = parseFloat(lastTrade.price);
-      const newPrice = parseFloat(tradeHistory[i].price);
-      const profit = calculatePercentageDifference(oldPrice, newPrice); 
-      totalProfit += profit;
-    }
-    if (parseFloat(tradeHistory[i].commission) > 0) {
-      if (tradeHistory[i].commissionAsset === "BNB") {
-        totalProfit -= 0.075
-      } else {
-        totalProfit -= 0.1
-      }
-    }
-    trades++;
-    lastTrade = tradeHistory[i]; 
-  }
-  return [ totalProfit, trades ];
-} 
-
 export const algorithmic = async (
   discord: Client, 
   binance: Binance, 
@@ -236,14 +195,14 @@ export const algorithmic = async (
       consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[1]);
     }
     if (options.startingMaxSellAmount > 0 && options.startingMaxBuyAmount !== undefined) {
-      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[0]);
+      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
     }
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
     }
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
-    consoleLogger.push("Return of investment", roi[0].toFixed(2));
-    consoleLogger.push("Trades", roi[1]);
+    consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
+    consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
     if (candlesticks.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;

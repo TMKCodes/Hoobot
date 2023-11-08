@@ -102,7 +102,7 @@ const checkProfitSignals = (
         lastPNL = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), parseFloat(olderTrade.qty), parseFloat(olderTrade.price));
       }
     }
-    if(lastTrade.isBuyer === true) { 
+    if (lastTrade.isBuyer === true) { 
       const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
     } else { 
@@ -134,15 +134,54 @@ const checkProfitSignals = (
     } else {
       check = "SKIP";
     }
+    consoleLogger.push("PROFIT Previous PNL%", lastPNL);
+    consoleLogger.push("PROFIT Unrealized PNL%", unrealizedPNL - options.tradeFee);
   } else {
     check = "SKIP";
   }
-  
-  consoleLogger.push("PROFIT Previous PNL%", lastPNL - options.tradeFee);
-  consoleLogger.push("PROFIT Unrealized PNL%", unrealizedPNL - options.tradeFee);
   consoleLogger.push("PROFIT Check", check);
   return check;
 }
+
+
+const checkPanicProfit = (
+  consoleLogger: ConsoleLogger, 
+  symbol: string, 
+  orderBook: OrderBook,
+  options: ConfigOptions
+) => {
+  let check = 'SKIP';
+  if (options.panicProfitMinimum > 0) {
+    if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      let unrealizedPNL: number = 0;
+      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if (lastTrade.isBuyer === true) { 
+        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
+      } else { 
+        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
+      }
+      if (unrealizedPNL > options.panicProfitMinimum) {
+        if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")])  {
+          if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop) {
+            if (lastTrade.isBuyer) {
+              check = 'SELL';
+            } else {
+              check = 'BUY';
+            }
+          } 
+        } else {
+          options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+        }
+      }
+      consoleLogger.push("PANIC Current max", options.panicProfitCurrentMax[symbol.split("/").join("")]);
+      consoleLogger.push("PANIC Check", check);
+    }
+  }
+  return check;
+}
+
 
 const checkBalanceSignals = async (
   binance: Binance,
@@ -162,7 +201,7 @@ const checkBalanceSignals = async (
   if (options.tradeHistory[symbol.split("/").join("")].length > 1) {
     let lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if (check !== ((lastTrade.isBuyer === true) ? 'SELL' : 'BUY')) {
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol);
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
       check = lastTrade.isBuyer === true ? 'SELL': 'BUY';
     } 
@@ -188,23 +227,21 @@ export const tradeDirection = async (
   let macdCheck: string = 'HOLD';
   let rsiCheck: string = 'HOLD';
   let smaCheck: string = 'HOLD';
-  let stochCheck: string = 'HOLD';
-  let stochRSICheck: string = 'HOLD';
   let stochasticOscillatorCheck: string = 'HOLD';
   let stochasticRSICheck: string = 'HOLD';
   let bollingerBandsCheck: string = 'HOLD';
   let gptCheck: string = 'HOLD';
   let obvCheck: string = 'HOLD';
   let cmfCheck: string = 'HOLD';
+  let panicCheck: string = 'SKIP';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
   profitCheck = checkProfitSignals(consoleLogger, symbol, orderBook, options);
+  panicCheck = checkPanicProfit(consoleLogger, symbol, orderBook, options);
   balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, quoteBalance, baseBalance, lastCandlestick.close, options);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);
   rsiCheck = checkRSISignals(consoleLogger, indicators, options);
-  stochCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
-  stochRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   stochasticOscillatorCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
   stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
   bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options);
@@ -320,6 +357,9 @@ export const tradeDirection = async (
     tradeDirection = signal;
   } else {
     tradeDirection = 'HOLD'
+  }
+  if (panicCheck !== 'SKIP') {
+    tradeDirection = panicCheck;
   }
   if (options.openaiOverwrite === true) {
     tradeDirection = gptCheck;

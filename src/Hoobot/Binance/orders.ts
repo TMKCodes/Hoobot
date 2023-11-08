@@ -33,6 +33,7 @@ import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculatePercentageDifference } from "./trade";
 
 export interface Order {
+  quoteQty: string;
   symbol: string;
   orderId: number;
   price: string;
