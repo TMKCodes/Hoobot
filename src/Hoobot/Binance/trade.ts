@@ -184,7 +184,7 @@ export const sell = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
   const roundedQuantityInQuote = roundedPrice * roundedQuantityInBase;
-  if (checkBeforeOrder(symbol, roundedQuantityInBase, roundedPrice, filter) === true) {
+  if (checkBeforeOrder(symbol, "sell", roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
@@ -244,7 +244,7 @@ export const buy = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInQuote = binance.roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityuInQuote, filter.stepSize);
-  if (checkBeforeOrder(symbol, roundedQuantityInQuote, roundedPrice, filter) === true) {
+  if (checkBeforeOrder(symbol, "buy", roundedQuantityInQuote, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {

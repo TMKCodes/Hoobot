@@ -46,12 +46,13 @@ import { OrderBook } from "../Binance/orders";
 
 export const checkBeforeOrder = (
   symbol: string,
+  direction: string,
   quantity: number,
   price: number,
   tradingPairFilters: any,
 ) => {
   const logFailure = (message: string) => {
-    logToFile(`ORDER PLACEMENT FAILURE: ${symbol}, ${quantity}, ${price}, ${message}\r\n`);
+    logToFile(`ORDER PLACEMENT FAILURE: ${symbol}, ${direction}, ${quantity}, ${price}, ${message}\r\n`);
     return false;
   };
 
