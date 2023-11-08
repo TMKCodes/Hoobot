@@ -27,7 +27,7 @@
 
 import { readFileSync } from "fs";
 import { ConfigOptions } from "../Utilities/args";
-import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
 import { candlestick } from "../Binance/candlesticks";
@@ -42,23 +42,23 @@ import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
 import { calculatePercentageDifference, getTradeHistory } from "../Binance/trade";
+import { OrderBook } from "../Binance/orders";
 
 export const checkBeforeOrder = (
   quantity: number,
   price: number,
   tradingPairFilters: any,
-  candleTime: string,
 ) => {
   const logFailure = (message: string) => {
-    logToFile(`PLACING ORDER WAS FAILURE AT: ${quantity}, ${price}, ${candleTime}, ${message}`);
+    logToFile(`PLACING ORDER WAS FAILURE AT: ${quantity}, ${price}, ${message}\r\n`);
     return false;
   };
 
-  const isPriceValid = (min: number, max: number, value: number, type: string) => {
+  const isPriceValid = (min: number, max: number, value: number) => {
     if (value < min) {
-      return logFailure(`${type} too low.`);
+      return logFailure(`Price too low.`);
     } else if (value > max) {
-      return logFailure(`${type} too high.`);
+      return logFailure(`Price too high.`);
     }
     return true;
   };
@@ -73,7 +73,7 @@ export const checkBeforeOrder = (
   };
   
   if (
-    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price, 'Limit price') ||
+    !isPriceValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price) ||
     !isQuantityValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quantity) 
   ) {
     return false;
