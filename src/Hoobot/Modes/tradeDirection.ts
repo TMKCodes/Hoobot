@@ -138,7 +138,7 @@ const checkProfitSignals = (
     check = "SKIP";
   }
   
-  consoleLogger.push("PROFIT PNL%", lastPNL - options.tradeFee);
+  consoleLogger.push("PROFIT Previous PNL%", lastPNL - options.tradeFee);
   consoleLogger.push("PROFIT Unrealized PNL%", unrealizedPNL - options.tradeFee);
   consoleLogger.push("PROFIT Check", check);
   return check;
