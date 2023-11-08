@@ -187,8 +187,8 @@ export const sell = async (
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
-      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice)
-      if (unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
+      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+      if (unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
         return false;
       }
     }
@@ -243,13 +243,12 @@ export const buy = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInQuote = binance.roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityuInQuote, filter.stepSize);
-  console.log(roundedQuantityInQuote);
   if (checkBeforeOrder(roundedQuantityInQuote, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
-      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice)
-      if (unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
+      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+      if (unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
         return false;
       }
     }
