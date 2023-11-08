@@ -183,6 +183,7 @@ export const sell = async (
   }
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
+  const roundedQuantityInQuote = roundedPrice * roundedQuantityInBase;
   if (checkBeforeOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
@@ -193,7 +194,7 @@ export const sell = async (
       }
     }
     let order: Order = undefined;
-    if(roundedQuantityInBase > parseFloat(filter.minNotional)) {
+    if(roundedQuantityInQuote > parseFloat(filter.minNotional)) {
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       const orderMsg = `>>> Placed **SELL** order ID: **${order.orderId}**\nPair: **${symbol}**\nQuantity: **${roundedQuantityInBase}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
@@ -214,7 +215,7 @@ export const sell = async (
       }
       return order;
     } else {
-      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInBase} > ${parseFloat(filter.minNotional)}\r\n`);
+      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
       return false;
     }
   } else {
