@@ -37,7 +37,7 @@ export const reverseSign = (number: number) => {
 
 export default {
   builder: new SlashCommandBuilder()
-    .setName("ppnl")
+    .setName("upnl")
     .setDescription("Calculates current possible PNL% for next trade.")
     .addStringOption(option =>
       option.setName('symbol')
