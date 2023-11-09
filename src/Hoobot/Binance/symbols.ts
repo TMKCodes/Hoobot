@@ -35,7 +35,8 @@ export interface SymbolInfo {
 
 // Function to get all symbols from Binance
 export const getTradeableSymbols = async (
-  binance: Binance
+  binance: Binance,
+  quote: string,
 ): Promise<SymbolInfo[]> => {
   try {
     if (!binance || typeof binance.exchangeInfo !== "function") {
@@ -46,6 +47,7 @@ export const getTradeableSymbols = async (
     fs.writeFileSync("./exchange-info.json", JSON.stringify(exchangeInfo, null, 4));
     
     return exchangeInfo.symbols
+    .filter((symbol: any) => symbol.quoteAsset === quote)
       .filter((symbol: any) => symbol.status === "TRADING")
       .filter((symbol: any) => symbol.isSpotTradingAllowed)
       .map((symbol: any) => {  

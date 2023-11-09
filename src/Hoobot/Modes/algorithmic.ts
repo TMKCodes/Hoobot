@@ -45,6 +45,7 @@ import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
+import { symbolFilters } from "../..";
 
 export interface Indicators {
   avg?: number;
@@ -83,10 +84,12 @@ const placeTrade = async (
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
       return false; // don't trade since the last trade was too new.
     }
+  } else {
+    consoleLogger.push("Time since last trade:", "No trades done yet.");
   }
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
-  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options);
+  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options, filter);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance);
   } else if (direction === 'BUY') {
@@ -163,10 +166,10 @@ export const algorithmic = async (
   symbol: string, 
   balances: Balances,
   candlesticks: candlestick[], 
-  filter: filter, 
   options: ConfigOptions
 ) => {
   try {
+    const filter = symbolFilters[symbol.split("/").join("")];
     const latestCandle = candlesticks[candlesticks.length - 1];
     const prevCandle = candlesticks[candlesticks.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');

@@ -31,6 +31,7 @@ import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
 import { candlestick } from "../Binance/candlesticks";
+import { filter } from "../Binance/filters";
 import { checkEMASignals } from "../Indicators/EMA";
 import { checkMACDSignals } from "../Indicators/MACD";
 import { checkRSISignals } from "../Indicators/RSI";
@@ -139,6 +140,8 @@ const checkProfitSignals = (
     consoleLogger.push("PROFIT Previous PNL%", lastPNL);
     consoleLogger.push("PROFIT Unrealized PNL%", unrealizedPNL - options.tradeFee);
   } else {
+    consoleLogger.push("PROFIT Previous PNL%", 0);
+    consoleLogger.push("PROFIT Unrealized PNL%", 0);
     check = "SKIP";
   }
   consoleLogger.push("PROFIT Check", check);
@@ -150,39 +153,43 @@ const checkPanicProfit = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
   orderBook: OrderBook,
-  options: ConfigOptions
+  balances: number[],
+  options: ConfigOptions,
+  filter: filter,
 ) => {
   let check = 'SKIP';
   if (options.panicProfitMinimum > 0) {
-    if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-      let unrealizedPNL: number = 0;
-      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-      if (lastTrade.isBuyer === true) { 
-        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
-      } else { 
-        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
-      }
-      if (unrealizedPNL > options.panicProfitMinimum) {
-        if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")])  {
-          if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop) {
-            if (lastTrade.isBuyer) {
-              check = 'SELL';
-            } else {
-              check = 'BUY';
-            }
-          } 
-        } else {
-          options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+    const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+    if (balances[1] > filter.minNotional || (balances[0] * orderBookBids[0]) > filter.minNotional) {
+      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        let unrealizedPNL: number = 0;
+        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+        if (lastTrade.isBuyer === true) { 
+          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
+        } else { 
+          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
         }
-        consoleLogger.push("PANIC Current MAX PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")]);
-        consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
-        consoleLogger.push("PANIC Current PANIC PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop);
+        if (unrealizedPNL > options.panicProfitMinimum) {
+          if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")])  {
+            if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop) {
+              if (lastTrade.isBuyer) {
+                check = 'SELL';
+              } else {
+                check = 'BUY';
+              }
+            } 
+          } else {
+            options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+          }
+          consoleLogger.push("PANIC Current MAX PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")]);
+          consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
+          consoleLogger.push("PANIC Current PANIC PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop);
+        }
       }
-      consoleLogger.push("PANIC Check", check);
     }
   }
+  consoleLogger.push("PANIC Check", check);
   return check;
 }
 
@@ -196,12 +203,12 @@ const checkPreviousTrade = (
   if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if (lastTrade.isBuyer) {
-      check = 'SELL';
-    } else {
       check = 'BUY';
+    } else {
+      check = 'SELL';
     }
   }
-  consoleLogger.push("PREVIOUS TRADE Check", (check === 'SELL') ? 'BUY' : 'SELL');
+  consoleLogger.push("PREVIOUS TRADE Check", check);
   return check;
 }
 
@@ -211,23 +218,32 @@ const checkBalanceSignals = (
   quoteBalance: number,
   baseBalance: number, 
   closePrice: number,  
-  options: ConfigOptions
+  options: ConfigOptions,
+  filter: filter,
 ) => {
   let check = 'HOLD';
-  if ((quoteBalance * closePrice) > baseBalance) {
+  const baseBalanceConverted = (baseBalance * closePrice)
+  if (baseBalanceConverted > quoteBalance) {
     check = 'SELL';
   } else {
-    check = 'BUY'
-  }
-  consoleLogger.push("BALANCE Check", check);
-  const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
-  if (tradeCheck === 'SELL' && check === 'BUY') {
-    check = 'SELL';
-  } else if (tradeCheck === 'BUY' && check === 'SELL') {
     check = 'BUY';
   }
+  const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
+  if (tradeCheck === 'SELL' && check === 'BUY') {
+    check = 'BUY';
+  } else if (tradeCheck === 'BUY' && check === 'SELL') {
+    check = 'SELL';
+  }
+  if (check === 'SELL' && (baseBalanceConverted < filter.minNotional || baseBalanceConverted > filter.maxNotional)) {
+    check = 'HOLD';
+  } else if (check === 'BUY' && (quoteBalance < filter.minNotional || quoteBalance > filter.maxNotional)) {
+    check = 'HOLD';
+  }
+  consoleLogger.push("NEXT TRADE Check", check);
   return check;
 }
+
+
 
 export const tradeDirection = async (
   binance: Binance,
@@ -238,151 +254,47 @@ export const tradeDirection = async (
   orderBook: any,
   candlesticks: candlestick[], 
   indicators: Indicators,
-  options: ConfigOptions
+  options: ConfigOptions,
+  filter: filter,
 ) => {
-  let profitCheck: string = 'HOLD';
-  let nextTradeCheck: string = 'HOLD';
-  let emaCheck: string = 'HOLD';
-  let macdCheck: string = 'HOLD';
-  let rsiCheck: string = 'HOLD';
-  let smaCheck: string = 'HOLD';
-  let stochasticOscillatorCheck: string = 'HOLD';
-  let stochasticRSICheck: string = 'HOLD';
-  let bollingerBandsCheck: string = 'HOLD';
-  let gptCheck: string = 'HOLD';
-  let obvCheck: string = 'HOLD';
-  let cmfCheck: string = 'HOLD';
-  let panicCheck: string = 'SKIP';
-  const lastCandlestick = candlesticks[candlesticks.length - 1];
-  nextTradeCheck = checkBalanceSignals(consoleLogger, symbol, quoteBalance, baseBalance, lastCandlestick.close, options);
-  profitCheck = checkProfitSignals(consoleLogger, symbol, orderBook, options);
-  panicCheck = checkPanicProfit(consoleLogger, symbol, orderBook, options);
-  smaCheck = checkSMASignals(consoleLogger, indicators, options);
-  emaCheck = checkEMASignals(consoleLogger, indicators, options);
-  macdCheck = checkMACDSignals(consoleLogger, indicators, options);
-  rsiCheck = checkRSISignals(consoleLogger, indicators, options);
-  stochasticOscillatorCheck = checkStochasticOscillatorSignals(consoleLogger, indicators, options);
-  stochasticRSICheck = checkStochasticRSISignals(consoleLogger, indicators, options);
-  bollingerBandsCheck = checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options);
-  gptCheck = await checkGPTSignals(consoleLogger, candlesticks, indicators, options);
-  obvCheck = checkOBVSignals(consoleLogger, candlesticks, indicators, options);
-  cmfCheck = checkCMFSignals(consoleLogger, indicators, options);
-  let tradeDirection = 'HOLD';
-  if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && nextTradeCheck === 'SELL') {
-    let signal = 'SELL'
-    if(options.useEMA === true && (emaCheck === 'BUY' || emaCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useEMA === false) {
-      emaCheck = "DISABLED";
-    }
-    if(options.useMACD === true && (macdCheck === 'BUY' || macdCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useMACD === false) {
-      macdCheck = 'DISABLED';
-    }
-    if(options.useRSI === true && (rsiCheck === 'BUY' || rsiCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useRSI === false) {
-      rsiCheck = 'DISABLED';
-    }
-    if(options.useSMA === true && (smaCheck === 'BUY' || smaCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useSMA === false) {
-      smaCheck = 'DISABLED';
-    }
-    if(options.useStochasticOscillator === true && (stochasticOscillatorCheck === 'BUY' || stochasticOscillatorCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useStochasticOscillator === false) {
-      stochasticOscillatorCheck = 'DISABLED';
-    }
-    if(options.useStochasticRSI === true && (stochasticRSICheck === 'BUY' || stochasticRSICheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useStochasticRSI === false) {
-      stochasticRSICheck = 'DISABLED';
-    }
-    if(options.useBollingerBands === true && (bollingerBandsCheck === 'BUY' || bollingerBandsCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useBollingerBands === false) {
-      bollingerBandsCheck = 'DISABLED';
-    }
-    if(options.openaiApiKey !== undefined && (gptCheck === 'BUY' || gptCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.openaiApiKey === undefined) {
-      bollingerBandsCheck = 'DISABLED';
-    }
-    if(options.useOBV === true && (obvCheck === 'BUY' || obvCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useOBV === false) {
-      obvCheck = 'DISABLED';
-    }
-    if(options.useCMF === true && (cmfCheck === 'BUY' || cmfCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useCMF === false) {
-      cmfCheck = 'DISABLED';
-    }
-    tradeDirection = signal;
-  } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && nextTradeCheck === 'BUY') {
-    let signal = 'BUY'
-    if(options.useEMA === true && (emaCheck === 'SELL' || emaCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useEMA === false) {
-      emaCheck = 'DISABLED';
-    }
-    if(options.useMACD === true && (macdCheck === 'SELL' || macdCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useMACD === false) {
-      macdCheck = 'DISABLED';
-    }
-    if(options.useRSI === true && (rsiCheck === 'SELL' || rsiCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useRSI === false) {
-      rsiCheck = 'DISABLED';
-    }
-    if(options.useSMA === true && (smaCheck === 'SELL' || smaCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useSMA === false) {
-      smaCheck = 'DISABLED';
-    }
-    if(options.useStochasticOscillator === true && (stochasticOscillatorCheck === 'SELL' || stochasticOscillatorCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useStochasticOscillator === false) {
-      stochasticOscillatorCheck = 'DISABLED';
-    }
-    if(options.useStochasticRSI === true && (stochasticRSICheck === 'SELL' || stochasticRSICheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useStochasticRSI === false) {
-      stochasticRSICheck = 'DISABLED';
-    }
-    if(options.useBollingerBands === true && (bollingerBandsCheck === 'SELL' || bollingerBandsCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useBollingerBands === false) {
-      bollingerBandsCheck = 'DISABLED';
-    }
-    if(options.openaiApiKey !== undefined && (gptCheck === 'SELL' || gptCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.openaiApiKey === undefined) {
-      bollingerBandsCheck = 'DISABLED';
-    }
-    if(options.useOBV === true && (obvCheck === 'SELL' || obvCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useOBV === false) {
-      obvCheck = 'DISABLED';
-    }
-    if(options.useCMF === true && (cmfCheck === 'SELL' || cmfCheck === 'HOLD')) {
-      signal = 'HOLD';
-    } else if(options.useCMF === false) {
-      cmfCheck = 'DISABLED';
-    }
-    tradeDirection = signal;
-  } else {
-    tradeDirection = 'HOLD'
+  let direction = 'HOLD';
+  const checks = {
+    profit: checkProfitSignals(consoleLogger, symbol, orderBook, options),
+    next: checkBalanceSignals(consoleLogger, symbol, quoteBalance, baseBalance, candlesticks[candlesticks.length - 1].close, options, filter),
+    SMA: checkSMASignals(consoleLogger, indicators, options),
+    EMA: checkEMASignals(consoleLogger, indicators, options),
+    MACD: checkMACDSignals(consoleLogger, indicators, options),
+    RSI: checkRSISignals(consoleLogger, indicators, options),
+    StochasticOscillator: checkStochasticOscillatorSignals(consoleLogger, indicators, options),
+    StochasticRSI: checkStochasticRSISignals(consoleLogger, indicators, options),
+    BollingerBands: checkBollingerBandsSignals(consoleLogger, candlesticks, indicators, options),
+    OBV: checkOBVSignals(consoleLogger, candlesticks, indicators, options),
+    CMF: checkCMFSignals(consoleLogger, indicators, options),
+    GPT: await checkGPTSignals(consoleLogger, candlesticks, indicators, options),
+    panic: checkPanicProfit(consoleLogger, symbol, orderBook, [baseBalance, quoteBalance], options, filter)
   }
-  if (panicCheck !== 'SKIP') {
-    tradeDirection = panicCheck;
+  const actions = ['BUY', 'SELL'];
+  const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF'];
+  for (const action in actions) {
+    if ((checks.profit === action || checks.profit === 'SKIP') && checks.next === action) {
+      direction = action;
+      for (const checking of whatToCheck) {
+        const check = checks[checking];
+        const useCheck = options[`use${checking}`];
+        const invalidConditions = [action, 'HOLD']
+        if (useCheck && invalidConditions.includes(check)) {
+          direction = 'HOLD';
+          break;
+        }
+      }
+    }
+  }
+  if (checks.panic !== 'SKIP') {
+    direction = checks.panic;
   }
   if (options.openaiOverwrite === true) {
-    tradeDirection = gptCheck;
+    direction = checks.GPT;
   }
-  consoleLogger.push(`TRADE Direction`, tradeDirection);
-  return tradeDirection;
+  consoleLogger.push(`TRADE Direction`, direction);
+  return direction;
 }

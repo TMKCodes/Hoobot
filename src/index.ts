@@ -51,7 +51,7 @@ const binance = new Binance().options({
   family: 4,
 });
 
-let tradingPairFilters: filters = {};
+export let symbolFilters: filters = {};
 const main = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -81,7 +81,7 @@ const main = async () => {
     const symbolCandlesticks: SymbolCandlesticks = {};
     if(options.mode === "algorithmic") {
       if (process.env.GO_CRAZY !== undefined) {
-        const symbolInfo = await getTradeableSymbols(binance);
+        const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
         const foundSymbols: string[] = [];
         for (const symbol of symbolInfo) {
           if (symbol.quote === process.env.GO_CRAZY) {
@@ -93,18 +93,18 @@ const main = async () => {
       if (Array.isArray(options.symbols)) {
         for (const symbol of options.symbols) {
           const filter = await getFilters(binance, symbol);
-          tradingPairFilters[symbol.split("/").join("")] = filter;
+          symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
           listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: candlestick[]) => {
-            algorithmic(discord, binance, logger, symbol, balances, candlesticks, filter, options)
+            algorithmic(discord, binance, logger, symbol, balances, candlesticks, options)
           });
         }
       } else {
         const filter = await getFilters(binance, options.symbols);
-        tradingPairFilters[options.symbols.split("/").join("")] = filter;
+        symbolFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
         listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
-          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, filter, options)
+          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, options)
         });
       }
     }
