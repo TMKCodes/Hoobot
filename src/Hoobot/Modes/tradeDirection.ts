@@ -27,7 +27,7 @@
 
 import { readFileSync } from "fs";
 import { ConfigOptions } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
 import { candlestick } from "../Binance/candlesticks";
@@ -187,30 +187,43 @@ const checkPanicProfit = (
 }
 
 
-const checkBalanceSignals = async (
-  binance: Binance,
+const lastTradeCheck = (
   consoleLogger: ConsoleLogger, 
-  symbol: string, 
+  symbol: string,
+  options: ConfigOptions
+) => {
+  let check = 'HOLD';
+  const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+  if (lastTrade.isBuyer) {
+    check = 'SELL';
+  } else {
+    check = 'BUY';
+  }
+  consoleLogger.push("NEXT TRADE Check", check);
+  return check;
+}
+
+const checkBalanceSignals = (
+  consoleLogger: ConsoleLogger, 
+  symbol: string,
   quoteBalance: number,
   baseBalance: number, 
   closePrice: number,  
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
-  if(baseBalance < (quoteBalance / closePrice)) {
-    check = 'BUY';
-  } else {
+  if ((quoteBalance * closePrice) > baseBalance) {
     check = 'SELL';
-  }
-  if (options.tradeHistory[symbol.split("/").join("")].length > 1) {
-    let lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-    if (check !== ((lastTrade.isBuyer === true) ? 'SELL' : 'BUY')) {
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
-      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-      check = lastTrade.isBuyer === true ? 'SELL': 'BUY';
-    } 
+  } else {
+    check = 'BUY'
   }
   consoleLogger.push("BALANCE Check", check);
+  const tradeCheck = lastTradeCheck(consoleLogger, symbol, options);
+  if (tradeCheck === 'SELL' && check === 'BUY') {
+    check = 'SELL';
+  } else if (tradeCheck === 'BUY' && check === 'SELL') {
+    check = 'BUY';
+  }
   return check;
 }
 
@@ -226,7 +239,7 @@ export const tradeDirection = async (
   options: ConfigOptions
 ) => {
   let profitCheck: string = 'HOLD';
-  let balanceCheck: string = 'HOLD';
+  let nextTradeCheck: string = 'HOLD';
   let emaCheck: string = 'HOLD';
   let macdCheck: string = 'HOLD';
   let rsiCheck: string = 'HOLD';
@@ -239,9 +252,9 @@ export const tradeDirection = async (
   let cmfCheck: string = 'HOLD';
   let panicCheck: string = 'SKIP';
   const lastCandlestick = candlesticks[candlesticks.length - 1];
+  nextTradeCheck = checkBalanceSignals(consoleLogger, symbol, quoteBalance, baseBalance, lastCandlestick.close, options);
   profitCheck = checkProfitSignals(consoleLogger, symbol, orderBook, options);
   panicCheck = checkPanicProfit(consoleLogger, symbol, orderBook, options);
-  balanceCheck = await checkBalanceSignals(binance, consoleLogger, symbol, quoteBalance, baseBalance, lastCandlestick.close, options);
   smaCheck = checkSMASignals(consoleLogger, indicators, options);
   emaCheck = checkEMASignals(consoleLogger, indicators, options);
   macdCheck = checkMACDSignals(consoleLogger, indicators, options);
@@ -253,7 +266,7 @@ export const tradeDirection = async (
   obvCheck = checkOBVSignals(consoleLogger, candlesticks, indicators, options);
   cmfCheck = checkCMFSignals(consoleLogger, indicators, options);
   let tradeDirection = 'HOLD';
-  if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && balanceCheck === 'SELL') {
+  if ((profitCheck === 'SELL' || profitCheck === 'SKIP')  && nextTradeCheck === 'SELL') {
     let signal = 'SELL'
     if(options.useEMA === true && (emaCheck === 'BUY' || emaCheck === 'HOLD')) {
       signal = 'HOLD';
@@ -306,7 +319,7 @@ export const tradeDirection = async (
       cmfCheck = 'DISABLED';
     }
     tradeDirection = signal;
-  } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && balanceCheck === 'BUY') {
+  } else if((profitCheck === 'BUY' || profitCheck === "SKIP") && nextTradeCheck === 'BUY') {
     let signal = 'BUY'
     if(options.useEMA === true && (emaCheck === 'SELL' || emaCheck === 'HOLD')) {
       signal = 'HOLD';
