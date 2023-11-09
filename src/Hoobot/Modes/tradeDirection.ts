@@ -187,19 +187,21 @@ const checkPanicProfit = (
 }
 
 
-const lastTradeCheck = (
+const checkPreviousTrade = (
   consoleLogger: ConsoleLogger, 
   symbol: string,
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
-  const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-  if (lastTrade.isBuyer) {
-    check = 'SELL';
-  } else {
-    check = 'BUY';
+  let check = 'BUY';
+  if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (lastTrade.isBuyer) {
+      check = 'SELL';
+    } else {
+      check = 'BUY';
+    }
   }
-  consoleLogger.push("NEXT TRADE Check", check);
+  consoleLogger.push("PREVIOUS TRADE Check", (check === 'SELL') ? 'BUY' : 'SELL');
   return check;
 }
 
@@ -218,7 +220,7 @@ const checkBalanceSignals = (
     check = 'BUY'
   }
   consoleLogger.push("BALANCE Check", check);
-  const tradeCheck = lastTradeCheck(consoleLogger, symbol, options);
+  const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
   if (tradeCheck === 'SELL' && check === 'BUY') {
     check = 'SELL';
   } else if (tradeCheck === 'BUY' && check === 'SELL') {
