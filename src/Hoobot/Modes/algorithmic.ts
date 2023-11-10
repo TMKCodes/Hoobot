@@ -211,22 +211,28 @@ export const algorithmic = async (
       return false;
     }
     const orderBook = await getOrderBook(binance, symbol);
-    let openOrders: Order[] = await getOpenOrders(binance, symbol);
-    if (openOrders.length > 0) {
-      consoleLogger.push(`warning`, `There are open orders. Waiting for them to complete or cancelling them.`);
-      return await handleOpenOrders(discord, binance, symbol, openOrders, orderBook, options, consoleLogger);
-    }
+    await handleOpenOrders(discord, binance, symbol, orderBook, options);
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();
     const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
-    await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
+    const placedTrade = await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
-    if (options.consoleUpdate === "final" && latestCandle.isFinal === true) {
+    if (options.consoleUpdate === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
       consoleLogger.print();
       consoleLogger.flush();
-    } else if(options.consoleUpdate === "final" && latestCandle.isFinal === false) {
+    } else if (options.consoleUpdate === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
+      consoleLogger.flush();
+    } else if (options.consoleUpdate === "trade" && placedTrade !== false) {
+      consoleLogger.print();
+      consoleLogger.flush();
+    } else if (options.consoleUpdate === "trade" && placedTrade === false) {
+      consoleLogger.flush();
+    } else if (options.consoleUpdate === "final" && latestCandle.isFinal === true) {
+      consoleLogger.print();
+      consoleLogger.flush();
+    } else if (options.consoleUpdate === "final" && latestCandle.isFinal === false) {
       consoleLogger.flush();
     } else {
       consoleLogger.print();
