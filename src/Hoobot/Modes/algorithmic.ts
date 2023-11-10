@@ -79,13 +79,16 @@ const placeTrade = async (
   options: ConfigOptions,
 ) => {
   if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-    const timeDifferenceInSeconds = (Date.now() - options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time) / 1000;
-    consoleLogger.push("Time since last trade:", timeDifferenceInSeconds);
+    const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
+    const currentTime = Date.now();
+    const lastTradeDate = new Date(lastTradeTime);
+    const timeDifferenceInSeconds = (currentTime - lastTradeTime) / 1000;
+    consoleLogger.push("Last trade datetime:", lastTradeDate.toLocaleString("fi-FI"));
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
-      return false; // don't trade since the last trade was too new.
+      return false; 
     }
   } else {
-    consoleLogger.push("Time since last trade:", "No trades done yet.");
+    consoleLogger.push("Last trade datetime:", "No trades done yet.");
   }
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
