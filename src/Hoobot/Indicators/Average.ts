@@ -25,11 +25,11 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 export const calculateAverage = (
-  candlesticks: candlestick[]
+  candlesticks: Candlestick[]
 ): number => {
   if (candlesticks.length === 0) {
     return 0;
@@ -43,7 +43,7 @@ export const calculateAverage = (
 
 export const logAverageSignals = (
   consoleLogger: ConsoleLogger,
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   average: number
 ) => {
   consoleLogger.push("Average", average);

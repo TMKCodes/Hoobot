@@ -29,8 +29,8 @@ import Binance from "node-binance-api";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions } from "../Utilities/args";
-import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
-import { calculatePercentageDifference, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./trade";
+import { consoleLogger } from "../Utilities/consoleLogger";
+import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./trade";
 
 export interface Order {
   quoteQty: string;

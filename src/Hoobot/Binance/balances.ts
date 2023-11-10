@@ -34,7 +34,7 @@ export interface Balances {
 export const getCurrentBalance = async (
   binance: Binance, 
   symbol: string
-) => {
+): Promise<number> => {
   try {
     const balance = await binance.balance();
     return parseFloat(balance[symbol].available || "0");
@@ -64,7 +64,9 @@ export const getCurrentBalances = async (
   }
 }
 
-export const getBalancesFromWebsocket = (data: any): Balances => {
+export const getBalancesFromWebsocket = (
+  data: any
+): Balances => {
   if (!Array.isArray(data.B)) {
     return {} as Balances;
   }

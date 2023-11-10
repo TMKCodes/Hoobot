@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from '../Binance/candlesticks';
+import { Candlestick } from '../Binance/candlesticks';
 import { Indicators } from '../Modes/algorithmic';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
@@ -69,7 +69,7 @@ export const calculateBollingerBands = (
 
 export const logBollingerBandsSignals = (
   consoleLogger: ConsoleLogger,
-  candlesticks: candlestick[],
+  candlesticks: Candlestick[],
   bollingerBands: [number[], number[], number[]]
 ) => {
   const currentLow = candlesticks[candlesticks.length - 1].low;
@@ -97,7 +97,7 @@ export const logBollingerBandsSignals = (
 
 export const checkBollingerBandsSignals = (
   consoleLogger: ConsoleLogger,
-  candlesticks: candlestick[],
+  candlesticks: Candlestick[],
   indicators: Indicators,
   options: ConfigOptions
 ) => {

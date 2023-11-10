@@ -28,27 +28,28 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { Trade, TradeHistory, getTradeHistory } from '../../Hoobot/Binance/trade';
 
 export default {
   builder: new SlashCommandBuilder()
-                .setName("trades")
-                .setDescription("Replis with last 10 trades on pair.")
-                .addStringOption(option =>
-                  option.setName('pair')
-                    .setDescription('The pair to check')),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, _options: ConfigOptions) => {
-    const pair = interaction.options.getString('pair').toUpperCase(); // Get the 'pair' value from the interaction options
-    if (!pair) {
-      await interaction.reply("Please provide a valid pair to check.");
+    .setName("trades")
+    .setDescription("Replis with last 10 trades on symbol.")
+    .addStringOption(option =>
+      option.setName('symbol')
+        .setDescription('The symbol to check')),
+  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
+    const symbol: string = interaction.options.getString('symbol').toUpperCase(); 
+    if (!symbol) {
+      await interaction.reply("Please provide a valid symbol to check.");
       return;
     }
-    const tradeHistory = (await binance.trades(pair)).reverse().slice(0, 5);
+    const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
     const trades = tradeHistory.map((trade) => {
       return {
         orderId: trade.orderId,
         price: trade.price,
-        quantity: trade.qty,
-        quoteQuantity: trade.quoteQuantity,
+        qty: trade.qty,
+        quoteQty: trade.quoteQty,
         commission: trade.commission,
         commissionAsset: trade.commissionAsset,
         isBuyer: trade.isBuyer,
@@ -57,6 +58,6 @@ export default {
         time: (new Date(trade.time).toLocaleString("fi-FI")),
       }
     })
-    await interaction.reply(`${pair}: ${JSON.stringify(trades, null, 4)}`);
+    await interaction.reply(`${symbol}: ${JSON.stringify(trades, null, 4)}`);
   }
 }

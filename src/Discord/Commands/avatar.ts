@@ -29,9 +29,9 @@ import { SlashCommandBuilder } from 'discord.js';
 
 export default {
   builder: new SlashCommandBuilder()
-                .setName('avatar')
-                .setDescription('Get the avatar URL of the selected user, or your own avatar.')
-                .addUserOption(option => option.setName('target').setDescription('The user\'s avatar to show')),
+      .setName('avatar')
+      .setDescription('Get the avatar URL of the selected user, or your own avatar.')
+      .addUserOption(option => option.setName('target').setDescription('The user\'s avatar to show')),
   execute: async (interaction: {
     user: any;
     options: any; 

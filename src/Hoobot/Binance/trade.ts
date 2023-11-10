@@ -30,21 +30,36 @@ import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
 import { filter } from "../Binance/filters";
-import { handleOpenOrders, Order } from "./orders";
+import { handleOpenOrders, Order, OrderBook } from "./orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
-import { parse } from "path";
 
 const soundFile = './alarm.mp3'
 
+export interface Trade {
+  symbol: string;
+  id: number;
+  orderId: number;
+  orderListID: number;
+  price: string;
+  qty: string;
+  quoteQty: string;
+  commission: string;
+  commissionAsset: string;
+  time: number;
+  isBuyer: boolean;
+  isMaker: boolean;
+  isBestMatch: boolean;
+}
+
 export interface TradeHistory {
-  [symbol: string]: Order[];
+  [symbol: string]: Trade[];
 }
 
 export const calculateROI = (
-  tradeHistory: Order[]
+  tradeHistory: Trade[]
 ) => {
   if (tradeHistory.length >= 2) {
     let totalBase = 0;
@@ -98,9 +113,9 @@ export const getTradeHistory = async (
   symbol: string,
   options: ConfigOptions
 ) => {
-  let tradeHistory: Order[] = (await binance.trades(symbol.split("/").join("")));
-  let compactedTradeHistory: Order[] = [];
-  let currentTrade: Order | null = null;
+  let tradeHistory: Trade[] = (await binance.trades(symbol.split("/").join("")));
+  let compactedTradeHistory: Trade[] = [];
+  let currentTrade: Trade | null = null;
   if (options.startTimestamp !== undefined) {
     tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(options.startTimestamp));
   }
@@ -155,7 +170,7 @@ export const sell = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  orderBook: any,
+  orderBook: OrderBook,
   filter: filter,
   options: ConfigOptions,
   baseBalance: number,

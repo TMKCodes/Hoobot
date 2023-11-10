@@ -25,14 +25,14 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { Indicators } from "../Modes/algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateRSI } from "./RSI";
 
 export const calculateStochasticOscillator = (
-  candles: candlestick[], 
+  candles: Candlestick[], 
   kPeriod: number = 14, 
   dPeriod: number = 1, 
   smoothing: number = 3, 
@@ -69,7 +69,7 @@ export const calculateStochasticOscillator = (
 
 
 export const calculateStochasticRSI = (
-  candles: candlestick[], 
+  candles: Candlestick[], 
   lengthRSI: number = 14, 
   lengthStoch: number = 14, 
   kSmoothing: number = 3, 

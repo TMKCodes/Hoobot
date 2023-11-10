@@ -25,14 +25,14 @@
 * the use of this software.
 * ===================================================================== */
 import OpenAI from 'openai';
-import { candlestick } from '../Binance/candlesticks';
+import { Candlestick } from '../Binance/candlesticks';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/algorithmic';
 import { ConfigOptions } from '../Utilities/args';
 
 export const checkGPTSignals = async (
   consoleLogger: ConsoleLogger, 
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   indicators: Indicators, 
   options: ConfigOptions
 ) => {

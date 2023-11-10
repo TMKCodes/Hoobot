@@ -27,15 +27,15 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { Order, getOpenOrders, getOrderBook, handleOpenOrders } from "../Binance/orders";
+import { getOrderBook, handleOpenOrders } from "../Binance/orders";
 import { filter } from "../Binance/filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Balances, getCurrentBalances } from "../Binance/balances";
+import { Balances } from "../Binance/balances";
 import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
 import { calculateRSI, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
@@ -71,7 +71,7 @@ const placeTrade = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  candlesticks: candlestick[],
+  candlesticks: Candlestick[],
   indicators: Indicators,
   balances: Balances,
   orderBook: any,
@@ -104,7 +104,7 @@ const placeTrade = async (
 
 export const calculateIndicators = async (
   consoleLogger: ConsoleLogger,
-  candlesticks: candlestick[],
+  candlesticks: Candlestick[],
   options: ConfigOptions
 ) => {
   const indicators: Indicators = {
@@ -168,7 +168,7 @@ export const algorithmic = async (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
   balances: Balances,
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   options: ConfigOptions
 ) => {
   try {

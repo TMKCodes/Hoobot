@@ -28,9 +28,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
-
-
+import { Trade, calculateROI, getTradeHistory } from '../../Hoobot/Binance/trade';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -40,14 +38,14 @@ export default {
       option.setName('symbol')
         .setDescription('The symbol to check')),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
-    const symbol = interaction.options.getString('symbol').toUpperCase();
+    const symbol: string = interaction.options.getString('symbol').toUpperCase();
     if (!symbol) {
       await interaction.reply("Please provide a valid symbol to check.");
       return;
     }
     try {
-      const tradeHistory = await getTradeHistory(binance, symbol, options);
-      const roi = calculateROI(tradeHistory);
+      const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
+      const roi: number[] = calculateROI(tradeHistory);
       if (symbol.split("/").length >= 2) {
         return await interaction.reply(`ROI for ${symbol}: ${roi[0].toFixed(7)} ${symbol.split("/")[0]} / ${roi[1].toFixed(7)} ${symbol.split("/")[1]}.`);
       } else {

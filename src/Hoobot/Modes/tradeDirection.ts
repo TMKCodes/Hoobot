@@ -30,7 +30,7 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { filter } from "../Binance/filters";
 import { checkEMASignals } from "../Indicators/EMA";
 import { checkMACDSignals } from "../Indicators/MACD";
@@ -252,7 +252,7 @@ export const tradeDirection = async (
   quoteBalance: number, 
   baseBalance: number, 
   orderBook: any,
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   indicators: Indicators,
   options: ConfigOptions,
   filter: filter,

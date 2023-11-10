@@ -32,12 +32,10 @@ import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
 export default {
   builder: new SlashCommandBuilder()
-                .setName("balances")
-                .setDescription("Replices with Binance balances!"),
+    .setName("balances")
+    .setDescription("Replices with Binance balances!"),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, config: ConfigOptions) => {
-    
-
-    const balances = await getCurrentBalances(binance);
+    const balances: Balances = await getCurrentBalances(binance);
     const newBalances: Balances = {}
     const symbols = Object.keys(balances);
     for (const symbol of symbols) {

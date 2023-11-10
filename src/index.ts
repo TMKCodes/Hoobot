@@ -27,7 +27,7 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
-import { SymbolCandlesticks, candlestick, listenForCandlesticks } from './Hoobot/Binance/candlesticks';
+import { SymbolCandlesticks, Candlestick, listenForCandlesticks } from './Hoobot/Binance/candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
@@ -95,7 +95,7 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: candlestick[]) => {
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlestick[]) => {
             algorithmic(discord, binance, logger, symbol, balances, candlesticks, options)
           });
         }
@@ -103,7 +103,7 @@ const main = async () => {
         const filter = await getFilters(binance, options.symbols);
         symbolFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: candlestick[]) => {
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlestick[]) => {
           algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, options)
         });
       }

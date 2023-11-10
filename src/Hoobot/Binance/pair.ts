@@ -28,7 +28,6 @@
 import Binance from "node-binance-api";
 import { ConfigOptions } from "../Utilities/args";
 
-
 export const getPrevDayPriceChange = async (
   binance: Binance, 
   symbol: string

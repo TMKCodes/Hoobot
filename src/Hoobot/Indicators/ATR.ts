@@ -25,12 +25,12 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateATR = (
-  candles: candlestick[], 
+  candles: Candlestick[], 
   period: number = 14, 
   source: string = 'close'
 ): number[] => {

@@ -29,8 +29,8 @@ import { SlashCommandBuilder } from 'discord.js';
 
 export default {
   builder: new SlashCommandBuilder()
-                .setName('server')
-                .setDescription('Display info about this server.'),
+    .setName('server')
+    .setDescription('Display info about this server.'),
   execute: async (interaction: {
     guild: any; 
     reply: (arg0: string) => any; 

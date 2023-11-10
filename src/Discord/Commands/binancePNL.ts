@@ -1,8 +1,7 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { buy, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
-import { Order } from '../../Hoobot/Binance/orders';
+import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -17,18 +16,18 @@ export default {
         .setDescription('The duration for PNL (1D, 1W, 1M)')
         .setRequired(true)),
   execute: async (interaction, binance: Binance, options: ConfigOptions) => {
-    const symbol = interaction.options.getString('symbol').toUpperCase();
-    const duration = interaction.options.getString('duration').toLowerCase();
+    const symbol: string = interaction.options.getString('symbol').toUpperCase();
+    const duration: string = interaction.options.getString('duration').toLowerCase();
     if (duration.toUpperCase() !== '1D' && duration.toUpperCase() !== '1W' && duration.toUpperCase() !== '1M' && duration.toUpperCase() !== '1Y') {
       return await interaction.reply('Invalid duration. Please use 1D, 1W, 1M or 1Y.');
     }
-    let tradesInDuration: Order[] = await getHistoricalDataForDuration(binance, symbol, duration, options);
-    let pnlPercentage = 0;
+    let tradesInDuration: Trade[] = await getHistoricalDataForDuration(binance, symbol, duration, options);
+    let pnlPercentage: number = 0;
     for (let i = 1; i < tradesInDuration.length; i++) {
-      let olderTrade: Order = tradesInDuration[i - 1];
-      let lastTrade: Order = tradesInDuration[i];
-      let lastPNL = 0;
-      let commission = 0;
+      let olderTrade: Trade = tradesInDuration[i - 1];
+      let lastTrade: Trade = tradesInDuration[i];
+      let lastPNL: number = 0;
+      let commission: number = 0;
       if(olderTrade.isBuyer) { 
         lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
@@ -54,11 +53,11 @@ export default {
   },
 };
 
-export const getHistoricalDataForDuration = async (binance: Binance, symbol: string, duration: string, options: ConfigOptions) => {
-  const tradeHistory = await getTradeHistory(binance, symbol, options);
-  const targetTimestamp = getTargetTimestamp(duration.toUpperCase());
-  const tradesInDuration = tradeHistory.filter(trade => trade.time / 1000 >= targetTimestamp);
-  const slicedTradeHistory = tradesInDuration.slice(0, tradesInDuration.length - tradesInDuration.length);
+export const getHistoricalDataForDuration = async (binance: Binance, symbol: string, duration: string, options: ConfigOptions): Promise<Trade[]> => {
+  const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
+  const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());
+  const tradesInDuration: Trade[] = tradeHistory.filter(trade => trade.time / 1000 >= targetTimestamp);
+  const slicedTradeHistory: Trade[] = tradesInDuration.slice(0, tradesInDuration.length - tradesInDuration.length);
   let previousTradeBeforeDuration = slicedTradeHistory[slicedTradeHistory.length - 1];
   if(previousTradeBeforeDuration === undefined) {
     return tradesInDuration
@@ -67,7 +66,7 @@ export const getHistoricalDataForDuration = async (binance: Binance, symbol: str
   }
 }
 
-export function getTargetTimestamp(duration: string) {
+export const getTargetTimestamp = (duration: string): number => {
   const now = Math.floor(new Date().getTime() / 1000);
   switch (duration.toUpperCase()) {
     case '1D' :

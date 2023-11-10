@@ -25,14 +25,14 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { Indicators } from "../Modes/algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateOBV = (
-  candlesticks: candlestick[]
+  candlesticks: Candlestick[]
 ): number[] => {
   const obvValues: number[] = [0]; 
   for (let i = 1; i < candlesticks.length; i++) {
@@ -50,7 +50,7 @@ export const calculateOBV = (
 
 export const logOBVSignals = (
   consoleLogger: ConsoleLogger,
-  candlesticks: candlestick[],
+  candlesticks: Candlestick[],
   obvValues: number[]
 ) => {
   const currentOBV = obvValues[obvValues.length - 1];
@@ -84,7 +84,7 @@ export const logOBVSignals = (
 
 export const checkOBVSignals = (
   consoleLogger: ConsoleLogger, 
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   indicators: Indicators, 
   options: ConfigOptions
 ) => {

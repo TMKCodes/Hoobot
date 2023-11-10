@@ -28,8 +28,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
-
+import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
+import { OrderBook } from '../../Hoobot/Binance/orders';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -45,9 +45,9 @@ export default {
       return;
     }
     try {
-    const tradeHistory = await getTradeHistory(binance, symbol, options);
-      const orderBook = await binance.depth(symbol);
-      const lastTrade = tradeHistory[tradeHistory.length - 1];
+      const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
+      const orderBook: OrderBook = await binance.depth(symbol);
+      const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
       if (lastTrade.isBuyer === true) {
         const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
         const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice) - options.tradeFee;

@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from '../Binance/candlesticks';
+import { Candlestick } from '../Binance/candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/algorithmic';
@@ -58,7 +58,7 @@ export const logRSISignals = (
 
 
 export const calculateRSI = (
-  candles: candlestick[], 
+  candles: Candlestick[], 
   length: number = 9, 
   smoothingType: string = "SMA", 
   smoothing: number = 1, 

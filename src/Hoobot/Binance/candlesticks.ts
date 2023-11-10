@@ -29,11 +29,11 @@ import Binance from 'node-binance-api';
 
 export interface SymbolCandlesticks {
   [symbolPair: string]: {
-    candles: candlestick[]
+    candles: Candlestick[]
   }
 }
 
-export interface candlestick {
+export interface Candlestick {
   symbol?: string,
   interval?: string,
   type?: string,
@@ -55,13 +55,13 @@ export async function getLastCandlesticks(
   pair: string, 
   interval: string, 
   limit: number = 500
-): Promise<candlestick[]> {
-  return new Promise<candlestick[]>((resolve, reject) => {
+): Promise<Candlestick[]> {
+  return new Promise<Candlestick[]>((resolve, reject) => {
     binance.candlesticks(pair.split("/").join(""), interval, (error: any, ticks: any, symbol: string, interval: string) => {
       if (error) {
         reject(error);
       } else {
-        const parsedData: candlestick[] = ticks.map((candle: string[]) => ({
+        const parsedData: Candlestick[] = ticks.map((candle: string[]) => ({
           symbol: symbol,
           interval: interval,
           type: candle[8],
@@ -90,7 +90,7 @@ export const listenForCandlesticks = async (
   interval: string, 
   candleStore: SymbolCandlesticks, 
   historyLength: number, 
-  callback: (candlesticks: candlestick[]) => void
+  callback: (candlesticks: Candlestick[]) => void
 ) => {
   symbol = symbol.split("/").join("");
   const maxCandlesticks = 5000;
@@ -107,7 +107,7 @@ export const listenForCandlesticks = async (
       let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
       
       // Create a new candlestick with the received data
-      const newCandlestick: candlestick = {
+      const newCandlestick: Candlestick = {
         symbol: symbol,
         interval: interval,
         type: eventType,

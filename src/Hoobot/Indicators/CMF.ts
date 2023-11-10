@@ -25,14 +25,14 @@
 * the use of this software.
 * ===================================================================== */
 
-import { candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/candlesticks";
 import { Indicators } from "../Modes/algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateCMF = (
-  candlesticks: candlestick[], 
+  candlesticks: Candlestick[], 
   period: number
 ): number[] => {
   const cmfValues: number[] = [];
