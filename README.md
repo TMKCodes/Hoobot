@@ -106,103 +106,127 @@ Here is a list of npm packages that are required:
 
 Below is an explanation of the various configuration values present in the `.env` file for the Hoobot:
 
-### API Keys
-- `API_KEY`: Your Binance API key.
-- `API_SECRET`: Your Binance API secret.
+```
+#Binance Bot configuration
+API_KEY=""
+API_SECRET=""
 
-### License
-- `LICENSE`: License key for the bot.
+# Hoobot license
+LICENSE=""
 
-### Mode, Symbols, and Candlestick Interval, Console Update
-- `MODE`: Trading mode (e.g., "algorithmic").
-- `SYMBOLS`: Comma-separated list of trading pairs (e.g., "ETH/TUSD, BNB/USDT").
-- `CANDLESTICK_INTERVAL`: Time interval for candlestick data. Allowed values: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M"
-- `CONSOLE_UPDATE` The interval how often console should be updated with candlesticks. "update" once every candlestick update, "final" only final candlesticks.
+# Discord configuration
+DISCORD_ENABLED="false"
+DISCORD_BOT_TOKEN=""
+DISCORD_APPLICATION_ID=""
+DISCORD_SERVER_ID=""
+DISCORD_CHANNEL_ID=""
 
-### Source Price for Indicators
-- `SOURCE`: Source price for indicators. Allowed values "open", "close", "high", "low"
+# Hoobot trading mode
+MODE="algorithmic"
+# Symbols to trade. Supports multiple coins seperated with comma 'ETH/TUSD,BTC/TUSD'.
+SYMBOLS="BTC/TUSD"
+# Interval of candlesticks
+CANDLESTICK_INTERVAL="15m"
+# Default source of candlestick to use for calculations
+SOURCE="close"
+# How often to update terminal: "update", "final", "trade", "trade/final".
+CONSOLE_UPDATE="trade/final"
 
-### Indicators
-- `USE_EMA`: Use Exponential Moving Average (true/false).
-- `USE_MACD`: Use Moving Average Convergence Divergence (true/false).
-- `USE_RSI`: Use Relative Strength Index (true/false).
-- `USE_SMA`: Use Simple Moving Average (true/false).
-- `USE_ATR`: Use Average True Range (true/false).
-- `USE_BOLLINGER_BANDS`: Use Bollinger Bands (true/false).
-- `USE_STOCHASTIC_OSCILLATOR`: Use Stochastic Oscillator (true/false).
-- `USE_STOCHASTIC_RSI`: Use Stochastic RSI (true/false).
+# Simple Moving Average configuration
+USE_SMA="false"
+SMA_LENGTH=7
 
-### SMA Parameters
-- `SMA_LENGTH`: Length of Simple Moving Average.
+# Exponetial Moving Average configuration
+USE_EMA="false"
+EMA_SHORT=20
+EMA_LONG=50
 
-### EMA Parameters
-- `EMA_SHORT`: Length of Short Exponential Moving Average.
-- `EMA_LONG`: Length of Long Exponential Moving Average.
+# Moving average convergence/divergence configuration
+USE_MACD="true"
+MACD_FAST=5
+MACD_SLOW=15
+MACD_SIGNAL=6
 
-### MACD Parameters
-- `MACD_FAST`: Fast length for Moving Average Convergence Divergence.
-- `MACD_SLOW`: Slow length for Moving Average Convergence Divergence.
-- `MACD_SIGNAL`: Signal length for Moving Average Convergence Divergence.
+# Relative Strength Index configuration
+USE_RSI="false"
+RSI_LENGTH=5
+RSI_SMOOTHING=12
+RSI_SMOOTHING_TYPE="EMA"
+RSI_HISTORY_LENGTH=5
+RSI_OVERBOUGHT_TRESHOLD=70
+RSI_OVERSOLD_TRESHOLD=30
 
-### RSI Parameters
-- `RSI_LENGTH`: Length of Relative Strength Index.
-- `RSI_SMOOTHING`: Smoothing factor for RSI.
-- `RSI_SMOOTHING_TYPE`: Type of smoothing for RSI.
-- `RSI_HISTORY_LENGTH`: Length of RSI history.
-- `RSI_OVERBOUGHT_TRESHOLD`: RSI overbought threshold.
-- `RSI_OVERSOLD_TRESHOLD`: RSI oversold threshold.
+# Average True Range configuration
+USE_ATR="false"
+ATR_LENGTH=14
 
-### ATR Parameters
-- `ATR_LENGTH`: Length of Average True Range.
+# On-Balance Volume configuration
+USE_OBV="false"
+OBV_HISTORY_LENGTH=5
 
-### Bollinger Bands Parameters
-- `BOLLINGER_BANDS_LENGTH`: Length of Bollinger Bands.
-- `BOLLINGER_BANDS_MULTIPLIER`: Multiplier for Bollinger Bands.
-- `BOLLINGER_BANDS_AVERAGE_TYPE`: Type of average for Bollinger Bands, Allowed options "SMA" | "EMA"
+# Chaikin Money Flow configuration
+USE_CMF="true"
+CMF_LEGNTH=20
+CMF_HISTORY_LENGTH=5
+CMF_OVERBOUGHT_TRESHOLD=0.25
+CMF_OVERSOLD_TRESHOLD=-0.25
 
-### Stochastic Oscillator Parameters
-- `STOCHASTIC_OSCILLATOR_KPERIOD`: K period for Stochastic Oscillator.
-- `STOCHASTIC_OSCILLATOR_DPERIOD`: D period for Stochastic Oscillator.
-- `STOCHASTIC_OSCILLATOR_SMOOTHING`: Smoothing factor for Stochastic Oscillator.
-- `STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD`: Stochastic Oscillator overbought threshold.
-- `STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD`: Stochastic Oscillator oversold threshold.
+# Bollinger Bands configuration
+USE_BOLLINGER_BANDS="false"
+BOLLINGER_BANDS_LENGTH=20
+BOLLINGER_BANDS_MULTIPLIER=2
+BOLLINGER_BANDS_AVERAGE_TYPE="SMA"
+BOLLINGER_BANDS_HISTORY_LENGTH=5
 
-### Stochastic RSI Parameters
-- `STOCHASTIC_RSI_LENGTH_RSI`: Length of RSI for Stochastic RSI.
-- `STOCHASTIC_RSI_LENGTH_STOCHASTIC`: Length of Stochastic for Stochastic RSI.
-- `STOCHASTIC_RSI_SMOOTH_K`: Smoothing factor for Stochastic RSI K.
-- `STOCHASTIC_RSI_SMOOTH_D`: Smoothing factor for Stochastic RSI D.
-- `STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD`: Stochastic RSI overbought threshold.
-- `STOCHASTIC_RSI_OVERSOLD_TRESHOLD`: Stochastic RSI oversold threshold.
+# Stochastic Oscillator configuration
+USE_STOCHASTIC_OSCILLATOR="false"
+STOCHASTIC_OSCILLATOR_KPERIOD=14
+STOCHASTIC_OSCILLATOR_DPERIOD=1
+STOCHASTIC_OSCILLATOR_SMOOTHING=3
+STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD=80
+STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD=20
 
-### Trading Limits
-- `MAX_AMOUNT`: Maximum amount to trade (0 for unlimited).
-- `CLOSE_PERCENTAGE`: Percentage to close a position.
-- `MAX_ORDER_AGE_SECONDS`: Maximum age of an order in seconds.
-- `TRADE_FEE_PERCENTAGE`: Trading fee percentage.
-- `HOLD_UNTIL_POSITIVE_TRADE`: Hold position until it's profitable (true/false).
-- `MINIMUM_PROFIT_SELL`: Minimum profit percentage to sell.
-- `MINIMUM_PROFIT_BUY`: Minimum profit percentage to buy.
+# Stochastic RSI configuration
+USE_STOCHASTIC_RSI="true"
+STOCHASTIC_RSI_LENGTH_RSI=14
+STOCHASTIC_RSI_LENGTH_STOCHASTIC=14
+STOCHASTIC_RSI_SMOOTH_K=3
+STOCHASTIC_RSI_SMOOTH_D=3
+STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD=80
+STOCHASTIC_RSI_OVERSOLD_TRESHOLD=20
+STOCHASTIC_RSI_HISTORY_LENGTH=5
 
-### Discord Configuration
-- `DISCORD_ENABLED`: Enable Discord notifications (true/false).
-- `DISCORD_BOT_TOKEN`: Discord bot token.
-- `DISCORD_APPLICATION_ID`: Discord application ID.
-- `DISCORD_SERVER_ID`: Discord server ID.
-- `DISCORD_CHANNEL_ID`: Discord channel ID.
+# Growing MAX buy and sell amount for quote coin.
+STARTING_MAX_BUY_AMOUNT=5.3
+STARTING_MAX_SELL_AMOUNT=0
 
-### OpenAI GPT Configuration
-- `OPENAI_API_KEY`: Enable GPT trade decisions when this is not undefined.
-- `OPENAI_MODEL`: GPT Model "gpt-4.0" | "gpt-3.5-turbo".
-- `OPENAI_HISTORY_LENGTH`: Length of indicator history sent to GPT.
-- `OPENAI_OVERWRITE`: Overwrite indicator checks with GPT decision.
+# Percentage of price change when to cancel order 
+CLOSE_PERCENTAGE=0.25
 
-### Developer
-- `DEBUG`: Enable debugging mode (true/false).
+# Maximum age of order, cancel afterwwards
+MAX_ORDER_AGE_SECONDS=60
 
-### Arbitrage
-- `PAIR_MIN_VOLUME`: Minimum trading volume for arbitrage.
-- `PAIR_MIN_PRICE_CHANGE`: Minimum price change for arbitrage.
+# Trade fee 
+TRADE_FEE_PERCENTAGE=0.075
+
+# Panic sell configuration, leave 0 for disabling.
+PANIC_PROFIT_MINIMUM=0.4
+PANIC_PROFIT_MINIMUM_DROP=0.05
+
+# Don't allow trading until these PNL are met. False to disable
+HOLD_UNTIL_POSITIVE_TRADE="true"
+MINIMUM_PROFIT_SELL=0.075
+MINIMUM_PROFIT_BUY=-0.075
+
+# Go crazy, enable trading on all symbols with given quote coin.
+GO_CRAZY="TUSD"
+
+# Developer
+DEBUG="true"
+
+# Trading start date in unix timestamp
+START_TIMESTAMP="1698789600"
+```
 
 ## Usage
 1. Copy the provided `.env` file and fill in the necessary values for the parameters.
