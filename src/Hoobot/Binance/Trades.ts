@@ -29,8 +29,8 @@ import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
-import { filter } from "../Binance/filters";
-import { handleOpenOrders, Order, OrderBook } from "./orders";
+import { Filter } from "./Filters";
+import { handleOpenOrders, Order, OrderBook } from "./Orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
@@ -171,7 +171,7 @@ export const sell = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   orderBook: OrderBook,
-  filter: filter,
+  filter: Filter,
   options: ConfigOptions,
   baseBalance: number,
 ): Promise<Order | boolean> => {
@@ -228,7 +228,7 @@ export const buy = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   orderBook: any,
-  filter: filter,
+  filter: Filter,
   options: ConfigOptions,
   quoteBalance: number,
 ): Promise<Order | boolean> => {

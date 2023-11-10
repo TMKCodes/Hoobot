@@ -30,7 +30,7 @@ import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions } from "../Utilities/args";
 import { consoleLogger } from "../Utilities/consoleLogger";
-import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./trade";
+import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 
 export interface Order {
   quoteQty: string;

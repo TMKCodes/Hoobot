@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { TradeHistory } from "../Binance/trade";
+import { TradeHistory } from "../Binance/Trades";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;

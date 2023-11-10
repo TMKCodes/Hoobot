@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { Balances, getCurrentBalances } from '../../Hoobot/Binance/balances';
+import { Balances, getCurrentBalances } from '../../Hoobot/Binance/Balances';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 

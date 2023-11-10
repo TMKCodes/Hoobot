@@ -30,8 +30,8 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
-import { Candlestick } from "../Binance/candlesticks";
-import { filter } from "../Binance/filters";
+import { Candlestick } from "../Binance/Candlesticks";
+import { Filter } from "../Binance/Filters";
 import { checkEMASignals } from "../Indicators/EMA";
 import { checkMACDSignals } from "../Indicators/MACD";
 import { checkRSISignals } from "../Indicators/RSI";
@@ -42,8 +42,8 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
-import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from "../Binance/trade";
-import { OrderBook } from "../Binance/orders";
+import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from "../Binance/Trades";
+import { OrderBook } from "../Binance/Orders";
 
 export const checkBeforeOrder = (
   symbol: string,
@@ -155,7 +155,7 @@ const checkPanicProfit = (
   orderBook: OrderBook,
   balances: number[],
   options: ConfigOptions,
-  filter: filter,
+  filter: Filter,
 ) => {
   let check = 'SKIP';
   if (options.panicProfitMinimum > 0) {
@@ -219,7 +219,7 @@ const checkBalanceSignals = (
   baseBalance: number, 
   closePrice: number,  
   options: ConfigOptions,
-  filter: filter,
+  filter: Filter,
 ) => {
   let check = 'HOLD';
   const baseBalanceConverted = (baseBalance * closePrice)
@@ -255,7 +255,7 @@ export const tradeDirection = async (
   candlesticks: Candlestick[], 
   indicators: Indicators,
   options: ConfigOptions,
-  filter: filter,
+  filter: Filter,
 ) => {
   let direction = 'HOLD';
   const checks = {

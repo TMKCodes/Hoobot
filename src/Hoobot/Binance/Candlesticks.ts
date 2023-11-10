@@ -91,7 +91,7 @@ export const listenForCandlesticks = async (
   candleStore: SymbolCandlesticks, 
   historyLength: number, 
   callback: (candlesticks: Candlestick[]) => void
-) => {
+): Promise<void> => {
   symbol = symbol.split("/").join("");
   const maxCandlesticks = 5000;
   try {

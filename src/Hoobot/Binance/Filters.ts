@@ -27,7 +27,7 @@
 
 import Binance from "node-binance-api";
 
-export interface filter {
+export interface Filter {
   minPrice: any;
   maxPrice: any;
   tickSize: any;
@@ -42,8 +42,8 @@ export interface filter {
   askMultiplierDown: any
 }
 
-export interface filters {
-  [pair: string]: filter;
+export interface Filters {
+  [pair: string]: Filter;
 }
 
 export const getFilters = async (

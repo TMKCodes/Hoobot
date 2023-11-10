@@ -27,20 +27,20 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getOrderBook, handleOpenOrders } from "../Binance/orders";
-import { filter } from "../Binance/filters";
+import { getOrderBook, handleOpenOrders } from "../Binance/Orders";
+import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Balances } from "../Binance/balances";
+import { Balances } from "../Binance/Balances";
 import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
 import { calculateRSI, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
-import { Candlestick } from "../Binance/candlesticks";
+import { Candlestick } from "../Binance/Candlesticks";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, calculateROI, getTradeHistory, sell } from "../Binance/trade";
+import { buy, calculateROI, getTradeHistory, sell } from "../Binance/Trades";
 import { tradeDirection } from "./tradeDirection";
 import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
@@ -75,7 +75,7 @@ const placeTrade = async (
   indicators: Indicators,
   balances: Balances,
   orderBook: any,
-  filter: filter,
+  filter: Filter,
   options: ConfigOptions,
 ) => {
   if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {

@@ -28,8 +28,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/trade';
-import { OrderBook } from '../../Hoobot/Binance/orders';
+import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/Trades';
+import { OrderBook } from '../../Hoobot/Binance/Orders';
 
 export default {
   builder: new SlashCommandBuilder()

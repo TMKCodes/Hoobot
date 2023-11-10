@@ -27,14 +27,14 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
-import { SymbolCandlesticks, Candlestick, listenForCandlesticks } from './Hoobot/Binance/candlesticks';
+import { SymbolCandlesticks, Candlestick, listenForCandlesticks } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
-import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/balances';
+import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
-import { filters, getFilters } from './Hoobot/Binance/filters';
+import { Filters, getFilters } from './Hoobot/Binance/Filters';
 import dotenv from 'dotenv';
 import { algorithmic } from './Hoobot/Modes/algorithmic';
-import { getTradeableSymbols } from './Hoobot/Binance/symbols';
+import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
 
 
@@ -51,7 +51,7 @@ const binance = new Binance().options({
   family: 4,
 });
 
-export let symbolFilters: filters = {};
+export let symbolFilters: Filters = {};
 const main = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
