@@ -92,12 +92,9 @@ export const calculatePNLPercentageForLong = (entryQty: number, entryPrice: numb
   return ((exitPrice) - (entryPrice)) / (entryPrice) * 100;
 }
 
-
 export const calculatePNLPercentageForShort = (entryQty: number, entryPrice: number, exitPrice: number): number => {
   return ((entryPrice) - (exitPrice)) / (entryPrice) * 100;
 }
-
-
 
 export const calculateUnrealizedPNLPercentageForLong = (entryQty: number, entryPrice: number, highestBidPrice: number): number => {
   return ((highestBidPrice - entryPrice) * entryQty / (entryPrice * entryQty)) * 100;

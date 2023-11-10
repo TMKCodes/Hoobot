@@ -28,7 +28,7 @@
 import Binance from 'node-binance-api';
 
 export interface SymbolCandlesticks {
-  [symbolPair: string]: {
+  [symbol: string]: {
     candles: Candlestick[]
   }
 }

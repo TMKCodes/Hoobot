@@ -28,7 +28,7 @@
 import Binance from "node-binance-api";
 
 export interface Balances { 
-  [coin: string]: number 
+  [symbol: string]: number 
 }
 
 export const getCurrentBalance = async (

@@ -96,6 +96,8 @@ export const handleOpenOrders = async (
         if (symbol.split("/").join("") !== order.symbol.split("/").join("")) {
           continue;
         }
+        //const orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+        //console.log(orderStatus)
         const logger = consoleLogger();
         const currentTime = Date.now();
         const orderAgeSeconds = Math.floor((currentTime - order.time) / 1000);
@@ -130,9 +132,3 @@ export const handleOpenOrders = async (
     delay(1500);
   } while(openOrders.length > 0);
 };
-
-export const getLastCompletedOrder = async (binance: Binance, pair: string): Promise<Order> => {
-  const tradeHistory = await binance.trades(pair.split("/").join(""));
-  tradeHistory.sort((a: { time: number; }, b: { time: number; }) => b.time - a.time);
-  return tradeHistory.length > 0 ? tradeHistory[0] : "LOL";
-}
