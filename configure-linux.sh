@@ -34,6 +34,7 @@ install_node_npm() {
 install_dependencies() {
   echo "Installing project dependencies..."
   npm install
+  npm run postinstall
 }
 
 # Function to prompt user for .env file information

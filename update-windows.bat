@@ -33,5 +33,6 @@ rmdir /S /Q %TMP_DIR%
 REM Install project dependencies with NPM
 echo Installing project dependencies...
 npm install
+npm run postinstall
 
 echo Update completed successfully.

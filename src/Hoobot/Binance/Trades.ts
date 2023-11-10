@@ -200,8 +200,6 @@ export const sell = async (
         if (options.startingMaxBuyAmount > 0) {
           options.startingMaxBuyAmount = Math.max(roundedQuantityInBase * roundedPrice, options.startingMaxBuyAmount);
         }
-        const statusMsg = `>>> **SELL** ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, options.discordChannelID, statusMsg);
         await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         updateForce(symbol);
         play(soundFile);
@@ -258,8 +256,6 @@ export const buy = async (
         if (options.startingMaxSellAmount > 0) {
           options.startingMaxSellAmount = Math.max(roundedQuantityInBase, options.startingMaxSellAmount);
         }
-        const statusMsg = `>>> **BUY** ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}** has been filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, options.discordChannelID, statusMsg);
         await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
         updateForce(symbol);
         play(soundFile);

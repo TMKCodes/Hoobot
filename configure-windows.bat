@@ -79,6 +79,7 @@ echo Configuration saved to .env file.
 REM Install project dependencies with NPM
 echo Installing project dependencies...
 npm install
+npm run postinstall
 
 echo Hoobot installation completed successfully.
 

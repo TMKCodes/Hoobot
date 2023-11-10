@@ -48,6 +48,28 @@ export interface Order {
   tradeId: number;
 }
 
+export interface OrderStatus {
+  symbol?: string,
+  orderId?: number;
+  orderListId?: number;
+  clientOrderId?: string;
+  price?: string;
+  origQty?: string;
+  executedQty?: string;
+  status?: string;
+  timeInForce?: string;
+  type?: string,
+  side?: string,
+  stopPrice?: string,
+  icebergQty?: string,
+  time?: number,
+  updateTime?: number,
+  isWorking?: true,
+  workingTime?: number,
+  origQuoteOrderQty?: string,
+  selfTradePreventionMode?: string
+}
+
 export interface OrderBook {
   bids: [string, string][]; 
   asks: [string, string][]; 
@@ -96,37 +118,63 @@ export const handleOpenOrders = async (
         if (symbol.split("/").join("") !== order.symbol.split("/").join("")) {
           continue;
         }
-        //const orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-        //console.log(orderStatus)
-        const logger = consoleLogger();
-        const currentTime = Date.now();
-        const orderAgeSeconds = Math.floor((currentTime - order.time) / 1000);
-        logger.push("Order ID: ", order.orderId);
-        logger.push("Symbol: ", symbol);
-        logger.push("Age seconds: ", orderAgeSeconds);
-        if (orderAgeSeconds > options.maxOrderAge) {
-          await cancelOrder(binance, symbol, order.orderId);
-          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nCancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-          logger.push("order-msg", orderMsg);
-          return "canceled";
-        } else {
-          let unrealizedPNL = 0;
-          const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-          const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-          if (order.isBuyer === true) { 
-            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
-          } else { 
-            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
-          }
-          if (unrealizedPNL < options.closePercentage) {
-            await cancelOrder(binance, symbol, order.orderId);
-            const orderMsg = `>>> Order ID **${order.orderId}**\n symbol **${symbol.split("/").join("")}**\nCancelled due to risk percentage ${options.closePercentage.toFixed(2)}%\nCurrent bid ${orderBookBids[0]}\nCurrent ask ${orderBookAsks[0]}\nCurrent price: ${order.price}\nDifference: ${unrealizedPNL.toFixed(4)} UPNL%.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        let orderStatus: OrderStatus = {}
+        do {
+          orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+          const logger = consoleLogger();
+          const currentTime = Date.now();
+          const orderAgeSeconds = Math.floor((currentTime - order.time) / 1000);
+          logger.push("Order ID: ", order.orderId);
+          logger.push("Symbol: ", symbol);
+          logger.push("Age seconds: ", orderAgeSeconds);
+          let tryToCancel = false;
+          if (orderStatus.status === "CANCELED") {
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            break;
+          } else if (orderStatus.status === "EXPIRED") {
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            break;
+          } else if (orderStatus.status === "FILLED") {
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            break;
+          } else if (orderStatus.status === "NEW") {
+            tryToCancel = true;
+          } else if (orderStatus.status === "PARTIALLY_FILLED") {
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          } else if (orderStatus.status === "REJECTED") {
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           }
-        }
-        logger.print();
-        logger.flush();
+          if (tryToCancel === true) {
+            if (orderAgeSeconds > options.maxOrderAge) {
+              await cancelOrder(binance, symbol, order.orderId);
+              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nCancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+              sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+              logger.push("order-msg", orderMsg);
+              return "canceled";
+            } else {
+              let unrealizedPNL = 0;
+              const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+              const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+              if (order.isBuyer === true) { 
+                unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
+              } else { 
+                unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
+              }
+              if (unrealizedPNL < options.closePercentage) {
+                await cancelOrder(binance, symbol, order.orderId);
+                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nCancelled due to risk percentage ${options.closePercentage.toFixed(2)}%\nCurrent bid ${orderBookBids[0]}\nCurrent ask ${orderBookAsks[0]}\nCurrent price: ${order.price}\nDifference: ${unrealizedPNL.toFixed(4)} UPNL%.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+              }
+            }
+          }
+          logger.print();
+          logger.flush();
+        } while(orderStatus.status === 'NEW' || orderStatus.status === "PENDING_CANCEL" || orderStatus.status === "PARTIALLY_FILLED")
       }
     }
     delay(1500);

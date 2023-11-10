@@ -4,6 +4,7 @@
   "description": "Hoobot is reactive algorithmic crypto trading bot with suport for OpenAI GPT and many other indicators.",
   "main": "src/index.ts",
   "scripts": {
+    "postinstall": "patch-package",
     "test": "npx jest",
     "start": "ts-node -r dotenv/config src/index.ts",
     "openai": "ts-node -r dotenv/config src/openai.ts"
@@ -22,6 +23,7 @@
     "dotenv": "^16.3.1",
     "node-binance-api": "^0.13.1",
     "openai": "^4.15.0",
+    "patch-package": "^8.0.0",
     "play-sound": "^1.1.5",
     "ts-node": "^10.9.1"
   }

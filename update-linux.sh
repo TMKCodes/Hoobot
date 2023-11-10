@@ -32,5 +32,6 @@ rm $ZIP_FILE
 rm -r $TMP_DIR
 
 npm install
+npm run postinstall
 
 echo "Update completed successfully."
