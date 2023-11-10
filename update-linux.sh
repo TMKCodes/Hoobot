@@ -25,7 +25,6 @@ if [ -z "$EXTRACTED_DIR" ]; then
 fi
 
 # Step 5: Use rsync to copy files and directories
-rm -rf $EXTRACTED_DIR/update-linux.sh
 rsync -av $EXTRACTED_DIR/ .
 
 # Step 6: Remove the downloaded zip file and tmp folder
