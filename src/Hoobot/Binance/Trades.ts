@@ -186,7 +186,7 @@ export const sell = async (
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
-      if (unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
+      if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
         return false;
       }
     }
@@ -240,7 +240,7 @@ export const buy = async (
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
-      if (unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
+      if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
         return false;
       }
     }

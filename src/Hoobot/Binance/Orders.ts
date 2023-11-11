@@ -165,9 +165,6 @@ export const handleOpenOrders = async (
           if (tryToCancel === true) {
             if (orderAgeSeconds > options.maxOrderAge) {
               await cancelOrder(binance, symbol, order.orderId);
-              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nCancelled due to exceeding max age ${options.maxOrderAge} seconds.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-              logger.push("order-msg", orderMsg);
               return "canceled";
             } else {
               let unrealizedPNL = 0;
@@ -180,8 +177,6 @@ export const handleOpenOrders = async (
               }
               if (unrealizedPNL < options.closePercentage) {
                 await cancelOrder(binance, symbol, order.orderId);
-                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nCancelled due to risk percentage ${options.closePercentage.toFixed(2)}%\nCurrent bid ${orderBookBids[0]}\nCurrent ask ${orderBookAsks[0]}\nCurrent price: ${order.price}\nDifference: ${unrealizedPNL.toFixed(4)} UPNL%.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-                sendMessageToChannel(discord, options.discordChannelID, orderMsg);
               }
             }
           }
