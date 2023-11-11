@@ -131,15 +131,15 @@ export const handleOpenOrders = async (
           if (orderStatus.status === "CANCELED") {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-            break;
+            return "CANCELED";
           } else if (orderStatus.status === "EXPIRED") {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-            break;
+            return "EXPIRED";
           } else if (orderStatus.status === "FILLED") {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-            break;
+            return "FILLED";
           } else if (orderStatus.status === "NEW") {
             tryToCancel = true;
           } else if (orderStatus.status === "PARTIALLY_FILLED") {
@@ -148,6 +148,7 @@ export const handleOpenOrders = async (
           } else if (orderStatus.status === "REJECTED") {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            return "REJECTED";
           }
           if (tryToCancel === true) {
             if (orderAgeSeconds > options.maxOrderAge) {
@@ -174,7 +175,7 @@ export const handleOpenOrders = async (
           }
           logger.print();
           logger.flush();
-        } while(orderStatus.status === 'NEW' || orderStatus.status === "PENDING_CANCEL" || orderStatus.status === "PARTIALLY_FILLED")
+        } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED")
       }
     }
     delay(1500);

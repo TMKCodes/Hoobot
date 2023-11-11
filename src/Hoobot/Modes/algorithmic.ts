@@ -65,7 +65,6 @@ export const reverseSign = (number: number) => {
   return -number;
 }
 
-// Place buy or sell order based on EMA difference
 const placeTrade = async (
   discord: Client,
   binance: Binance,
@@ -182,7 +181,7 @@ export const algorithmic = async (
     if (latestCandle.close > latestCandle.open) {
       consoleLogger.push(`Candlestick Color`, "Green");
     } else {
-        consoleLogger.push(`Candlestick Color`, "Red");
+      consoleLogger.push(`Candlestick Color`, "Red");
     }
     if (prevCandle) {
       if (latestCandle.close > prevCandle.close) {
@@ -214,7 +213,6 @@ export const algorithmic = async (
       return false;
     }
     const orderBook = await getOrderBook(binance, symbol);
-    await handleOpenOrders(discord, binance, symbol, orderBook, options);
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();

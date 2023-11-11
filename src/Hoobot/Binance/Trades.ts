@@ -195,17 +195,15 @@ export const sell = async (
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      const openedOrder = await handleOpenOrders(discord, binance, symbol, orderBook, options);
-      if (openedOrder !== "canceled") {
-        if (options.startingMaxBuyAmount > 0) {
-          options.startingMaxBuyAmount = Math.max(roundedQuantityInBase * roundedPrice, options.startingMaxBuyAmount);
-        }
-        await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
-        updateForce(symbol);
-        play(soundFile);
-        options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
-        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
+      await handleOpenOrders(discord, binance, symbol, orderBook, options);
+      if (options.startingMaxBuyAmount > 0) {
+        options.startingMaxBuyAmount = Math.max(roundedQuantityInBase * roundedPrice, options.startingMaxBuyAmount);
       }
+      await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
+      updateForce(symbol);
+      play(soundFile);
+      options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       return order;
     } else {
       consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
@@ -251,17 +249,15 @@ export const buy = async (
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      const openedOrder = await handleOpenOrders(discord, binance, symbol, orderBook, options);
-      if (openedOrder !== "canceled") {
-        if (options.startingMaxSellAmount > 0) {
-          options.startingMaxSellAmount = Math.max(roundedQuantityInBase, options.startingMaxSellAmount);
-        }
-        await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
-        updateForce(symbol);
-        play(soundFile);
-        options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
-        options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
+      await handleOpenOrders(discord, binance, symbol, orderBook, options);
+      if (options.startingMaxSellAmount > 0) {
+        options.startingMaxSellAmount = Math.max(roundedQuantityInBase, options.startingMaxSellAmount);
       }
+      await delay(getSecondsFromInterval(options.candlestickInterval) * 1000);
+      updateForce(symbol);
+      play(soundFile);
+      options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       return order;
     } else {
       consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
