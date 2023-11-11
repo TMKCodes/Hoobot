@@ -274,7 +274,7 @@ export const tradeDirection = async (
     panic: checkPanicProfit(consoleLogger, symbol, orderBook, [baseBalance, quoteBalance], options, filter)
   }
   const actions = ['BUY', 'SELL'];
-  const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF'];
+  const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF', 'GPT'];
   for (const action in actions) {
     if ((checks.profit === action || checks.profit === 'SKIP') && checks.next === action) {
       direction = action;

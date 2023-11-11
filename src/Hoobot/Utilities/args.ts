@@ -104,6 +104,7 @@ export interface ConfigOptions {
   useATR: boolean;
   useOBV: boolean;
   useCMF: boolean;
+  useGPT: boolean;
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
@@ -158,6 +159,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     useATR: process.env.USE_ATR === "true" ? true : false,
     useOBV: process.env.USE_OBV === "true" ? true : false,
     useCMF: process.env.USE_CMF === "true" ? true : false,
+    useGPT: process.env.USE_GPT === "true" ? true : false,
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
@@ -213,10 +215,10 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     discordServerID: process.env.DISCORD_SERVER_ID || "",
     discordChannelID:  process.env.DISCORD_CHANNEL_ID || "",
     // OpenAI
-    openaiApiKey: process.env.OPENAI_API_KEY || undefined,
-    openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
-    openaiHistoryLength: parseFloat(process.env.OPENAI_HISTORY_LENGTH!) || 5,
-    openaiOverwrite:  process.env.OPENAI_OVERWRITE === "true" ? true : false || false,
+    openaiApiKey: process.env.GPT_API_KEY || undefined,
+    openaiModel: process.env.GPT_MODEL || "gpt-3.5-turbo",
+    openaiHistoryLength: parseFloat(process.env.GPT_HISTORY_LENGTH!) || 5,
+    openaiOverwrite:  process.env.GPT_OVERWRITE === "true" ? true : false || false,
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,
     // Arbitrage
