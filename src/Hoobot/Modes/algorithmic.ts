@@ -71,9 +71,7 @@ const placeTrade = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   candlesticks: Candlestick[],
-  indicators: Indicators,
   balances: Balances,
-  orderBook: any,
   filter: Filter,
   options: ConfigOptions,
 ) => {
@@ -92,8 +90,10 @@ const placeTrade = async (
   if (await openOrders(binance, symbol) !== false) {
     return false;
   }
+  const orderBook = await getOrderBook(binance, symbol);
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
+  const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
   const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options, filter);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance);
@@ -215,12 +215,10 @@ export const algorithmic = async (
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
-    const orderBook = await getOrderBook(binance, symbol);
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
     const startTime = Date.now();
-    const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
-    const placedTrade = await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, indicators, balances, orderBook, filter, options);
+    const placedTrade = await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, balances, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
     if (options.consoleUpdate === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
