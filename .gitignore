@@ -37,4 +37,5 @@ package-lock.json
 force.json
 .env_backup
 logs.txt
+trades.json
 exchange-info.json
