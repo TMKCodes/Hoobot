@@ -152,7 +152,9 @@ export const handleOpenOrder = async (
     }
     if (tryToCancel === true) {
       if (orderAgeSeconds > options.maxOrderAge) {
-        await cancelOrder(binance, symbol, order.orderId);
+        await cancelOrder(binance, symbol.split("/").join(""), order.orderId);
+        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
         return "CANCELED";
       } else {
         let unrealizedPNL = 0;
@@ -164,7 +166,9 @@ export const handleOpenOrder = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
         }
         if (unrealizedPNL < options.closePercentage) {
-          await cancelOrder(binance, symbol, order.orderId);
+          await cancelOrder(binance, symbol.split("/").join(""), order.orderId);
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           return "CANCELED";
         }
       }

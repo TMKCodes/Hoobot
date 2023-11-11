@@ -114,7 +114,7 @@ const checkProfitSignals = (
       const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price), orderBookAsks[0]);
     }
-    if(force[symbol]?.skip !== true) {
+    if(force[symbol.split("/").join("")]?.skip !== true) {
       if (lastTrade.isBuyer === true) { 
         if(options.holdUntilPositiveTrade === true) {
           if(unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
@@ -226,21 +226,19 @@ const checkBalanceSignals = async (
   let check = 'HOLD';
   const baseBalance = options.balances[symbol.split("/")[0]];
   const quoteBalance = options.balances[symbol.split("/")[1]];
-  const baseBalanceConverted = (baseBalance * closePrice)
+  const baseBalanceConverted = (baseBalance * closePrice);
   const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
   if (tradeCheck === 'SELL') {
     if (quoteBalance > parseFloat(filter.minNotional)) {
       check = 'BUY';
     } else {
       check = 'HOLD';
-      // options.balances = await getCurrentBalances(binance);
     }
   } else if (tradeCheck === 'BUY') {
     if (baseBalanceConverted > parseFloat(filter.minNotional)) {
       check = 'SELL'
     } else {
       check = 'HOLD';
-      // options.balances = await getCurrentBalances(binance);
     }
   }
   if (check === 'SELL' && (baseBalanceConverted < filter.minNotional || baseBalanceConverted > filter.maxNotional)) {

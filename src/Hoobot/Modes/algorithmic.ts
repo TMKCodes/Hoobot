@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { openOrders } from "../Binance/Orders";
+import { handleOpenOrder, openOrders } from "../Binance/Orders";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -93,7 +93,7 @@ const placeTrade = async (
   consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
   consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
   const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
-  const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), orderBook, candlesticks, indicators, options, filter);
+  const direction = await tradeDirection(binance, consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
   const stopTime = Date.now();
   consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
   if (direction === 'SELL') {

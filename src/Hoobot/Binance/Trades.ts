@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
 import { Orderbook } from "./Orderbook";
 import { getCurrentBalances } from "./Balances";
+import { logToFile } from "../Utilities/logToFile";
 
 const soundFile = './alarm.mp3'
 
@@ -202,9 +203,10 @@ export const sell = async (
     let order: Order = undefined;
     if(roundedQuantityInQuote > parseFloat(filter.minNotional)) {
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      console.log(order);
+      logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+      logToFile(orderMsg);
       const orderResult = await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
       if (orderResult === "FILLED") {
         if (options.startingMaxBuyAmount > 0) {
@@ -266,9 +268,10 @@ export const buy = async (
     let order: Order = undefined;
     if(roundedQuantityInQuote > parseFloat(filter.minNotional)) {
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      console.log(order);
+      logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+      logToFile(orderMsg);
       const orderResult = await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
       if (orderResult === "FILLED") {
         if (options.startingMaxSellAmount > 0) {
