@@ -103,6 +103,18 @@ export const cancelOrder = async (
   }
 };
 
+export const openOrders = async (
+  binance: Binance, 
+  symbol: string,
+): Promise<boolean | Order[]> => {
+  const openOrders: Order[] = await binance.openOrders(symbol.split("/").join(""))
+  if (openOrders.length === 0) {
+    return false;
+  } else {
+    return openOrders;
+  }
+}
+
 export const handleOpenOrders = async (
   discord: Client, 
   binance: Binance, 

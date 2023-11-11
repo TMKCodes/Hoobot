@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getOrderBook } from "../Binance/Orders";
+import { getOrderBook, openOrders } from "../Binance/Orders";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -88,6 +88,9 @@ const placeTrade = async (
     }
   } else {
     consoleLogger.push("Last trade datetime:", "No trades done yet.");
+  }
+  if (await openOrders(binance, symbol) !== false) {
+    return false;
   }
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
