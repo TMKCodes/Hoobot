@@ -63,24 +63,3 @@ export const getCurrentBalances = async (
     throw error;
   }
 }
-
-export const getBalancesFromWebsocket = (
-  data: any
-): Balances => {
-  if (!Array.isArray(data.B)) {
-    return {} as Balances;
-  }
-  const balances: Balances = {};
-  for (let obj of data.B) {
-    if (!obj.a || !obj.f || !obj.l) {
-      console.error("Balance object is missing required properties (a, f, l).", obj);
-      continue;
-    }
-    let { a: asset, f: available, l: onOrder } = obj;
-    available = parseFloat(available);
-    if (available === 0) continue;
-    balances[asset] = available;
-  }
-
-  return balances;
-}

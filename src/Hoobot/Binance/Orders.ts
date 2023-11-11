@@ -32,6 +32,7 @@ import { ConfigOptions } from "../Utilities/args";
 import { consoleLogger } from "../Utilities/consoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
+import { logToFile } from "../Utilities/logToFile";
 
 export interface Order {
   quoteQty: string;
@@ -115,8 +116,12 @@ export const handleOpenOrder = async (
   options: ConfigOptions,
 ): Promise<string> => {
   const logger = consoleLogger();
+  delay(1500);
   let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+  logToFile(JSON.stringify(orderStatus));
+  delay(1500);
   do {
+    delay(1500);
     const currentTime = Date.now();
     const orderAgeSeconds = Math.floor((currentTime - orderStatus.time) / 1000);
     logger.push("Order ID: ", order.orderId);
@@ -167,6 +172,6 @@ export const handleOpenOrder = async (
     logger.print();
     logger.flush();
     orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-  } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED")
-  delay(1500);
+    delay(1500);
+  } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED");
 };

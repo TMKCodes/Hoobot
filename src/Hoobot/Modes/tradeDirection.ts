@@ -27,7 +27,7 @@
 
 import { readFileSync } from "fs";
 import { ConfigOptions } from "../Utilities/args";
-import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { logToFile } from "../Utilities/logToFile";
 import { Indicators } from "./algorithmic";
 import { Candlestick } from "../Binance/Candlesticks";
@@ -42,8 +42,9 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
-import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from "../Binance/Trades";
+import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort } from "../Binance/Trades";
 import { Orderbook } from "../Binance/Orderbook";
+import { getCurrentBalances } from "../Binance/Balances";
 
 
 export const checkBeforeOrder = (
@@ -154,15 +155,16 @@ const checkPanicProfit = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
   orderBook: Orderbook,
-  balances: number[],
   options: ConfigOptions,
   filter: Filter,
 ) => {
   let check = 'SKIP';
   if (options.panicProfitMinimum > 0) {
+    const baseBalance = options.balances[symbol.split("/")[0]];
+    const quoteBalance = options.balances[symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    if (balances[1] > filter.minNotional || (balances[0] * orderBookBids[0]) > filter.minNotional) {
+    if (quoteBalance > filter.minNotional || (baseBalance * orderBookBids[0]) > filter.minNotional) {
       if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         let unrealizedPNL: number = 0;
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
@@ -213,16 +215,17 @@ const checkPreviousTrade = (
   return check;
 }
 
-const checkBalanceSignals = (
+const checkBalanceSignals = async (
+  binance: Binance,
   consoleLogger: ConsoleLogger, 
   symbol: string,
-  quoteBalance: number,
-  baseBalance: number, 
   closePrice: number,  
   options: ConfigOptions,
   filter: Filter,
 ) => {
   let check = 'HOLD';
+  const baseBalance = options.balances[symbol.split("/")[0]];
+  const quoteBalance = options.balances[symbol.split("/")[1]];
   const baseBalanceConverted = (baseBalance * closePrice)
   const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
   if (tradeCheck === 'SELL') {
@@ -230,12 +233,14 @@ const checkBalanceSignals = (
       check = 'BUY';
     } else {
       check = 'HOLD';
+      // options.balances = await getCurrentBalances(binance);
     }
   } else if (tradeCheck === 'BUY') {
     if (baseBalanceConverted > parseFloat(filter.minNotional)) {
       check = 'SELL'
     } else {
       check = 'HOLD';
+      // options.balances = await getCurrentBalances(binance);
     }
   }
   if (check === 'SELL' && (baseBalanceConverted < filter.minNotional || baseBalanceConverted > filter.maxNotional)) {
@@ -251,8 +256,6 @@ export const tradeDirection = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  quoteBalance: number, 
-  baseBalance: number, 
   orderBook: Orderbook,
   candlesticks: Candlestick[], 
   indicators: Indicators,
@@ -263,7 +266,7 @@ export const tradeDirection = async (
   let direction = 'HOLD';
   const checks = {
     profit: checkProfitSignals(consoleLogger, symbol, orderBook, options),
-    next: checkBalanceSignals(consoleLogger, symbol, quoteBalance, baseBalance, candlesticks[candlesticks.length - 1].close, options, filter),
+    next: await checkBalanceSignals(binance, consoleLogger, symbol, candlesticks[candlesticks.length - 1].close, options, filter),
     SMA: checkSMASignals(consoleLogger, indicators, options),
     EMA: checkEMASignals(consoleLogger, indicators, options),
     MACD: checkMACDSignals(consoleLogger, indicators, options),
@@ -274,7 +277,7 @@ export const tradeDirection = async (
     OBV: checkOBVSignals(consoleLogger, candlesticks, indicators, options),
     CMF: checkCMFSignals(consoleLogger, indicators, options),
     GPT: await checkGPTSignals(consoleLogger, candlesticks, indicators, options),
-    panic: checkPanicProfit(consoleLogger, symbol, orderBook, [baseBalance, quoteBalance], options, filter)
+    panic: checkPanicProfit(consoleLogger, symbol, orderBook, options, filter)
   }
   const actions = ['BUY', 'SELL'];
   const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF', 'GPT'];

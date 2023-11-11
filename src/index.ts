@@ -29,7 +29,7 @@ import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
 import { SymbolCandlesticks, Candlestick, listenForCandlesticks } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
-import { getBalancesFromWebsocket, getCurrentBalances } from './Hoobot/Binance/Balances';
+import { getCurrentBalances } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
 import { Filters, getFilters } from './Hoobot/Binance/Filters';
 import dotenv from 'dotenv';
@@ -65,18 +65,7 @@ const main = async () => {
       discord = loginDiscord(binance, options);
     }
 
-    const balances = await getCurrentBalances(binance);
-    binance.websockets.userData((data: any) => {
-      const newBalances = getBalancesFromWebsocket(data);
-      if (newBalances !== undefined) {
-        const balanceKeys = Object.keys(newBalances);
-        for (const key of balanceKeys) {
-          balances[key] = newBalances[key];
-        }
-      }
-    }, (data: any) => {
-      // Possible to add discord notification if order has been fulfilled with websocket notification.
-    });
+    options.balances = await getCurrentBalances(binance);
 
     const candlesticksToPreload = 1000;
     const symbolCandlesticks: SymbolCandlesticks = {};
@@ -109,7 +98,7 @@ const main = async () => {
             options.orderbooks[symbol.split("/").join("")] = orderbook;
           });
           listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlestick[]) => {
-            algorithmic(discord, binance, logger, symbol, balances, candlesticks, options)
+            algorithmic(discord, binance, logger, symbol, candlesticks, options)
           });
         }
       } else {
@@ -127,7 +116,7 @@ const main = async () => {
           options.orderbooks[symbol.split("/").join("")] = orderbook;
         });
         listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlestick[]) => {
-          algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, options)
+          algorithmic(discord, binance, logger, options.symbols as string, candlesticks, options)
         });
       }
     }

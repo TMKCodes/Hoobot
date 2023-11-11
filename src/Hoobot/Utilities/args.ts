@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { Balances } from "../Binance/Balances";
 import { Orderbooks } from "../Binance/Orderbook";
 import { TradeHistory } from "../Binance/Trades";
 
@@ -132,13 +133,14 @@ export interface ConfigOptions {
   openaiModel: string,
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
-  tradeHistory?: TradeHistory,
-  orderbooks?: Orderbooks,
   startTimestamp?: string,
   panicProfitMinimum?: number,
   panicProfitMinimumDrop?: number,
   panicProfitCurrentMax?: CurrentProfitMax,
-  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax; // Index signature
+  tradeHistory?: TradeHistory,
+  orderbooks?: Orderbooks,
+  balances?: Balances,
+  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
 }
 
 export const parseArgs = (args: string[]): ConfigOptions => {
@@ -232,6 +234,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     tradeHistory: {},
     orderbooks: {},
     panicProfitCurrentMax: {},
+    balances: {},
   };
   if (args.length === 0) {
     return options;
