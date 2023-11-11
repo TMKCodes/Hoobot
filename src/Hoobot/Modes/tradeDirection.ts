@@ -275,13 +275,13 @@ export const tradeDirection = async (
   }
   const actions = ['BUY', 'SELL'];
   const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF', 'GPT'];
-  for (const action in actions) {
-    if ((checks.profit === action || checks.profit === 'SKIP') && checks.next === action) {
-      direction = action;
-      for (const checking of whatToCheck) {
-        const check = checks[checking];
-        const useCheck = options[`use${checking}`];
-        const invalidConditions = [action, 'HOLD']
+  for (let i = 0; i < actions.length; i++) {
+    if ((checks.profit === actions[i] || checks.profit === 'SKIP') && checks.next === actions[i]) {
+      direction = actions[i];
+      for (let i = 0; i < whatToCheck.length; i++) {
+        const check = checks[whatToCheck[i]];
+        const useCheck = options[`use${whatToCheck[i]}`];
+        const invalidConditions = [actions[i], 'HOLD'];
         if (useCheck && invalidConditions.includes(check)) {
           direction = 'HOLD';
           break;

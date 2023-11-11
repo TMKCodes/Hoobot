@@ -87,9 +87,6 @@ const placeTrade = async (
   } else {
     consoleLogger.push("Last trade datetime:", "No trades done yet.");
   }
-  if (await openOrders(binance, symbol) !== false) {
-    return false;
-  }
   const orderBook = await getOrderBook(binance, symbol);
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];

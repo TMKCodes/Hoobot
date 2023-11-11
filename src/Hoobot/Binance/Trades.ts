@@ -30,7 +30,7 @@ import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, Order, OrderBook } from "./Orders";
+import { handleOpenOrder, openOrders, Order, OrderBook } from "./Orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
@@ -172,6 +172,13 @@ export const sell = async (
   options: ConfigOptions,
   baseBalance: number,
 ): Promise<Order | boolean> => {
+  const orders = await openOrders(binance, symbol);
+  if (orders !== false && Array.isArray(orders)) {
+    // for(let i = 0; i < orders.length; i++) {
+    //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
+    // }
+    return false;
+  }
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
   let price = orderBookAsks[0] - parseFloat(filter.tickSize);
   let maxQuantityInBase = baseBalance;
@@ -226,6 +233,13 @@ export const buy = async (
   options: ConfigOptions,
   quoteBalance: number,
 ): Promise<Order | boolean> => {
+  const orders = await openOrders(binance, symbol);
+  if (orders !== false && Array.isArray(orders)) {
+    // for(let i = 0; i < orders.length; i++) {
+    //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
+    // }
+    return false;
+  }
   const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
   let price = orderBookBids[0] + parseFloat(filter.tickSize);
   let maxQuantityuInQuote = quoteBalance;
@@ -236,11 +250,16 @@ export const buy = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
+  console.log(roundedQuantityInBase);
+  console.log(roundedQuantityInQuote);
+  console.log(roundedPrice);
   if (checkBeforeOrder(symbol, "buy", roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+      console.log(unrealizedPNL);
+      console.log(options.minimumProfitBuy + options.tradeFee)
       if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
         return false;
       }
