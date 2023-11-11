@@ -24,10 +24,11 @@
 * not be liable for any losses, damages, or liabilities arising from
 * the use of this software.
 * ===================================================================== */
-
+import fs from 'fs';
 export interface ConsoleLogger {
   push: (key: string, value: string | string[] | number | boolean | object | undefined) => ConsoleLogger;
   print: () => void;
+  writeJSONTofile: (filePath: string) => void;
   flush: () => ConsoleLogger;
 }
 
@@ -44,6 +45,19 @@ export const consoleLogger = (): ConsoleLogger => {
   };
   const print = () => {
     console.log(JSON.stringify(DisplayData, null, 4));
+  };
+  const writeJSONTofile = (filePath: string) => {
+    try {
+      let fileBuffer = fs.readFileSync(filePath);
+      if (fileBuffer.toString() === "") {
+        fileBuffer = Buffer.from("[]");
+      }
+      const parsedJSON = JSON.parse(fileBuffer.toString());
+      parsedJSON.push(DisplayData)
+      fs.writeFileSync(filePath, JSON.stringify(parsedJSON, null, 4));
+    } catch (error) {
+      console.log(error);
+    }
   };
   const flush = () => {
     DisplayData = {};
@@ -64,6 +78,7 @@ export const consoleLogger = (): ConsoleLogger => {
   const logger: ConsoleLogger = {
     push,
     print,
+    writeJSONTofile,
     flush,
   };
   return logger;

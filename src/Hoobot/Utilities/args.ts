@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { Orderbooks } from "../Binance/Orderbook";
 import { TradeHistory } from "../Binance/Trades";
 
 export interface CurrentProfitMax {
@@ -132,11 +133,12 @@ export interface ConfigOptions {
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
   tradeHistory?: TradeHistory,
+  orderbooks?: Orderbooks,
   startTimestamp?: string,
   panicProfitMinimum?: number,
   panicProfitMinimumDrop?: number,
   panicProfitCurrentMax?: CurrentProfitMax,
-  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | CurrentProfitMax; // Index signature
+  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax; // Index signature
 }
 
 export const parseArgs = (args: string[]): ConfigOptions => {
@@ -224,10 +226,11 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     // Arbitrage
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
-    tradeHistory: {},
     startTimestamp: process.env.START_TIMESTAMP || undefined,
     panicProfitMinimum: parseFloat(process.env.PANIC_PROFIT_MINIMUM!) || 0,
     panicProfitMinimumDrop: parseFloat(process.env.PANIC_PROFIT_MINIMUM_DROP!) || 0,
+    tradeHistory: {},
+    orderbooks: {},
     panicProfitCurrentMax: {},
   };
   if (args.length === 0) {

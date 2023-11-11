@@ -43,7 +43,8 @@ import Binance from "node-binance-api";
 import { checkOBVSignals } from "../Indicators/OBV";
 import { checkCMFSignals } from "../Indicators/CMF";
 import { calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from "../Binance/Trades";
-import { OrderBook } from "../Binance/Orders";
+import { Orderbook } from "../Binance/Orderbook";
+
 
 export const checkBeforeOrder = (
   symbol: string,
@@ -88,7 +89,7 @@ export const checkBeforeOrder = (
 const checkProfitSignals = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  orderBook: OrderBook,
+  orderBook: Orderbook,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
@@ -152,7 +153,7 @@ const checkProfitSignals = (
 const checkPanicProfit = (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  orderBook: OrderBook,
+  orderBook: Orderbook,
   balances: number[],
   options: ConfigOptions,
   filter: Filter,
@@ -223,16 +224,19 @@ const checkBalanceSignals = (
 ) => {
   let check = 'HOLD';
   const baseBalanceConverted = (baseBalance * closePrice)
-  if (baseBalanceConverted > quoteBalance) {
-    check = 'SELL';
-  } else {
-    check = 'BUY';
-  }
   const tradeCheck = checkPreviousTrade(consoleLogger, symbol, options);
-  if (tradeCheck === 'SELL' && check === 'BUY') {
-    check = 'BUY';
-  } else if (tradeCheck === 'BUY' && check === 'SELL') {
-    check = 'SELL';
+  if (tradeCheck === 'SELL') {
+    if (quoteBalance > parseFloat(filter.minNotional)) {
+      check = 'BUY';
+    } else {
+      check = 'HOLD';
+    }
+  } else if (tradeCheck === 'BUY') {
+    if (baseBalanceConverted > parseFloat(filter.minNotional)) {
+      check = 'SELL'
+    } else {
+      check = 'HOLD';
+    }
   }
   if (check === 'SELL' && (baseBalanceConverted < filter.minNotional || baseBalanceConverted > filter.maxNotional)) {
     check = 'HOLD';
@@ -243,20 +247,19 @@ const checkBalanceSignals = (
   return check;
 }
 
-
-
 export const tradeDirection = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
   quoteBalance: number, 
   baseBalance: number, 
-  orderBook: any,
+  orderBook: Orderbook,
   candlesticks: Candlestick[], 
   indicators: Indicators,
   options: ConfigOptions,
   filter: Filter,
 ) => {
+  const startTime = Date.now();
   let direction = 'HOLD';
   const checks = {
     profit: checkProfitSignals(consoleLogger, symbol, orderBook, options),
@@ -290,11 +293,15 @@ export const tradeDirection = async (
     }
   }
   if (checks.panic !== 'SKIP') {
-    direction = checks.panic;
+    if (checks.panic === checks.next) {
+      direction = checks.panic;
+    }
   }
   if (options.openaiOverwrite === true) {
     direction = checks.GPT;
   }
   consoleLogger.push(`TRADE Direction`, direction);
+  const stopTime = Date.now();
+  consoleLogger.push(`Time to decide direction (ms)`, stopTime - startTime);
   return direction;
 }

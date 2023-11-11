@@ -102,7 +102,7 @@ export const listenForCandlesticks = async (
         candleStore[symbol] = { candles: await getLastCandlesticks(binance, symbol, interval, historyLength) }; 
       }
     }
-    const wsEndpoint = binance.websockets.candlesticks(symbol, interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
+    binance.websockets.candlesticks(symbol, interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
       let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
       let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
       

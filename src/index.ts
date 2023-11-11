@@ -36,6 +36,7 @@ import dotenv from 'dotenv';
 import { algorithmic } from './Hoobot/Modes/algorithmic';
 import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
+import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
 
 
 // Get configuration options from command-line arguments and dotenv.
@@ -92,9 +93,21 @@ const main = async () => {
       }
       if (Array.isArray(options.symbols)) {
         for (const symbol of options.symbols) {
+          options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
+        }
+        for (const symbol of options.symbols) {
           const filter = await getFilters(binance, symbol);
           symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
+          listenForOrderbooks(binance, symbol, (symbol: string, orderbook: Orderbook) => {
+            if(options.orderbooks[symbol.split("/").join("")] === undefined) {
+              options.orderbooks[symbol.split("/").join("")] =  {
+                bids: [],
+                asks: []
+              }
+            }
+            options.orderbooks[symbol.split("/").join("")] = orderbook;
+          });
           listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlestick[]) => {
             algorithmic(discord, binance, logger, symbol, balances, candlesticks, options)
           });
@@ -103,6 +116,16 @@ const main = async () => {
         const filter = await getFilters(binance, options.symbols);
         symbolFilters[options.symbols.split("/").join("")] = filter;
         const logger = consoleLogger();
+        options.orderbooks[options.symbols.split("/").join("")] = await getOrderbook(binance, options.symbols);
+        listenForOrderbooks(binance, options.symbols, (symbol: string, orderbook: Orderbook) => {
+          if(options.orderbooks[symbol.split("/").join("")] === undefined) {
+            options.orderbooks[symbol.split("/").join("")] =  {
+              bids: [],
+              asks: []
+            }
+          }
+          options.orderbooks[symbol.split("/").join("")] = orderbook;
+        });
         listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlestick[]) => {
           algorithmic(discord, binance, logger, options.symbols as string, balances, candlesticks, options)
         });

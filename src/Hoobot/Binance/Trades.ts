@@ -30,11 +30,12 @@ import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, openOrders, Order, OrderBook } from "./Orders";
+import { handleOpenOrder, openOrders, Order } from "./Orders";
 import { checkBeforeOrder } from "../Modes/tradeDirection";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
+import { Orderbook } from "./Orderbook";
 
 const soundFile = './alarm.mp3'
 
@@ -167,7 +168,7 @@ export const sell = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  orderBook: OrderBook,
+  orderBook: Orderbook,
   filter: Filter,
   options: ConfigOptions,
   baseBalance: number,
@@ -250,16 +251,11 @@ export const buy = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-  console.log(roundedQuantityInBase);
-  console.log(roundedQuantityInQuote);
-  console.log(roundedPrice);
   if (checkBeforeOrder(symbol, "buy", roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
-      console.log(unrealizedPNL);
-      console.log(options.minimumProfitBuy + options.tradeFee)
       if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
         return false;
       }

@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getOrderBook, openOrders } from "../Binance/Orders";
+import { openOrders } from "../Binance/Orders";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -46,6 +46,8 @@ import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 import { symbolFilters } from "../..";
+import { getOrderbook } from "../Binance/Orderbook";
+import { logToFile } from "../Utilities/logToFile";
 
 export interface Indicators {
   avg?: number;
@@ -75,6 +77,7 @@ const placeTrade = async (
   filter: Filter,
   options: ConfigOptions,
 ) => {
+  const startTime = Date.now();
   if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
     const currentTime = Date.now();
@@ -87,11 +90,15 @@ const placeTrade = async (
   } else {
     consoleLogger.push("Last trade datetime:", "No trades done yet.");
   }
-  const orderBook = await getOrderBook(binance, symbol);
+  const orderBook = options.orderbooks[symbol.split("/").join("")];
+  consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
+  consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
   const baseBalance = balances[symbol.split("/")[0]];
   const quoteBalance = balances[symbol.split("/")[1]];
   const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
   const direction = await tradeDirection(binance, consoleLogger, symbol.split("/").join(""), quoteBalance, baseBalance, orderBook, candlesticks, indicators, options, filter);
+  const stopTime = Date.now();
+  consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options, baseBalance);
   } else if (direction === 'BUY') {
@@ -171,6 +178,7 @@ export const algorithmic = async (
   options: ConfigOptions
 ) => {
   try {
+    const startTime = Date.now();
     const filter = symbolFilters[symbol.split("/").join("")];
     const latestCandle = candlesticks[candlesticks.length - 1];
     const prevCandle = candlesticks[candlesticks.length - 2];
@@ -214,10 +222,12 @@ export const algorithmic = async (
     }
     consoleLogger.push("Balance " + symbol.split("/")[0], balances[symbol.split("/")[0]].toFixed(7));
     consoleLogger.push("Balance " + symbol.split("/")[1], balances[symbol.split("/")[1]].toFixed(7));
-    const startTime = Date.now();
     const placedTrade = await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, balances, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
+    if (placedTrade !== false) {
+      consoleLogger.writeJSONTofile('./trades.json');
+    }
     if (options.consoleUpdate === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
       consoleLogger.print();
       consoleLogger.flush();

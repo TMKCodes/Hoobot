@@ -31,6 +31,7 @@ import { Client } from "discord.js";
 import { ConfigOptions } from "../Utilities/args";
 import { consoleLogger } from "../Utilities/consoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
+import { Orderbook } from "./Orderbook";
 
 export interface Order {
   quoteQty: string;
@@ -70,17 +71,7 @@ export interface OrderStatus {
   selfTradePreventionMode?: string
 }
 
-export interface OrderBook {
-  bids: [string, string][]; 
-  asks: [string, string][]; 
-}
 
-export const getOrderBook = async (
-  binance: Binance, 
-  symbol: string
-): Promise<OrderBook> => {
-  return await binance.depth(symbol.split("/").join(""))
-}
 
 export const getOpenOrders = async (
   binance: Binance, 
@@ -120,14 +111,14 @@ export const handleOpenOrder = async (
   binance: Binance, 
   symbol: string,
   order: Order,
-  orderBook: any, 
+  orderBook: Orderbook, 
   options: ConfigOptions,
 ): Promise<string> => {
   const logger = consoleLogger();
-  let orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+  let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
   do {
     const currentTime = Date.now();
-    const orderAgeSeconds = Math.floor((currentTime - order.time) / 1000);
+    const orderAgeSeconds = Math.floor((currentTime - orderStatus.time) / 1000);
     logger.push("Order ID: ", order.orderId);
     logger.push("Symbol: ", symbol);
     logger.push("Age seconds: ", orderAgeSeconds);

@@ -29,7 +29,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/Trades';
-import { OrderBook } from '../../Hoobot/Binance/Orders';
+import { Orderbook } from '../../Hoobot/Binance/Orderbook';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -46,7 +46,7 @@ export default {
     }
     try {
       const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
-      const orderBook: OrderBook = await binance.depth(symbol.split("/").join(""));
+      const orderBook: Orderbook = await binance.depth(symbol.split("/").join(""));
       const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
       if (lastTrade.isBuyer === true) {
         const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
