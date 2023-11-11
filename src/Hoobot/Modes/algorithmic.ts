@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { getOrderBook, handleOpenOrders } from "../Binance/Orders";
+import { getOrderBook } from "../Binance/Orders";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
