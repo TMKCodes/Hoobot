@@ -46,7 +46,7 @@ export default {
     }
     try {
       const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
-      const orderBook: OrderBook = await binance.depth(symbol);
+      const orderBook: OrderBook = await binance.depth(symbol.split("/").join(""));
       const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
       if (lastTrade.isBuyer === true) {
         const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
