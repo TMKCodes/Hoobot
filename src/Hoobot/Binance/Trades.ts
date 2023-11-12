@@ -28,10 +28,9 @@
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions,  getSecondsFromInterval } from "../Utilities/args";
+import { ConfigOptions } from "../Utilities/args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, openOrders, Order } from "./Orders";
-import { checkBeforeOrder } from "../Modes/tradeDirection";
+import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
@@ -191,7 +190,7 @@ export const sell = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
   const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-  if (checkBeforeOrder(symbol, "sell", roundedQuantityInBase, roundedPrice, filter) === true) {
+  if (checkBeforePlacingOrder(symbol, "sell", roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
@@ -229,6 +228,7 @@ export const sell = async (
   }
 }
 
+
 export const buy = async (
   discord: Client,
   binance: Binance,
@@ -256,7 +256,7 @@ export const buy = async (
   const roundedPrice = binance.roundStep(price, filter.tickSize);
   const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-  if (checkBeforeOrder(symbol, "buy", roundedQuantityInBase, roundedPrice, filter) === true) {
+  if (checkBeforePlacingOrder(symbol, "buy", roundedQuantityInBase, roundedPrice, filter) === true) {
     const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
     let unrealizedPNL = 0;
     if (tradeHistory?.length > 0) {
@@ -291,4 +291,20 @@ export const buy = async (
     consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
     return false;
   }
+}
+
+export const checkPreviousTrade = (
+  symbol: string,
+  options: ConfigOptions
+) => {
+  let check = 'BUY';
+  if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (lastTrade.isBuyer) {
+      check = 'BUY';
+    } else {
+      check = 'SELL';
+    }
+  }
+  return check;
 }

@@ -107,6 +107,40 @@ export const openOrders = async (
   }
 }
 
+export const checkBeforePlacingOrder = (
+  symbol: string,
+  direction: string,
+  quoteQuantity: number,
+  price: number,
+  tradingPairFilters: any,
+) => {
+  const logFailure = (message: string) => {
+    logToFile(`ORDER PLACEMENT FAILURE: ${symbol}, ${direction}, ${quoteQuantity}, ${price}, ${message}\r\n`);
+    return false;
+  };
+
+  const isValid = (min: number, max: number, value: number) => {
+    if (value < min) {
+      return logFailure(`Price too low.`);
+    } else if (value > max) {
+      return logFailure(`Price too high.`);
+    }
+    return true;
+  };
+
+  
+  if (
+    !isValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price) ||
+    !isValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quoteQuantity) ||
+    !isValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), price * quoteQuantity)
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+
 export const handleOpenOrder = async (
   discord: Client, 
   binance: Binance, 

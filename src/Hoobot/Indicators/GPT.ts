@@ -27,7 +27,7 @@
 import OpenAI from 'openai';
 import { Candlesticks } from '../Binance/Candlesticks';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
-import { Indicators } from '../Modes/algorithmic';
+import { Indicators } from '../Modes/Algorithmic';
 import { ConfigOptions } from '../Utilities/args';
 
 export const checkGPTSignals = async (

@@ -28,7 +28,7 @@
 import { Candlestick } from '../Binance/Candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
-import { Indicators } from '../Modes/algorithmic';
+import { Indicators } from '../Modes/Algorithmic';
 
 export const logRSISignals = (
   consoleLogger: ConsoleLogger,

@@ -30,20 +30,24 @@ import Binance from "node-binance-api";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
-import { calculateRSI, logRSISignals } from "../Indicators/RSI";
-import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
+import { calculateEMA, logEMASignals, ema, checkEMASignals } from "../Indicators/EMA";
+import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
+import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
 import {  Candlesticks } from "../Binance/Candlesticks";
-import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
+import { calculateSMA, checkSMASignals, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
-import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
-import { calculateStochasticOscillator, calculateStochasticRSI, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
+import { calculateBollingerBands, checkBollingerBandsSignals, logBollingerBandsSignals } from "../Indicators/BollingerBands";
+import { calculateStochasticOscillator, calculateStochasticRSI, checkStochasticOscillatorSignals, checkStochasticRSISignals, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
 import { buy, calculateROI, getTradeHistory, sell } from "../Binance/Trades";
-import { tradeDirection } from "./tradeDirection";
-import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
-import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
+import { calculateOBV, checkOBVSignals, logOBVSignals } from "../Indicators/OBV";
+import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 import { symbolFilters } from "../..";
+import { checkGPTSignals } from "../Indicators/GPT";
+import { Orderbook } from "../Binance/Orderbook";
+import { checkProfitSignals } from "../Indicators/Profit";
+import { checkBalanceSignals } from "../Indicators/Balance";
+import { checkPanicProfit } from "../Indicators/Panic";
 
 export interface Indicators {
   avg?: {
@@ -85,7 +89,106 @@ export const reverseSign = (number: number) => {
   return -number;
 }
 
-const placeTrade = async (
+
+export const tradeDirection = async (
+  consoleLogger: ConsoleLogger,
+  symbol: string,
+  orderBook: Orderbook,
+  candlesticks: Candlesticks, 
+  indicators: Indicators,
+  options: ConfigOptions,
+  filter: Filter,
+) => {
+  symbol = symbol.split("/").join("");
+  const startTime = Date.now();
+  let directions = [];
+  const timeframes = Object.keys(candlesticks[symbol]);
+  for (let i = 0; i < timeframes.length; i++) {
+    let direction = 'HOLD';
+    const checks = {
+      profit: checkProfitSignals(consoleLogger, symbol, orderBook, options),
+      next: await checkBalanceSignals(consoleLogger, symbol, candlesticks[symbol][timeframes[i]][candlesticks[symbol][timeframes[i]].length - 1].close, options, filter),
+      SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[i]], options),
+      EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[i]], options),
+      MACD: checkMACDSignals(consoleLogger, indicators.macd[timeframes[i]], options),
+      RSI: checkRSISignals(consoleLogger, indicators.rsi[timeframes[i]], options),
+      StochasticOscillator: checkStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[i]], options),
+      StochasticRSI: checkStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[i]], options),
+      BollingerBands: checkBollingerBandsSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.bollingerBands[timeframes[i]], options),
+      OBV: checkOBVSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.obv[timeframes[i]], options),
+      CMF: checkCMFSignals(consoleLogger, indicators.cmf[timeframes[i]], options),
+      panic: checkPanicProfit(consoleLogger, symbol, orderBook, options, filter),
+    }
+    const actions = ['BUY', 'SELL'];
+    const whatToCheck = ['SMA', 'EMA', 'MACD', 'RSI', 'StochasticOscillator', 'StochasticRSI', 'BollingerBands', 'OBV', 'CMF'];
+    for (let i = 0; i < actions.length; i++) {
+      if ((checks.profit === actions[i] || checks.profit === 'SKIP') && checks.next === actions[i]) {
+        direction = actions[i];
+        for (let i = 0; i < whatToCheck.length; i++) {
+          const check = checks[whatToCheck[i]];
+          const useCheck = options[`use${whatToCheck[i]}`];
+          const invalidConditions = [actions[i], 'HOLD'];
+          if (useCheck && invalidConditions.includes(check)) {
+            direction = 'HOLD';
+            break;
+          }
+        }
+      }
+    }
+    if (checks.panic !== 'SKIP') {
+      if (checks.panic === checks.next) {
+        direction = checks.panic;
+      }
+    }
+    directions.push(direction);
+  }
+  let rightDirection = 'HOLD';
+  if (directions.length === 0) {
+    console.log("ERROR: Could not check directions!");
+  } else {
+    let sell = 0;
+    let buy = 0;
+    let hold = 0;
+    for (let i = 0; i < directions.length; i++) {
+      if (directions[i] === "BUY") {
+        buy++;
+      } else if (directions[i] === "SELL") {
+        sell++;
+      } else {
+        hold++;
+      }
+    }
+    consoleLogger.push("Timeframe Direction", sell + " SELL, " + buy + " BUY, " + hold + " HOLD");
+    const total = sell + buy + hold;
+    const sellPercentage = (sell / total) * 100;
+    const buyPercentage = (buy / total) * 100;
+    const holdPercentage = (hold / total) * 100; 
+    if (total == timeframes.length) {
+      if (sellPercentage > buyPercentage && sellPercentage > holdPercentage && sellPercentage > options.timeframeAgreement) {
+        rightDirection = 'SELL';
+      } else if (buyPercentage > sellPercentage && buyPercentage > holdPercentage && buyPercentage > options.timeframeAgreement) {
+        rightDirection = 'BUY';
+      }
+    }
+  }
+  if (options.useGPT) {
+    const checkGPT = await checkGPTSignals(consoleLogger, symbol, candlesticks, indicators, options);
+    if (options.openaiOverwrite === true) {
+      rightDirection = checkGPT;
+    } else {
+      if (rightDirection !== checkGPT) {
+        rightDirection = 'HOLD';
+      }
+    }
+  }
+  consoleLogger.push(`TRADE Direction`, rightDirection);
+  const stopTime = Date.now();
+  consoleLogger.push(`Time to decide direction (ms)`, stopTime - startTime);
+  return rightDirection;
+}
+
+
+export const placeTrade = async (
   discord: Client,
   binance: Binance,
   consoleLogger: ConsoleLogger,
@@ -111,7 +214,7 @@ const placeTrade = async (
   consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
   consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
   const indicators = await calculateIndicators(consoleLogger, symbol, candlesticks, options);
-  const direction = await tradeDirection(binance, consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
+  const direction = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
   const stopTime = Date.now();
   consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
   if (direction === 'SELL') {

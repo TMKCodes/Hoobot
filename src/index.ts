@@ -33,7 +33,7 @@ import { getCurrentBalances } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
 import { Filters, getFilters } from './Hoobot/Binance/Filters';
 import dotenv from 'dotenv';
-import { algorithmic } from './Hoobot/Modes/algorithmic';
+import { algorithmic } from './Hoobot/Modes/Algorithmic';
 import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
 import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
@@ -78,6 +78,7 @@ const main = async () => {
             foundSymbols.push(symbol.base + "/" + symbol.quote);
           }
         }
+        console.log(foundSymbols);
         options.symbols = foundSymbols;
       }
       if (Array.isArray(options.symbols)) {
