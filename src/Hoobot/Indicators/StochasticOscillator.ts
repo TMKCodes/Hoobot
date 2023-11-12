@@ -152,17 +152,17 @@ export const logStochasticOscillatorSignals = (
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];
   const lastDValue = dValuesFixed[dValuesFixed.length - 1];
   if (lastKValue > 80 || lastDValue > 80) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Overbought`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish Overbought`);
   } else if (lastKValue < 20 || lastDValue < 20) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Oversold`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish Oversold`);
   } else if (lastKValue > 70 || lastDValue > 70) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Overbought (Approaching)`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish Overbought (Approaching)`);
   } else if (lastKValue < 30 || lastDValue < 30) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Oversold (Approaching)`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish Oversold (Approaching)`);
   } else if (lastKValue < 50 || lastDValue < 50) {
-    consoleLogger.push(`Stochastic Oscillator signal`, `Bullish`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish`);
   } else if (lastKValue > 50 || lastDValue > 50) {
-    consoleLogger.push(`Stochastic Oscillator signal`, `Bearish`);
+    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish`);
   }
 }
 
@@ -185,13 +185,13 @@ export const logStochasticRSISignals = (
   const lastKValue = kValuesFixed[kValuesFixed.length - 1];
   const lastDValue = dValuesFixed[dValuesFixed.length - 1];
   if (lastKValue > 80 || lastDValue > 80) {
-    consoleLogger.push(`Stochastic RSI condition`, `Overbought`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bearish Overbought`);
   } else if (lastKValue < 20 || lastDValue < 20) {
-    consoleLogger.push(`Stochastic RSI condition`, `Oversold`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bullish Oversold`);
   } else if (lastKValue > 70 || lastDValue > 70) {
-    consoleLogger.push(`Stochastic RSI condition`, `Overbought (Approaching)`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bearish Overbought (Approaching)`);
   } else if (lastKValue < 30 || lastDValue < 30) {
-    consoleLogger.push(`Stochastic RSI condition`, `Oversold (Approaching)`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bullish Oversold (Approaching)`);
   } else if (lastKValue < 50 || lastDValue < 50) {
     consoleLogger.push(`Stochastic RSI condition`, `Bullish`);
   } else if (lastKValue > 50 || lastDValue > 50) {
