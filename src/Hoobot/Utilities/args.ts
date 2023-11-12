@@ -137,6 +137,7 @@ export interface ConfigOptions {
   panicProfitMinimum?: number,
   panicProfitMinimumDrop?: number,
   panicProfitCurrentMax?: CurrentProfitMax,
+  timeframeAgreement?: number,
   tradeHistory?: TradeHistory,
   orderbooks?: Orderbooks,
   balances?: Balances,
@@ -223,6 +224,8 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     openaiModel: process.env.GPT_MODEL || "gpt-3.5-turbo",
     openaiHistoryLength: parseFloat(process.env.GPT_HISTORY_LENGTH!) || 5,
     openaiOverwrite:  process.env.GPT_OVERWRITE === "true" ? true : false || false,
+    // Timeframe agreement
+    timeframeAgreement: parseFloat(process.env.TIMEFRAME_AGREEMENT) || 100,
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,
     // Arbitrage

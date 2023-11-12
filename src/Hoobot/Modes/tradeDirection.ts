@@ -320,10 +320,16 @@ export const tradeDirection = async (
       }
     }
     consoleLogger.push("Timeframe Direction", sell + " SELL, " + buy + " BUY, " + hold + " HOLD");
-    if (sell === 0 && buy === timeframes.length) {
-      rightDirection = 'BUY';
-    } else if (buy === 0 && sell === timeframes.length) {
-      rightDirection = 'SELL';
+    const total = sell + buy + hold;
+    const sellPercentage = (sell / total) * 100;
+    const buyPercentage = (buy / total) * 100;
+    const holdPercentage = (hold / total) * 100; 
+    if (total == timeframes.length) {
+      if (sellPercentage > buyPercentage && sellPercentage > holdPercentage && sellPercentage > options.timeframeAgreement) {
+        rightDirection = 'SELL';
+      } else if (buyPercentage > sellPercentage && buyPercentage > holdPercentage && buyPercentage > options.timeframeAgreement) {
+        rightDirection = 'BUY';
+      }
     }
   }
   if (options.useGPT) {
