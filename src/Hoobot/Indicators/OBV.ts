@@ -34,28 +34,28 @@ import { calculateSMA } from "./SMA";
 export const calculateOBV = (
   candlesticks: Candlestick[]
 ): number[] => {
-  const obvValues: number[] = [0]; 
+  const obv: number[] = [0]; 
   for (let i = 1; i < candlesticks.length; i++) {
     if (candlesticks[i].close > candlesticks[i - 1].close) {
-      obvValues.push(obvValues[i - 1] + candlesticks[i].volume);
+      obv.push(obv[i - 1] + candlesticks[i].volume);
     } else if (candlesticks[i].close < candlesticks[i - 1].close) {
-      obvValues.push(obvValues[i - 1] - candlesticks[i].volume);
+      obv.push(obv[i - 1] - candlesticks[i].volume);
     } else {
-      obvValues.push(obvValues[i - 1]);
+      obv.push(obv[i - 1]);
     }
   }
-  return obvValues;
+  return obv;
 }
 
 
 export const logOBVSignals = (
   consoleLogger: ConsoleLogger,
   candlesticks: Candlestick[],
-  obvValues: number[]
+  obv: number[]
 ) => {
-  const currentOBV = obvValues[obvValues.length - 1];
-  const prevOBV = obvValues[obvValues.length - 2];
-  const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50, 'close'); 
+  const currentOBV = obv[obv.length - 1];
+  const prevOBV = obv[obv.length - 2];
+  const obvSMA = calculateSMA(obv.map((value) => ({ close: value })), 50, 'close'); 
   consoleLogger.push(`OBV Value`, currentOBV.toFixed(7));
   consoleLogger.push(`OBV Smoothed`, obvSMA[obvSMA.length - 1].toFixed(7));
   const isBullish = currentOBV > prevOBV;
@@ -85,16 +85,15 @@ export const logOBVSignals = (
 export const checkOBVSignals = (
   consoleLogger: ConsoleLogger, 
   candlesticks: Candlestick[], 
-  indicators: Indicators, 
+  obv: number[],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useOBV) {
-    const obvValues = indicators.obv;
     for(let i = 1; i < (options.obvHistoryLength + 1); i++) {
-      const currentOBV = obvValues[obvValues.length - i];
-      const prevOBV = obvValues[obvValues.length - (i + 1)];
-      const obvSMA = calculateSMA(obvValues.map((value) => ({ close: value })), 50, 'close'); 
+      const currentOBV = obv[obv.length - i];
+      const prevOBV = obv[obv.length - (i + 1)];
+      const obvSMA = calculateSMA(obv.map((value) => ({ close: value })), 50, 'close'); 
       const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
       const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
       const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;

@@ -26,19 +26,22 @@
 * ===================================================================== */
 import fs from 'fs';
 export interface ConsoleLogger {
-  push: (key: string, value: string | string[] | number | boolean | object | undefined) => ConsoleLogger;
+  push: (key: string, value: any | any[]) => ConsoleLogger;
   print: () => void;
   writeJSONTofile: (filePath: string) => void;
   flush: () => ConsoleLogger;
 }
 
 interface consoleData {
-  [key: string]: string | string[] | number | boolean | object | undefined;
+  [key: string]: any | any[];
 }
 
 export const consoleLogger = (): ConsoleLogger => {
   let DisplayData: consoleData = {};
-  const push = (key: string, value: string | string[] | number | boolean | object | undefined) => {
+  const push = (key: string, value: any | any[]) => {
+    if (DisplayData[key] !== undefined) {
+      return logger;
+    }
     const updatedData = { ...DisplayData, [key]: value };
     DisplayData = createImmutableData(updatedData);
     return logger;

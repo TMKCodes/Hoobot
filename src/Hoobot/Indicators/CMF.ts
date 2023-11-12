@@ -88,12 +88,12 @@ export const logCMFSignals = (
 
 export const checkCMFSignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  cmfValues: number[],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useCMF) {
-    const cmfValues = indicators.cmf.slice(-options.cmfHistoryLength);
+    cmfValues = cmfValues.slice(-options.cmfHistoryLength);
     const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value })), 50, 'close'); 
     for (let i = cmfValues.length; i > 0; i--) {
       const currentCMF = cmfValues[i];

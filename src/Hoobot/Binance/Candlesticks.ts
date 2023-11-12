@@ -26,10 +26,11 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
+import { CandlestickInterval } from '../Utilities/args';
 
-export interface SymbolCandlesticks {
+export interface Candlesticks {
   [symbol: string]: {
-    candles: Candlestick[]
+    [time: string]:  Candlestick[]
   }
 }
 
@@ -87,59 +88,64 @@ export async function getLastCandlesticks(
 export const listenForCandlesticks = async (
   binance: Binance, 
   symbol: string, 
-  interval: string, 
-  candleStore: SymbolCandlesticks, 
+  timeframe: CandlestickInterval[], 
+  candleStore: Candlesticks, 
   historyLength: number, 
-  callback: (candlesticks: Candlestick[]) => void
+  callback: (candlesticks: Candlesticks) => void
 ): Promise<void> => {
   symbol = symbol.split("/").join("");
   const maxCandlesticks = 5000;
   try {
-    if (candleStore[symbol] === undefined) {
-      if (historyLength === 0) {
-        candleStore[symbol] = { candles: [] }
-      } else {
-        candleStore[symbol] = { candles: await getLastCandlesticks(binance, symbol, interval, historyLength) }; 
+    for (let i = 0; i < timeframe.length; i++) {
+      if (candleStore[symbol] === undefined) {
+        if (historyLength === 0) {
+          candleStore[symbol] = {
+            [timeframe[i]]: []
+          }
+        } else {
+          candleStore[symbol] = {
+            [timeframe[i]]: await getLastCandlesticks(binance, symbol, timeframe[i], historyLength) 
+          }
+        }
       }
+      binance.websockets.candlesticks(symbol, timeframe[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
+        let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
+        let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
+        
+        const newCandlestick: Candlestick = {
+          symbol: symbol,
+          interval: interval,
+          type: eventType,
+          time: parseFloat(eventTime),
+          open: parseFloat(open),
+          high: parseFloat(high),
+          low: parseFloat(low),
+          close: parseFloat(close),
+          trades: parseFloat(trades),
+          volume: parseFloat(volume),
+          quoteVolume: parseFloat(quoteVolume),
+          buyVolume: parseFloat(buyVolume),
+          quoteBuyVolume: parseFloat(quoteBuyVolume),
+          isFinal: isFinal,
+        };
+        if (candleStore[symbol] === undefined) {
+          candleStore[symbol] = {
+            [timeframe[i]]: [...(await getLastCandlesticks(binance, symbol, timeframe[i], historyLength)), newCandlestick]
+          }
+        } else if (candleStore[symbol][timeframe[i]] === undefined) {
+          candleStore[symbol][timeframe[i]] = [...(await getLastCandlesticks(binance, symbol, timeframe[i], historyLength)), newCandlestick];
+        } else if(newCandlestick.isFinal === true) {
+          candleStore[symbol][timeframe[i]].push(newCandlestick);
+        } else {
+          candleStore[symbol][timeframe[i]][candleStore[symbol][timeframe[i]].length - 1] = newCandlestick;
+        } 
+  
+        if (candleStore[symbol][timeframe[i]].length > maxCandlesticks) {
+          candleStore[symbol][timeframe[i]] = candleStore[symbol][timeframe[i]].slice(-maxCandlesticks);
+        }
+        callback(candleStore);
+      });
     }
-    binance.websockets.candlesticks(symbol, interval, (candlestick: { e: any; E: any; s: any; k: any; }) => {
-      let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
-      let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
-      
-      // Create a new candlestick with the received data
-      const newCandlestick: Candlestick = {
-        symbol: symbol,
-        interval: interval,
-        type: eventType,
-        time: parseFloat(eventTime),
-        open: parseFloat(open),
-        high: parseFloat(high),
-        low: parseFloat(low),
-        close: parseFloat(close),
-        trades: parseFloat(trades),
-        volume: parseFloat(volume),
-        quoteVolume: parseFloat(quoteVolume),
-        buyVolume: parseFloat(buyVolume),
-        quoteBuyVolume: parseFloat(quoteBuyVolume),
-        isFinal: isFinal,
-      };
-
-      // Check if the previous candlestick was final.
-      if (candleStore[symbol] === undefined || candleStore[symbol].candles === undefined) {
-        candleStore[symbol] = { candles: [newCandlestick] }
-      } else if(newCandlestick.isFinal === true) {
-        candleStore[symbol].candles.push(newCandlestick);
-      } else {
-        candleStore[symbol].candles[candleStore[symbol].candles.length - 1] = newCandlestick;
-      } 
-
-      // Check if the array length exceeds the maximum allowed size
-      if (candleStore[symbol]?.candles?.length > maxCandlesticks) {
-        // Remove the oldest candleStore[symbol].candles to keep the array size within the limit
-        candleStore[symbol].candles = candleStore[symbol]?.candles.slice(-maxCandlesticks);
-      }
-      callback(candleStore[symbol].candles);
-    });
   } catch (error: any) {
     console.log(error);
   }

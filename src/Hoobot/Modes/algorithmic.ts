@@ -27,15 +27,13 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { handleOpenOrder, openOrders } from "../Binance/Orders";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Balances } from "../Binance/Balances";
 import { calculateEMA, logEMASignals, ema } from "../Indicators/EMA";
 import { calculateRSI, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, logMACDSignals, macd } from "../Indicators/MACD";
-import { Candlestick } from "../Binance/Candlesticks";
+import {  Candlesticks } from "../Binance/Candlesticks";
 import { calculateSMA, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, logBollingerBandsSignals } from "../Indicators/BollingerBands";
@@ -46,21 +44,41 @@ import { calculateOBV, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 import { symbolFilters } from "../..";
-import { getOrderbook } from "../Binance/Orderbook";
-import { logToFile } from "../Utilities/logToFile";
 
 export interface Indicators {
-  avg?: number;
-  sma?: number[];
-  ema: ema;
-  macd?: macd;
-  rsi?: number[];
-  atr?: number[];
-  bollingerBands?: [number[], number[], number[]];
-  stochasticOscillator?: [number[], number[]];
-  stochasticRSI?: [number[], number[]];
-  obv?: number[];
-  cmf?: number[];
+  avg?: {
+    [time: string]:  number;
+  },
+  sma?: {
+    [time: string]:  number[];
+  },
+  ema?: {
+    [time: string]: ema;
+  },
+  macd?:  {
+    [time: string]: macd;
+  },
+  rsi?:  {
+    [time: string]: number[];
+  },
+  atr?:  {
+    [time: string]: number[];
+  },
+  bollingerBands?:  {
+    [time: string]: [number[], number[], number[]];
+  },
+  stochasticOscillator?:  {
+    [time: string]: [number[], number[]];
+  },
+  stochasticRSI?:  {
+    [time: string]: [number[], number[]];
+  },
+  obv?:  {
+    [time: string]: number[];
+  },
+  cmf?:  {
+    [time: string]: number[];
+  },
 }
 
 export const reverseSign = (number: number) => {
@@ -72,7 +90,7 @@ const placeTrade = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
-  candlesticks: Candlestick[],
+  candlesticks: Candlesticks,
   filter: Filter,
   options: ConfigOptions,
 ) => {
@@ -83,7 +101,7 @@ const placeTrade = async (
     const lastTradeDate = new Date(lastTradeTime);
     const timeDifferenceInSeconds = (currentTime - lastTradeTime) / 1000;
     consoleLogger.push("Last trade datetime:", lastTradeDate.toLocaleString("fi-FI"));
-    if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval)) {
+    if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval[0])) {
       return false; 
     }
   } else {
@@ -92,7 +110,7 @@ const placeTrade = async (
   const orderBook = options.orderbooks[symbol.split("/").join("")];
   consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
   consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
-  const indicators = await calculateIndicators(consoleLogger, candlesticks, options);
+  const indicators = await calculateIndicators(consoleLogger, symbol, candlesticks, options);
   const direction = await tradeDirection(binance, consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
   const stopTime = Date.now();
   consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
@@ -107,60 +125,69 @@ const placeTrade = async (
 
 export const calculateIndicators = async (
   consoleLogger: ConsoleLogger,
-  candlesticks: Candlestick[],
+  symbol: string,
+  candlesticks: Candlesticks,
   options: ConfigOptions
 ) => {
+  symbol = symbol.split("/").join("");
   const indicators: Indicators = {
-    sma: undefined,
-    ema: undefined,
-    macd: undefined,
-    atr: undefined,
-    bollingerBands: undefined,
-    stochasticOscillator: undefined,
-    stochasticRSI: undefined,
+    avg: {},
+    sma: {},
+    ema: {},
+    macd: {},
+    rsi: {},
+    atr: {},
+    bollingerBands: {},
+    stochasticOscillator: {},
+    stochasticRSI: {},
+    obv: {},
+    cmf: {},
   };
-  indicators.avg = calculateAverage(candlesticks);
-  logAverageSignals(consoleLogger, candlesticks, indicators.avg);
-  indicators.sma = calculateSMA(candlesticks, options.smaLength, options.source);
-  if (options.useSMA) {
-    logSMASignals(consoleLogger, indicators.sma); 
-  }
-  indicators.ema = {
-    short: calculateEMA(candlesticks, options.shortEma, options.source),
-    long: calculateEMA(candlesticks, options.longEma, options.source),
-  }
-  logEMASignals(consoleLogger, indicators.ema.short, indicators.ema.long);
-  if (options.useRSI) {
-    indicators.rsi = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-    logRSISignals(consoleLogger, indicators.rsi, options);
-  }
-  if (options.useMACD) {
-    indicators.macd = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
-    logMACDSignals(consoleLogger, indicators.macd);
-  }
-  if (options.useATR) {
-    indicators.atr = calculateATR(candlesticks, options.atrLength, options.source);
-    logATRSignals(consoleLogger, indicators.atr);
-  }
-  if (options.useBollingerBands) {
-    indicators.bollingerBands = calculateBollingerBands(candlesticks, options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-    logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands);
-  }
-  if (options.useStochasticOscillator) {
-    indicators.stochasticOscillator = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
-    logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator);
-  }
-  if (options.useStochasticRSI) {
-    indicators.stochasticRSI = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
-    logStochasticRSISignals(consoleLogger, indicators.stochasticRSI);
-  }
-  if (options.useOBV) {
-    indicators.obv = calculateOBV(candlesticks);
-    logOBVSignals(consoleLogger, candlesticks, indicators.obv);
-  }
-  if (options.useCMF) {
-    indicators.cmf = calculateCMF(candlesticks, options.cmfLength);
-    logCMFSignals(consoleLogger, indicators.cmf, options);
+  const timeframes = Object.keys(candlesticks[symbol]);
+  for (let i = 0; i < timeframes.length; i++) {
+    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol][timeframes[i]]);
+    logAverageSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.avg[timeframes[i]]);
+    indicators.sma[timeframes[i]] = calculateSMA(candlesticks[symbol][timeframes[i]], options.smaLength, options.source);
+    if (options.useSMA) {
+      logSMASignals(consoleLogger, indicators.sma[timeframes[i]]); 
+    }
+    indicators.ema[timeframes[i]] = {
+      short: calculateEMA(candlesticks[symbol][timeframes[i]], options.shortEma, options.source),
+      long: calculateEMA(candlesticks[symbol][timeframes[i]], options.longEma, options.source),
+    }
+    logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
+    if (options.useRSI) {
+      indicators.rsi[timeframes[i]] = calculateRSI(candlesticks[symbol][timeframes[i]], options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+      logRSISignals(consoleLogger, indicators.rsi[timeframes[i]], options);
+    }
+    if (options.useMACD) {
+      indicators.macd[timeframes[i]] = calculateMACD(candlesticks[symbol][timeframes[i]], options.fastMacd, options.slowMacd, options.signalMacd, options.source);
+      logMACDSignals(consoleLogger, indicators.macd[timeframes[i]]);
+    }
+    if (options.useATR) {
+      indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol][timeframes[i]], options.atrLength, options.source);
+      logATRSignals(consoleLogger, indicators.atr[timeframes[i]]);
+    }
+    if (options.useBollingerBands) {
+      indicators.bollingerBands[timeframes[i]] = calculateBollingerBands(candlesticks[symbol][timeframes[i]], options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+      logBollingerBandsSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.bollingerBands[timeframes[i]]);
+    }
+    if (options.useStochasticOscillator) {
+      indicators.stochasticOscillator[timeframes[i]] = calculateStochasticOscillator(candlesticks[symbol][timeframes[i]], options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
+      logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[i]]);
+    }
+    if (options.useStochasticRSI) {
+      indicators.stochasticRSI[timeframes[i]] = calculateStochasticRSI(candlesticks[symbol][timeframes[i]], options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
+      logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[i]]);
+    }
+    if (options.useOBV) {
+      indicators.obv[timeframes[i]] = calculateOBV(candlesticks[symbol][timeframes[i]]);
+      logOBVSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.obv[timeframes[i]]);
+    }
+    if (options.useCMF) {
+      indicators.cmf[timeframes[i]] = calculateCMF(candlesticks[symbol][timeframes[i]], options.cmfLength);
+      logCMFSignals(consoleLogger, indicators.cmf[timeframes[i]], options);
+    }
   }
   return indicators;
 }
@@ -170,17 +197,25 @@ export const algorithmic = async (
   binance: Binance, 
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  candlesticks: Candlestick[], 
+  candlesticks: Candlesticks, 
   options: ConfigOptions
 ) => {
   try {
     const startTime = Date.now();
     const filter = symbolFilters[symbol.split("/").join("")];
-    const latestCandle = candlesticks[candlesticks.length - 1];
-    const prevCandle = candlesticks[candlesticks.length - 2];
+    if (candlesticks[symbol.split("/").join("")] === undefined) {
+      return false;
+    }
+    const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+      return false;
+    }
+    const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]].length - 1];
+    const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]].length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
-    consoleLogger.push("Symbol", symbol);
-    consoleLogger.push(`Amount of candles`, candlesticks.length);
+    consoleLogger.push("Symbol", symbol.split("/").join(""));
+    consoleLogger.push("Displayed timeframe", timeframe[0]);
+    consoleLogger.push(`Amount of candles`, candlesticks[symbol.split("/").join("")][timeframe[0]]?.length);
     consoleLogger.push(`Candlestick time`, candleTime);
     if (latestCandle.close > latestCandle.open) {
       consoleLogger.push(`Candlestick Color`, "Green");
@@ -212,7 +247,7 @@ export const algorithmic = async (
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
     consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
-    if (candlesticks.length < options.longEma) {
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
@@ -243,6 +278,7 @@ export const algorithmic = async (
       consoleLogger.print();
       consoleLogger.flush();
     }
+    return true;
   } catch (error: any) {
     console.error(JSON.stringify(error));
   }

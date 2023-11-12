@@ -131,12 +131,12 @@ export const calculateRSI = (
 
 export const checkRSISignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  rsi: number[], 
   options: ConfigOptions
 ): string => {
   let check = 'HOLD';
   if (options.useRSI) {
-    const rsiValues = indicators.rsi.slice(-options.rsiHistoryLength);
+    const rsiValues = rsi.slice(-options.rsiHistoryLength);
     if (options.useRSI) {
       const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
       const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 

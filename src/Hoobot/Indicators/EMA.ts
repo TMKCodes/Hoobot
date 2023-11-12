@@ -68,13 +68,12 @@ export const calculateEMA = (
 
 export const logEMASignals = (
   consoleLogger: ConsoleLogger,
-  shortEma: number[],
-  longEma: number[],
+  ema: ema
 ) => {
-  const currentShortEma = shortEma[shortEma.length - 1];
-  const currentLongEma = longEma[longEma.length - 1];
-  const prevShortEma = shortEma[shortEma.length - 2];
-  const prevLongEma = longEma[longEma.length - 2];
+  const currentShortEma = ema.short[ema.short.length - 1];
+  const currentLongEma = ema.long[ema.long.length - 1];
+  const prevShortEma = ema.short[ema.short.length - 2];
+  const prevLongEma = ema.long[ema.long.length - 2];
   consoleLogger.push(`EMA Short`, currentShortEma.toFixed(7));
   consoleLogger.push(`EMA Long`, currentLongEma.toFixed(7));
   consoleLogger.push(`EMA Difference`, (currentShortEma - currentLongEma).toFixed(7));
@@ -87,8 +86,8 @@ export const logEMASignals = (
     consoleLogger.push(`EMA Signal`, `Neutral`);
   }
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
-    const isBullishCrossover = shortEma > longEma && prevShortEma <= prevLongEma;
-    const isBearishCrossover = shortEma < longEma && prevShortEma >= prevLongEma;
+    const isBullishCrossover = ema.short > ema.long && prevShortEma <= prevLongEma;
+    const isBearishCrossover = ema.short < ema.long && prevShortEma >= prevLongEma;
     const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
     const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
@@ -109,15 +108,15 @@ export const logEMASignals = (
 
 export const checkEMASignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  ema: ema, 
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useEMA) {
-    const currentShortEma = indicators.ema.short[indicators.ema.short.length - 1];
-    const currentLongEma = indicators.ema.long[indicators.ema.long.length - 1];
-    const prevShortEma = indicators.ema.short[indicators.ema.short.length - 2];
-    const prevLongEma = indicators.ema.long[indicators.ema.long.length - 2];
+    const currentShortEma = ema.short[ema.short.length - 1];
+    const currentLongEma = ema.long[ema.long.length - 1];
+    const prevShortEma = ema.short[ema.short.length - 2];
+    const prevLongEma = ema.long[ema.long.length - 2];
     const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
     const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
     const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;

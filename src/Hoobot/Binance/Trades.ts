@@ -285,7 +285,6 @@ export const buy = async (
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       return order;
     } else {
-      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
       return false;
     }
   } else {

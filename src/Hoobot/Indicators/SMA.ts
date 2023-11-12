@@ -84,13 +84,13 @@ export const logSMASignals = (
 
 export const checkSMASignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  sma: number[],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useSMA) {
-    const currentSMA = indicators.sma[indicators.sma.length - 1];
-    const prevSMA = indicators.sma[indicators.sma.length - 2];
+    const currentSMA = sma[sma.length - 1];
+    const prevSMA = sma[sma.length - 2];
     const isBullishCrossover = currentSMA > prevSMA;
     const isBearishCrossover = currentSMA < prevSMA;
     const isFlatDirection = currentSMA == prevSMA;

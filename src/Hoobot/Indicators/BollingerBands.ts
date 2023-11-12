@@ -98,7 +98,7 @@ export const logBollingerBandsSignals = (
 export const checkBollingerBandsSignals = (
   consoleLogger: ConsoleLogger,
   candlesticks: Candlestick[],
-  indicators: Indicators,
+  bollingerBands: [number[], number[], number[]],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
@@ -106,8 +106,8 @@ export const checkBollingerBandsSignals = (
     for(let i = 1; i < options.bollingerBandsHistoryLength + 1; i++) {
       const currentLow = candlesticks[candlesticks.length - i].low;
       const currentHigh = candlesticks[candlesticks.length - i].high;    
-      const currentUpperBand = indicators.bollingerBands[1][indicators.bollingerBands[1].length - i];
-      const currentLowerBand = indicators.bollingerBands[0][indicators.bollingerBands[0].length - i];
+      const currentUpperBand = bollingerBands[1][bollingerBands[1].length - i];
+      const currentLowerBand = bollingerBands[0][bollingerBands[0].length - i];
       const isAboveUpperBand = currentHigh > currentUpperBand;
       const isBelowLowerBand = currentLow < currentLowerBand;
       if (isAboveUpperBand) {

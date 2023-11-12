@@ -193,21 +193,21 @@ export const logStochasticRSISignals = (
   } else if (lastKValue < 30 || lastDValue < 30) {
     consoleLogger.push(`Stochastic RSI condition`, `Oversold (Approaching)`);
   } else if (lastKValue < 50 || lastDValue < 50) {
-    consoleLogger.push(`Stochastic RSI signal`, `Bullish`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bullish`);
   } else if (lastKValue > 50 || lastDValue > 50) {
-    consoleLogger.push(`Stochastic RSI signal`, `Bearish`);
+    consoleLogger.push(`Stochastic RSI condition`, `Bearish`);
   }
 }
 
 export const checkStochasticOscillatorSignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  stochasticOscillator: [number[], number[]],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useStochasticOscillator) {
-    const kValues = indicators.stochasticOscillator[0].slice(-5);
-    const dValues = indicators.stochasticOscillator[1].slice(-5);
+    const kValues = stochasticOscillator[0].slice(-5);
+    const dValues = stochasticOscillator[1].slice(-5);
     const overboughtTreshold = options.stochasticOscillatorOverboughtTreshold !== undefined ? options.stochasticOscillatorOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticOscillatorOversoldTreshold !== undefined ? options.stochasticOscillatorOversoldTreshold : 20; 
     for (let i = dValues.length - 1; i >= 0; i--) {
@@ -231,13 +231,13 @@ export const checkStochasticOscillatorSignals = (
 
 export const checkStochasticRSISignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  stochasticRSI: [number[], number[]],
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useStochasticRSI) {
-    const kValues = indicators.stochasticRSI[0].slice(-options.stochasticRSIHistoryLength);
-    const dValues = indicators.stochasticRSI[1].slice(-options.stochasticRSIHistoryLength);
+    const kValues = stochasticRSI[0].slice(-options.stochasticRSIHistoryLength);
+    const dValues = stochasticRSI[1].slice(-options.stochasticRSIHistoryLength);
     const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     for (let i = dValues.length - 1; i >= 0; i--) {

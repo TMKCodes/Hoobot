@@ -130,15 +130,15 @@ export const calculateMACD = (
 
 export const checkMACDSignals = (
   consoleLogger: ConsoleLogger, 
-  indicators: Indicators, 
+  macd: macd, 
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
   if (options.useMACD) {
-    const currentHistogram = indicators.macd.histogram[indicators.macd.histogram.length -1];
-    const prevHistogram = indicators.macd.histogram[indicators.macd.histogram.length - 2];
-    const currentMacdLine = indicators.macd.macdLine[indicators.macd.macdLine.length -1];
-    const currentSignalLine = indicators.macd.signalLine[indicators.macd.signalLine.length -1];
+    const currentHistogram = macd.histogram[macd.histogram.length -1];
+    const prevHistogram = macd.histogram[macd.histogram.length - 2];
+    const currentMacdLine = macd.macdLine[macd.macdLine.length -1];
+    const currentSignalLine = macd.signalLine[macd.signalLine.length -1];
     const isPrevHistogramPositive = prevHistogram > 0;
     const isPrevHistogramNegative = prevHistogram < 0;
     const isHistogramPositive = currentHistogram > 0;

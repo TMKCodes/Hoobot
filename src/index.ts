@@ -27,7 +27,7 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
-import { SymbolCandlesticks, Candlestick, listenForCandlesticks } from './Hoobot/Binance/Candlesticks';
+import { listenForCandlesticks, Candlesticks } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getCurrentBalances } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
@@ -68,7 +68,7 @@ const main = async () => {
     options.balances = await getCurrentBalances(binance);
 
     const candlesticksToPreload = 1000;
-    const symbolCandlesticks: SymbolCandlesticks = {};
+    const symbolCandlesticks: Candlesticks = {};
     if(options.mode === "algorithmic") {
       if (process.env.GO_CRAZY !== undefined) {
         const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
@@ -97,7 +97,7 @@ const main = async () => {
             }
             options.orderbooks[symbol.split("/").join("")] = orderbook;
           });
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlestick[]) => {
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlesticks) => {
             algorithmic(discord, binance, logger, symbol, candlesticks, options)
           });
         }
@@ -115,7 +115,7 @@ const main = async () => {
           }
           options.orderbooks[symbol.split("/").join("")] = orderbook;
         });
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlestick[]) => {
+        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlesticks) => {
           algorithmic(discord, binance, logger, options.symbols as string, candlesticks, options)
         });
       }
