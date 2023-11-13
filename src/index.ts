@@ -37,6 +37,7 @@ import { algorithmic } from './Hoobot/Modes/Algorithmic';
 import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
 import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
+import { hilow } from './Hoobot/Modes/HiLow';
 
 
 // Get configuration options from command-line arguments and dotenv.
@@ -118,6 +119,25 @@ const main = async () => {
         });
         listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlesticks) => {
           algorithmic(discord, binance, logger, options.symbols as string, candlesticks, options)
+        });
+      }
+    } else if (options.mode === "hilow") {
+      for (const symbol of options.symbols) {
+        options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
+      }
+      for (const symbol of options.symbols) {
+        const filter = await getFilters(binance, symbol);
+        symbolFilters[symbol.split("/").join("")] = filter;
+        listenForOrderbooks(binance, symbol, (_symbol: string, orderbook: Orderbook) => {
+          if(options.orderbooks[symbol.split("/").join("")] === undefined) {
+            options.orderbooks[symbol.split("/").join("")] =  {
+              bids: [],
+              asks: []
+            }
+          }
+          options.orderbooks[symbol.split("/").join("")] = orderbook;
+          const logger = consoleLogger();
+          hilow(discord, binance, logger, symbol, options);
         });
       }
     }

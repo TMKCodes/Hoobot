@@ -74,6 +74,7 @@ commands.push({name: server.builder.name, execute: server.execute});
 import fkick from './Commands/fkick';
 import { ConfigOptions } from '../Hoobot/Utilities/args';
 import Binance from 'node-binance-api';
+import { error } from 'console';
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
 
@@ -89,21 +90,24 @@ export const loginDiscord = (binance: Binance, options: ConfigOptions): Client =
       console.log(`Logged in as ${c.user.tag}`);
     });
     client.on(Events.InteractionCreate, async (interaction) => {
-      if(!interaction.isChatInputCommand()) return;
-      commands.forEach(async (command) => {
-        if(command.name == interaction.commandName) {
-          try {
-            await command.execute(interaction, binance, options);
-          } catch (error) {
-            console.log(error);
-            if(interaction.replied || interaction.deferred) {
-              await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-            } else {
-              await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        if(!interaction.isChatInputCommand()) return;
+        commands.forEach(async (command) => {
+          if(command.name == interaction.commandName) {
+            try {
+              await command.execute(interaction, binance, options);
+            } catch (error) {
+              console.log(error);
+              if(interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+              } else {
+                await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+              }
             }
           }
-        }
-      });
+        });
+    });
+    client.on(Events.Error, (error: Error) => {
+      console.log(JSON.stringify(error));
     });
     client.login(token);
     return client;

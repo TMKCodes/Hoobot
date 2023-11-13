@@ -173,34 +173,34 @@ export const sell = async (
   filter: Filter,
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
-  const baseBalance = options.balances[symbol.split("/")[0]];
-  const orders = await openOrders(binance, symbol);
-  if (orders !== false && Array.isArray(orders)) {
-    // for(let i = 0; i < orders.length; i++) {
-    //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
-    // }
-    return false;
-  }
-  const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-  let price = orderBookAsks[0] - parseFloat(filter.tickSize);
-  let maxQuantityInBase = baseBalance;
-  if (options.startingMaxSellAmount > 0) {
-    maxQuantityInBase = Math.min(baseBalance, options.startingMaxSellAmount);
-  }
-  const roundedPrice = binance.roundStep(price, filter.tickSize);
-  const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
-  const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-  if (checkBeforePlacingOrder(symbol, "sell", roundedQuantityInBase, roundedPrice, filter) === true) {
-    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
-    let unrealizedPNL = 0;
-    if (tradeHistory?.length > 0) {
-      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
-      if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
-        return false;
-      }
+  try {
+    const baseBalance = options.balances[symbol.split("/")[0]];
+    const orders = await openOrders(binance, symbol);
+    if (orders !== false && Array.isArray(orders)) {
+      // for(let i = 0; i < orders.length; i++) {
+      //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
+      // }
+      return false;
     }
-    let order: Order = undefined;
-    if(roundedQuantityInQuote > parseFloat(filter.minNotional)) {
+    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+    let price = orderBookAsks[0] - parseFloat(filter.tickSize);
+    let maxQuantityInBase = baseBalance;
+    if (options.startingMaxSellAmount > 0) {
+      maxQuantityInBase = Math.min(baseBalance, options.startingMaxSellAmount);
+    }
+    const roundedPrice = binance.roundStep(price, filter.tickSize);
+    const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
+    const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
+    if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
+      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+      let unrealizedPNL = 0;
+      if (tradeHistory?.length > 0) {
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
+          return false;
+        }
+      }
+      let order: Order = undefined;
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
@@ -219,12 +219,12 @@ export const sell = async (
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       return order;
     } else {
-      consoleLogger.push("error", `\r\nFailed check: ${roundedQuantityInQuote} > ${parseFloat(filter.minNotional)}\r\n`);
+      consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
       return false;
     }
-  } else {
-    consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
-    return false;
+  } catch (error) {
+    logToFile(JSON.stringify(error));
+    console.log(error);
   }
 }
 
@@ -238,35 +238,35 @@ export const buy = async (
   filter: Filter,
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
-  const quoteBalance = options.balances[symbol.split("/")[1]];
-  const orders = await openOrders(binance, symbol);
-  if (orders !== false && Array.isArray(orders)) {
-    // for(let i = 0; i < orders.length; i++) {
-    //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
-    // }
-    return false;
-  }
-  const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-  let price = orderBookBids[0] + parseFloat(filter.tickSize);
-  let maxQuantityuInQuote = quoteBalance;
-  if (options.startingMaxBuyAmount > 0) {
-    maxQuantityuInQuote = Math.min(quoteBalance, options.startingMaxBuyAmount);
-  }
-  const quantityInBase = (maxQuantityuInQuote / price);
-  const roundedPrice = binance.roundStep(price, filter.tickSize);
-  const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
-  const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-  if (checkBeforePlacingOrder(symbol, "buy", roundedQuantityInBase, roundedPrice, filter) === true) {
-    const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
-    let unrealizedPNL = 0;
-    if (tradeHistory?.length > 0) {
-      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
-      if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
-        return false;
-      }
+  try {
+    const quoteBalance = options.balances[symbol.split("/")[1]];
+    const orders = await openOrders(binance, symbol);
+    if (orders !== false && Array.isArray(orders)) {
+      // for(let i = 0; i < orders.length; i++) {
+      //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
+      // }
+      return false;
     }
-    let order: Order = undefined;
-    if(roundedQuantityInQuote > parseFloat(filter.minNotional)) {
+    const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+    let price = orderBookBids[0] + parseFloat(filter.tickSize);
+    let maxQuantityuInQuote = quoteBalance;
+    if (options.startingMaxBuyAmount > 0) {
+      maxQuantityuInQuote = Math.min(quoteBalance, options.startingMaxBuyAmount);
+    }
+    const quantityInBase = (maxQuantityuInQuote / price);
+    const roundedPrice = binance.roundStep(price, filter.tickSize);
+    const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
+    const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
+    if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
+      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
+      let unrealizedPNL = 0;
+      if (tradeHistory?.length > 0) {
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
+          return false;
+        }
+      }
+      let order: Order = undefined;
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
@@ -285,11 +285,12 @@ export const buy = async (
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       return order;
     } else {
+      consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
       return false;
     }
-  } else {
-    consoleLogger.push("error", "NOTANIONAL PROBLEM, CHECK LIMITS AND YOUR BALANCES");
-    return false;
+  } catch (error) {
+    logToFile(JSON.stringify(error, null, 2));
+    console.log(error);
   }
 }
 

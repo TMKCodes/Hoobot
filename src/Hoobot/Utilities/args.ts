@@ -141,6 +141,7 @@ export interface ConfigOptions {
   tradeHistory?: TradeHistory,
   orderbooks?: Orderbooks,
   balances?: Balances,
+  profitCurrentMax?: number,
   [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
 }
 
@@ -237,6 +238,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     tradeHistory: {},
     orderbooks: {},
     panicProfitCurrentMax: {},
+    profitCurrentMax: 0,
     balances: {},
   };
   if (args.length === 0) {

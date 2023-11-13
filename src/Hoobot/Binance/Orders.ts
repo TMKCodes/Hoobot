@@ -108,27 +108,18 @@ export const openOrders = async (
 }
 
 export const checkBeforePlacingOrder = (
-  symbol: string,
-  direction: string,
   quoteQuantity: number,
   price: number,
   tradingPairFilters: any,
 ) => {
-  const logFailure = (message: string) => {
-    logToFile(`ORDER PLACEMENT FAILURE: ${symbol}, ${direction}, ${quoteQuantity}, ${price}, ${message}\r\n`);
-    return false;
-  };
-
   const isValid = (min: number, max: number, value: number) => {
     if (value < min) {
-      return logFailure(`Price too low.`);
+      return false;
     } else if (value > max) {
-      return logFailure(`Price too high.`);
+      return false;
     }
     return true;
   };
-
-  
   if (
     !isValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price) ||
     !isValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quoteQuantity) ||
@@ -149,67 +140,73 @@ export const handleOpenOrder = async (
   orderBook: Orderbook, 
   options: ConfigOptions,
 ): Promise<string> => {
-  const logger = consoleLogger();
-  delay(1500);
-  let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-  logToFile(JSON.stringify(orderStatus));
-  delay(1500);
-  do {
+  try {
+    const logger = consoleLogger();
     delay(1500);
-    const currentTime = Date.now();
-    const orderAgeSeconds = Math.floor((currentTime - orderStatus.time) / 1000);
-    logger.push("Order ID: ", order.orderId);
-    logger.push("Symbol: ", symbol);
-    logger.push("Age seconds: ", orderAgeSeconds);
-    let tryToCancel = false;
-    if (orderStatus.status === "CANCELED") {
-      const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      return "CANCELED";
-    } else if (orderStatus.status === "EXPIRED") {
-      const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      return "EXPIRED";
-    } else if (orderStatus.status === "FILLED") {
-      const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      return "FILLED";
-    } else if (orderStatus.status === "NEW") {
-      tryToCancel = true;
-    } else if (orderStatus.status === "PARTIALLY_FILLED") {
-      const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-    } else if (orderStatus.status === "REJECTED") {
-      const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      return "REJECTED";
-    }
-    if (tryToCancel === true) {
-      if (orderAgeSeconds > options.maxOrderAge) {
-        await cancelOrder(binance, symbol.split("/").join(""), order.orderId);
+    let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+    logToFile(JSON.stringify(orderStatus, null, 2));
+    delay(1500);
+    do {
+      delay(1500);
+      const currentTime = Date.now();
+      const orderAgeSeconds = Math.floor((currentTime - orderStatus.time) / 1000);
+      logger.push("Order ID: ", order.orderId);
+      logger.push("Symbol: ", symbol);
+      logger.push("Age seconds: ", orderAgeSeconds);
+      let tryToCancel = false;
+      if (orderStatus.status === "CANCELED") {
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
         sendMessageToChannel(discord, options.discordChannelID, orderMsg);
         return "CANCELED";
-      } else {
-        let unrealizedPNL = 0;
-        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-        if (order.isBuyer === true) { 
-          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
-        } else { 
-          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
-        }
-        if (unrealizedPNL < options.closePercentage) {
+      } else if (orderStatus.status === "EXPIRED") {
+        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+        return "EXPIRED";
+      } else if (orderStatus.status === "FILLED") {
+        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+        return "FILLED";
+      } else if (orderStatus.status === "NEW") {
+        tryToCancel = true;
+      } else if (orderStatus.status === "PARTIALLY_FILLED") {
+        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+      } else if (orderStatus.status === "REJECTED") {
+        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+        return "REJECTED";
+      }
+      if (tryToCancel === true) {
+        if (orderAgeSeconds > options.maxOrderAge) {
           await cancelOrder(binance, symbol.split("/").join(""), order.orderId);
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, options.discordChannelID, orderMsg);
           return "CANCELED";
+        } else {
+          let unrealizedPNL = 0;
+          const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+          const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+          if (order.isBuyer === true) { 
+            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
+          } else { 
+            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
+          }
+          if (unrealizedPNL < options.closePercentage) {
+            await cancelOrder(binance, symbol.split("/").join(""), order.orderId);
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            return "CANCELED";
+          }
         }
       }
-    }
-    logger.print();
-    logger.flush();
-    orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-    delay(1500);
-  } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED");
+      logger.print();
+      logger.flush();
+      orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
+      logToFile(JSON.stringify(orderStatus, null, 2));
+      delay(1500);
+    } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED");
+  } catch (error) {
+    logToFile(JSON.stringify(error, null, 2));
+    console.log(error);
+  }
 };
