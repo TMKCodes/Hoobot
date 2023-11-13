@@ -141,6 +141,7 @@ export const handleOpenOrder = async (
   options: ConfigOptions,
 ): Promise<string> => {
   try {
+    let partiallyFilledSent = false;
     const logger = consoleLogger();
     delay(1500);
     let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
@@ -168,8 +169,11 @@ export const handleOpenOrder = async (
       } else if (orderStatus.status === "NEW") {
         tryToCancel = true;
       } else if (orderStatus.status === "PARTIALLY_FILLED") {
-        const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+        if (partiallyFilledSent === false) {
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          partiallyFilledSent = true;
+        }
       } else if (orderStatus.status === "REJECTED") {
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
         sendMessageToChannel(discord, options.discordChannelID, orderMsg);
