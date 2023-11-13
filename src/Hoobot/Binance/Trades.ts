@@ -193,10 +193,10 @@ export const sell = async (
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
-      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
       let unrealizedPNL = 0;
-      if (tradeHistory?.length > 0) {
-        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
           return false;
         }
@@ -257,10 +257,10 @@ export const buy = async (
     const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
-      const tradeHistory = options.tradeHistory[symbol.split("/").join("")].reverse().slice(0, 3);
       let unrealizedPNL = 0;
-      if (tradeHistory?.length > 0) {
-        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(tradeHistory[0].qty), parseFloat(tradeHistory[0].price), roundedPrice);
+      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
           return false;
         }
