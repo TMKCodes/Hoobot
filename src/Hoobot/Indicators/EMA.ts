@@ -111,8 +111,9 @@ export const checkEMASignals = (
   ema: ema, 
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useEMA) {
+    check = 'HOLD';
     const currentShortEma = ema.short[ema.short.length - 1];
     const currentLongEma = ema.long[ema.long.length - 1];
     const prevShortEma = ema.short[ema.short.length - 2];
@@ -129,7 +130,6 @@ export const checkEMASignals = (
     } else if (isFlatDirection) {
       check = 'HOLD'
     }
-    consoleLogger.push("EMA Check", check);
   }
   return check;
 }

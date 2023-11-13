@@ -87,8 +87,9 @@ export const checkSMASignals = (
   sma: number[],
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useSMA) {
+    check = 'HOLD';
     const currentSMA = sma[sma.length - 1];
     const prevSMA = sma[sma.length - 2];
     const isBullishCrossover = currentSMA > prevSMA;
@@ -101,7 +102,6 @@ export const checkSMASignals = (
     } else if (isFlatDirection) {
       check = 'HOLD'
     }
-    consoleLogger.push("SMA Check", check);
   }
   return check;
 }

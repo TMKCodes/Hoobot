@@ -133,8 +133,9 @@ export const checkMACDSignals = (
   macd: macd, 
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useMACD) {
+    check = 'HOLD';
     const currentHistogram = macd.histogram[macd.histogram.length -1];
     const prevHistogram = macd.histogram[macd.histogram.length - 2];
     const currentMacdLine = macd.macdLine[macd.macdLine.length -1];
@@ -154,13 +155,12 @@ export const checkMACDSignals = (
     } else if (isPrevHistogramPositive && isHistogramNegative) {
       check = 'SELL';
     } else {
-      if (isMacdLineBelowHstogram && isSignalLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramNegative) {
+      if (isMacdLineAboveSignalLine && isHistogramNegative) {
         check = 'BUY';
-      } else if (isMacdLineAboveHistogram && isSignalLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramPositive) {
+      } else if (isMacdLineBelowSignalLine && isHistogramNegative) {
         check = 'SELL';
       }
     }
-    consoleLogger.push("MACD Check", check);
   }
   return check;
 }

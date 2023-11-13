@@ -38,8 +38,9 @@ export const checkGPTSignals = async (
   options: ConfigOptions
 ) => {
   symbol = symbol.split("/").join("");
-  let check = "HOLD";
+  let check = "SKIP";
   if(options.openaiApiKey !== undefined && options.openaiModel !== undefined) {
+    check = 'HOLD';
     const slice = options.openaiHistoryLength; 
     let message = "I give you this trade data, I want you to decide from them if I should BUY, SELL or HOLD.  Data in arrays are oldest to newest order. Please reply only with one word HOLD, BUY or SELL!\n\n";
     message += `Traded symbol is: ${symbol}\n`;

@@ -134,8 +134,9 @@ export const checkRSISignals = (
   rsi: number[], 
   options: ConfigOptions
 ): string => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useRSI) {
+    check = 'HOLD';
     const rsiValues = rsi.slice(-options.rsiHistoryLength);
     if (options.useRSI) {
       const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;

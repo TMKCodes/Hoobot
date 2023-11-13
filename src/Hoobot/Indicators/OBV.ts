@@ -88,8 +88,9 @@ export const checkOBVSignals = (
   obv: number[],
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useOBV) {
+    check = 'HOLD';
     for(let i = 1; i < (options.obvHistoryLength + 1); i++) {
       const currentOBV = obv[obv.length - i];
       const prevOBV = obv[obv.length - (i + 1)];
@@ -108,7 +109,6 @@ export const checkOBVSignals = (
         check = 'SELL'; 
       }
     }
-    consoleLogger.push("OBV Check", check);
   }
   return check;
 }

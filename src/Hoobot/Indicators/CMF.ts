@@ -91,8 +91,9 @@ export const checkCMFSignals = (
   cmfValues: number[],
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useCMF) {
+    check = 'HOLD';
     cmfValues = cmfValues.slice(-options.cmfHistoryLength);
     const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value })), 50, 'close'); 
     for (let i = cmfValues.length; i > 0; i--) {
@@ -116,7 +117,6 @@ export const checkCMFSignals = (
         break;
       }
     }
-    consoleLogger.push("CMF Check", check);
   }
   return check;
 }

@@ -137,11 +137,20 @@ export interface ConfigOptions {
   panicProfitMinimum?: number,
   panicProfitMinimumDrop?: number,
   panicProfitCurrentMax?: CurrentProfitMax,
-  timeframeAgreement?: number,
+  directionAgreement?: number,
   tradeHistory?: TradeHistory,
   orderbooks?: Orderbooks,
   balances?: Balances,
   profitCurrentMax?: number,
+  SMAWeight?: number,
+  EMAWeight?: number,
+  MACDWeight?: number,
+  RSIWeight?: number,
+  StochasticOscillatorWeight?: number,
+  StochasticRSIWeight?: number,
+  bollingerBandsWeight?: number,
+  OBVWeight?: number,
+  CMFWeight?: number,
   [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
 }
 
@@ -205,6 +214,15 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD) || 80,
     stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD) || 20,
     stochasticRSIHistoryLength: parseFloat(process.env.STOCHASTIC_RSI_HISTORY_LENGTH) || 5,
+    SMAWeight: parseFloat(process.env.SMA_WEIGHT) || 1,
+    EMAWeight: parseFloat(process.env.EMA_WEIGHT) || 1,
+    MACDWeight: parseFloat(process.env.MACD_WEIGHT) || 1,
+    RSIWeight: parseFloat(process.env.RSI_WEIGHT) || 1,
+    StochasticOscillatorWeight: parseFloat(process.env.STOCHASTIC_OSCILLATOR_WEIGHT) || 1,
+    StochasticRSIWeight: parseFloat(process.env.STOCHASTIC_RSI_WEIGHT) || 1,
+    bollingerBandsWeight: parseFloat(process.env.BOLLINGER_BANDS_WEIGHT) || 1,
+    OBVWeight: parseFloat(process.env.OBV_WEIGHT) || 1,
+    CMFWeight: parseFloat(process.env.CMF_WEIGHT) || 1,
     // Limits
     startingMaxBuyAmount: parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0,
     startingMaxSellAmount: parseFloat(process.env.STARTING_MAX_SELL_AMOUNT!) || 0,
@@ -226,7 +244,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     openaiHistoryLength: parseFloat(process.env.GPT_HISTORY_LENGTH!) || 5,
     openaiOverwrite:  process.env.GPT_OVERWRITE === "true" ? true : false || false,
     // Timeframe agreement
-    timeframeAgreement: parseFloat(process.env.TIMEFRAME_AGREEMENT) || 100,
+    directionAgreement: parseFloat(process.env.DIRECTION_AGREEMENT) || 100,
     // Developer
     debug: process.env.DEBUG === "true" ? true : false || false,
     // Arbitrage

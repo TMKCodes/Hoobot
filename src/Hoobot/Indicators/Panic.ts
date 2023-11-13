@@ -39,39 +39,34 @@ export const checkPanicProfit = (
   filter: Filter,
 ): string => {
   let check = 'SKIP';
+  let unrealizedPNL: number = 0;
   if (options.panicProfitMinimum > 0) {
-    const baseBalance = options.balances[symbol.split("/")[0]];
-    const quoteBalance = options.balances[symbol.split("/")[1]];
-    const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    if (quoteBalance > filter.minNotional || (baseBalance * orderBookBids[0]) > filter.minNotional) {
-      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        let unrealizedPNL: number = 0;
-        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-        if (lastTrade.isBuyer === true) { 
-          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
-        } else { 
-          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
+    if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if (lastTrade.isBuyer === true) { 
+        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
+      } else { 
+        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
+      }
+      if (unrealizedPNL > options.panicProfitMinimum) {
+        if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")])  {
+          if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop) {
+            if (lastTrade.isBuyer) {
+              check = 'SELL';
+            } else {
+              check = 'BUY';
+            }
+          } 
+        } else {
+          options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
         }
-        if (unrealizedPNL > options.panicProfitMinimum) {
-          if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")])  {
-            if (unrealizedPNL < options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop) {
-              if (lastTrade.isBuyer) {
-                check = 'SELL';
-              } else {
-                check = 'BUY';
-              }
-            } 
-          } else {
-            options.panicProfitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
-          }
-          consoleLogger.push("PANIC Current MAX PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")]);
-          consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
-          consoleLogger.push("PANIC Current PANIC PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop);
-        }
+        consoleLogger.push("PANIC Current MAX PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")]);
+        consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
+        consoleLogger.push("PANIC Current PANIC PNL%", options.panicProfitCurrentMax[symbol.split("/").join("")] - options.panicProfitMinimumDrop);
       }
     }
   }
-  consoleLogger.push("PANIC Check", check);
   return check;
 }

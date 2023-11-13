@@ -101,8 +101,9 @@ export const checkBollingerBandsSignals = (
   bollingerBands: [number[], number[], number[]],
   options: ConfigOptions
 ) => {
-  let check = 'HOLD';
+  let check = 'SKIP';
   if (options.useBollingerBands) {
+    check = 'HOLD';
     for(let i = 1; i < options.bollingerBandsHistoryLength + 1; i++) {
       const currentLow = candlesticks[candlesticks.length - i].low;
       const currentHigh = candlesticks[candlesticks.length - i].high;    

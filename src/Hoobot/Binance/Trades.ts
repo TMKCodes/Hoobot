@@ -165,6 +165,13 @@ export const updateForce = (
   writeFileSync("force.json", JSON.stringify(force));
 }
 
+export const readForce = (
+  symbol: string
+) => {
+  const force = JSON.parse(readFileSync("force.json", "utf-8"));
+  return force[symbol.split("/").join("")];
+}
+
 export const sell = async (
   discord: Client,
   binance: Binance,
@@ -197,7 +204,7 @@ export const sell = async (
       if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee) {
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
           return false;
         }
       }
@@ -261,7 +268,7 @@ export const buy = async (
       if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee) {
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
           return false;
         }
       }
