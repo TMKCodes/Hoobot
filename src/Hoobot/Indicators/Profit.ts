@@ -47,17 +47,17 @@ export const checkProfitSignals = (
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
       if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
     }
     if (lastTrade.isBuyer === true) { 
       const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price), orderBookBids[0]);
+      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
     } else { 
       const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.quoteQty), parseFloat(lastTrade.price), orderBookAsks[0]);
+      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
     }
     if(force[symbol.split("/").join("")]?.skip !== true) {
       if (lastTrade.isBuyer === true) { 

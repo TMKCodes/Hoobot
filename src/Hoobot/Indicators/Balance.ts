@@ -55,11 +55,12 @@ export const checkBalanceSignals = async (
       check = 'HOLD';
     }
   }
-  if (check === 'SELL' && (baseBalanceConverted < filter.minNotional || baseBalanceConverted > filter.maxNotional)) {
+  if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
     check = 'HOLD';
-  } else if (check === 'BUY' && (quoteBalance < filter.minNotional || quoteBalance > filter.maxNotional)) {
+  } else if (check === 'BUY' && (quoteBalance < parseFloat(filter.minNotional) || quoteBalance > parseFloat(filter.maxNotional))) {
     check = 'HOLD';
   }
+  consoleLogger.push("PREVIOUS TRADE Check", tradeCheck);
   consoleLogger.push("NEXT TRADE Check", check);
   return check;
 }

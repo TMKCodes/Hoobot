@@ -144,7 +144,6 @@ export const handleOpenOrder = async (
     const logger = consoleLogger();
     delay(1500);
     let orderStatus: OrderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-    logToFile(JSON.stringify(orderStatus, null, 2));
     delay(1500);
     do {
       delay(1500);
@@ -202,7 +201,6 @@ export const handleOpenOrder = async (
       logger.print();
       logger.flush();
       orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
-      logToFile(JSON.stringify(orderStatus, null, 2));
       delay(1500);
     } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED");
   } catch (error) {

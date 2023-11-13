@@ -99,23 +99,22 @@ export const tradeDirection = async (
   options: ConfigOptions,
   filter: Filter,
 ) => {
-  symbol = symbol.split("/").join("");
   const startTime = Date.now();
   let directions = [];
-  const timeframes = Object.keys(candlesticks[symbol]);
+  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
     let direction = 'HOLD';
     const checks = {
       profit: checkProfitSignals(consoleLogger, symbol, orderBook, options),
-      next: await checkBalanceSignals(consoleLogger, symbol, candlesticks[symbol][timeframes[i]][candlesticks[symbol][timeframes[i]].length - 1].close, options, filter),
+      next: await checkBalanceSignals(consoleLogger, symbol, candlesticks[symbol.split("/").join("")][timeframes[i]][candlesticks[symbol.split("/").join("")][timeframes[i]].length - 1].close, options, filter),
       SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[i]], options),
       EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[i]], options),
       MACD: checkMACDSignals(consoleLogger, indicators.macd[timeframes[i]], options),
       RSI: checkRSISignals(consoleLogger, indicators.rsi[timeframes[i]], options),
       StochasticOscillator: checkStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[i]], options),
       StochasticRSI: checkStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[i]], options),
-      BollingerBands: checkBollingerBandsSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.bollingerBands[timeframes[i]], options),
-      OBV: checkOBVSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.obv[timeframes[i]], options),
+      BollingerBands: checkBollingerBandsSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.bollingerBands[timeframes[i]], options),
+      OBV: checkOBVSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.obv[timeframes[i]], options),
       CMF: checkCMFSignals(consoleLogger, indicators.cmf[timeframes[i]], options),
       panic: checkPanicProfit(consoleLogger, symbol, orderBook, options, filter),
     }
@@ -232,7 +231,6 @@ export const calculateIndicators = async (
   candlesticks: Candlesticks,
   options: ConfigOptions
 ) => {
-  symbol = symbol.split("/").join("");
   const indicators: Indicators = {
     avg: {},
     sma: {},
@@ -246,49 +244,49 @@ export const calculateIndicators = async (
     obv: {},
     cmf: {},
   };
-  const timeframes = Object.keys(candlesticks[symbol]);
+  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
-    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol][timeframes[i]]);
-    logAverageSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.avg[timeframes[i]]);
-    indicators.sma[timeframes[i]] = calculateSMA(candlesticks[symbol][timeframes[i]], options.smaLength, options.source);
+    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
+    logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
+    indicators.sma[timeframes[i]] = calculateSMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.smaLength, options.source);
     if (options.useSMA) {
       logSMASignals(consoleLogger, indicators.sma[timeframes[i]]); 
     }
     indicators.ema[timeframes[i]] = {
-      short: calculateEMA(candlesticks[symbol][timeframes[i]], options.shortEma, options.source),
-      long: calculateEMA(candlesticks[symbol][timeframes[i]], options.longEma, options.source),
+      short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
+      long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
     }
     logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
     if (options.useRSI) {
-      indicators.rsi[timeframes[i]] = calculateRSI(candlesticks[symbol][timeframes[i]], options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+      indicators.rsi[timeframes[i]] = calculateRSI(candlesticks[symbol.split("/").join("")][timeframes[i]], options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
       logRSISignals(consoleLogger, indicators.rsi[timeframes[i]], options);
     }
     if (options.useMACD) {
-      indicators.macd[timeframes[i]] = calculateMACD(candlesticks[symbol][timeframes[i]], options.fastMacd, options.slowMacd, options.signalMacd, options.source);
+      indicators.macd[timeframes[i]] = calculateMACD(candlesticks[symbol.split("/").join("")][timeframes[i]], options.fastMacd, options.slowMacd, options.signalMacd, options.source);
       logMACDSignals(consoleLogger, indicators.macd[timeframes[i]]);
     }
     if (options.useATR) {
-      indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol][timeframes[i]], options.atrLength, options.source);
+      indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
       logATRSignals(consoleLogger, indicators.atr[timeframes[i]]);
     }
     if (options.useBollingerBands) {
-      indicators.bollingerBands[timeframes[i]] = calculateBollingerBands(candlesticks[symbol][timeframes[i]], options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-      logBollingerBandsSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.bollingerBands[timeframes[i]]);
+      indicators.bollingerBands[timeframes[i]] = calculateBollingerBands(candlesticks[symbol.split("/").join("")][timeframes[i]], options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+      logBollingerBandsSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.bollingerBands[timeframes[i]]);
     }
     if (options.useStochasticOscillator) {
-      indicators.stochasticOscillator[timeframes[i]] = calculateStochasticOscillator(candlesticks[symbol][timeframes[i]], options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
+      indicators.stochasticOscillator[timeframes[i]] = calculateStochasticOscillator(candlesticks[symbol.split("/").join("")][timeframes[i]], options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
       logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[i]]);
     }
     if (options.useStochasticRSI) {
-      indicators.stochasticRSI[timeframes[i]] = calculateStochasticRSI(candlesticks[symbol][timeframes[i]], options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
+      indicators.stochasticRSI[timeframes[i]] = calculateStochasticRSI(candlesticks[symbol.split("/").join("")][timeframes[i]], options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
       logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[i]]);
     }
     if (options.useOBV) {
-      indicators.obv[timeframes[i]] = calculateOBV(candlesticks[symbol][timeframes[i]]);
-      logOBVSignals(consoleLogger, candlesticks[symbol][timeframes[i]], indicators.obv[timeframes[i]]);
+      indicators.obv[timeframes[i]] = calculateOBV(candlesticks[symbol.split("/").join("")][timeframes[i]]);
+      logOBVSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.obv[timeframes[i]]);
     }
     if (options.useCMF) {
-      indicators.cmf[timeframes[i]] = calculateCMF(candlesticks[symbol][timeframes[i]], options.cmfLength);
+      indicators.cmf[timeframes[i]] = calculateCMF(candlesticks[symbol.split("/").join("")][timeframes[i]], options.cmfLength);
       logCMFSignals(consoleLogger, indicators.cmf[timeframes[i]], options);
     }
   }
