@@ -51,15 +51,19 @@ export const consoleLogger = (): ConsoleLogger => {
   };
   const writeJSONTofile = (filePath: string) => {
     try {
-      let fileBuffer = fs.readFileSync(filePath);
-      if (fileBuffer.toString() === "") {
-        fileBuffer = Buffer.from("[]");
+      if (fs.existsSync(filePath)) {
+        let fileBuffer = fs.readFileSync(filePath);
+        if (fileBuffer.toString() === "") {
+          fileBuffer = Buffer.from("[]");
+        }
+        const parsedJSON = JSON.parse(fileBuffer.toString());
+        parsedJSON.push(DisplayData);
+        fs.writeFileSync(filePath, JSON.stringify(parsedJSON, null, 4));
+      } else {
+        fs.writeFileSync(filePath, JSON.stringify({}, null, 4));
       }
-      const parsedJSON = JSON.parse(fileBuffer.toString());
-      parsedJSON.push(DisplayData)
-      fs.writeFileSync(filePath, JSON.stringify(parsedJSON, null, 4));
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
   const flush = () => {

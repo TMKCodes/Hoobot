@@ -30,19 +30,48 @@ import { Balances, getCurrentBalances } from '../../Hoobot/Binance/Balances';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
+export interface balancesWithUSDT { 
+  [symbol: string]: {
+    amount: number,
+    amountInUSDT: number,
+  }; 
+}
+
+export interface result {
+  [symbol: string]: string,
+}
+
 export default {
   builder: new SlashCommandBuilder()
     .setName("balances")
     .setDescription("Replices with Binance balances!"),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, config: ConfigOptions) => {
     const balances: Balances = await getCurrentBalances(binance);
-    const newBalances: Balances = {}
+    const newBalances: balancesWithUSDT = {}
+    const prices = await binance.prices();
+    const priceSymbols = Object.keys(prices);
     const symbols = Object.keys(balances);
     for (const symbol of symbols) {
-      if(balances[symbol] > 0) {
-        newBalances[symbol] = balances[symbol];
+      if (balances[symbol] > 0) {
+        let amountInUSDT = 0;
+        if (priceSymbols.includes(symbol + "USDT")) {
+          amountInUSDT = prices[symbol + "USDT"] * balances[symbol];
+        }
+        newBalances[symbol] = { 
+          amount: balances[symbol],
+          amountInUSDT: amountInUSDT
+        };
       }
     }
-    await interaction.reply(`${JSON.stringify(newBalances, null, 4)}`);
+    const sortedBalances = Object.entries(newBalances)
+      .sort(([, a], [, b]) => b.amountInUSDT - a.amountInUSDT)
+      .reduce((obj, [key, value]) => {
+        obj[key] = value;
+        return obj;
+      }, {} as balancesWithUSDT);
+
+    // Extract and sort the resultBalances array based on the sortedBalances keys
+    const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.amount.toFixed(7)} = ${data.amountInUSDT.toFixed(7)} USDT`);
+    await interaction.reply(`${JSON.stringify(resultBalances, null, 4)}`);
   }
 }

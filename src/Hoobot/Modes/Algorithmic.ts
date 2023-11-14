@@ -310,55 +310,43 @@ export const algorithmic = async (
     if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
       return false;
     }
-    const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]].length - 1];
-    const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]].length - 2];
-    const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
-    consoleLogger.push("Symbol", symbol.split("/").join(""));
-    consoleLogger.push("Displayed timeframe", timeframe[0]);
-    consoleLogger.push(`Amount of candles`, candlesticks[symbol.split("/").join("")][timeframe[0]]?.length);
-    consoleLogger.push(`Candlestick time`, candleTime);
-    if (latestCandle.close > latestCandle.open) {
-      consoleLogger.push(`Candlestick Color`, "Green");
-    } else {
-      consoleLogger.push(`Candlestick Color`, "Red");
-    }
-    if (prevCandle) {
-      if (latestCandle.close > prevCandle.close) {
-        consoleLogger.push(`Candlesticks Direction`, "Rising");
-      } else if (latestCandle.close < prevCandle.close) {
-        consoleLogger.push(`Candlesticks Direction`, "Dropping");
-      } else {
-        consoleLogger.push(`Candlesticks Direction`, "Stagnant");
-      }
-    }
-    consoleLogger.push(`Candlestick Open`, latestCandle.open.toFixed(7));
-    consoleLogger.push(`Candlestick High`, latestCandle.high.toFixed(7));
-    consoleLogger.push(`Candlestick Low`, latestCandle.low.toFixed(7));
-    consoleLogger.push(`Candlestick Close`, latestCandle.close.toFixed(7));
-    if (options.startingMaxBuyAmount > 0 && options.startingMaxBuyAmount !== undefined) {
-      consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[1]);
-    }
-    if (options.startingMaxSellAmount > 0 && options.startingMaxBuyAmount !== undefined) {
-      consoleLogger.push("Max sell amount", options.startingMaxSellAmount + " " + symbol.split("/")[1]);
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+      return false;
     }
     if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
     }
-    const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
-    consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
-    consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
     if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < options.longEma) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
-    consoleLogger.push("Balance " + symbol.split("/")[0], options.balances[symbol.split("/")[0]].toFixed(7));
-    consoleLogger.push("Balance " + symbol.split("/")[1], options.balances[symbol.split("/")[1]].toFixed(7));
+    const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1];
+    const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
+    const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
+    consoleLogger.push("Symbol", symbol.split("/").join(""));
+    consoleLogger.push('Candlestick', {
+      time: candleTime,
+      color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
+      direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
+      open: latestCandle.open.toFixed(7),
+      close: latestCandle.close.toFixed(7),
+      low: latestCandle.low.toFixed(7),
+      high: latestCandle.high.toFixed(7)
+    });
+    const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
+    consoleLogger.push("Profit", {
+      base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
+      quote: roi[1].toFixed(7) + " " + symbol.split("/")[1]
+    });
+    consoleLogger.push("Balance", {
+      base:  options.balances[symbol.split("/")[0]].toFixed(7) + " " + symbol.split("/")[0],
+      quote: options.balances[symbol.split("/")[1]].toFixed(7) + " " + symbol.split("/")[1]
+    });
     const placedTrade = await placeTrade(discord, binance, consoleLogger, symbol, candlesticks, filter, options);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
     if (latestCandle.isFinal === true) {
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
-      consoleLogger.writeJSONTofile('./trades.json');
     } else if (placedTrade == true) {
       consoleLogger.writeJSONTofile('./trades.json');
     }
@@ -368,7 +356,6 @@ export const algorithmic = async (
     } else if (options.consoleUpdate === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
       consoleLogger.flush();
     } else if (options.consoleUpdate === "trade" && placedTrade === true) {
-      consoleLogger.writeJSONTofile('./trades.json');
       consoleLogger.print();
       consoleLogger.flush();
     } else if (options.consoleUpdate === "trade" && placedTrade === false) {
