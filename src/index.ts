@@ -29,7 +29,7 @@ import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
 import { listenForCandlesticks, Candlesticks } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
-import { getCurrentBalances } from './Hoobot/Binance/Balances';
+import { getCurrentBalances, storeBalancesDaily } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
 import { Filters, getFilters } from './Hoobot/Binance/Filters';
 import dotenv from 'dotenv';
@@ -67,6 +67,7 @@ const main = async () => {
     }
 
     options.balances = await getCurrentBalances(binance);
+    storeBalancesDaily(binance, "USDT");
 
     const candlesticksToPreload = 1000;
     const symbolCandlesticks: Candlesticks = {};

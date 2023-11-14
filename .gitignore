@@ -38,4 +38,5 @@ force.json
 .env_backup
 logs.txt
 trades.json
+balances.json
 exchange-info.json
