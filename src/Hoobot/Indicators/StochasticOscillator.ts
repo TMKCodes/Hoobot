@@ -26,7 +26,6 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Binance/Candlesticks";
-import { Indicators } from "../Modes/Algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateRSI } from "./RSI";
@@ -139,12 +138,16 @@ export const logStochasticOscillatorSignals = (
 ) => {
   const kValuesFixed = stochasticOscillator[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
   const dValuesFixed = stochasticOscillator[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  if (kValuesFixed.length === 1) {
+  if (kValuesFixed.length === 0) {
+    consoleLogger.push("Stochastic Oscillator %K history", 0);
+  } else if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
-  if (dValuesFixed.length === 1) {
+  if (dValuesFixed.length === 0) {
+    consoleLogger.push("Stochastic Oscillator %D history", 0);
+  } else if (dValuesFixed.length === 1) {
     consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
@@ -163,6 +166,8 @@ export const logStochasticOscillatorSignals = (
     consoleLogger.push(`Stochastic Oscillator condition`, `Bullish`);
   } else if (lastKValue > 50 || lastDValue > 50) {
     consoleLogger.push(`Stochastic Oscillator condition`, `Bearish`);
+  } else {
+    consoleLogger.push(`Stochastic Oscillator condition`, `Unknown`);
   }
 }
 
@@ -172,12 +177,16 @@ export const logStochasticRSISignals = (
 ) => {
   const kValuesFixed = stochasticRSI[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
   const dValuesFixed = stochasticRSI[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  if (kValuesFixed.length === 1) {
+  if (kValuesFixed.length === 0) {
+    consoleLogger.push("Stochastic RSI %K history", 0);
+  } else if (kValuesFixed.length === 1) {
     consoleLogger.push("Stochastic RSI %K history", kValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic RSI %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
   }
-  if (dValuesFixed.length === 1) {
+  if (dValuesFixed.length === 0) {
+    consoleLogger.push("Stochastic RSI %D history", 0);
+  } else if (dValuesFixed.length === 1) {
     consoleLogger.push("Stochastic RSI %D history", dValuesFixed.join(", "));
   } else {
     consoleLogger.push("Stochastic RSI %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
@@ -196,6 +205,8 @@ export const logStochasticRSISignals = (
     consoleLogger.push(`Stochastic RSI condition`, `Bullish`);
   } else if (lastKValue > 50 || lastDValue > 50) {
     consoleLogger.push(`Stochastic RSI condition`, `Bearish`);
+  } else {
+    consoleLogger.push(`Stochastic RSI condition`, `Unknown`);
   }
 }
 

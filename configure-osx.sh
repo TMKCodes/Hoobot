@@ -1,6 +1,5 @@
 #!/bin/bash
-
-#!/bin/bash
+set -x
 
 # Function to check if Homebrew is installed
 is_brew_installed() {
@@ -10,7 +9,7 @@ is_brew_installed() {
 # Function to install Node.js using brew
 install_node_with_brew() {
   echo "Installing Node.js using Homebrew..."
-  brew install node@18
+  brew install node
 }
 
 # Function to install project dependencies with NPM
@@ -52,7 +51,7 @@ main() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  if brew list node@18 &>/dev/null; then
+  if brew list node.js &>/dev/null; then
     echo "Node.js is already installed with Homebrew."
   else
     install_node_with_brew

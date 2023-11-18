@@ -27,7 +27,6 @@
 
 import fs from 'fs';
 import Binance from "node-binance-api";
-import { balancesWithUSDT } from '../../Discord/Commands/binanceBalance';
 
 export interface Balances { 
   [symbol: string]: number 

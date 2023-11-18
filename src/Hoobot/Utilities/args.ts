@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { bold } from "discord.js";
 import { Balances } from "../Binance/Balances";
 import { Orderbooks } from "../Binance/Orderbook";
 import { TradeHistory } from "../Binance/Trades";
@@ -58,11 +59,18 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
   return intervalToSeconds[interval];
 }
 
+export interface GrowingMaxBuy {
+  [symbol: string]: number;
+} 
+
 export interface ConfigOptions {
+  startTime: string;
   apiKey: string;
   apiSecret: string;
+  simulate: boolean;
+  simulateBruteForce: boolean;
   mode: BotMode;
-  symbols: string | string[];
+  symbols: string[];
   candlestickInterval: CandlestickInterval[];
   consoleUpdate: string;
   smaLength: number;
@@ -110,8 +118,7 @@ export interface ConfigOptions {
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
-  startingMaxBuyAmount: number;
-  startingMaxSellAmount: number;
+  startingMaxBuyAmount: GrowingMaxBuy;
   closePercentage: number;
   overboughtTreshold: number;
   oversoldTreshold: number;
@@ -134,14 +141,10 @@ export interface ConfigOptions {
   openaiHistoryLength: number,
   openaiOverwrite: boolean,
   startTimestamp?: string,
-  panicProfitMinimum?: number,
-  panicProfitMinimumDrop?: number,
-  panicProfitCurrentMax?: CurrentProfitMax,
   directionAgreement?: number,
   tradeHistory?: TradeHistory,
   orderbooks?: Orderbooks,
   balances?: Balances,
-  profitCurrentMax?: number,
   SMAWeight?: number,
   EMAWeight?: number,
   MACDWeight?: number,
@@ -151,15 +154,27 @@ export interface ConfigOptions {
   bollingerBandsWeight?: number,
   OBVWeight?: number,
   CMFWeight?: number,
-  [key: string]: string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
+  stopLoss?: boolean,
+  stopLossStopTrading?: boolean,
+  stopLossPNL?: number,
+  stopLossHit: boolean,
+  profitCurrentMax: CurrentProfitMax,
+  takeProfitPNL?: number,
+  takeProfitMinimumPNL?: number,
+  takeProfitMinimumPNLDrop?: number,
+  maxPNL?: number,
+  [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
 }
 
 export const parseArgs = (args: string[]): ConfigOptions => {
   const options: ConfigOptions = {
-        // Binance
+    // Binance
+    startTime: new Date().toISOString(),
     apiKey: process.env.API_KEY || '',
     apiSecret: process.env.API_SECRET || '',
     // Hoobot
+    simulate: process.env.SIMULATE === "true" ? true : false,
+    simulateBruteForce: process.env.SIMULATION_BRUTE_FORCE === "true" ? true : false,
     license: process.env.LICENSE || "",
     mode: process.env.MODE as BotMode || 'algorithmic',
     symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(/ /g, "").split(",") : [],
@@ -224,8 +239,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     OBVWeight: parseFloat(process.env.OBV_WEIGHT) || 1,
     CMFWeight: parseFloat(process.env.CMF_WEIGHT) || 1,
     // Limits
-    startingMaxBuyAmount: parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0,
-    startingMaxSellAmount: parseFloat(process.env.STARTING_MAX_SELL_AMOUNT!) || 0,
+    startingMaxBuyAmount: {},
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
     maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
     tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
@@ -251,14 +265,22 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
     pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
     startTimestamp: process.env.START_TIMESTAMP || undefined,
-    panicProfitMinimum: parseFloat(process.env.PANIC_PROFIT_MINIMUM!) || 0,
-    panicProfitMinimumDrop: parseFloat(process.env.PANIC_PROFIT_MINIMUM_DROP!) || 0,
     tradeHistory: {},
     orderbooks: {},
-    panicProfitCurrentMax: {},
-    profitCurrentMax: 0,
+    profitCurrentMax: {},
     balances: {},
+    stopLoss: process.env.DEBUG === "true" ? true : false,
+    stopLossStopTrading: process.env.STOP_LOSS_STOP_TRADING === "true" ? true : false,
+    stopLossHit: false,
+    stopLossPNL: parseFloat(process.env.STOP_LOSS_PNL!) || 1,
+    takeProfitMinimumPNL: parseFloat(process.env.TAKE_PROFIT_MINIMUM!) || 0.5,
+    takeProfitMinimumPNLDrop: parseFloat(process.env.TAKE_PROFIT_MINIMUM_DROP!) || 0.01,
+    takeProfitPNL: parseFloat(process.env.TAKE_PROFIT_LIMIT!) || 0.01,
+    maxPNL: 0,
   };
+  for (let i = 0; i < options.symbols.length; i++) {
+    options.startingMaxBuyAmount[options.symbols[i].split("/").join("")] = parseFloat(process.env.STARTING_MAX_BUY_AMOUNT) || 0;
+  }
   if (args.length === 0) {
     return options;
   }

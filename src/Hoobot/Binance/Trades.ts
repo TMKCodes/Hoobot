@@ -32,11 +32,12 @@ import { ConfigOptions } from "../Utilities/args";
 import { Filter } from "./Filters";
 import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
-import { readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
 import { Orderbook } from "./Orderbook";
-import { getCurrentBalances } from "./Balances";
+import { Balances, getCurrentBalances } from "./Balances";
 import { logToFile } from "../Utilities/logToFile";
+import path from "path";
 
 const soundFile = './alarm.mp3'
 
@@ -154,7 +155,12 @@ export const delay = (
 export const updateForce = (
   symbol: string
 ) => {
-  const force = JSON.parse(readFileSync("force.json", "utf-8"));
+  const forcePath = "force.json";
+  if(!existsSync(forcePath)) {
+    return false;
+  }
+  const file = readFileSync(forcePath, "utf-8");
+  const force = JSON.parse(file !== "" ? file : "{}");
   if(force[symbol.split("/").join("")] === undefined) {
     force[symbol.split("/").join("")] = {
       skip: false,
@@ -162,13 +168,18 @@ export const updateForce = (
   } else {
     force[symbol.split("/").join("")].skip = false;
   }
-  writeFileSync("force.json", JSON.stringify(force));
+  writeFileSync(forcePath, JSON.stringify(force));
 }
 
 export const readForce = (
   symbol: string
 ) => {
-  const force = JSON.parse(readFileSync("force.json", "utf-8"));
+  const forcePath = "force.json";
+  if(!existsSync(forcePath)) {
+    return false;
+  }
+  const file = readFileSync(forcePath, "utf-8");
+  const force = JSON.parse(file !== "" ? file : "{}");
   return force[symbol.split("/").join("")];
 }
 
@@ -193,9 +204,6 @@ export const sell = async (
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInBase = baseBalance;
-    if (options.startingMaxSellAmount > 0) {
-      maxQuantityInBase = Math.min(baseBalance, options.startingMaxSellAmount);
-    }
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantityInBase = binance.roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
@@ -215,11 +223,9 @@ export const sell = async (
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       logToFile(orderMsg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
-      if (options.startingMaxBuyAmount > 0) {
-        options.startingMaxBuyAmount = Math.max(roundedQuantityInBase * roundedPrice, options.startingMaxBuyAmount);
-      }
+      updateBuyAmount(symbol, roundedQuantityInBase * roundedPrice, options);
       play(soundFile);
-      options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+      options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
@@ -234,6 +240,19 @@ export const sell = async (
   }
 }
 
+const maxBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
+  if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
+    return quoteQuantity = Math.min(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
+  } else {
+    return quoteQuantity;
+  }
+}
+
+const updateBuyAmount = (symbol: string, quoteQuantity, options: ConfigOptions) => {
+  if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
+    options.startingMaxBuyAmount[symbol.split("/").join("")] = Math.max(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
+  }
+}
 
 export const buy = async (
   discord: Client,
@@ -256,9 +275,7 @@ export const buy = async (
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
     let maxQuantityuInQuote = quoteBalance;
-    if (options.startingMaxBuyAmount > 0) {
-      maxQuantityuInQuote = Math.min(quoteBalance, options.startingMaxBuyAmount);
-    }
+    maxQuantityuInQuote = maxBuyAmount(symbol, maxQuantityuInQuote, options);
     const quantityInBase = (maxQuantityuInQuote / price);
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
@@ -279,11 +296,8 @@ export const buy = async (
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       logToFile(orderMsg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
-      if (options.startingMaxSellAmount > 0) {
-        options.startingMaxSellAmount = Math.max(roundedQuantityInBase, options.startingMaxSellAmount);
-      }
       play(soundFile);
-      options.panicProfitCurrentMax[symbol.split("/").join("")] = 0;
+      options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
@@ -294,7 +308,6 @@ export const buy = async (
     }
   } catch (error) {
     logToFile(JSON.stringify(error, null, 2));
-    console.log(error);
   }
 }
 
@@ -302,7 +315,7 @@ export const checkPreviousTrade = (
   symbol: string,
   options: ConfigOptions
 ) => {
-  let check = 'BUY';
+  let check = 'SELL';
   if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if (lastTrade.isBuyer) {
@@ -312,4 +325,106 @@ export const checkPreviousTrade = (
     }
   }
   return check;
+}
+
+export const simulateSell = async (
+  symbol: string,
+  quantity: number,
+  price: number,
+  balances: Balances,
+  options: ConfigOptions,
+  time: number,
+  filter: Filter,
+) => {
+  let baseQuantity = quantity;
+  let quoteQuantity = quantity * price;
+  if(checkBeforePlacingOrder(quoteQuantity, price, filter) === true) { 
+    let fee = quoteQuantity * (0.075 / 100); 
+    let quoteQuontityWithoutFee = quoteQuantity - fee; 
+    options.tradeHistory[symbol.split("/").join("")].push({
+      symbol: symbol.split("/").join(""),
+      id: 0,
+      orderId: 0,
+      orderListID: 0,
+      price: price.toString(),
+      qty: (baseQuantity).toString(),
+      quoteQty: quoteQuontityWithoutFee.toString(),
+      commission: fee.toString(),
+      commissionAsset: symbol.split("/")[1],
+      time: time,
+      isBuyer: false,
+      isMaker: true,
+      isBestMatch: true,
+    });
+    const baseCoin = symbol.split("/")[0];
+    const quoteCoin = symbol.split("/")[1];
+    balances[baseCoin] = balances[baseCoin] - baseQuantity;
+    balances[quoteCoin] = balances[quoteCoin] + quoteQuontityWithoutFee;
+    const filePath = `./simulation/${options.startTime}/trades.json`;
+    const directory = path.dirname(filePath);
+    if (!existsSync(directory)) {
+      mkdirSync(directory, { recursive: true });
+    }
+    options.profitCurrentMax[symbol.split("/").join("")] = 0;
+    updateBuyAmount(symbol, quoteQuantity, options)
+    writeFileSync(filePath, JSON.stringify({
+      symbol: symbol,
+      direction: 'SELL',
+      quantity: baseQuantity,
+      price: price,
+      balances: balances,
+      tradeHistory: options.tradeHistory
+    }, null, 2));
+  }
+}
+
+export const simulateBuy = async (
+  symbol: string,
+  quantity: number,
+  price: number,
+  balances: Balances,
+  options: ConfigOptions,
+  time: number,
+  filter: Filter,
+) => {
+  let quoteQuantity = quantity;
+  quoteQuantity = maxBuyAmount(symbol, quoteQuantity, options);
+  let baseQuantity = quoteQuantity / price;
+  if(checkBeforePlacingOrder(quoteQuantity, price, filter) === true) {
+    let fee = baseQuantity * (0.075 / 100); 
+    let baseQuantityWithoutFee = baseQuantity - fee; 
+    options.tradeHistory[symbol.split("/").join("")].push({
+      symbol: symbol.split("/").join(""),
+      id: 0,
+      orderId: 0,
+      orderListID: 0,
+      price: price.toString(),
+      qty: baseQuantityWithoutFee.toString(),
+      quoteQty:  quoteQuantity.toString(),
+      commission: fee.toString(),
+      commissionAsset: symbol.split("/")[0],
+      time: time,
+      isBuyer: true,
+      isMaker: true,
+      isBestMatch: true,
+    });
+    const baseCoin = symbol.split("/")[0];
+    const quoteCoin = symbol.split("/")[1];
+    balances[baseCoin] = balances[baseCoin] + baseQuantity;
+    balances[quoteCoin] = balances[quoteCoin] - quoteQuantity;
+    const filePath = `./simulation/${options.startTime}/trades.json`;
+    const directory = path.dirname(filePath);
+    if (!existsSync(directory)) {
+      mkdirSync(directory, { recursive: true });
+    }
+    options.profitCurrentMax[symbol.split("/").join("")] = 0;
+    writeFileSync(filePath, JSON.stringify({
+      symbol: symbol,
+      direction: 'BUY',
+      quantity: baseQuantityWithoutFee,
+      price: price,
+      balances: balances,
+      tradeHistory: options.tradeHistory
+    }, null, 2));
+  }
 }

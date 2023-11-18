@@ -38,7 +38,7 @@ export interface ema {
 
 export const calculateEMA = (
   candles: Candlestick[], 
-  length: number, 
+  length: number = 7, 
   source: string = 'close'
 ): number[] => {
   const emaValues: number[] = [];
@@ -56,9 +56,13 @@ export const calculateEMA = (
   for (let i = 0; i < length; i++) {
     sum += prices[i];
   }
-  const initialEMA = sum / length;
+  let initialEMA = sum / 7;
+  let smoothingFactor = 2 / (7 + 1);
+  if (length > 0) {
+    initialEMA = sum / length;
+    smoothingFactor = 2 / (length + 1);
+  }
   emaValues.push(initialEMA);
-  const smoothingFactor = 2 / (length + 1);
   for (let i = length; i < prices.length; i++) {
     const currentEMA = (prices[i] - emaValues[i - length]) * smoothingFactor + emaValues[i - length];
     emaValues.push(currentEMA);

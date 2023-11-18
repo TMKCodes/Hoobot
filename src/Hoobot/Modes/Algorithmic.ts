@@ -29,7 +29,7 @@ import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMA, logEMASignals, ema, checkEMASignals } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
@@ -38,18 +38,16 @@ import { calculateSMA, checkSMASignals, logSMASignals, sma } from "../Indicators
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, checkBollingerBandsSignals, logBollingerBandsSignals } from "../Indicators/BollingerBands";
 import { calculateStochasticOscillator, calculateStochasticRSI, checkStochasticOscillatorSignals, checkStochasticRSISignals, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, calculateROI, getTradeHistory, sell } from "../Binance/Trades";
+import { buy, calculateROI, getTradeHistory, sell, simulateBuy, simulateSell } from "../Binance/Trades";
 import { calculateOBV, checkOBVSignals, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 import { symbolFilters } from "../..";
 import { checkGPTSignals } from "../Indicators/GPT";
 import { Orderbook } from "../Binance/Orderbook";
-import { checkProfitSignals } from "../Indicators/Profit";
+import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
-import { checkPanicProfit } from "../Indicators/Panic";
-import { dir } from "console";
-import { sign } from "crypto";
+import { Balances } from "../Binance/Balances";
 
 export interface Indicators {
   avg?: {
@@ -91,15 +89,15 @@ export const reverseSign = (number: number) => {
   return -number;
 }
 
-export const tradeDirection = async (
+export const tradeDirection =  async (
   consoleLogger: ConsoleLogger,
   symbol: string,
-  orderBook: Orderbook,
+  orderBook: Orderbook | undefined,
   candlesticks: Candlesticks, 
   indicators: Indicators,
   options: ConfigOptions,
   filter: Filter,
-) => {
+): Promise<string> => {
   const startTime = Date.now();
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   let direction = 'TORN';
@@ -109,8 +107,14 @@ export const tradeDirection = async (
     HOLD: 0,
   };
   let actions = ['BUY', 'SELL', 'HOLD'];
-  const profit = checkProfitSignals(consoleLogger, symbol, orderBook, options);
-  const next = await checkBalanceSignals(consoleLogger, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close, options, filter);
+  let profit = "SKIP";
+  const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
+  const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
+  if (orderBook !== undefined) {
+    profit = checkProfitSignals(consoleLogger, next, symbol, orderBook, options);
+  } else {
+    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
+  }
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
     const weights = {
       SMAWeight: options.SMAWeight,
@@ -157,19 +161,23 @@ export const tradeDirection = async (
   consoleLogger.push("Directions", directions);
   actions = actions.filter(action => directions[action] !== undefined);
   for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
-    if((profit == actions[actionsIndex] || profit === 'SKIP') && next == actions[actionsIndex]) {
+    if((profit == actions[actionsIndex] || profit === 'SKIP' || profit === "TAKE_PROFIT" || profit === "STOP_LOSS") && next == actions[actionsIndex]) {
       if (directions[actions[actionsIndex]] >= options.directionAgreement) {
         direction = actions[actionsIndex];
         break;
+      } else {
+        if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= options.directionAgreement / 2) {
+          direction = next;
+          break;
+        }
+        if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= options.directionAgreement / 2) {
+          direction = next;
+          break;
+        }
       }
     }
   }
-  if (options.panicProfitMinimum > 0) {
-    const panic = checkPanicProfit(consoleLogger, symbol, orderBook, options, filter);
-    if (panic !== 'SKIP' && panic !== direction) {
-      direction = panic;
-    } 
-  }
+  
   if (options.useGPT) {
     const checkGPT = await checkGPTSignals(consoleLogger, symbol, candlesticks, indicators, options);
     if (options.openaiOverwrite === true) {
@@ -211,25 +219,29 @@ export const placeTrade = async (
   const orderBook = options.orderbooks[symbol.split("/").join("")];
   consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
   consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
-  const indicators = await calculateIndicators(consoleLogger, symbol, candlesticks, options);
+  const indicators = calculateIndicators(consoleLogger, symbol, candlesticks, options);
   const direction = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
   const stopTime = Date.now();
+  if (options.stopLossHit === true && options.stopLossStopTrading === true) {
+    consoleLogger.push("STOP LOSS TRADING ON SYMBOL STOPPED", symbol.split("/").join(""));
+    delete candlesticks[symbol.split("/").join("")];
+  } 
   consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options);
-  } else if (direction === 'BUY') {
+  } else if (direction === 'BUY' && options.stopLossHit === false) {
     return buy(discord, binance, consoleLogger, symbol, orderBook, filter, options);
   } else {
     return false;
   }
 }
 
-export const calculateIndicators = async (
+export const calculateIndicators = (
   consoleLogger: ConsoleLogger,
   symbol: string,
   candlesticks: Candlesticks,
   options: ConfigOptions
-) => {
+): Indicators => {
   const indicators: Indicators = {
     avg: {},
     sma: {},
@@ -324,15 +336,17 @@ export const algorithmic = async (
     const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     consoleLogger.push("Symbol", symbol.split("/").join(""));
-    consoleLogger.push('Candlestick', {
-      time: candleTime,
-      color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
-      direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
-      open: latestCandle.open.toFixed(7),
-      close: latestCandle.close.toFixed(7),
-      low: latestCandle.low.toFixed(7),
-      high: latestCandle.high.toFixed(7)
-    });
+    if (latestCandle !== undefined) {
+      consoleLogger.push('Candlestick', {
+        time: candleTime,
+        color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
+        direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
+        open: latestCandle?.open?.toFixed(7),
+        close: latestCandle?.close?.toFixed(7),
+        low: latestCandle?.low?.toFixed(7),
+        high: latestCandle?.high?.toFixed(7)
+      });
+    }
     const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
     consoleLogger.push("Profit", {
       base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
@@ -374,3 +388,65 @@ export const algorithmic = async (
     console.error(JSON.stringify(error));
   }
 }
+
+export const simulateAlgorithmic = async (
+  symbol: string, 
+  candlesticks: Candlesticks, 
+  options: ConfigOptions,
+  balances: Balances,
+  filter: Filter,
+) => {
+  const logger = consoleLogger();
+  logger.push("Simulation", "true");
+  if (candlesticks[symbol.split("/").join("")] === undefined) {
+    return false;
+  }
+  const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+    return false;
+  }
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+    return false;
+  }
+  if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
+    options.tradeHistory[symbol.split("/").join("")] = []
+  }
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < options.longEma) {
+    logger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
+    return false;
+  }
+  const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1];
+  const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
+  const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
+  logger.push("Symbol", symbol.split("/").join(""));
+  if (latestCandle !== undefined) {
+    logger.push('Candlestick', {
+      time: candleTime,
+      color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
+      direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
+      open: latestCandle?.open?.toFixed(7),
+      close: latestCandle?.close?.toFixed(7),
+      low: latestCandle?.low?.toFixed(7),
+      high: latestCandle?.high?.toFixed(7)
+    });
+  }
+  logger.push("Balance", {
+    base:  options.balances[symbol.split("/")[0]].toFixed(7) + " " + symbol.split("/")[0],
+    quote: options.balances[symbol.split("/")[1]].toFixed(7) + " " + symbol.split("/")[1]
+  });
+  const indicators: Indicators = calculateIndicators(logger, symbol, candlesticks, options);
+  const orderBook = undefined;
+  const direction = await tradeDirection(logger, symbol, orderBook, candlesticks, indicators, options, filter);
+  if (direction === 'SELL') {
+    const baseSymbol = symbol.split("/")[0];
+    const high = latestCandle.high;
+    simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter);
+  } else if (direction === 'BUY') {
+    const quoteSymbol = symbol.split("/")[1];
+    const low = latestCandle.low;
+    simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter);
+  }
+  logger.print();
+  logger.flush();
+}
+

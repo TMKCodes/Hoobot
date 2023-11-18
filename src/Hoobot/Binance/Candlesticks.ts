@@ -26,7 +26,11 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { CandlestickInterval } from '../Utilities/args';
+import { CandlestickInterval, ConfigOptions } from '../Utilities/args';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import AdmZip from 'adm-zip';
+import path from 'path';
+import { candlestickArray } from '../..';
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -84,14 +88,14 @@ export async function getLastCandlesticks(
   });
 }
 
-
 export const listenForCandlesticks = async (
   binance: Binance, 
   symbol: string, 
   timeframe: CandlestickInterval[], 
   candleStore: Candlesticks, 
   historyLength: number, 
-  callback: (candlesticks: Candlesticks) => void
+  options: ConfigOptions,
+  callback: (candlesticks: Candlesticks) => Promise<void>
 ): Promise<void> => {
   symbol = symbol.split("/").join("");
   const maxCandlesticks = 5000;
@@ -111,7 +115,6 @@ export const listenForCandlesticks = async (
       binance.websockets.candlesticks(symbol, timeframe[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
         let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
         let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
-        
         const newCandlestick: Candlestick = {
           symbol: symbol,
           interval: interval,
@@ -139,14 +142,199 @@ export const listenForCandlesticks = async (
         } else {
           candleStore[symbol][timeframe[i]][candleStore[symbol][timeframe[i]].length - 1] = newCandlestick;
         } 
-  
         if (candleStore[symbol][timeframe[i]].length > maxCandlesticks) {
           candleStore[symbol][timeframe[i]] = candleStore[symbol][timeframe[i]].slice(-maxCandlesticks);
         }
-        callback(candleStore);
+        if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
+          await callback(candleStore);
+        }
       });
     }
   } catch (error: any) {
     console.log(error);
   }
 }
+
+interface Candlerow {
+  opentime?: number,
+  open?: number,
+  high?: number,
+  low?: number,
+  close?: number,
+  volume?: number,
+  closetime?: number,
+  quoteVolume?: number,
+  trades?: number,
+  takerQtyBase?: number,
+  takerQtyQuote?: number,
+  unused?: number,
+}
+
+export const readCsvFile = async (
+  filePath: string
+): Promise<Candlerow[]> => {
+  try {
+    const data = readFileSync(filePath, { encoding: 'utf8' });
+    const lines = data.split('\n');
+    const rows: Candlerow[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: Candlerow = {
+        opentime: parseInt(values[0], 10),
+        open: parseFloat(values[1]),
+        high: parseFloat(values[2]),
+        low: parseFloat(values[3]),
+        close: parseFloat(values[4]),
+        volume: parseFloat(values[5]),
+        quoteVolume: parseFloat(values[6]),
+        closetime: parseInt(values[7], 10),
+        trades: parseInt(values[8], 10),
+        takerQtyBase: parseFloat(values[9]),
+        takerQtyQuote: parseFloat(values[10]),
+        unused: parseInt(values[11], 10),
+      };
+      rows.push(row);
+    }
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export const downloadAndExtractZipFile = async (
+  url: string, destinationPath: string
+): Promise<boolean | string> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return "404 NOT FOUND";
+    }
+    const buffer = await response.arrayBuffer();
+    const zipFilePath = path.join(destinationPath, 'downloaded.zip');
+    writeFileSync(zipFilePath, Buffer.from(buffer));
+    const zip = new AdmZip(zipFilePath);
+    zip.extractAllTo(destinationPath, true);
+    unlinkSync(zipFilePath);
+    return true;
+  } catch (error) {
+    console.error('Error:', error.message || error);
+  }
+  return false;
+}
+
+const addLeadingZero = (n: number) => {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function shellSortCandlesticksByTime(nums: Candlestick[]): Candlestick[] {
+  const n = nums.length;
+  let gap = Math.floor(n / 2);
+  while (gap > 0) {
+    for (let i = gap; i < n; i++) {
+      const temp = nums[i];
+      let j = i;
+      while (j >= gap && nums[j - gap].time > temp.time) {
+        nums[j] = nums[j - gap];
+        j -= gap;
+      }
+      nums[j] = temp;
+    }
+    gap = Math.floor(gap / 2);
+  }
+  return nums;
+}
+
+export const downloadHistoricalCandlesticks = async (
+  symbols: string[],
+  intervals: string[],
+): Promise<Candlestick[]> => {
+  let allCandlesticks: Candlestick[] = [];
+  for (let symbolIndex = 0; symbolIndex < symbols?.length; symbolIndex++) {
+    console.log(`Downloading symbol ${symbols[symbolIndex]} candlesticks.`);
+    for (let intervalIndex = 0; intervalIndex < intervals?.length; intervalIndex++) {
+      let currentYear = new Date().getFullYear();
+      let currentMonth = new Date().getMonth() + 1;
+      const startYear = 2020;
+      const startMonth = 1;
+      for (let year = startYear; year <= currentYear; year++) {
+        for (let month = (year === startYear ? startMonth : 1); month <= (year === currentYear ? currentMonth : 12); month++) {
+          const formattedYear = year.toString()
+          const formattedMonth = addLeadingZero(month);
+          const url = `https://data.binance.vision/data/spot/monthly/klines/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}/${intervals[intervalIndex]}/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.zip`;
+          const destinationPath = './candlestore/';
+          const filePath = `./candlestore/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.csv`;
+          if(!existsSync(filePath)) {
+            const dlresult = await downloadAndExtractZipFile(url, destinationPath);
+            console.log(`Downloaded file ${url}: ${dlresult}`);
+          }
+          if (existsSync(filePath)) {
+            const candledata = await readCsvFile(filePath);
+            for (let candledataIndex = 0; candledataIndex <= candledata.length; candledataIndex++) {
+              const candlestick: Candlestick = {
+                symbol: symbols[symbolIndex]?.split("/").join(""),
+                interval: intervals[intervalIndex],
+                type: "",
+                time: candledata[candledataIndex]?.opentime,
+                open: candledata[candledataIndex]?.open,
+                high: candledata[candledataIndex]?.high,
+                low: candledata[candledataIndex]?.low,
+                close: candledata[candledataIndex]?.close,
+                trades: candledata[candledataIndex]?.trades,
+                volume: candledata[candledataIndex]?.volume,
+                quoteVolume: candledata[candledataIndex]?.quoteVolume,
+                buyVolume: candledata[candledataIndex]?.takerQtyBase,
+                quoteBuyVolume: candledata[candledataIndex]?.takerQtyQuote,
+                isFinal: true
+              }
+              allCandlesticks.push(candlestick);
+            }
+          }
+        }
+      }
+    }
+    console.log(`Downloaded symbol ${symbols[symbolIndex]} candlesticks.`);
+  }
+  console.log(`Sorting candlesticks.`);
+  allCandlesticks = shellSortCandlesticksByTime(allCandlesticks);
+  console.log(`Candlesticks sorted.`);
+  return allCandlesticks;
+}
+
+export const simulateListenForCandlesticks = async (
+  symbols: string[],
+  candleStore: Candlesticks, 
+  options: ConfigOptions,
+  callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>
+) => {
+  const maxCandlesticks = 2000;
+  for (let candleIndex = 0; candleIndex < candlestickArray.length; candleIndex++) {
+    const candlestick = candlestickArray[candleIndex];
+    const symbol = candlestickArray[candleIndex]?.symbol;
+    const interval = candlestickArray[candleIndex]?.interval;
+    if (candleStore[symbol] == undefined) {
+      candleStore[symbol] = {}
+      if(candleStore[symbol][interval] == undefined) {
+        candleStore[symbol] = {
+          [interval]: [],
+        }
+      }
+    }
+    candleStore[symbol][interval]?.push(candlestick);
+    if (candleStore[symbol][interval]?.length > maxCandlesticks) {
+      candleStore[symbol][interval] = candleStore[symbol][interval].slice(-maxCandlesticks)
+    }
+    if (candleStore[symbol][interval]?.length >= 1000) {
+      let splittedSymbol = "";
+      for (let symbolsIndex = 0; symbolsIndex < symbols.length; symbolsIndex++) {
+        if(symbol == symbols[symbolsIndex].split("/").join("")) {
+          splittedSymbol = symbols[symbolsIndex];
+          break;
+        }
+      }
+      if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
+        await callback(splittedSymbol, interval, candleStore);
+      }
+    }
+  }
+}
+

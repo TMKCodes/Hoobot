@@ -1,13 +1,13 @@
 {
   "name": "hoobot",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Hoobot is reactive algorithmic crypto trading bot with suport for OpenAI GPT and many other indicators.",
   "main": "src/index.ts",
   "scripts": {
     "postinstall": "patch-package",
     "test": "npx jest",
     "start": "ts-node -r dotenv/config src/index.ts",
-    "openai": "ts-node -r dotenv/config src/openai.ts"
+    "simulate": "SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192 --inspect\" ts-node -r dotenv/config src/index.ts"
   },
   "author": "Toni Lukkaroinen",
   "license": "ISC",
@@ -19,6 +19,7 @@
     "ts-jest": "^29.1.1"
   },
   "dependencies": {
+    "adm-zip": "^0.5.10",
     "discord.js": "^14.11.0",
     "dotenv": "^16.3.1",
     "node-binance-api": "^0.13.1",

@@ -25,19 +25,26 @@
 * the use of this software.
 * ===================================================================== */
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
-import { listenForCandlesticks, Candlesticks } from './Hoobot/Binance/Candlesticks';
+import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getCurrentBalances, storeBalancesDaily } from './Hoobot/Binance/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
 import { Filters, getFilters } from './Hoobot/Binance/Filters';
 import dotenv from 'dotenv';
-import { algorithmic } from './Hoobot/Modes/Algorithmic';
+import { algorithmic, simulateAlgorithmic } from './Hoobot/Modes/Algorithmic';
 import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
 import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
 import { hilow } from './Hoobot/Modes/HiLow';
+import { delay, getTradeHistory } from './Hoobot/Binance/Trades';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import path from 'path';
 
 
 // Get configuration options from command-line arguments and dotenv.
@@ -65,14 +72,12 @@ const main = async () => {
     if(options.discordEnabled === true) {
       discord = loginDiscord(binance, options);
     }
-
     options.balances = await getCurrentBalances(binance);
     storeBalancesDaily(binance, "USDT");
-
     const candlesticksToPreload = 1000;
     const symbolCandlesticks: Candlesticks = {};
     if(options.mode === "algorithmic") {
-      if (process.env.GO_CRAZY !== undefined) {
+      if (process.env.GO_CRAZY !== undefined && process.env.GO_CRAZY !== "false") {
         const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
         const foundSymbols: string[] = [];
         for (const symbol of symbolInfo) {
@@ -100,27 +105,10 @@ const main = async () => {
             }
             options.orderbooks[symbol.split("/").join("")] = orderbook;
           });
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, (candlesticks: Candlesticks) => {
-            algorithmic(discord, binance, logger, symbol, candlesticks, options)
+          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, options, async (candlesticks: Candlesticks) => {
+            await algorithmic(discord, binance, logger, symbol, candlesticks, options);
           });
         }
-      } else {
-        const filter = await getFilters(binance, options.symbols);
-        symbolFilters[options.symbols.split("/").join("")] = filter;
-        const logger = consoleLogger();
-        options.orderbooks[options.symbols.split("/").join("")] = await getOrderbook(binance, options.symbols);
-        listenForOrderbooks(binance, options.symbols, (symbol: string, orderbook: Orderbook) => {
-          if(options.orderbooks[symbol.split("/").join("")] === undefined) {
-            options.orderbooks[symbol.split("/").join("")] =  {
-              bids: [],
-              asks: []
-            }
-          }
-          options.orderbooks[symbol.split("/").join("")] = orderbook;
-        });
-        listenForCandlesticks(binance, options.symbols, options.candlestickInterval, symbolCandlesticks,  candlesticksToPreload, (candlesticks: Candlesticks) => {
-          algorithmic(discord, binance, logger, options.symbols as string, candlesticks, options)
-        });
       }
     } else if (options.mode === "hilow") {
       for (const symbol of options.symbols) {
@@ -147,5 +135,121 @@ const main = async () => {
   }
 }
 
-main();
+
+export const recalculateNewOptions = (options: ConfigOptions) => {
+  const filePath = `simulation/best-configuration.json`; 
+  if(existsSync(filePath)) {
+    const file = readFileSync(filePath, "utf-8");
+    let prevOptions: ConfigOptions = (JSON.parse(file) as ConfigOptions);
+    let prevBalance = 0;
+    let prevQuote = "";
+    for(let i = 0; i < prevOptions.symbols.length; i++) {
+      const symbol = prevOptions.symbols[i];
+      const lastTrade = prevOptions.tradeHistory[symbol.split("/").join("")][prevOptions.tradeHistory[symbol.split("/").join("")].length - 1];
+      const lastPrice = parseFloat(lastTrade.price);
+      const base = symbol.split("/")[0];
+      const baseBalance = prevOptions.balances[base] * lastPrice;
+      prevBalance += baseBalance;
+      if (prevQuote === "") {
+        prevQuote == symbol.split("/")[1];
+      }
+    }
+    prevBalance += prevOptions.balances[prevQuote];
+    let balance = 0;
+    let Quote = "";
+    for(let i = 0; i < options.symbols.length; i++) {
+      const symbol = options.symbols[i];
+      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      const lastPrice = parseFloat(lastTrade.price);
+      const base = symbol.split("/")[0];
+      const baseBalance = options.balances[base] * lastPrice;
+      balance += baseBalance;
+      if (Quote === "") {
+        Quote == symbol.split("/")[1];
+      }
+    }
+    balance += prevOptions.balances[Quote];
+    if(prevBalance > balance) { // New simulation sucks!
+      options.minimumProfitSell = prevOptions.minimumProfitBuy + 0.05;
+      options.minimumProfitBuy = prevOptions.minimumProfitBuy + 0.05;
+      options.stopLossPNL = prevOptions.minimumProfitBuy + 0.01;
+      options.takeProfitPNL = prevOptions.minimumProfitBuy + 0.01;
+      options.takeProfitMinimumPNL = prevOptions.minimumProfitBuy + 0.01;
+      options.takeProfitMinimumPNLDrop = prevOptions.minimumProfitBuy + 0.01;
+    } else if(prevBalance < balance) { // New simulation may rock!
+      const filePath = `simulation/best-configuration.json`; 
+      writeFileSync(filePath, JSON.stringify(options, null, 2));
+    }
+  } else {
+    const filePath = `simulation/best-configuration.json`; 
+    writeFileSync(filePath, JSON.stringify(options, null, 2));
+  }
+}
+
+const initBruteForceOptions = (
+  options: ConfigOptions
+) => {
+  const filePath = `simulation/best-configuration.json`; 
+  if(options.simulateBruteForce) {
+    if (existsSync(filePath)) {
+      options = JSON.parse(readFileSync(filePath, 'utf-8') || "{}");
+    } else {
+      options.minimumProfitSell = 0.05;
+      options.minimumProfitBuy = -100;
+      options.stopLoss = false;
+      options.stopLossPNL = 100;
+      options.takeProfitPNL = 0.05;
+      options.takeProfitMinimumPNL = 0.05;
+      options.takeProfitMinimumPNLDrop = 0.05
+    }
+  }
+}
+
+export let candlestickArray: Candlestick[];
+const simulate = async () => {
+  do {
+    options.startTime = new Date().toISOString();
+    options.balances = {};
+    const candleStore: Candlesticks = {};
+    if(options.mode === "algorithmic") {
+      if (process.env.GO_CRAZY !== undefined && process.env.GO_CRAZY !== "false") {
+        const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
+        const foundSymbols: string[] = [];
+        for (const symbol of symbolInfo) {
+          if (symbol.quote === process.env.GO_CRAZY) {
+            foundSymbols.push(symbol.base + "/" + symbol.quote);
+          }
+        }
+        options.symbols = foundSymbols;
+      }
+      console.log(options.symbols);
+      candlestickArray = await downloadHistoricalCandlesticks(options.symbols, options.candlestickInterval);
+      console.log("Starting simulation with downloaded candlesticks.");
+      for (const symbol of options.symbols) {
+        options.balances[symbol.split("/")[0]] = 0;
+        options.balances[symbol.split("/")[1]] = options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length;
+        const filter = await getFilters(binance, symbol);
+        symbolFilters[symbol.split("/").join("")] = filter;
+      }
+      const filePath = `./simulation/${options.startTime}/configuration.json`;
+      const directory = path.dirname(filePath);
+      if (!existsSync(directory)) {
+        mkdirSync(directory, { recursive: true });
+      }
+      writeFileSync(filePath, JSON.stringify(options, null, 2));
+      await simulateListenForCandlesticks(options.symbols, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
+        if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
+          return;
+        }
+        await simulateAlgorithmic(symbol, candlesticks, options, options.balances, symbolFilters[symbol.split("/").join("")]);
+      });
+    }
+    recalculateNewOptions(options);
+  } while(options.simulateBruteForce === true)
+}
+if (options.simulate === true) {
+  simulate();
+} else {
+  main();
+}
 

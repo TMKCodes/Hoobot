@@ -30,7 +30,7 @@ import { ConfigOptions } from "../Utilities/args";
 import { Filter } from "../Binance/Filters";
 import { checkPreviousTrade } from "../Binance/Trades";
 
-export const checkBalanceSignals = async (
+export const checkBalanceSignals = (
   consoleLogger: ConsoleLogger, 
   symbol: string,
   closePrice: number,  
