@@ -170,7 +170,7 @@ export const recalculateNewOptions = (options: ConfigOptions) => {
     }
     balance += prevOptions.balances[Quote];
     if(prevBalance > balance) { // New simulation sucks!
-      options.minimumProfitSell = prevOptions.minimumProfitBuy + 0.05;
+      options.minimumProfitSell = prevOptions.minimumProfitSell + 0.05;
       options.minimumProfitBuy = prevOptions.minimumProfitBuy + 0.05;
       options.stopLossPNL = prevOptions.minimumProfitBuy + 0.01;
       options.takeProfitPNL = prevOptions.minimumProfitBuy + 0.01;
