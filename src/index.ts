@@ -208,6 +208,7 @@ const initBruteForceOptions = (
 export let candlestickArray: Candlestick[];
 const simulate = async () => {
   do {
+    initBruteForceOptions(options);
     options.startTime = new Date().toISOString();
     options.balances = {};
     const candleStore: Candlesticks = {};
