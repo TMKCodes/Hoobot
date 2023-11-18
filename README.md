@@ -121,14 +121,18 @@ DISCORD_APPLICATION_ID=""
 DISCORD_SERVER_ID=""
 DISCORD_CHANNEL_ID=""
 
-# Hoobot trading mode
+# Hoobot trading mode "algorithmic", "hilow"
 MODE="algorithmic"
+
 # Symbols to trade. Supports multiple coins seperated with comma 'ETH/TUSD,BTC/TUSD'.
 SYMBOLS="BTC/TUSD"
+
 # Interval of candlesticks
 CANDLESTICK_INTERVAL="15m"
+
 # Default source of candlestick to use for calculations
 SOURCE="close"
+
 # How often to update terminal: "update", "final", "trade", "trade/final".
 CONSOLE_UPDATE="trade/final"
 
@@ -209,23 +213,36 @@ MAX_ORDER_AGE_SECONDS=60
 # Trade fee 
 TRADE_FEE_PERCENTAGE=0.075
 
-# Panic sell configuration, leave 0 for disabling.
-PANIC_PROFIT_MINIMUM=0.4
-PANIC_PROFIT_MINIMUM_DROP=0.05
-
 # Don't allow trading until these PNL are met. False to disable
 HOLD_UNTIL_POSITIVE_TRADE="true"
 MINIMUM_PROFIT_SELL=0.075
 MINIMUM_PROFIT_BUY=-0.075
 
-# Go crazy, enable trading on all symbols with given quote coin.
-GO_CRAZY="TUSD"
+# STOP_LOSS 
+STOP_LOSS="true"
+STOP_LOSS_STOP_TRADING="true"
+STOP_LOSS_PNL=20
+
+# TAKE_PROFIT 
+TAKE_PROFIT_LIMIT=0.05
+TAKE_PROFIT_MINIMUM=0.5
+TAKE_PROFIT_MINIMUM_DROP=0.05
+
+# Go crazy, uncomment to enable trading on all symbols with given quote coin.
+#GO_CRAZY="TUSD"
+
+# Timeframe agreement for trade directin
+TIMEFRAME_AGREEMENT=60
 
 # Developer
 DEBUG="true"
 
 # Trading start date in unix timestamp
 START_TIMESTAMP="1698789600"
+
+# Simulation
+SIMULATION="true"
+SIMULATION_BRUTE_FORCE="true"
 ```
 
 ## Usage
