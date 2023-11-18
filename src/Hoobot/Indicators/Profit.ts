@@ -66,10 +66,10 @@ export const checkProfitSignals = (
     const currentMaxPNL = options.profitCurrentMax[symbol.split("/").join("")] !== undefined ? options.profitCurrentMax[symbol.split("/").join("")] : 0;
     const stopLoss = currentMaxPNL - options.stopLossPNL
     const takeProfit = currentMaxPNL - options.takeProfitPNL;
-    if (unrealizedPNL <= stopLoss && currentMaxPNL === 0 && next === 'SELL') { 
+    if (unrealizedPNL <= stopLoss && currentMaxPNL === 0 && next === 'SELL' && options.stopLoss === true) { 
       check = "STOP_LOSS"
       options.stopLossHit = true;
-    } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+    } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit && options.takeProfit === true) {
       check = "TAKE_PROFIT"
     } else {
       if(force[symbol.split("/").join("")]?.skip !== true) {
