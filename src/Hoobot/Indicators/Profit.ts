@@ -60,16 +60,22 @@ export const checkProfitSignals = (
       const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
     }
+    if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
+      if (unrealizedPNL > 0) {
+        options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+      }
+      options.profitCurrentMax[symbol.split("/").join("")] = 0;
+    }
     if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
       options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
     }
-    const currentMaxPNL = options.profitCurrentMax[symbol.split("/").join("")] !== undefined ? options.profitCurrentMax[symbol.split("/").join("")] : 0;
+    const currentMaxPNL = options.profitCurrentMax[symbol.split("/").join("")];
     const stopLoss = currentMaxPNL + options.stopLossPNL
     let takeProfit = currentMaxPNL - options.takeProfitPNL;
     if (takeProfit < options.takeProfitMinimumPNL) {
       takeProfit = options.takeProfitMinimumPNL
     }
-    if (unrealizedPNL <= stopLoss && currentMaxPNL === 0 && next === 'SELL' && options.stopLoss === true) { 
+    if (unrealizedPNL <= stopLoss && next === 'SELL' && options.stopLoss === true) { 
       check = "STOP_LOSS"
       options.stopLossHit = true;
     } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit && options.takeProfit === true) {
@@ -153,6 +159,12 @@ export const checkProfitSignalsFromCandlesticks = (
     } else { 
       const low = candlesticks[candlesticks.length - 1].low;
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), low);
+    }
+    if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
+      if (unrealizedPNL > 0) {
+        options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+      }
+      options.profitCurrentMax[symbol.split("/").join("")] = 0;
     }
     if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
       options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
