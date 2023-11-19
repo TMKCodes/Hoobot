@@ -206,7 +206,7 @@ export const handleOpenOrder = async (
       logger.flush();
       orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
       delay(1500);
-    } while(orderStatus.status !== "CANCELED" && orderStatus.status !== "EXPIRED" && orderStatus.status !== "FILLED" && orderStatus.status !== "REJECTED");
+    } while(true);
   } catch (error) {
     logToFile(JSON.stringify(error, null, 2));
     console.log(error);

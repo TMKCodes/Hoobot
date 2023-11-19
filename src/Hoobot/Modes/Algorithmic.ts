@@ -433,17 +433,16 @@ export const simulateAlgorithmic = async (
   const indicators: Indicators = calculateIndicators(logger, symbol, candlesticks, options);
   const orderBook = undefined;
   const direction = await tradeDirection(logger, symbol, orderBook, candlesticks, indicators, options, filter);
+  const high = latestCandle.high;
+  const low = latestCandle.low;
+  const close = latestCandle.close;
+  const open = latestCandle.open;
+  const midpoint = (low + high) / 2;
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
-    const high = latestCandle.high;
-    const low = latestCandle.low;
-    const midpoint = (low + high) / 2;
     simulateSell(symbol, balances[baseSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
-    const high = latestCandle.high;
-    const low = latestCandle.low;
-    const midpoint = (low + high) / 2;
     simulateBuy(symbol, balances[quoteSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
   }
 }

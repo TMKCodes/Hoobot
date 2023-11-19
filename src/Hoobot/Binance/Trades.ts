@@ -218,13 +218,13 @@ export const sell = async (
       }
       let order: Order = undefined;
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       logToFile(orderMsg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
       updateBuyAmount(symbol, roundedQuantityInBase * roundedPrice, options);
-      play(soundFile);
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
@@ -293,6 +293,7 @@ export const buy = async (
       }
       let order: Order = undefined;
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
