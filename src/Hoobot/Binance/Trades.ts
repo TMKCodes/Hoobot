@@ -384,11 +384,6 @@ export const simulateSell = async (
     logger.push("Balances", balances);
     logger.print();
     logger.flush();
-  } else {
-    logger.flush();
-    logger.push("Check before orders failed", "Quantity too low or big.");
-    logger.print();
-    logger.flush();
   }
 }
 
@@ -447,11 +442,6 @@ export const simulateBuy = async (
     logger.flush();
     logger.push("time", (new Date(time)).toLocaleString());
     logger.push("Balances", balances);
-    logger.print();
-    logger.flush();
-  } else {
-    logger.flush();
-    logger.push("Check before orders failed", "Quantity too low or big.");
     logger.print();
     logger.flush();
   }
