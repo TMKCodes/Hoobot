@@ -35,25 +35,24 @@ export const logRSISignals = (
   rsi: number[], 
   options: ConfigOptions
 ) => {
-  const rsiFixed = rsi.slice(-5).map((rsi) => rsi.toFixed(2));
-  if(rsiFixed.length === 1) {
-    consoleLogger.push("RSI history", rsiFixed.slice(-5).join(", "));
-  } else {
-    consoleLogger.push("RSI history", rsiFixed.slice(0, rsiFixed.length - 1).join(", "));
-  }
+  let signal = "Neutral";
   if (rsi[rsi.length - 1] > 80) {
-    consoleLogger.push(`RSI condition`, `Extremely Overbought`);
+    signal = `Extremely Overbought`;
   } else if (rsi[rsi.length - 1] < 20) {
-    consoleLogger.push(`RSI condition`, `Extremely Oversold`);
+    signal = `Extremely Oversold`;
   } else if (rsi[rsi.length - 1] > 70) {
-    consoleLogger.push(`RSI condition`, `Overbought`);
+    signal = `Overbought`;
   } else if (rsi[rsi.length - 1] < 30) {
-    consoleLogger.push(`RSI condition`, `Oversold`);
+    signal = `Oversold`;
   } else if (rsi[rsi.length - 1] < 50) {
-    consoleLogger.push(`RSI signal`, `Bullish`);
+    signal = `Bullish`;
   } else if(rsi[rsi.length - 1] > 50) {
-    consoleLogger.push(`RSI signal`, `Bearish`);
+    signal = `Bearish`;
   }
+  consoleLogger.push("RSI", {
+    value: rsi[rsi.length - 1].toFixed(7),
+    signal: signal
+  })
 }
 
 

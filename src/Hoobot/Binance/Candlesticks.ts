@@ -112,7 +112,8 @@ export const listenForCandlesticks = async (
           }
         }
       }
-      binance.websockets.candlesticks(symbol, timeframe[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
+      const websocket = binance.websockets;
+      websocket.candlesticks(symbol, timeframe[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
         let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
         let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
         const newCandlestick: Candlestick = {
@@ -147,6 +148,8 @@ export const listenForCandlesticks = async (
         }
         if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
           await callback(candleStore);
+        } else {
+          websocket.terminate();
         }
       });
     }
@@ -333,6 +336,8 @@ export const simulateListenForCandlesticks = async (
       }
       if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
         await callback(splittedSymbol, interval, candleStore);
+      } else {
+        break;
       }
     }
   }

@@ -46,12 +46,14 @@ export const logAverageSignals = (
   candlesticks: Candlestick[], 
   average: number
 ) => {
-  consoleLogger.push("Average", average);
+  let signal = "Neutral";
   if (candlesticks[candlesticks.length - 1].high < average) {
-    consoleLogger.push("Average Signal", "Buy");
+    signal = "Buy";
   } else if (candlesticks[candlesticks.length -1].low > average) {
-    consoleLogger.push("Average Signal", "Sell");
-  } else {
-    consoleLogger.push("Average Signal", "Neutral");
+    signal = "Sell";
   }
+  consoleLogger.push("Average", {
+    value: average,
+    signal: signal
+  })
 }

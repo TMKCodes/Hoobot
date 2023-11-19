@@ -203,13 +203,10 @@ export const placeTrade = async (
   filter: Filter,
   options: ConfigOptions,
 ) => {
-  const startTime = Date.now();
   if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
     const currentTime = Date.now();
-    const lastTradeDate = new Date(lastTradeTime);
     const timeDifferenceInSeconds = (currentTime - lastTradeTime) / 1000;
-    consoleLogger.push("Last trade datetime:", lastTradeDate.toLocaleString("fi-FI"));
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval[0])) {
       return false; 
     }
@@ -217,16 +214,12 @@ export const placeTrade = async (
     consoleLogger.push("Last trade datetime:", "No trades done yet.");
   }
   const orderBook = options.orderbooks[symbol.split("/").join("")];
-  consoleLogger.push("ASK", Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0]);
-  consoleLogger.push("BID", Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]);
+  consoleLogger.push("Orderbook", {
+    ask: Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0],
+    bid: Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]
+  })
   const indicators = calculateIndicators(consoleLogger, symbol, candlesticks, options);
   const direction = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
-  const stopTime = Date.now();
-  if (options.stopLossHit === true && options.stopLossStopTrading === true) {
-    consoleLogger.push("STOP LOSS TRADING ON SYMBOL STOPPED", symbol.split("/").join(""));
-    delete candlesticks[symbol.split("/").join("")];
-  } 
-  consoleLogger.push(`Time to place a trade (ms)`, stopTime - startTime);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, orderBook, filter, options);
   } else if (direction === 'BUY' && options.stopLossHit === false) {
@@ -336,6 +329,9 @@ export const algorithmic = async (
     const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     consoleLogger.push("Symbol", symbol.split("/").join(""));
+    const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
+    const lastTradeDate = new Date(lastTradeTime);
+    consoleLogger.push("Last trade time:", lastTradeDate.toLocaleString("fi-FI"));
     if (latestCandle !== undefined) {
       consoleLogger.push('Candlestick', {
         time: candleTime,
@@ -440,13 +436,11 @@ export const simulateAlgorithmic = async (
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
     const high = latestCandle.high;
-    simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter);
+    simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter, logger);
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
     const low = latestCandle.low;
-    simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter);
+    simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter, logger);
   }
-  logger.print();
-  logger.flush();
 }
 

@@ -66,20 +66,25 @@ export const logSMASignals = (
   const currentSMA = sma[sma.length - 1];
   const prevSMA = sma[sma.length - 2];
   consoleLogger.push(`SMA Value`, currentSMA.toFixed(7));
+  let signal = "Neutral";
   if (currentSMA > prevSMA) {
-    consoleLogger.push(`SMA Signal`, `Bullish`);
+    signal = `Bullish`;
   } else if (currentSMA < prevSMA) {
-    consoleLogger.push(`SMA Signal`, `Bearish`);
+    signal = `Bearish`;
   } else {
-    consoleLogger.push(`SMA Signal`, `Neutral`);
+    signal = `Neutral`;
   }
   const isBullishCrossover = currentSMA > prevSMA;
   const isBearishCrossover = currentSMA < prevSMA;
   if (isBullishCrossover) {
-    consoleLogger.push(`SMA Signal`, `Bullish Crossover`);
+    signal = `Bullish Crossover`;
   } else if (isBearishCrossover) {
-    consoleLogger.push(`SMA Signal`, `Bearish Crossover`);
+    signal = `Bearish Crossover`;
   }
+  consoleLogger.push("SMA", {
+    value: currentSMA.toFixed(7),
+    signal: signal,
+  })
 };
 
 export const checkSMASignals = (

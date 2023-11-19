@@ -137,54 +137,54 @@ const main = async () => {
 
 
 export const recalculateNewOptions = (options: ConfigOptions) => {
-  const filePath = `simulation/best-configuration.json`; 
-  if(existsSync(filePath)) {
-    const file = readFileSync(filePath, "utf-8");
-    let prevOptions: ConfigOptions = (JSON.parse(file) as ConfigOptions);
-    let prevBalance = 0;
-    let prevQuote = "";
-    for(let i = 0; i < prevOptions.symbols.length; i++) {
-      const symbol = prevOptions.symbols[i];
-      const lastTrade = prevOptions.tradeHistory[symbol.split("/").join("")][prevOptions.tradeHistory[symbol.split("/").join("")].length - 1];
-      const lastPrice = parseFloat(lastTrade.price);
-      const base = symbol.split("/")[0];
-      const baseBalance = prevOptions.balances[base] * lastPrice;
-      prevBalance += baseBalance;
-      if (prevQuote === "") {
-        prevQuote == symbol.split("/")[1];
+  const filePath = `simulation/best-configuration.json`;
+
+  try {
+    if (existsSync(filePath)) {
+      const file = readFileSync(filePath, 'utf-8');
+      const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
+
+      let prevBalance = calculateBalance(prevOptions);
+      let balance = calculateBalance(options);
+
+      if (prevBalance > balance) {
+        updateOptionsForWorseSimulation(options, prevOptions);
+      } else if (prevBalance < balance) {
+        writeFileSync(filePath, JSON.stringify(options, null, 2));
       }
-    }
-    prevBalance += prevOptions.balances[prevQuote];
-    let balance = 0;
-    let Quote = "";
-    for(let i = 0; i < options.symbols.length; i++) {
-      const symbol = options.symbols[i];
-      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-      const lastPrice = parseFloat(lastTrade.price);
-      const base = symbol.split("/")[0];
-      const baseBalance = options.balances[base] * lastPrice;
-      balance += baseBalance;
-      if (Quote === "") {
-        Quote == symbol.split("/")[1];
-      }
-    }
-    balance += prevOptions.balances[Quote];
-    if(prevBalance > balance) { // New simulation sucks!
-      options.minimumProfitSell = prevOptions.minimumProfitSell + 0.05;
-      options.minimumProfitBuy = prevOptions.minimumProfitBuy + 0.05;
-      options.stopLossPNL = prevOptions.minimumProfitBuy + 0.01;
-      options.takeProfitPNL = prevOptions.minimumProfitBuy + 0.01;
-      options.takeProfitMinimumPNL = prevOptions.minimumProfitBuy + 0.01;
-      options.takeProfitMinimumPNLDrop = prevOptions.minimumProfitBuy + 0.01;
-    } else if(prevBalance < balance) { // New simulation may rock!
-      const filePath = `simulation/best-configuration.json`; 
+    } else {
       writeFileSync(filePath, JSON.stringify(options, null, 2));
     }
-  } else {
-    const filePath = `simulation/best-configuration.json`; 
-    writeFileSync(filePath, JSON.stringify(options, null, 2));
+  } catch (error) {
+    console.error('Error while recalculating options:', error.message);
   }
-}
+};
+
+const calculateBalance = (options: ConfigOptions): number => {
+  let balance = 0;
+  let quote = '';
+  for (const symbol of options.symbols) {
+    const lastTrade = options.tradeHistory[symbol.split('/').join('')].slice(-1)[0];
+    const lastPrice = parseFloat(lastTrade.price);
+    const base = symbol.split('/')[0];
+    const baseBalance = options.balances[base] * lastPrice;
+    balance += baseBalance;
+    if (quote === '') {
+      quote = symbol.split('/')[1];
+    }
+  }
+  balance += options.balances[quote];
+  return balance;
+};
+
+const updateOptionsForWorseSimulation = (options: ConfigOptions, prevOptions: ConfigOptions) => {
+  options.minimumProfitSell = prevOptions.minimumProfitSell + 0.05;
+  options.minimumProfitBuy = prevOptions.minimumProfitBuy - 0.05;
+  options.stopLossPNL = prevOptions.stopLossPNL + 0.01;
+  options.takeProfitPNL = prevOptions.takeProfitPNL + 0.05;
+  options.takeProfitMinimumPNL = prevOptions.takeProfitMinimumPNL + 0.01;
+  options.takeProfitMinimumPNLDrop = prevOptions.takeProfitMinimumPNLDrop + 0.001;
+};
 
 const initBruteForceOptions = (
   options: ConfigOptions
@@ -193,14 +193,20 @@ const initBruteForceOptions = (
   if(options.simulateBruteForce) {
     if (existsSync(filePath)) {
       options = JSON.parse(readFileSync(filePath, 'utf-8') || "{}");
+      options.minimumProfitSell = options.minimumProfitSell + 0.05;
+      options.minimumProfitBuy = options.minimumProfitBuy - 0.05;
+      options.stopLossPNL = options.stopLossPNL + 0.01;
+      options.takeProfitPNL = options.takeProfitPNL + 0.05;
+      options.takeProfitMinimumPNL = options.takeProfitMinimumPNL + 0.01;
+      options.takeProfitMinimumPNLDrop = options.takeProfitMinimumPNLDrop + 0.001;
     } else {
-      options.minimumProfitSell = 0.05;
-      options.minimumProfitBuy = -100;
-      options.stopLoss = false;
+      options.minimumProfitSell = 0.00;
+      options.minimumProfitBuy = 0;
+      options.stopLoss = true;
       options.stopLossPNL = 100;
-      options.takeProfitPNL = 0.05;
+      options.takeProfitPNL = 0.5;
       options.takeProfitMinimumPNL = 0.05;
-      options.takeProfitMinimumPNLDrop = 0.05
+      options.takeProfitMinimumPNLDrop = 0.005
     }
   }
 }

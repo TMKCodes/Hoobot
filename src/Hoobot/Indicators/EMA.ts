@@ -78,17 +78,16 @@ export const logEMASignals = (
   const currentLongEma = ema.long[ema.long.length - 1];
   const prevShortEma = ema.short[ema.short.length - 2];
   const prevLongEma = ema.long[ema.long.length - 2];
-  consoleLogger.push(`EMA Short`, currentShortEma.toFixed(7));
-  consoleLogger.push(`EMA Long`, currentLongEma.toFixed(7));
-  consoleLogger.push(`EMA Difference`, (currentShortEma - currentLongEma).toFixed(7));
   const emaDiff = currentShortEma - currentLongEma;
+  let signal = "";
   if (emaDiff > 0) {
-    consoleLogger.push(`EMA Signal`, `Bullish`);
+    signal = `Bullish`;
   } else if (emaDiff < 0) {
-    consoleLogger.push(`EMA Signal`, `Bearish`);
+    signal = `Bearish`;
   } else {
-    consoleLogger.push(`EMA Signal`, `Neutral`);
+    signal = `Neutral`;
   }
+  let direction = "flat";
   if (prevShortEma !== undefined && prevLongEma !== undefined) {
     const isBullishCrossover = ema.short > ema.long && prevShortEma <= prevLongEma;
     const isBearishCrossover = ema.short < ema.long && prevShortEma >= prevLongEma;
@@ -96,18 +95,25 @@ export const logEMASignals = (
     const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
     if (isBullishCrossover) {
-      consoleLogger.push(`EMA Signal`, `Bullish Crossover`);
+      signal = `Bullish Crossover`;
     } else if (isBearishCrossover) {
-      consoleLogger.push(`EMA Signal`, `Bearish Crossover`);
+      signal = `Bearish Crossover`;
     }
     if (isUpwardDirection) {
-      consoleLogger.push(`EMA Direction`, `Upward`);
+      direction = `Upward`;
     } else if (isDownwardDirection) {
-      consoleLogger.push(`EMA Direction`, `Downward`);
+      direction = `Downward`;
     } else if (isFlatDirection) {
-      consoleLogger.push(`EMA Direction`, `Flat`);
+      direction = `Flat`;
     }
   }
+  consoleLogger.push("EMA", {
+    short: currentShortEma.toFixed(7),
+    long: currentLongEma.toFixed(7),
+    diff: (currentShortEma - currentLongEma).toFixed(7),
+    signal: signal,
+    direction: direction,
+  })
 };
 
 export const checkEMASignals = (

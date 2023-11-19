@@ -136,78 +136,58 @@ export const logStochasticOscillatorSignals = (
   consoleLogger: ConsoleLogger, 
   stochasticOscillator: [number[], number[]]
 ) => {
-  const kValuesFixed = stochasticOscillator[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  const dValuesFixed = stochasticOscillator[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  if (kValuesFixed.length === 0) {
-    consoleLogger.push("Stochastic Oscillator %K history", 0);
-  } else if (kValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.join(", "));
-  } else {
-    consoleLogger.push("Stochastic Oscillator %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
-  }
-  if (dValuesFixed.length === 0) {
-    consoleLogger.push("Stochastic Oscillator %D history", 0);
-  } else if (dValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.join(", "));
-  } else {
-    consoleLogger.push("Stochastic Oscillator %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
-  }
-  const lastKValue = kValuesFixed[kValuesFixed.length - 1];
-  const lastDValue = dValuesFixed[dValuesFixed.length - 1];
+  const lastKValue = stochasticOscillator[0][stochasticOscillator[0].length - 1];
+  const lastDValue =  stochasticOscillator[1][stochasticOscillator[1].length - 1];
+  let signal = "Neutral";
   if (lastKValue > 80 || lastDValue > 80) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish Overbought`);
+    signal = `Bearish Overbought`;
   } else if (lastKValue < 20 || lastDValue < 20) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish Oversold`);
+    signal = `Bullish Oversold`;
   } else if (lastKValue > 70 || lastDValue > 70) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish Overbought (Approaching)`);
+    signal = `Bearish Overbought (Approaching)`;
   } else if (lastKValue < 30 || lastDValue < 30) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish Oversold (Approaching)`);
+    signal = `Bullish Oversold (Approaching)`;
   } else if (lastKValue < 50 || lastDValue < 50) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bullish`);
+    signal = `Bullish`;
   } else if (lastKValue > 50 || lastDValue > 50) {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Bearish`);
+    signal = `Bearish`;
   } else {
-    consoleLogger.push(`Stochastic Oscillator condition`, `Unknown`);
+    signal = `Unknown`;
   }
+  consoleLogger.push("Stochastic Oscillator", {
+    kValue: lastKValue.toFixed(7),
+    dValue: lastDValue.toFixed(7),
+    signal: signal,
+  });
 }
 
 export const logStochasticRSISignals = (
   consoleLogger: ConsoleLogger, 
   stochasticRSI: [number[], number[]]
 ) => {
-  const kValuesFixed = stochasticRSI[0].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  const dValuesFixed = stochasticRSI[1].slice(-5).map((value) => parseFloat(value.toFixed(2)));
-  if (kValuesFixed.length === 0) {
-    consoleLogger.push("Stochastic RSI %K history", 0);
-  } else if (kValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic RSI %K history", kValuesFixed.join(", "));
-  } else {
-    consoleLogger.push("Stochastic RSI %K history", kValuesFixed.slice(0, kValuesFixed.length - 1).join(", "));
-  }
-  if (dValuesFixed.length === 0) {
-    consoleLogger.push("Stochastic RSI %D history", 0);
-  } else if (dValuesFixed.length === 1) {
-    consoleLogger.push("Stochastic RSI %D history", dValuesFixed.join(", "));
-  } else {
-    consoleLogger.push("Stochastic RSI %D history", dValuesFixed.slice(0, dValuesFixed.length - 1).join(", "));
-  }
-  const lastKValue = kValuesFixed[kValuesFixed.length - 1];
-  const lastDValue = dValuesFixed[dValuesFixed.length - 1];
+  const lastKValue = stochasticRSI[0][stochasticRSI[0].length - 1];
+  const lastDValue = stochasticRSI[1][stochasticRSI[1].length - 1];
+  let signal = "Neutral";
   if (lastKValue > 80 || lastDValue > 80) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bearish Overbought`);
+    signal = `Bearish Overbought`;
   } else if (lastKValue < 20 || lastDValue < 20) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bullish Oversold`);
+    signal = `Bullish Oversold`;
   } else if (lastKValue > 70 || lastDValue > 70) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bearish Overbought (Approaching)`);
+    signal = `Bearish Overbought (Approaching)`;
   } else if (lastKValue < 30 || lastDValue < 30) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bullish Oversold (Approaching)`);
+    signal = `Bullish Oversold (Approaching)`;
   } else if (lastKValue < 50 || lastDValue < 50) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bullish`);
+    signal = `Bullish`;
   } else if (lastKValue > 50 || lastDValue > 50) {
-    consoleLogger.push(`Stochastic RSI condition`, `Bearish`);
+    signal = `Bearish`;
   } else {
-    consoleLogger.push(`Stochastic RSI condition`, `Unknown`);
+    signal = `Unknown`;
   }
+  consoleLogger.push("Stochastic Oscillator", {
+    kValue: lastKValue.toFixed(7),
+    dValue: lastDValue.toFixed(7),
+    signal: signal,
+  });
 }
 
 export const checkStochasticOscillatorSignals = (

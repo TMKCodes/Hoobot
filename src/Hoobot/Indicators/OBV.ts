@@ -64,21 +64,27 @@ export const logOBVSignals = (
   const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - 1] && prevOBV > obvSMA[obvSMA.length - 1];
   const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - 1].close < candlesticks[candlesticks.length - 2].close;
   const isBearishDivergence = currentOBV < prevOBV && candlesticks[candlesticks.length - 1].close > candlesticks[candlesticks.length - 2].close;
+  let signal = "Neutral";
   if (isBullishCrossover) {
-    consoleLogger.push(`OBV Signal`, `Bullish Crossover`);
+    signal = `Bullish Crossover`;
   } else if (isBearishCrossover) {
-    consoleLogger.push(`OBV Signal`, `Bearish Crossover`);
+    signal = `Bearish Crossover`;
   } else if (isBullishDivergence) {
-    consoleLogger.push(`OBV Signal`, `Bullish Divergence`);
+    signal = `Bullish Divergence`;
   } else if (isBearishDivergence) {
-    consoleLogger.push(`OBV Signal`, `Bearish Divergence`);
+    signal = `Bearish Divergence`;
   } else if (isBullish) {
-    consoleLogger.push(`OBV Signal`, `Bullish`);
+    signal = `Bullish`;
   } else if (isBearish) {
-    consoleLogger.push(`OBV Signal`, `Bearish`);
+    signal = `Bearish`;
   } else {
-    consoleLogger.push(`OBV Signal`, `Neutral`);
+    signal = `Neutral`;
   }
+  consoleLogger.push("OBV", {
+    value: currentOBV.toFixed(7),
+    smoothed: obvSMA[obvSMA.length - 1].toFixed(7),
+    signal: signal,
+  })
 };
 
 

@@ -53,22 +53,26 @@ export const logATRSignals = (
 ) => {
   const currentATR = atr[atr.length - 1];
   const prevATR = atr[atr.length - 2];
-  consoleLogger.push(`ATR Value`, currentATR.toFixed(7));
+  let signal = "Neutral";
   if (currentATR > prevATR) {
-    consoleLogger.push(`ATR Signal`, `Increasing`);
+    signal = `Increasing`;
   } else if (currentATR < prevATR) {
-    consoleLogger.push(`ATR Signal`, `Decreasing`);
+    signal = `Decreasing`;
   } else {
-    consoleLogger.push(`ATR Signal`, `Stable`);
+    signal = `Stable`;
   }
   const highVolatilityThreshold = 2.0; 
   const lowVolatilityThreshold = 0.5;
   if (currentATR > highVolatilityThreshold) {
-    consoleLogger.push(`ATR Signal`, `High Volatility`);
+    signal = `High Volatility`;
   } else if (currentATR < lowVolatilityThreshold) {
-    consoleLogger.push(`ATR Signal`, `Low Volatility`);
+    signal = `Low Volatility`;
   } else {
-    consoleLogger.push(`ATR Signal`, `Medium Volatility`);
+    signal = `Medium Volatility`;
   }
+  consoleLogger.push("ATR", {
+    value: currentATR.toFixed(7),
+    signal: signal,
+  })
 }
 

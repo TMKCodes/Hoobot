@@ -335,7 +335,11 @@ export const simulateSell = async (
   options: ConfigOptions,
   time: number,
   filter: Filter,
+  logger: ConsoleLogger
 ) => {
+  if(price === null) {
+    return;
+  }
   let baseQuantity = quantity;
   let quoteQuantity = quantity * price;
   if(checkBeforePlacingOrder(quoteQuantity, price, filter) === true) { 
@@ -375,6 +379,15 @@ export const simulateSell = async (
       balances: balances,
       tradeHistory: options.tradeHistory
     }, null, 2));
+    logger.flush();
+    logger.push("Balances", balances);
+    logger.print();
+    logger.flush();
+  } else {
+    logger.flush();
+    logger.push("Check before orders failed", "Quantity too low or big.");
+    logger.print();
+    logger.flush();
   }
 }
 
@@ -386,7 +399,11 @@ export const simulateBuy = async (
   options: ConfigOptions,
   time: number,
   filter: Filter,
+  logger: ConsoleLogger
 ) => {
+  if(price === null) {
+    return;
+  }
   let quoteQuantity = quantity;
   quoteQuantity = maxBuyAmount(symbol, quoteQuantity, options);
   let baseQuantity = quoteQuantity / price;
@@ -426,5 +443,14 @@ export const simulateBuy = async (
       balances: balances,
       tradeHistory: options.tradeHistory
     }, null, 2));
+    logger.flush();
+    logger.push("Balances", balances);
+    logger.print();
+    logger.flush();
+  } else {
+    logger.flush();
+    logger.push("Check before orders failed", "Quantity too low or big.");
+    logger.print();
+    logger.flush();
   }
 }

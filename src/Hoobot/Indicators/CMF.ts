@@ -73,17 +73,23 @@ export const logCMFSignals = (
   const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - 1] && prevCMF > cmfSMA[cmfSMA.length - 1];
   const isOverbought = currentCMF > options.cmfOverboughtTreshold; 
   const isOversold = currentCMF < options.cmfOversoldTreshold; 
+  let signal = "Neutral";
   if (isBullishCrossover) {
-    consoleLogger.push(`CMF Signal`, `Bullish Crossover`);
+    signal = `Bullish Crossover`;
   } else if (isBearishCrossover) {
-    consoleLogger.push(`CMF Signal`, `Bearish Crossover`);
+    signal = `Bearish Crossover`;
   } else if (isOverbought) {
-    consoleLogger.push(`CMF Signal`, `Overbought`);
+    signal = `Overbought`;
   } else if (isOversold) {
-    consoleLogger.push(`CMF Signal`, `Oversold`);
+    signal = `Oversold`;
   } else {
-    consoleLogger.push(`CMF Signal`, `Neutral`);
+    signal = `Neutral`;
   } 
+  consoleLogger.push("CMF", {
+    value: currentCMF.toFixed(7),
+    sma: cmfSMA[cmfSMA.length - 1],
+    signal: signal
+  })
 };
 
 export const checkCMFSignals = (
