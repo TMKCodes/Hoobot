@@ -198,19 +198,20 @@ export const checkStochasticOscillatorSignals = (
   let check = 'SKIP';
   if (options.useStochasticOscillator) {
     check = 'HOLD';
-    const kValues = stochasticOscillator[0].slice(-5);
     const dValues = stochasticOscillator[1].slice(-5);
+    const kHigherThanD = stochasticOscillator[0][stochasticOscillator[0].length - 1] > stochasticOscillator[1][stochasticOscillator[1].length - 1];
+    const dHigherThanK = stochasticOscillator[1][stochasticOscillator[1].length - 1] > stochasticOscillator[0][stochasticOscillator[0].length - 1];
     const overboughtTreshold = options.stochasticOscillatorOverboughtTreshold !== undefined ? options.stochasticOscillatorOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticOscillatorOversoldTreshold !== undefined ? options.stochasticOscillatorOversoldTreshold : 20; 
     for (let i = dValues.length - 1; i >= 0; i--) {
-      if (dValues[i] > overboughtTreshold && kValues[i] > overboughtTreshold) {
+      if (dValues[i] > overboughtTreshold && dHigherThanK) {
         check = 'SELL';
         break;
       }
     }
     if(check === "SKIP") {
       for (let i = dValues.length - 1; i >= 0; i--) {
-        if (dValues[i] < oversoldTreshold && kValues[i] < oversoldTreshold) {
+        if (dValues[i] < oversoldTreshold && kHigherThanD) {
           check = 'BUY';
           break;
         }
@@ -228,19 +229,20 @@ export const checkStochasticRSISignals = (
   let check = 'SKIP';
   if (options.useStochasticRSI) {
     check = 'HOLD';
-    const kValues = stochasticRSI[0].slice(-options.stochasticRSIHistoryLength);
     const dValues = stochasticRSI[1].slice(-options.stochasticRSIHistoryLength);
+    const kHigherThanD = stochasticRSI[0][stochasticRSI[0].length - 1] > stochasticRSI[1][stochasticRSI[1].length - 1];
+    const dHigherThanK = stochasticRSI[1][stochasticRSI[1].length - 1] > stochasticRSI[0][stochasticRSI[0].length - 1];
     const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     for (let i = dValues.length - 1; i >= 0; i--) {
-      if (dValues[i] > overboughtTreshold) {
+      if (dValues[i] > overboughtTreshold && dHigherThanK) {
         check = 'SELL';
         break;
       }
     }
     if(check === "HOLD") {
       for (let i = dValues.length - 1; i >= 0; i--) {
-        if (dValues[i] < oversoldTreshold) {
+        if (dValues[i] < oversoldTreshold && kHigherThanD) {
           check = 'BUY';
           break;
         }
