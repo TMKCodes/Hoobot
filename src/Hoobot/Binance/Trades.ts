@@ -342,7 +342,7 @@ export const simulateSell = async (
   }
   let baseQuantity = quantity;
   let quoteQuantity = quantity * price;
-  if(checkBeforePlacingOrder(quoteQuantity, price, filter) === true) { 
+  if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) { 
     let fee = quoteQuantity * (0.075 / 100); 
     let quoteQuontityWithoutFee = quoteQuantity - fee; 
     options.tradeHistory[symbol.split("/").join("")].push({
@@ -403,7 +403,7 @@ export const simulateBuy = async (
   let quoteQuantity = quantity;
   quoteQuantity = maxBuyAmount(symbol, quoteQuantity, options);
   let baseQuantity = quoteQuantity / price;
-  if(checkBeforePlacingOrder(quoteQuantity, price, filter) === true) {
+  if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
     let fee = baseQuantity * (0.075 / 100); 
     let baseQuantityWithoutFee = baseQuantity - fee; 
     options.tradeHistory[symbol.split("/").join("")].push({

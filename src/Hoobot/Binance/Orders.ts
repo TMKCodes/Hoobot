@@ -108,7 +108,7 @@ export const openOrders = async (
 }
 
 export const checkBeforePlacingOrder = (
-  quoteQuantity: number,
+  baseQuantity: number,
   price: number,
   tradingPairFilters: any,
 ) => {
@@ -122,8 +122,8 @@ export const checkBeforePlacingOrder = (
   };
   if (
     !isValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price) ||
-    !isValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), quoteQuantity) ||
-    !isValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), price * quoteQuantity)
+    !isValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), baseQuantity) ||
+    !isValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), price * baseQuantity)
   ) {
     return false;
   }
