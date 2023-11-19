@@ -164,20 +164,25 @@ export const recalculateNewOptions = (options: ConfigOptions) => {
 const calculateBalance = (options: ConfigOptions): number => {
   let balance = 0;
   const uniqueQuoteCurrencies = new Set<string>();
+
   for (const symbol of options.symbols) {
-    const lastTrade = options.tradeHistory[symbol.split('/').join('')].slice(-1)[0];
-    const lastPrice = parseFloat(lastTrade.price);
-    const [base, quote] = symbol.split('/');
-    if (options.balances[base] !== null) {
-      const baseBalance = options.balances[base] * lastPrice;
-      balance += baseBalance;
+    const symbolKey = symbol.split('/').join('');
+    if (options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
+      const lastTrade = options.tradeHistory[symbolKey].slice(-1)[0];
+      const lastPrice = parseFloat(lastTrade.price);
+      const [base, quote] = symbol.split('/');
+      if (options.balances[base] !== null) {
+        const baseBalance = options.balances[base] * lastPrice;
+        balance += baseBalance;
+      }
+      uniqueQuoteCurrencies.add(quote);
+    } else {
+      console.error(`Trade history not available for symbol: ${symbol}`);
     }
-    uniqueQuoteCurrencies.add(quote);
   }
   uniqueQuoteCurrencies.forEach((quote) => {
     balance += options.balances[quote];
   });
-
   return balance;
 };
 
@@ -264,20 +269,21 @@ const simulate = async () => {
 }
 if (options.simulate === true) {
   // compare file manually to best-configuration
-  // const configurationPath = `simulation/2023-11-19T08:35:22.609Z/configuration.json`;
-  // const TradesPath = `simulation/2023-11-19T08:35:22.609Z/trades.json`;
-  // if (existsSync(configurationPath)) {
-  //   const file = readFileSync(configurationPath, 'utf-8');
-  //   const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
-  //   if (existsSync(TradesPath)) {
-  //     const tradesFile = readFileSync(TradesPath, 'utf-8');
-  //     const trades = JSON.parse(tradesFile);
-  //     prevOptions.balances = trades.balances;
-  //     prevOptions.tradeHistory = trades.tradeHistory;
-  //     recalculateNewOptions(prevOptions)
-  //   }
-  // }
-  simulate();
+
+  const configurationPath = `simulation/2023-11-19T13:40:38.665Z/configuration.json`;
+  const TradesPath = `simulation/2023-11-19T13:40:38.665Z/trades.json`;
+  if (existsSync(configurationPath)) {
+    const file = readFileSync(configurationPath, 'utf-8');
+    const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
+    if (existsSync(TradesPath)) {
+      const tradesFile = readFileSync(TradesPath, 'utf-8');
+      const trades = JSON.parse(tradesFile);
+      prevOptions.balances = trades.balances;
+      prevOptions.tradeHistory = trades.tradeHistory;
+      recalculateNewOptions(prevOptions)
+    }
+  }
+  // simulate();
 } else {
   main();
 }
