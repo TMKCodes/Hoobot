@@ -270,20 +270,20 @@ const simulate = async () => {
 if (options.simulate === true) {
   // compare file manually to best-configuration
 
-  const configurationPath = `simulation/2023-11-19T13:40:38.665Z/configuration.json`;
-  const TradesPath = `simulation/2023-11-19T13:40:38.665Z/trades.json`;
-  if (existsSync(configurationPath)) {
-    const file = readFileSync(configurationPath, 'utf-8');
-    const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
-    if (existsSync(TradesPath)) {
-      const tradesFile = readFileSync(TradesPath, 'utf-8');
-      const trades = JSON.parse(tradesFile);
-      prevOptions.balances = trades.balances;
-      prevOptions.tradeHistory = trades.tradeHistory;
-      recalculateNewOptions(prevOptions)
-    }
-  }
-  // simulate();
+  // const configurationPath = `simulation/2023-11-19T13:40:38.665Z/configuration.json`;
+  // const TradesPath = `simulation/2023-11-19T13:40:38.665Z/trades.json`;
+  // if (existsSync(configurationPath)) {
+  //   const file = readFileSync(configurationPath, 'utf-8');
+  //   const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
+  //   if (existsSync(TradesPath)) {
+  //     const tradesFile = readFileSync(TradesPath, 'utf-8');
+  //     const trades = JSON.parse(tradesFile);
+  //     prevOptions.balances = trades.balances;
+  //     prevOptions.tradeHistory = trades.tradeHistory;
+  //     recalculateNewOptions(prevOptions)
+  //   }
+  // }
+  simulate();
 } else {
   main();
 }

@@ -436,11 +436,15 @@ export const simulateAlgorithmic = async (
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
     const high = latestCandle.high;
-    simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter, logger);
+    const low = latestCandle.low;
+    const midpoint = (low + high) / 2;
+    simulateSell(symbol, balances[baseSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
+    const high = latestCandle.high;
     const low = latestCandle.low;
-    simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter, logger);
+    const midpoint = (low + high) / 2;
+    simulateBuy(symbol, balances[quoteSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
   }
 }
 

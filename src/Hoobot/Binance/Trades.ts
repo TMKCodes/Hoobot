@@ -241,7 +241,9 @@ export const sell = async (
 }
 
 const maxBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
-  if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
+  if (options.startingMaxBuyAmount[symbol.split("/").join("")] === undefined) {
+    return quoteQuantity;
+  } else if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
     return quoteQuantity = Math.min(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
   } else {
     return quoteQuantity;
