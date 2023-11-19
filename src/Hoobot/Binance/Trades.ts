@@ -380,6 +380,7 @@ export const simulateSell = async (
       tradeHistory: options.tradeHistory
     }, null, 2));
     logger.flush();
+    logger.push("time", (new Date(time)).toLocaleString());
     logger.push("Balances", balances);
     logger.print();
     logger.flush();
@@ -444,6 +445,7 @@ export const simulateBuy = async (
       tradeHistory: options.tradeHistory
     }, null, 2));
     logger.flush();
+    logger.push("time", (new Date(time)).toLocaleString());
     logger.push("Balances", balances);
     logger.print();
     logger.flush();
