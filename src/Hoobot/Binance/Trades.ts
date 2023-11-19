@@ -337,7 +337,7 @@ export const simulateSell = async (
   filter: Filter,
   logger: ConsoleLogger
 ) => {
-  if(price === null) {
+  if(price === null || quantity === 0) {
     return;
   }
   let baseQuantity = quantity;
@@ -401,7 +401,7 @@ export const simulateBuy = async (
   filter: Filter,
   logger: ConsoleLogger
 ) => {
-  if(price === null) {
+  if(price === null || quantity === 0) {
     return;
   }
   let quoteQuantity = quantity;
