@@ -136,8 +136,7 @@ SOURCE="close"
 # How often to update terminal: "update", "final", "trade", "trade/final".
 CONSOLE_UPDATE="trade/final"
 
-# Simple Moving Average configuration
-USE_SMA="false"
+# Indicator parameters
 SMA_LENGTH=7
 
 # Exponetial Moving Average configuration
@@ -146,7 +145,7 @@ EMA_SHORT=20
 EMA_LONG=50
 
 # Moving average convergence/divergence configuration
-USE_MACD="true"
+USE_MACD="false"
 MACD_FAST=5
 MACD_SLOW=15
 MACD_SIGNAL=6
@@ -169,11 +168,11 @@ USE_OBV="false"
 OBV_HISTORY_LENGTH=5
 
 # Chaikin Money Flow configuration
-USE_CMF="true"
+USE_CMF="false"
 CMF_LEGNTH=20
-CMF_HISTORY_LENGTH=5
-CMF_OVERBOUGHT_TRESHOLD=0.25
-CMF_OVERSOLD_TRESHOLD=-0.25
+CMF_HISTORY_LENGTH=3
+CMF_OVERBOUGHT_TRESHOLD=0.15
+CMF_OVERSOLD_TRESHOLD=-0.15
 
 # Bollinger Bands configuration
 USE_BOLLINGER_BANDS="false"
@@ -200,8 +199,15 @@ STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD=80
 STOCHASTIC_RSI_OVERSOLD_TRESHOLD=20
 STOCHASTIC_RSI_HISTORY_LENGTH=5
 
+# OpenAI GPT
+USE_GPT="false"
+USE_GPT_API_KEY=""
+USE_GPT_MODEL=""
+USE_GPT_HISTORY_LENGTH=""
+USE_GPT_OVERWRITE="false"
+
 # Growing MAX buy and sell amount for quote coin.
-STARTING_MAX_BUY_AMOUNT=5.3
+STARTING_MAX_BUY_AMOUNT=8
 STARTING_MAX_SELL_AMOUNT=0
 
 # Percentage of price change when to cancel order 
@@ -213,26 +219,21 @@ MAX_ORDER_AGE_SECONDS=60
 # Trade fee 
 TRADE_FEE_PERCENTAGE=0.075
 
-# Don't allow trading until these PNL are met. False to disable
-HOLD_UNTIL_POSITIVE_TRADE="true"
-MINIMUM_PROFIT_SELL=0.075
-MINIMUM_PROFIT_BUY=-0.075
+# Don't allow trading until these PNL are met. False to disable both, 0 to either one disables.
+HOLD_UNTIL_POSITIVE_TRADE="false"
+MINIMUM_PROFIT_SELL=0.25
+MINIMUM_PROFIT_BUY=0
 
-# STOP_LOSS 
+# STOP_LOSS
 STOP_LOSS="true"
-STOP_LOSS_STOP_TRADING="true"
-STOP_LOSS_PNL=20
+STOP_LOSS_STOP_TRADING="false"
+STOP_LOSS_PNL=-2
 
 # TAKE_PROFIT 
+TAKE_PROFIT="true"
 TAKE_PROFIT_LIMIT=0.05
 TAKE_PROFIT_MINIMUM=0.5
 TAKE_PROFIT_MINIMUM_DROP=0.05
-
-# Go crazy, uncomment to enable trading on all symbols with given quote coin.
-#GO_CRAZY="TUSD"
-
-# Timeframe agreement for trade directin
-TIMEFRAME_AGREEMENT=60
 
 # Developer
 DEBUG="true"
@@ -242,7 +243,7 @@ START_TIMESTAMP="1698789600"
 
 # Simulation
 SIMULATION="true"
-SIMULATION_BRUTE_FORCE="true"
+SIMULATION_BRUTE_FORCE="false"
 ```
 
 ## Usage
