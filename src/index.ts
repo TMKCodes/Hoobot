@@ -25,9 +25,9 @@
 * the use of this software.
 * ===================================================================== */
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+// process.on('unhandledRejection', (reason, promise) => {
+//   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+// });
 
 import Binance from 'node-binance-api';
 import { loginDiscord, } from './Discord/discord';
@@ -138,14 +138,15 @@ const main = async () => {
 
 export const recalculateNewOptions = (options: ConfigOptions) => {
   const filePath = `simulation/best-configuration.json`;
-
   try {
     if (existsSync(filePath)) {
       const file = readFileSync(filePath, 'utf-8');
       const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
 
       let prevBalance = calculateBalance(prevOptions);
+      console.log(prevBalance);
       let balance = calculateBalance(options);
+      console.log(balance);
 
       if (prevBalance > balance) {
         updateOptionsForWorseSimulation(options, prevOptions);
@@ -162,18 +163,21 @@ export const recalculateNewOptions = (options: ConfigOptions) => {
 
 const calculateBalance = (options: ConfigOptions): number => {
   let balance = 0;
-  let quote = '';
+  const uniqueQuoteCurrencies = new Set<string>();
   for (const symbol of options.symbols) {
     const lastTrade = options.tradeHistory[symbol.split('/').join('')].slice(-1)[0];
     const lastPrice = parseFloat(lastTrade.price);
-    const base = symbol.split('/')[0];
-    const baseBalance = options.balances[base] * lastPrice;
-    balance += baseBalance;
-    if (quote === '') {
-      quote = symbol.split('/')[1];
+    const [base, quote] = symbol.split('/');
+    if (options.balances[base] !== null) {
+      const baseBalance = options.balances[base] * lastPrice;
+      balance += baseBalance;
     }
+    uniqueQuoteCurrencies.add(quote);
   }
-  balance += options.balances[quote];
+  uniqueQuoteCurrencies.forEach((quote) => {
+    balance += options.balances[quote];
+  });
+
   return balance;
 };
 
@@ -215,6 +219,7 @@ export let candlestickArray: Candlestick[];
 const simulate = async () => {
   initBruteForceOptions(options);
   do {
+    let startingBalance = 0;
     options.startTime = new Date().toISOString();
     options.balances = {};
     const candleStore: Candlesticks = {};
@@ -235,6 +240,7 @@ const simulate = async () => {
       for (const symbol of options.symbols) {
         options.balances[symbol.split("/")[0]] = 0;
         options.balances[symbol.split("/")[1]] = options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length;
+        startingBalance += options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length;
         const filter = await getFilters(binance, symbol);
         symbolFilters[symbol.split("/").join("")] = filter;
       }
@@ -252,9 +258,25 @@ const simulate = async () => {
       });
     }
     recalculateNewOptions(options);
+    let balance = calculateBalance(options);
+    console.log(`Final Balance: ${balance}, ROI = ${(balance - startingBalance) / startingBalance}`);
   } while(options.simulateBruteForce === true)
 }
 if (options.simulate === true) {
+  // compare file manually to best-configuration
+  // const configurationPath = `simulation/2023-11-19T08:35:22.609Z/configuration.json`;
+  // const TradesPath = `simulation/2023-11-19T08:35:22.609Z/trades.json`;
+  // if (existsSync(configurationPath)) {
+  //   const file = readFileSync(configurationPath, 'utf-8');
+  //   const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
+  //   if (existsSync(TradesPath)) {
+  //     const tradesFile = readFileSync(TradesPath, 'utf-8');
+  //     const trades = JSON.parse(tradesFile);
+  //     prevOptions.balances = trades.balances;
+  //     prevOptions.tradeHistory = trades.tradeHistory;
+  //     recalculateNewOptions(prevOptions)
+  //   }
+  // }
   simulate();
 } else {
   main();
