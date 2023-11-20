@@ -25,10 +25,10 @@
 * the use of this software.
 * ===================================================================== */
 
-import { bold } from "discord.js";
 import { Balances } from "../Binance/Balances";
 import { Orderbooks } from "../Binance/Orderbook";
 import { TradeHistory } from "../Binance/Trades";
+import { Order } from "../Binance/Orders";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
@@ -62,6 +62,10 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
 export interface GrowingMaxBuy {
   [symbol: string]: number;
 } 
+
+export interface OpenOrders {
+  [symbol: string]: Order[];
+}
 
 export interface ConfigOptions {
   startTime: string;
@@ -164,7 +168,8 @@ export interface ConfigOptions {
   takeProfitMinimumPNL?: number,
   takeProfitMinimumPNLDrop?: number,
   maxPNL?: number,
-  [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances; // Index signature
+  openOrders?: OpenOrders,
+  [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
 }
 
 export const parseArgs = (args: string[]): ConfigOptions => {
@@ -279,6 +284,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     takeProfitMinimumPNLDrop: parseFloat(process.env.TAKE_PROFIT_MINIMUM_DROP!) || 0.01,
     takeProfitPNL: parseFloat(process.env.TAKE_PROFIT_LIMIT!) || 0.01,
     maxPNL: 0,
+    openOorders: {}
   };
   for (let i = 0; i < options.symbols.length; i++) {
     options.startingMaxBuyAmount[options.symbols[i].split("/").join("")] = parseFloat(process.env.STARTING_MAX_BUY_AMOUNT) || 0;

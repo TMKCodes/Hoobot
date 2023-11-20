@@ -132,6 +132,42 @@ export const checkBeforePlacingOrder = (
 };
 
 
+export const addOpenOrder = (
+  symbol: string,
+  order: Order,
+  options: ConfigOptions,
+) => {
+  if (options.openOrders[symbol.split("/").join("")] === undefined) {
+    options.openOrders[symbol.split("/").join("")] = [ order ];
+  } else {
+    options.openOrders[symbol.split("/").join("")].push(order);
+  }
+}
+
+export const openOrderDone = (
+  symbol: string,
+  orderId: number,
+  options: ConfigOptions,
+) => {
+  if (options.openOrders[ symbol.split("/").join("")] !== undefined) {
+    options.openOrders[ symbol.split("/").join("")] = options.openOrders[ symbol.split("/").join("")].filter(
+      (order) => order.orderId !== orderId
+    );
+  }
+}
+
+export const checkOpenOrders = (
+  symbol: string,
+  options: ConfigOptions,
+) => {
+  if (options.openOrders[symbol.split("/").join("")] === undefined) {
+    options.openOrders[symbol.split("/").join("")] = [];
+    return options.openOrders[symbol.split("/").join("")];
+  } else {
+    return options.openOrders[symbol.split("/").join("")];
+  }
+}
+
 export const handleOpenOrder = async (
   discord: Client, 
   binance: Binance, 
@@ -206,6 +242,7 @@ export const handleOpenOrder = async (
       logger.flush();
       orderStatus = await binance.orderStatus(symbol.split("/").join(""), order.orderId);
       delay(1500);
+      openOrderDone(symbol, order.orderId, options);
     } while(true);
   } catch (error) {
     logToFile(JSON.stringify(error, null, 2));

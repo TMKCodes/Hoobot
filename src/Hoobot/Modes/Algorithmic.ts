@@ -440,10 +440,30 @@ export const simulateAlgorithmic = async (
   const midpoint = (low + high) / 2;
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
-    simulateSell(symbol, balances[baseSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
+    if(options.source === "close") {
+      simulateSell(symbol, balances[baseSymbol], close, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source == "open") {
+      simulateSell(symbol, balances[baseSymbol], open, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "high") {
+      simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "low") {
+      simulateSell(symbol, balances[baseSymbol], low, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "midpoint") {
+      simulateSell(symbol, balances[baseSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
+    }
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
-    simulateBuy(symbol, balances[quoteSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
+    if(options.source === "close") {
+      simulateBuy(symbol, balances[quoteSymbol], close, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source == "open") {
+      simulateBuy(symbol, balances[quoteSymbol], open, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "high") {
+      simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "low") {
+      simulateBuy(symbol, balances[quoteSymbol], high, balances, options, latestCandle.time, filter, logger);
+    } else if(options.source === "midpoint") {
+      simulateBuy(symbol, balances[quoteSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
+    }
   }
 }
 

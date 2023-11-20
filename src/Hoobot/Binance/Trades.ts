@@ -30,7 +30,7 @@ import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions } from "../Utilities/args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
+import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder, checkOpenOrders, addOpenOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
@@ -193,14 +193,11 @@ export const sell = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const baseBalance = options.balances[symbol.split("/")[0]];
-    const orders = await openOrders(binance, symbol);
-    if (orders !== false && Array.isArray(orders)) {
-      // for(let i = 0; i < orders.length; i++) {
-      //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
-      // }
+    const openOrders = checkOpenOrders(symbol, options);
+    if (openOrders.length > 0) {
       return false;
-    }
+    } 
+    const baseBalance = options.balances[symbol.split("/")[0]];
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInBase = baseBalance;
@@ -218,6 +215,7 @@ export const sell = async (
       }
       let order: Order = undefined;
       order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
@@ -266,14 +264,11 @@ export const buy = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const quoteBalance = options.balances[symbol.split("/")[1]];
-    const orders = await openOrders(binance, symbol);
-    if (orders !== false && Array.isArray(orders)) {
-      // for(let i = 0; i < orders.length; i++) {
-      //   await handleOpenOrder(discord, binance, symbol, orders[i], orderBook, options);
-      // }
+    const openOrders = checkOpenOrders(symbol, options);
+    if (openOrders.length > 0) {
       return false;
-    }
+    } 
+    const quoteBalance = options.balances[symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
     let maxQuantityuInQuote = quoteBalance;
@@ -293,13 +288,13 @@ export const buy = async (
       }
       let order: Order = undefined;
       order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, options.discordChannelID, orderMsg);
       logToFile(orderMsg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
-      play(soundFile);
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);

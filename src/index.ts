@@ -85,7 +85,7 @@ const main = async () => {
             foundSymbols.push(symbol.base + "/" + symbol.quote);
           }
         }
-        console.log(foundSymbols);
+        console.log(JSON.stringify(foundSymbols, null, 2));
         options.symbols = foundSymbols;
       }
       if (Array.isArray(options.symbols)) {
@@ -239,7 +239,7 @@ const simulate = async () => {
         }
         options.symbols = foundSymbols;
       }
-      console.log(options.symbols);
+      console.log(JSON.stringify(options.symbols, null, 2));
       candlestickArray = await downloadHistoricalCandlesticks(options.symbols, options.candlestickInterval);
       console.log("Starting simulation with downloaded candlesticks.");
       for (const symbol of options.symbols) {
