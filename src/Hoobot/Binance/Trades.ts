@@ -28,7 +28,7 @@
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
 import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder, checkOpenOrders, addOpenOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -224,6 +224,7 @@ export const sell = async (
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
+      await delay(getSecondsFromInterval(options.candlestickInterval[0]));
       return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
@@ -293,6 +294,7 @@ export const buy = async (
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
+      await delay(getSecondsFromInterval(options.candlestickInterval[0]));
       return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
