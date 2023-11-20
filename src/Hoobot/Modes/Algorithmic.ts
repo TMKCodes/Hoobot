@@ -345,11 +345,13 @@ export const algorithmic = async (
         high: latestCandle?.high?.toFixed(7)
       });
     }
-    const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
-    consoleLogger.push("Profit", {
-      base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
-      quote: roi[1].toFixed(7) + " " + symbol.split("/")[1]
-    });
+    if (options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
+      const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
+      consoleLogger.push("Profit", {
+        base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
+        quote: roi[1].toFixed(7) + " " + symbol.split("/")[1]
+      });
+    }
     consoleLogger.push("Balance", {
       base:  options.balances[symbol.split("/")[0]].toFixed(7) + " " + symbol.split("/")[0],
       quote: options.balances[symbol.split("/")[1]].toFixed(7) + " " + symbol.split("/")[1]

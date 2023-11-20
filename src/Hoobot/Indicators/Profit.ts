@@ -81,7 +81,7 @@ export const checkProfitSignals = (
     } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit && options.takeProfit === true) {
       check = "TAKE_PROFIT"
     } else {
-      if(force[symbol.split("/").join("")]?.skip !== true) {
+      if (force === undefined || force?.skip !== true) {
         if (lastTrade.isBuyer === true) { 
           if(options.holdUntilPositiveTrade === true) {
             if (options.minimumProfitSell === 0) {
