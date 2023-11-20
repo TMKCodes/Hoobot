@@ -213,7 +213,6 @@ export const sell = async (
         return false;
       }
       const order: Order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
@@ -284,7 +283,6 @@ export const buy = async (
         return false;
       }
       const order: Order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
       const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;

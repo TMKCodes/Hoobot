@@ -210,8 +210,6 @@ export const placeTrade = async (
     if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval[0])) {
       return false; 
     }
-  } else {
-    consoleLogger.push("Last trade datetime:", "No trades done yet.");
   }
   const orderBook = options.orderbooks[symbol.split("/").join("")];
   consoleLogger.push("Orderbook", {
@@ -333,6 +331,8 @@ export const algorithmic = async (
       const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
       const lastTradeDate = new Date(lastTradeTime);
       consoleLogger.push("Last trade time:", lastTradeDate.toLocaleString("fi-FI"));
+    } else {
+      consoleLogger.push("Last trade time:", "No trades done!");
     }
     if (latestCandle !== undefined) {
       consoleLogger.push('Candlestick', {
@@ -350,6 +350,11 @@ export const algorithmic = async (
       consoleLogger.push("Profit", {
         base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
         quote: roi[1].toFixed(7) + " " + symbol.split("/")[1]
+      });
+    } else {
+      consoleLogger.push("Profit", {
+        base: "0 " + symbol.split("/")[0],
+        quote: "0 " + symbol.split("/")[1]
       });
     }
     consoleLogger.push("Balance", {
