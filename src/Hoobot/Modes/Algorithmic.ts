@@ -329,9 +329,11 @@ export const algorithmic = async (
     const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     consoleLogger.push("Symbol", symbol.split("/").join(""));
-    const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
-    const lastTradeDate = new Date(lastTradeTime);
-    consoleLogger.push("Last trade time:", lastTradeDate.toLocaleString("fi-FI"));
+    if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
+      const lastTradeDate = new Date(lastTradeTime);
+      consoleLogger.push("Last trade time:", lastTradeDate.toLocaleString("fi-FI"));
+    }
     if (latestCandle !== undefined) {
       consoleLogger.push('Candlestick', {
         time: candleTime,
