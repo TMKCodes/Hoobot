@@ -160,11 +160,10 @@ export const checkOpenOrders = (
   symbol: string,
   options: ConfigOptions,
 ) => {
-  if (options.openOrders[symbol.split("/").join("")] === undefined) {
-    options.openOrders[symbol.split("/").join("")] = [];
-    return options.openOrders[symbol.split("/").join("")];
+  if (options.openOrders[symbol.split("/").join("")] !== undefined && openOrderDone[symbol.split("/").join("")]?.length > 0) {
+    return true;
   } else {
-    return options.openOrders[symbol.split("/").join("")];
+    return false;
   }
 }
 

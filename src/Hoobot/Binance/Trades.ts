@@ -193,10 +193,6 @@ export const sell = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const openOrders = checkOpenOrders(symbol, options);
-    if (openOrders.length > 0) {
-      return false;
-    } 
     const baseBalance = options.balances[symbol.split("/")[0]];
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
@@ -213,8 +209,10 @@ export const sell = async (
           return false;
         }
       }
-      let order: Order = undefined;
-      order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      if(await openOrders(binance, symbol) !== false) {
+        return false;
+      }
+      const order: Order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
@@ -264,10 +262,6 @@ export const buy = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const openOrders = checkOpenOrders(symbol, options);
-    if (openOrders.length > 0) {
-      return false;
-    } 
     const quoteBalance = options.balances[symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
@@ -286,8 +280,10 @@ export const buy = async (
           return false;
         }
       }
-      let order: Order = undefined;
-      order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      if(await openOrders(binance, symbol) !== false) {
+        return false;
+      }
+      const order: Order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       addOpenOrder(symbol, order, options);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
