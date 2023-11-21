@@ -130,16 +130,49 @@ export const checkEMASignals = (
     const prevLongEma = ema.long[ema.long.length - 2];
     const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
     const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
-    const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
-    const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
-    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-    if (isBullishCrossover) {
+    const isShortUpwardDirection = currentShortEma > prevShortEma;
+    const isShortDownwardDirection = currentShortEma < prevShortEma;
+    const isLongUpwardDirection = currentLongEma > prevLongEma;
+    const isLongDownwardDirection = currentLongEma < prevLongEma;
+    const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
+    const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
+    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;if (isBullishCrossover) {
+      options.EMAWeight = 2;
       check = 'BUY';
     } else if (isBearishCrossover) {
+      options.EMAWeight = 2;
       check = 'SELL';
     } else if (isFlatDirection) {
+      options.EMAWeight = 1;
+      check = 'HOLD'
+    } else {
+      options.EMAWeight = 1;
       check = 'HOLD'
     }
   }
   return check;
+}
+
+export const checkTrendSignal = (
+  ema: ema,
+) => {
+  let trend = 'LONG'
+  const currentShortEma = ema.short[ema.short.length - 1];
+  const currentLongEma = ema.long[ema.long.length - 1];
+  const prevShortEma = ema.short[ema.short.length - 2];
+  const prevLongEma = ema.long[ema.long.length - 2];
+  const isBullish = currentShortEma > currentLongEma;
+  const isBearish = currentShortEma < currentLongEma;
+  const isShortUpwardDirection = currentShortEma > prevShortEma;
+  const isShortDownwardDirection = currentShortEma < prevShortEma;
+  const isLongUpwardDirection = currentLongEma > prevLongEma;
+  const isLongDownwardDirection = currentLongEma < prevLongEma;
+  const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
+  const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
+  if (isUpwardDirection && isBullish) {
+    trend = 'LONG';
+  } else if (isDownwardDirection && isBearish) {
+    trend = 'SHORT';
+  }
+  return trend;
 }

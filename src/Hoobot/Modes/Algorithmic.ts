@@ -30,7 +30,7 @@ import Binance from "node-binance-api";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
-import { calculateEMA, logEMASignals, ema, checkEMASignals } from "../Indicators/EMA";
+import { calculateEMA, logEMASignals, ema, checkEMASignals, checkTrendSignal } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
 import {  Candlesticks } from "../Binance/Candlesticks";
@@ -100,7 +100,7 @@ export const tradeDirection =  async (
 ): Promise<string> => {
   const startTime = Date.now();
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
-  let direction = 'TORN';
+  let direction = 'HOLD';
   const directions = {
     BUY: 0,
     SELL: 0,
@@ -110,23 +110,27 @@ export const tradeDirection =  async (
   let profit = "SKIP";
   const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
+  const trend = checkTrendSignal(indicators.ema[timeframes[timeframes.length - 1]]);
   if (orderBook !== undefined) {
     profit = checkProfitSignals(consoleLogger, next, symbol, orderBook, options);
   } else {
     profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
   }
+  if (profit === "STOP_LOSS") {
+    return "SELL";
+  }
+  const weights = {
+    SMAWeight: options.SMAWeight,
+    EMAWeight: options.EMAWeight,
+    MACDWeight: options.MACDWeight,
+    RSIWeight: options.RSIWeight,
+    StochasticOscillatorWeight: options.StochasticOscillatorWeight,
+    StochasticRSIWeight: options.StochasticRSIWeight,
+    BollingerBandsWeight: options.bollingerBandsWeight,
+    OBVWeight: options.OBVWeight,
+    CMFWeight: options.CMFWeight,
+  }
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
-    const weights = {
-      SMAWeight: options.SMAWeight,
-      EMAWeight: options.EMAWeight,
-      MACDWeight: options.MACDWeight,
-      RSIWeight: options.RSIWeight,
-      StochasticOscillatorWeight: options.StochasticOscillatorWeight,
-      StochasticRSIWeight: options.StochasticRSIWeight,
-      BollingerBandsWeight: options.bollingerBandsWeight,
-      OBVWeight: options.OBVWeight,
-      CMFWeight: options.CMFWeight,
-    }
     const checks = {
       SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[timeframeIndex]], options),
       EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[timeframeIndex]], options),
@@ -188,6 +192,70 @@ export const tradeDirection =  async (
       }
     }
   }
+  // if (direction === "SELL") {
+  //   console.log(`
+  //   _______________________
+  //   |  _________________  |
+  //   | |       SELL   /  | |
+  //   | |       /\\    /   | |
+  //   | |  /\\  /  \\  /    | |
+  //   | | /  \\/    \\/     | |
+  //   | |/                | |
+  //   | |_________________| |
+  //   |  ___ ___ ___   ___  |
+  //   | | 7 | 8 | 9 | | + | |
+  //   | |___|___|___| |___| |
+  //   | | 4 | 5 | 6 | | - | |
+  //   | |___|___|___| |___| |
+  //   | | 1 | 2 | 3 | | x | |
+  //   | |___|___|___| |___| |
+  //   | | . | 0 | = | | / | |
+  //   | |___|___|___| |___| |
+  //   |_____________________|
+  //   `);
+  // } else if (direction === "BUY") {
+  //   console.log(`
+  //   _______________________
+  //   |  _________________  |
+  //   | |              /  | |
+  //   | |       /\\    /   | |
+  //   | |  /\\  /  \\  /    | |
+  //   | | /  \\/    \\/     | |
+  //   | |/          BUY   | |
+  //   | |_________________| |
+  //   |  ___ ___ ___   ___  |
+  //   | | 7 | 8 | 9 | | + | |
+  //   | |___|___|___| |___| |
+  //   | | 4 | 5 | 6 | | - | |
+  //   | |___|___|___| |___| |
+  //   | | 1 | 2 | 3 | | x | |
+  //   | |___|___|___| |___| |
+  //   | | . | 0 | = | | / | |
+  //   | |___|___|___| |___| |
+  //   |_____________________|
+  //   `);
+  // } else if (direction === "HOLD") {
+  //   console.log(`
+  //   _______________________
+  //   |  _________________  |
+  //   | |                 | |
+  //   | |      HOLD       | |
+  //   | |-----------------| |
+  //   | |     WAITING     | |
+  //   | |    FOR PULSE    | |
+  //   | |_________________| |
+  //   |  ___ ___ ___   ___  |
+  //   | | 7 | 8 | 9 | | + | |
+  //   | |___|___|___| |___| |
+  //   | | 4 | 5 | 6 | | - | |
+  //   | |___|___|___| |___| |
+  //   | | 1 | 2 | 3 | | x | |
+  //   | |___|___|___| |___| |
+  //   | | . | 0 | = | | / | |
+  //   | |___|___|___| |___| |
+  //   |_____________________|
+  //   `);
+  // }
   consoleLogger.push(`TRADE Direction`, direction);
   const stopTime = Date.now();
   consoleLogger.push(`Time to decide direction (ms)`, stopTime - startTime);
@@ -385,6 +453,12 @@ export const algorithmic = async (
     } else if (options.consoleUpdate === "final" && latestCandle.isFinal === false) {
       consoleLogger.flush();
     } else {
+      // const base =  options.balances[symbol.split("/")[0]] * latestCandle.close;
+      // const quote = options.balances[symbol.split("/")[1]];
+      // if (base > 5 || quote > 5) {
+      //   consoleLogger.print();
+      //   consoleLogger.flush();
+      // }
       consoleLogger.print();
       consoleLogger.flush();
     }

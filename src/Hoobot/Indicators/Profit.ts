@@ -75,7 +75,12 @@ export const checkProfitSignals = (
     if (takeProfit < options.takeProfitMinimumPNL) {
       takeProfit = options.takeProfitMinimumPNL
     }
-    if (unrealizedPNL <= stopLoss && next === 'SELL' && options.stopLoss === true) { 
+    if(options.debug === true) {
+      console.log("Take profit: " + options.takeProfit)
+      console.log("Stop loss: " + options.stopLoss);
+      console.log("Next trade: " + next);
+    }
+    if (unrealizedPNL <= stopLoss && options.stopLoss === true && next === "SELL" ) { 
       check = "STOP_LOSS"
       options.stopLossHit = true;
     } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit && options.takeProfit === true) {
@@ -84,9 +89,10 @@ export const checkProfitSignals = (
       if (force === undefined || force?.skip !== true) {
         if (lastTrade.isBuyer === true) { 
           if(options.holdUntilPositiveTrade === true) {
+            let minProfitSell = options.minimumProfitSell + options.tradeFee;
             if (options.minimumProfitSell === 0) {
               check = "SELL";
-            } else if(unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
+            } else if(unrealizedPNL > minProfitSell) {
               check = "SELL";
             } else {
               check = "HOLD";
@@ -96,9 +102,10 @@ export const checkProfitSignals = (
           }
         } else { 
           if(options.holdUntilPositiveTrade === true) {
+            let minProfitBuy = options.minimumProfitBuy + options.tradeFee;
             if (options.minimumProfitBuy === 0) {
               check = "BUY";
-            } else if(unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
+            } else if(unrealizedPNL > minProfitBuy) {
               check = "BUY";
             } else {
               check = "HOLD";
@@ -175,36 +182,38 @@ export const checkProfitSignalsFromCandlesticks = (
     if (takeProfit < options.takeProfitMinimumPNL) {
       takeProfit = options.takeProfitMinimumPNL
     }
-    if (unrealizedPNL <= stopLoss && next === 'SELL') { 
+    if (unrealizedPNL <= stopLoss && options.stopLoss === true && next === "SELL" ) { 
       check = "STOP_LOSS"
     } else if (unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
       check = "TAKE_PROFIT"
     } else { 
-        if (lastTrade.isBuyer === true) { 
-          if(options.holdUntilPositiveTrade === true) {
-            if (options.minimumProfitSell === 0) {
-              check = "SELL";
-            } else if(unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
-              check = "SELL";
-            } else {
-              check = "HOLD";
-            }
+      if (lastTrade.isBuyer === true) { 
+        if(options.holdUntilPositiveTrade === true) {
+          let minProfitSell = options.minimumProfitSell + options.tradeFee;
+          if (options.minimumProfitSell === 0) {
+            check = "SELL";
+          } else if(unrealizedPNL > minProfitSell) {
+            check = "SELL";
           } else {
-            check = "SELL"
+            check = "HOLD";
           }
-        } else { 
-          if(options.holdUntilPositiveTrade === true) {
-            if (options.minimumProfitBuy === 0) {
-              check = "BUY";
-            } else if(unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
-              check = "BUY";
-            } else {
-              check = "HOLD";
-            }
-          } else {
-            check = "BUY";
-          }
+        } else {
+          check = "SELL"
         }
+      } else { 
+        if(options.holdUntilPositiveTrade === true) {
+          let minProfitBuy = options.minimumProfitBuy + options.tradeFee;
+          if (options.minimumProfitBuy === 0) {
+            check = "BUY";
+          } else if(unrealizedPNL > minProfitBuy) {
+            check = "BUY";
+          } else {
+            check = "HOLD";
+          }
+        } else {
+          check = "BUY";
+        }
+      }
     }
     consoleLogger.push("PNL%", {
       previous: lastPNL,

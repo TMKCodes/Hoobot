@@ -169,6 +169,10 @@ export interface ConfigOptions {
   takeProfitMinimumPNLDrop?: number,
   maxPNL?: number,
   openOrders?: OpenOrders,
+  StochOscillatorkBelowThreshold?: boolean,
+  StochOscillatorkAboveThreshold?: boolean,
+  StochRSIkBelowThreshold?: boolean,
+  StochRSIkAboveThreshold?: boolean,
   [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
 }
 
@@ -275,7 +279,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     orderbooks: {},
     profitCurrentMax: {},
     balances: {},
-    stopLoss: process.env.DEBUG === "true" ? true : false,
+    stopLoss: process.env.STOP_LOSS === "true" ? true : false,
     stopLossStopTrading: process.env.STOP_LOSS_STOP_TRADING === "true" ? true : false,
     stopLossHit: false,
     stopLossPNL: parseFloat(process.env.STOP_LOSS_PNL!) || 1,

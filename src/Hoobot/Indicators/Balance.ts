@@ -46,13 +46,21 @@ export const checkBalanceSignals = (
     if (quoteBalance > parseFloat(filter.minNotional)) {
       check = 'BUY';
     } else {
-      check = 'HOLD';
+      if (baseBalanceConverted > parseFloat(filter.minNotional)) {
+        check = 'SELL';
+      } else {
+        check = 'HOLD';
+      }
     }
   } else if (tradeCheck === 'BUY') {
     if (baseBalanceConverted > parseFloat(filter.minNotional)) {
       check = 'SELL'
     } else {
-      check = 'HOLD';
+      if (quoteBalance > parseFloat(filter.minNotional)) {
+        check = 'BUY';
+      } else {
+        check = 'HOLD';
+      }
     }
   }
   if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
