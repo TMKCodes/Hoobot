@@ -119,6 +119,7 @@ export interface ConfigOptions {
   useOBV: boolean;
   useCMF: boolean;
   useGPT: boolean;
+  useRenko: boolean;
   useBollingerBands: boolean;
   useStochasticOscillator: boolean;
   useStochasticRSI: boolean;
@@ -153,6 +154,7 @@ export interface ConfigOptions {
   EMAWeight?: number,
   MACDWeight?: number,
   RSIWeight?: number,
+  RenkoWeight?: number,
   StochasticOscillatorWeight?: number,
   StochasticRSIWeight?: number,
   bollingerBandsWeight?: number,
@@ -200,6 +202,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     useOBV: process.env.USE_OBV === "true" ? true : false,
     useCMF: process.env.USE_CMF === "true" ? true : false,
     useGPT: process.env.USE_GPT === "true" ? true : false,
+    useRenko: process.env.USE_RENKO === "true" ? true : false,
     useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
     useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
     useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
@@ -248,14 +251,15 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     bollingerBandsWeight: parseFloat(process.env.BOLLINGER_BANDS_WEIGHT) || 1,
     OBVWeight: parseFloat(process.env.OBV_WEIGHT) || 1,
     CMFWeight: parseFloat(process.env.CMF_WEIGHT) || 1,
+    RenkoWeight: parseFloat(process.env.RENKO_WEIGHT) || 1,
     // Limits
     startingMaxBuyAmount: {},
     closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
     maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
     tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
     holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
-    minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0.01,
-    minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0.01,
+    minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL) || 0,
+    minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY) || 0,
     // Discord
     discordEnabled: process.env.DISCORD_ENABLED === "true" ? true : false || false,
     discordBotToken: process.env.DISCORD_BOT_TOKEN || "",

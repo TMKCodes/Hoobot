@@ -48,11 +48,16 @@ import { Orderbook } from "../Binance/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Binance/Balances";
+import { RenkoBrick, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
+import { time } from "console";
 
 export interface Indicators {
   avg?: {
     [time: string]:  number;
   },
+  renko?: {
+    [time: string]: RenkoBrick[];
+  }
   sma?: {
     [time: string]:  number[];
   },
@@ -112,12 +117,9 @@ export const tradeDirection =  async (
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
   const trend = checkTrendSignal(indicators.ema[timeframes[timeframes.length - 1]]);
   if (orderBook !== undefined) {
-    profit = checkProfitSignals(consoleLogger, next, symbol, orderBook, options);
+    profit = checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, options);
   } else {
-    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
-  }
-  if (profit === "STOP_LOSS") {
-    return "SELL";
+    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
   }
   const weights = {
     SMAWeight: options.SMAWeight,
@@ -129,10 +131,12 @@ export const tradeDirection =  async (
     BollingerBandsWeight: options.bollingerBandsWeight,
     OBVWeight: options.OBVWeight,
     CMFWeight: options.CMFWeight,
+    RenkoWeight: options.RenkoWeight,
   }
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
     const checks = {
       SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[timeframeIndex]], options),
+      Renko: checkRenkoSignals(consoleLogger, indicators.renko[timeframes[timeframeIndex]], options),
       EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[timeframeIndex]], options),
       MACD: checkMACDSignals(consoleLogger, indicators.macd[timeframes[timeframeIndex]], options),
       RSI: checkRSISignals(consoleLogger, indicators.rsi[timeframes[timeframeIndex]], options),
@@ -166,18 +170,15 @@ export const tradeDirection =  async (
   actions = actions.filter(action => directions[action] !== undefined);
   for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
     if((profit == actions[actionsIndex] || profit === 'SKIP' || profit === "TAKE_PROFIT" || profit === "STOP_LOSS") && next == actions[actionsIndex]) {
-      if (directions[actions[actionsIndex]] >= options.directionAgreement) {
+      if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= options.directionAgreement) {
+        direction = next;
+        break;
+      } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= options.directionAgreement) {
+        direction = next;
+        break;
+      } else if (directions[actions[actionsIndex]] >= options.directionAgreement) {
         direction = actions[actionsIndex];
         break;
-      } else {
-        if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= options.directionAgreement / 2) {
-          direction = next;
-          break;
-        }
-        if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= options.directionAgreement / 2) {
-          direction = next;
-          break;
-        }
       }
     }
   }
@@ -313,6 +314,7 @@ export const calculateIndicators = (
     stochasticRSI: {},
     obv: {},
     cmf: {},
+    renko: {},
   };
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
@@ -326,6 +328,13 @@ export const calculateIndicators = (
       short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
       long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
     }
+    indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
+    const averageAtr = indicators.atr[timeframes[i]].reduce((sum, atr) => sum + atr, 0) / indicators.atr[timeframes[i]].length;
+    const renkoBrickSize = averageAtr * options.atrLength;
+    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], renkoBrickSize);
+    if (options.useRenko) {
+      logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
+    }
     logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
     if (options.useRSI) {
       indicators.rsi[timeframes[i]] = calculateRSI(candlesticks[symbol.split("/").join("")][timeframes[i]], options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
@@ -336,7 +345,6 @@ export const calculateIndicators = (
       logMACDSignals(consoleLogger, indicators.macd[timeframes[i]]);
     }
     if (options.useATR) {
-      indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
       logATRSignals(consoleLogger, indicators.atr[timeframes[i]]);
     }
     if (options.useBollingerBands) {
