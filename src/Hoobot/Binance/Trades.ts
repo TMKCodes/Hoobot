@@ -339,11 +339,31 @@ export const simulateSell = async (
   if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) { 
     let fee = quoteQuantity * (0.075 / 100); 
     let quoteQuontityWithoutFee = quoteQuantity - fee; 
+    let lastTrade: Trade ={
+      symbol: "",
+      id: 0,
+      orderId: 0,
+      orderListID: 0,
+      price: "",
+      qty: "",
+      quoteQty: "",
+      commission: "",
+      commissionAsset: "",
+      time: 0,
+      isBuyer: true,
+      isMaker: true,
+      isBestMatch: true,
+    }
+    let pnl = 0;
+    if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+    }
     options.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
       id: 0,
       orderId: 0,
-      orderListID: 0,
+      orderListID: pnl,
       price: price.toString(),
       qty: (baseQuantity).toString(),
       quoteQty: quoteQuontityWithoutFee.toString(),
@@ -374,7 +394,9 @@ export const simulateSell = async (
       tradeHistory: options.tradeHistory
     }, null, 2));
     logger.flush();
-    logger.push("time", (new Date(time)).toLocaleString());
+    logger.push("Time", (new Date(time)).toLocaleString());
+    logger.push("SOLD", "true");
+    logger.push("PNL", pnl);
     logger.push("Balances", balances);
     logger.print();
     logger.flush();
@@ -400,11 +422,31 @@ export const simulateBuy = async (
   if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
     let fee = baseQuantity * (0.075 / 100); 
     let baseQuantityWithoutFee = baseQuantity - fee; 
+    let lastTrade: Trade ={
+      symbol: "",
+      id: 0,
+      orderId: 0,
+      orderListID: 0,
+      price: "",
+      qty: "",
+      quoteQty: "",
+      commission: "",
+      commissionAsset: "",
+      time: 0,
+      isBuyer: true,
+      isMaker: true,
+      isBestMatch: true,
+    }
+    let pnl = 0;
+    if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+    }
     options.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
       id: 0,
       orderId: 0,
-      orderListID: 0,
+      orderListID: pnl,
       price: price.toString(),
       qty: baseQuantityWithoutFee.toString(),
       quoteQty:  quoteQuantity.toString(),
@@ -434,7 +476,9 @@ export const simulateBuy = async (
       tradeHistory: options.tradeHistory
     }, null, 2));
     logger.flush();
-    logger.push("time", (new Date(time)).toLocaleString());
+    logger.push("Time", (new Date(time)).toLocaleString());
+    logger.push("Bought", "true");
+    logger.push("PNL", pnl);
     logger.push("Balances", balances);
     logger.print();
     logger.flush();
