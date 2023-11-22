@@ -7,7 +7,7 @@
     "postinstall": "patch-package",
     "test": "npx jest",
     "start": "ts-node -r dotenv/config src/index.ts",
-    "simulate": "SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192 --inspect\" ts-node -r dotenv/config src/index.ts"
+    "simulate": "SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" ts-node -r dotenv/config src/index.ts"
   },
   "author": "Toni Lukkaroinen",
   "license": "ISC",
