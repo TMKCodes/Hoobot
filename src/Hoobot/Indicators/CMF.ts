@@ -66,9 +66,7 @@ export const logCMFSignals = (
 ) => {
   const currentCMF = cmfValues[cmfValues.length - 1];
   const prevCMF = cmfValues[cmfValues.length - 2];
-  consoleLogger.push(`CMF Value`, currentCMF.toFixed(7));
   const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value })), 50, 'close'); 
-  consoleLogger.push("CMF SMA Value", cmfSMA[cmfSMA.length - 1]);
   const isBullishCrossover = currentCMF > cmfSMA[cmfSMA.length - 1] && prevCMF < cmfSMA[cmfSMA.length - 1];
   const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - 1] && prevCMF > cmfSMA[cmfSMA.length - 1];
   const isOverbought = currentCMF > options.cmfOverboughtTreshold; 
