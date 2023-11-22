@@ -170,9 +170,9 @@ export const checkTrendSignal = (
   const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
   const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
   if (isUpwardDirection && isBullish) {
-    trend = 'LONG';
+    trend = 'UP';
   } else if (isDownwardDirection && isBearish) {
-    trend = 'SHORT';
+    trend = 'DOWN';
   }
   return trend;
 }
