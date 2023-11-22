@@ -329,9 +329,10 @@ export const calculateIndicators = (
       long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
     }
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
-    const averageAtr = indicators.atr[timeframes[i]].reduce((sum, atr) => sum + atr, 0) / indicators.atr[timeframes[i]].length;
-    const renkoBrickSize = averageAtr * options.atrLength;
-    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], renkoBrickSize);
+    const averageAtr = indicators.atr[timeframes[i]]
+      .filter((atr) => atr !== undefined)
+      .reduce((sum, atr) => sum + atr, 0) / indicators.atr[timeframes[i]].length;
+    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], averageAtr);
     if (options.useRenko) {
       logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
     }

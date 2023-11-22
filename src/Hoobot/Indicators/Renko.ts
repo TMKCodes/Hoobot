@@ -24,24 +24,24 @@ export const calculateRenko = (
   renko.push({ time: candlesticks[0].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
   for (let i = 1; i < candlesticks.length; i++) {
     const { close } = candlesticks[i];
-    brickColor = close > currentPrice ? 'green' : 'red';
-    while (close >= currentPrice + brickSize) {
-      currentPrice += brickSize;
-      currentHigh = currentPrice;
-      currentLow = currentPrice - brickSize;
-      renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+    if (close > currentPrice + brickSize) {
+      while (close > currentPrice + brickSize) {
+        currentLow = currentPrice;
+        currentHigh = currentPrice + brickSize;
+        currentPrice += brickSize;
+        brickColor = 'green';
+        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+      }
+    } else if (close < currentPrice - brickSize) {
+      while (close < currentPrice - brickSize) {
+        currentHigh = currentPrice;
+        currentLow = currentPrice - brickSize;
+        currentPrice -= brickSize;
+        brickColor = 'red';
+        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+      }
     }
-    while (close <= currentPrice - brickSize) {
-      currentPrice -= brickSize;
-      currentLow = currentPrice;
-      currentHigh = currentPrice + brickSize;
-      renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
-    }
-    currentOpen = renko[renko.length - 1].close;
-    currentHigh = renko[renko.length - 1].high; 
-    currentLow = renko[renko.length - 1].low;   
   }
-
   return renko;
 }
 
@@ -51,12 +51,11 @@ export const logRenkoSignals = (
 ) => {
   const lastBrick = renkoData[renkoData.length - 1];
   const prevBrick = renkoData[renkoData.length - 2];
-  const brickColor = lastBrick.close > lastBrick.open ? 'green' : 'red';
   let signal = "";
   let direction = "flat";
   if (prevBrick !== undefined) {
-    const isBullishCrossover = brickColor === 'green' && prevBrick.color === 'red';
-    const isBearishCrossover = brickColor === 'red' && prevBrick.color === 'green';
+    const isBullishCrossover = lastBrick?.color === 'green' && prevBrick.color === 'red';
+    const isBearishCrossover = lastBrick?.color === 'red' && prevBrick.color === 'green';
     const isUpwardDirection = lastBrick.close > prevBrick.close;
     const isDownwardDirection = lastBrick.close < prevBrick.close;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
@@ -76,7 +75,7 @@ export const logRenkoSignals = (
   consoleLogger.push("Renko", {
     open: lastBrick?.open?.toFixed(7),
     close: lastBrick?.close?.toFixed(7),
-    color: brickColor,
+    color: lastBrick?.color,
     signal: signal,
     direction: direction,
   });
