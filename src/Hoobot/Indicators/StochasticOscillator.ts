@@ -239,10 +239,10 @@ export const checkStochasticRSISignals = (
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     const rising = K > prevK && D > prevD;
     const dropping = K < prevK && D > prevD;
-    if (D < oversoldTreshold && rising) {
+    if (D < oversoldTreshold && rising && KDHigher) {
       options.StochasticRSIWeight = 2; 
       check = 'BUY';
-    } else if(D > overboughtTreshold && dropping) {
+    } else if(D > overboughtTreshold && dropping && DKHigher) {
       options.StochasticRSIWeight = 2;
       check = 'SELL';
     } else if (D < oversoldTreshold && KDCrossover) {
