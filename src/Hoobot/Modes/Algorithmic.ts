@@ -48,7 +48,7 @@ import { Orderbook } from "../Binance/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Binance/Balances";
-import { RenkoBrick, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
+import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
 import { time } from "console";
 
 export interface Indicators {
@@ -329,10 +329,7 @@ export const calculateIndicators = (
       long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
     }
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
-    const averageAtr = indicators.atr[timeframes[i]]
-      .filter((atr) => atr !== undefined)
-      .reduce((sum, atr) => sum + atr, 0) / indicators.atr[timeframes[i]].length;
-    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], averageAtr);
+    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]]));
     if (options.useRenko) {
       logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
     }

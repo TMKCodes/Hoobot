@@ -11,6 +11,16 @@ export interface RenkoBrick {
   color?: string;
 }
 
+export const calculateBrickSize = (
+  atr: number[],
+) => {
+  const averageAtr = atr
+      .filter((atr) => atr !== undefined)
+      .reduce((sum, atr) => sum + atr, 0) / atr.length;
+  return averageAtr;
+}
+
+
 export const calculateRenko = (
   candlesticks: Candlestick[], 
   brickSize: number
