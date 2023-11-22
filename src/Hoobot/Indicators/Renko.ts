@@ -9,6 +9,7 @@ export interface RenkoBrick {
   low: number;
   close: number;
   color?: string;
+  volume?: number;
 }
 
 export const calculateBrickSize = (
@@ -31,16 +32,20 @@ export const calculateRenko = (
   let currentHigh = candlesticks[0].high;
   let currentLow = candlesticks[0].low;
   let brickColor: 'green' | 'red' = 'green';
-  renko.push({ time: candlesticks[0].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+  let currentVolume = 0;
+  renko.push({ time: candlesticks[0].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor, volume: currentVolume });
+
   for (let i = 1; i < candlesticks.length; i++) {
-    const { close } = candlesticks[i];
+    const { close, volume } = candlesticks[i];
+
     if (close > currentPrice + brickSize) {
       while (close > currentPrice + brickSize) {
         currentLow = currentPrice;
         currentHigh = currentPrice + brickSize;
         currentPrice += brickSize;
         brickColor = 'green';
-        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor, volume: currentVolume });
+        currentVolume = 0;
       }
     } else if (close < currentPrice - brickSize) {
       while (close < currentPrice - brickSize) {
@@ -48,12 +53,16 @@ export const calculateRenko = (
         currentLow = currentPrice - brickSize;
         currentPrice -= brickSize;
         brickColor = 'red';
-        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor });
+        renko.push({ time: candlesticks[i].time, open: currentOpen, high: currentHigh, low: currentLow, close: currentPrice, color: brickColor, volume: currentVolume });
+        currentVolume = 0;
       }
+    } else {
+      currentVolume += volume || 0;
     }
   }
   return renko;
 }
+
 
 export const logRenkoSignals = (
   consoleLogger: ConsoleLogger,

@@ -33,7 +33,7 @@ import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMA, logEMASignals, ema, checkEMASignals, checkTrendSignal } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
-import {  Candlesticks } from "../Binance/Candlesticks";
+import {  Candlestick, Candlesticks } from "../Binance/Candlesticks";
 import { calculateSMA, checkSMASignals, logSMASignals, sma } from "../Indicators/SMA";
 import { calculateATR, logATRSignals } from "../Indicators/ATR";
 import { calculateBollingerBands, checkBollingerBandsSignals, logBollingerBandsSignals } from "../Indicators/BollingerBands";
@@ -296,13 +296,65 @@ export const placeTrade = async (
   }
 }
 
+const subCalculateIndicators = (
+  consoleLogger: ConsoleLogger,
+  candlesticks: Candlestick[],
+  symbol: string,
+  indicators: any,
+  timeframe: string,
+  options: ConfigOptions,
+) => {
+  logAverageSignals(consoleLogger, candlesticks, indicators.avg[timeframe]);
+  indicators.sma[timeframe] = calculateSMA(candlesticks, options.smaLength, options.source);
+  if (options.useSMA) {
+    logSMASignals(consoleLogger, indicators.sma[timeframe]); 
+  }
+  indicators.ema[timeframe] = {
+    short: calculateEMA(candlesticks, options.shortEma, options.source),
+    long: calculateEMA(candlesticks, options.longEma, options.source),
+  }
+  logEMASignals(consoleLogger, indicators.ema[timeframe]);
+  if (options.useRSI) {
+    indicators.rsi[timeframe] = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+    logRSISignals(consoleLogger, indicators.rsi[timeframe], options);
+  }
+  if (options.useMACD) {
+    indicators.macd[timeframe] = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
+    logMACDSignals(consoleLogger, indicators.macd[timeframe]);
+  }
+  if (options.useATR) {
+    logATRSignals(consoleLogger, indicators.atr[timeframe]);
+  }
+  if (options.useBollingerBands) {
+    indicators.bollingerBands[timeframe] = calculateBollingerBands(candlesticks, options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
+    logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands[timeframe]);
+  }
+  if (options.useStochasticOscillator) {
+    indicators.stochasticOscillator[timeframe] = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
+    logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframe]);
+  }
+  if (options.useStochasticRSI) {
+    indicators.stochasticRSI[timeframe] = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
+    logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframe]);
+  }
+  if (options.useOBV) {
+    indicators.obv[timeframe] = calculateOBV(candlesticks);
+    logOBVSignals(consoleLogger, candlesticks, indicators.obv[timeframe]);
+  }
+  if (options.useCMF) {
+    indicators.cmf[timeframe] = calculateCMF(candlesticks, options.cmfLength);
+    logCMFSignals(consoleLogger, indicators.cmf[timeframe], options);
+  }
+  return indicators;
+}
+
 export const calculateIndicators = (
   consoleLogger: ConsoleLogger,
   symbol: string,
   candlesticks: Candlesticks,
   options: ConfigOptions
 ): Indicators => {
-  const indicators: Indicators = {
+  let indicators: Indicators = {
     avg: {},
     sma: {},
     ema: {},
@@ -318,53 +370,15 @@ export const calculateIndicators = (
   };
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
-    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
-    logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
-    indicators.sma[timeframes[i]] = calculateSMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.smaLength, options.source);
-    if (options.useSMA) {
-      logSMASignals(consoleLogger, indicators.sma[timeframes[i]]); 
-    }
-    indicators.ema[timeframes[i]] = {
-      short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
-      long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
-    }
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
     indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]]));
     if (options.useRenko) {
       logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
+      indicators = subCalculateIndicators(consoleLogger, indicators.renko[timeframes[i]] as Candlestick[], symbol, indicators, timeframes[i], options);
+    } else {
+      indicators = subCalculateIndicators(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], symbol, indicators, timeframes[i], options);
     }
-    logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
-    if (options.useRSI) {
-      indicators.rsi[timeframes[i]] = calculateRSI(candlesticks[symbol.split("/").join("")][timeframes[i]], options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
-      logRSISignals(consoleLogger, indicators.rsi[timeframes[i]], options);
-    }
-    if (options.useMACD) {
-      indicators.macd[timeframes[i]] = calculateMACD(candlesticks[symbol.split("/").join("")][timeframes[i]], options.fastMacd, options.slowMacd, options.signalMacd, options.source);
-      logMACDSignals(consoleLogger, indicators.macd[timeframes[i]]);
-    }
-    if (options.useATR) {
-      logATRSignals(consoleLogger, indicators.atr[timeframes[i]]);
-    }
-    if (options.useBollingerBands) {
-      indicators.bollingerBands[timeframes[i]] = calculateBollingerBands(candlesticks[symbol.split("/").join("")][timeframes[i]], options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-      logBollingerBandsSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.bollingerBands[timeframes[i]]);
-    }
-    if (options.useStochasticOscillator) {
-      indicators.stochasticOscillator[timeframes[i]] = calculateStochasticOscillator(candlesticks[symbol.split("/").join("")][timeframes[i]], options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
-      logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[i]]);
-    }
-    if (options.useStochasticRSI) {
-      indicators.stochasticRSI[timeframes[i]] = calculateStochasticRSI(candlesticks[symbol.split("/").join("")][timeframes[i]], options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
-      logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[i]]);
-    }
-    if (options.useOBV) {
-      indicators.obv[timeframes[i]] = calculateOBV(candlesticks[symbol.split("/").join("")][timeframes[i]]);
-      logOBVSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.obv[timeframes[i]]);
-    }
-    if (options.useCMF) {
-      indicators.cmf[timeframes[i]] = calculateCMF(candlesticks[symbol.split("/").join("")][timeframes[i]], options.cmfLength);
-      logCMFSignals(consoleLogger, indicators.cmf[timeframes[i]], options);
-    }
+    
   }
   return indicators;
 }
