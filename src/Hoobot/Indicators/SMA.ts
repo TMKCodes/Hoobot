@@ -37,25 +37,20 @@ export interface sma {
 
 export const calculateSMA = (
   candles: Candlestick[], 
-  length: number, 
+  period: number, 
   source: string = 'close'
 ): number[] => {
   const smaValues: number[] = [];
-  let prices: number[] = [];
-  if(source == 'close') {
-    prices = candles.map((candle) => candle.close);
-  } else if(source == 'open') {
-    prices = candles.map((candle) => candle.open);
-  } else if(source == 'high') {
-    prices = candles.map((candle) => candle.high);
-  } else if(source == 'low') {
-    prices = candles.map((candle) => candle.low);
+  let sum = 0;
+  for (let i = 0; i < candles.length; i++) {
+    sum += candles[i][source];
+    if (i >= period - 1) {
+      const sma = sum / period;
+      smaValues.push(sma);
+      sum -= candles[i - (period - 1)][source];
+    }
   }
-  for (let i = length - 1; i < candles.length; i++) {
-    const sum = prices.slice(i - length + 1, i + 1).reduce((acc, val) => acc + val, 0);
-    const sma = sum / length;
-    smaValues.push(sma);
-  }
+  // console.log("SMA Values:", JSON.stringify(smaValues));
   return smaValues;
 }
 
