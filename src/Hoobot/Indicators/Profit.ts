@@ -67,10 +67,8 @@ export const calculateProfitSignals = (
         check = "TAKE_PROFIT";
       } else if (trend === "DOWN" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
-      }if (unrealizedPNL > 0) {
+      } else  {
         check = "SELL";
-      } else {
-        check = "HOLD";
       }
     }
   } else if (!lastTrade.isBuyer) { // NEXT BUY
