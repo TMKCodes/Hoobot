@@ -176,6 +176,7 @@ export interface ConfigOptions {
   StochRSIkBelowThreshold?: boolean,
   StochRSIkAboveThreshold?: boolean,
   minimumTimeSinceLastTrade?: number,
+  RenkoBrickMultiplier?: number,
   [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
 }
 
@@ -295,6 +296,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     maxPNL: 0,
     openOorders: {},
     minimumTimeSinceLastTrade: parseFloat(process.env.TIME_SINCE_LAST_TRADE_FORCE_TRADE) | 0,
+    RenkoBrickMultiplier: parseFloat(process.env.RENKO_BRICK_MULTIPLIER) | 0,
   };
   for (let i = 0; i < options.symbols.length; i++) {
     options.startingMaxBuyAmount[options.symbols[i].split("/").join("")] = parseFloat(process.env.STARTING_MAX_BUY_AMOUNT) || 0;

@@ -14,10 +14,14 @@ export interface RenkoBrick {
 
 export const calculateBrickSize = (
   atr: number[],
+  options: ConfigOptions
 ) => {
   const averageAtr = atr
       .filter((atr) => atr !== undefined)
       .reduce((sum, atr) => sum + atr, 0) / atr.length;
+  if (options.RenkoBrickMultiplier > 0) {
+    return averageAtr * options.RenkoBrickMultiplier;
+  }
   return averageAtr;
 }
 

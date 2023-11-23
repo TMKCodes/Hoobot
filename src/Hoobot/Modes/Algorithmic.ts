@@ -371,7 +371,7 @@ export const calculateIndicators = (
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
-    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]]));
+    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]], options));
     if (options.useRenko) {
       logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
       indicators = subCalculateIndicators(consoleLogger, indicators.renko[timeframes[i]] as Candlestick[], symbol, indicators, timeframes[i], options);
