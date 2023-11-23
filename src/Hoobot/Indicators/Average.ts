@@ -34,6 +34,7 @@ export const calculateAverage = (
   if (candlesticks.length === 0) {
     return 0;
   }
+  candlesticks = candlesticks.slice(-150);
   let totalPrice = 0;
   for (let i = 0; i < candlesticks.length; i++) {
     totalPrice += (candlesticks[i].close + candlesticks[i].high + candlesticks[i].low + candlesticks[i].open) / 4;
