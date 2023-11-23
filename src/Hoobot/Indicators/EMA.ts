@@ -43,30 +43,30 @@ export const calculateEMA = (
 ): number[] => {
   const emaValues: number[] = [];
   let prices: number[] = [];
-  if(source == 'close') {
+  if (source === 'close') {
     prices = candles.map((candle) => candle.close);
-  } else if(source == 'open') {
+  } else if (source === 'open') {
     prices = candles.map((candle) => candle.open);
-  } else if(source == 'high') {
+  } else if (source === 'high') {
     prices = candles.map((candle) => candle.high);
-  } else if(source == 'low') {
+  } else if (source === 'low') {
     prices = candles.map((candle) => candle.low);
+  }
+  if (prices.length < length) {
+    return emaValues;
   }
   let sum = 0;
   for (let i = 0; i < length; i++) {
     sum += prices[i];
   }
-  let initialEMA = sum / 7;
-  let smoothingFactor = 2 / (7 + 1);
-  if (length > 0) {
-    initialEMA = sum / length;
-    smoothingFactor = 2 / (length + 1);
-  }
+  const initialEMA = sum / length;
+  const smoothingFactor = 2 / (length + 1);
   emaValues.push(initialEMA);
   for (let i = length; i < prices.length; i++) {
     const currentEMA = (prices[i] - emaValues[i - length]) * smoothingFactor + emaValues[i - length];
     emaValues.push(currentEMA);
   }
+
   return emaValues;
 }
 
