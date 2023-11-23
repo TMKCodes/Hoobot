@@ -309,11 +309,6 @@ const subCalculateIndicators = (
   if (options.useSMA) {
     logSMASignals(consoleLogger, indicators.sma[timeframe]); 
   }
-  indicators.ema[timeframe] = {
-    short: calculateEMA(candlesticks, options.shortEma, options.source),
-    long: calculateEMA(candlesticks, options.longEma, options.source),
-  }
-  logEMASignals(consoleLogger, indicators.ema[timeframe]);
   if (options.useRSI) {
     indicators.rsi[timeframe] = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
     logRSISignals(consoleLogger, indicators.rsi[timeframe], options);
@@ -370,6 +365,11 @@ export const calculateIndicators = (
   };
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
+    indicators.ema[timeframes[i]] = {
+      short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
+      long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
+    }
+    logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
     indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]], options));
     if (options.useRenko) {

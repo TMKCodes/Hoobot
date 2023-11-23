@@ -53,7 +53,7 @@ export const calculateEMA = (
     prices = candles.map((candle) => candle.low);
   }
   if (prices.length < length) {
-    return emaValues;
+    return undefined;
   }
   let sum = 0;
   for (let i = 0; i < length; i++) {
@@ -66,7 +66,6 @@ export const calculateEMA = (
     const currentEMA = (prices[i] - emaValues[i - length]) * smoothingFactor + emaValues[i - length];
     emaValues.push(currentEMA);
   }
-
   return emaValues;
 }
 
@@ -74,46 +73,49 @@ export const logEMASignals = (
   consoleLogger: ConsoleLogger,
   ema: ema
 ) => {
-  const currentShortEma = ema.short[ema.short.length - 1];
-  const currentLongEma = ema.long[ema.long.length - 1];
-  const prevShortEma = ema.short[ema.short.length - 2];
-  const prevLongEma = ema.long[ema.long.length - 2];
-  const emaDiff = currentShortEma - currentLongEma;
-  let signal = "";
-  if (emaDiff > 0) {
-    signal = `Bullish`;
-  } else if (emaDiff < 0) {
-    signal = `Bearish`;
-  } else {
-    signal = `Neutral`;
-  }
-  let direction = "flat";
-  if (prevShortEma !== undefined && prevLongEma !== undefined) {
-    const isBullishCrossover = ema.short > ema.long && prevShortEma <= prevLongEma;
-    const isBearishCrossover = ema.short < ema.long && prevShortEma >= prevLongEma;
-    const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
-    const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
-    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-    if (isBullishCrossover) {
-      signal = `Bullish Crossover`;
-    } else if (isBearishCrossover) {
-      signal = `Bearish Crossover`;
+  if (ema !== undefined) {
+    const currentShortEma = ema.short[ema.short.length - 1];
+    const currentLongEma = ema.long[ema.long.length - 1];
+    const prevShortEma = ema.short[ema.short.length - 2];
+    const prevLongEma = ema.long[ema.long.length - 2];
+    const emaDiff = currentShortEma - currentLongEma;
+    let signal = "";
+    if (emaDiff > 0) {
+      signal = `Bullish`;
+    } else if (emaDiff < 0) {
+      signal = `Bearish`;
+    } else {
+      signal = `Neutral`;
     }
-    if (isUpwardDirection) {
-      direction = `Upward`;
-    } else if (isDownwardDirection) {
-      direction = `Downward`;
-    } else if (isFlatDirection) {
-      direction = `Flat`;
+    let direction = "flat";
+    if (prevShortEma !== undefined && prevLongEma !== undefined) {
+      const isBullishCrossover = ema.short > ema.long && prevShortEma <= prevLongEma;
+      const isBearishCrossover = ema.short < ema.long && prevShortEma >= prevLongEma;
+      const isUpwardDirection = currentShortEma > prevShortEma && currentLongEma > prevLongEma;
+      const isDownwardDirection = currentShortEma < prevShortEma && currentLongEma < prevLongEma;
+      const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+      if (isBullishCrossover) {
+        signal = `Bullish Crossover`;
+      } else if (isBearishCrossover) {
+        signal = `Bearish Crossover`;
+      }
+      if (isUpwardDirection) {
+        direction = `Upward`;
+      } else if (isDownwardDirection) {
+        direction = `Downward`;
+      } else if (isFlatDirection) {
+        direction = `Flat`;
+      }
     }
+    consoleLogger.push("EMA", {
+      short: currentShortEma.toFixed(7),
+      long: currentLongEma.toFixed(7),
+      diff: (currentShortEma - currentLongEma).toFixed(7),
+      signal: signal,
+      direction: direction,
+    })
   }
-  consoleLogger.push("EMA", {
-    short: currentShortEma.toFixed(7),
-    long: currentLongEma.toFixed(7),
-    diff: (currentShortEma - currentLongEma).toFixed(7),
-    signal: signal,
-    direction: direction,
-  })
+  
 };
 
 export const checkEMASignals = (
@@ -122,7 +124,7 @@ export const checkEMASignals = (
   options: ConfigOptions
 ) => {
   let check = 'SKIP';
-  if (options.useEMA) {
+  if (options.useEMA && ema !== undefined) {
     check = 'HOLD';
     const currentShortEma = ema.short[ema.short.length - 1];
     const currentLongEma = ema.long[ema.long.length - 1];
@@ -157,22 +159,24 @@ export const checkTrendSignal = (
   ema: ema,
 ) => {
   let trend = 'LONG'
-  const currentShortEma = ema.short[ema.short.length - 1];
-  const currentLongEma = ema.long[ema.long.length - 1];
-  const prevShortEma = ema.short[ema.short.length - 2];
-  const prevLongEma = ema.long[ema.long.length - 2];
-  const isBullish = currentShortEma > currentLongEma;
-  const isBearish = currentShortEma < currentLongEma;
-  const isShortUpwardDirection = currentShortEma > prevShortEma;
-  const isShortDownwardDirection = currentShortEma < prevShortEma;
-  const isLongUpwardDirection = currentLongEma > prevLongEma;
-  const isLongDownwardDirection = currentLongEma < prevLongEma;
-  const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
-  const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
-  if (isUpwardDirection && isBullish) {
-    trend = 'UP';
-  } else if (isDownwardDirection && isBearish) {
-    trend = 'DOWN';
+  if (ema !== undefined) {
+    const currentShortEma = ema.short[ema.short.length - 1];
+    const currentLongEma = ema.long[ema.long.length - 1];
+    const prevShortEma = ema.short[ema.short.length - 2];
+    const prevLongEma = ema.long[ema.long.length - 2];
+    const isBullish = currentShortEma > currentLongEma;
+    const isBearish = currentShortEma < currentLongEma;
+    const isShortUpwardDirection = currentShortEma > prevShortEma;
+    const isShortDownwardDirection = currentShortEma < prevShortEma;
+    const isLongUpwardDirection = currentLongEma > prevLongEma;
+    const isLongDownwardDirection = currentLongEma < prevLongEma;
+    const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
+    const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
+    if (isUpwardDirection && isBullish) {
+      trend = 'UP';
+    } else if (isDownwardDirection && isBearish) {
+      trend = 'DOWN';
+    }
   }
   return trend;
 }
