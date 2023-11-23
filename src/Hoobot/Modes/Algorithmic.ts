@@ -304,7 +304,6 @@ const subCalculateIndicators = (
   timeframe: string,
   options: ConfigOptions,
 ) => {
-  logAverageSignals(consoleLogger, candlesticks, indicators.avg[timeframe]);
   indicators.sma[timeframe] = calculateSMA(candlesticks, options.smaLength, options.source);
   if (options.useSMA) {
     logSMASignals(consoleLogger, indicators.sma[timeframe]); 
@@ -365,6 +364,8 @@ export const calculateIndicators = (
   };
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   for (let i = 0; i < timeframes.length; i++) {
+    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
+    logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
     indicators.ema[timeframes[i]] = {
       short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
       long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
