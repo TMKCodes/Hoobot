@@ -175,6 +175,7 @@ export interface ConfigOptions {
   StochOscillatorkAboveThreshold?: boolean,
   StochRSIkBelowThreshold?: boolean,
   StochRSIkAboveThreshold?: boolean,
+  minimumTimeSinceLastTrade?: number,
   [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
 }
 
@@ -292,7 +293,8 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     takeProfitMinimumPNLDrop: parseFloat(process.env.TAKE_PROFIT_MINIMUM_DROP!) || 0.01,
     takeProfitPNL: parseFloat(process.env.TAKE_PROFIT_LIMIT!) || 0.01,
     maxPNL: 0,
-    openOorders: {}
+    openOorders: {},
+    minimumTimeSinceLastTrade: parseFloat(process.env.TIME_SINCE_LAST_TRADE_FORCE_TRADE) | 0,
   };
   for (let i = 0; i < options.symbols.length; i++) {
     options.startingMaxBuyAmount[options.symbols[i].split("/").join("")] = parseFloat(process.env.STARTING_MAX_BUY_AMOUNT) || 0;
