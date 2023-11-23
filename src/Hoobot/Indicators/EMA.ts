@@ -98,13 +98,12 @@ export const logEMASignals = (
         signal = `Bullish Crossover`;
       } else if (isBearishCrossover) {
         signal = `Bearish Crossover`;
-      }
-      if (isUpwardDirection) {
-        direction = `Upward`;
+      }if (isUpwardDirection) {
+        signal = `Upward`;
       } else if (isDownwardDirection) {
-        direction = `Downward`;
+        signal = `Downward`;
       } else if (isFlatDirection) {
-        direction = `Flat`;
+        signal = `Flat`;
       }
     }
     consoleLogger.push("EMA", {
@@ -112,7 +111,6 @@ export const logEMASignals = (
       long: currentLongEma.toFixed(7),
       diff: (currentShortEma - currentLongEma).toFixed(7),
       signal: signal,
-      direction: direction,
     })
   }
   

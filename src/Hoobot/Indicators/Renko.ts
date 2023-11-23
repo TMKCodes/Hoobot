@@ -75,7 +75,6 @@ export const logRenkoSignals = (
   const lastBrick = renkoData[renkoData.length - 1];
   const prevBrick = renkoData[renkoData.length - 2];
   let signal = "";
-  let direction = "flat";
   if (prevBrick !== undefined) {
     const isBullishCrossover = lastBrick?.color === 'green' && prevBrick.color === 'red';
     const isBearishCrossover = lastBrick?.color === 'red' && prevBrick.color === 'green';
@@ -86,13 +85,12 @@ export const logRenkoSignals = (
       signal = `Bullish Crossover`;
     } else if (isBearishCrossover) {
       signal = `Bearish Crossover`;
-    }
-    if (isUpwardDirection) {
-      direction = `Upward`;
+    } else  if (isUpwardDirection) {
+      signal = `Upward`;
     } else if (isDownwardDirection) {
-      direction = `Downward`;
+      signal = `Downward`;
     } else if (isFlatDirection) {
-      direction = `Flat`;
+      signal = `Flat`;
     }
   }
   consoleLogger.push("Renko", {
@@ -100,7 +98,6 @@ export const logRenkoSignals = (
     close: lastBrick?.close?.toFixed(7),
     color: lastBrick?.color,
     signal: signal,
-    direction: direction,
   });
 };
 
