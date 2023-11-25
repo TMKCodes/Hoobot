@@ -59,39 +59,39 @@ export const checkGPTSignals = async (
       const volume = latestCandles.map((candle) => candle.volume);
       message += `${timeframes[i]} Candle volume: ${JSON.stringify(volume, null, 2)}\n`;
       if (options.useEMA) {
-        const emalong = indicators[timeframes[i]].ema.long.slice(-slice);
+        const emalong = indicators.ema[timeframes[i]].long.slice(-slice);
         message += `${timeframes[i]} EMA long: ${JSON.stringify(emalong, null, 2)}\n`;
-        const emashort = indicators[timeframes[i]].ema.short.slice(-slice);
+        const emashort = indicators.ema[timeframes[i]].short.slice(-slice);
         message += `${timeframes[i]} EMA short: ${JSON.stringify(emashort, null, 2)}\n`;
       }
       if (options.useMACD) {
-        const macdline = indicators[timeframes[i]].macd?.macdLine?.slice(-slice);
+        const macdline = indicators.macd[timeframes[i]]?.macdLine?.slice(-slice);
         message += `${timeframes[i]} MACD line: ${JSON.stringify(macdline, null, 2)}\n`;
-        const macdsignal = indicators[timeframes[i]].macd?.signalLine.slice(-slice);
+        const macdsignal = indicators.macd[timeframes[i]]?.signalLine.slice(-slice);
         message += `${timeframes[i]} MACD line: ${JSON.stringify(macdsignal, null, 2)}\n`;
-        const macdhistogram = indicators[timeframes[i]].macd?.histogram.slice(-slice);
+        const macdhistogram = indicators.macd[timeframes[i]]?.histogram.slice(-slice);
         message += `${timeframes[i]} MACD line: ${JSON.stringify(macdhistogram, null, 2)}\n`;
       }
       if (options.useATR) {
-        const atr = indicators[timeframes[i]].atr.slice(-slice);
+        const atr = indicators.atr[timeframes[i]].slice(-slice);
         message += `${timeframes[i]} ATR: ${JSON.stringify(atr, null, 2)}\n`;
       }
       if (options.useRSI) {
-        const rsi = indicators[timeframes[i]].rsi.slice(-slice);
+        const rsi = indicators.rsi[timeframes[i]].slice(-slice);
         message += `${timeframes[i]} RSI: ${JSON.stringify(rsi, null, 2)}\n`;
       }
       if (options.useBollingerBands) {
-        message += `${timeframes[i]} Bollinger Bands average: ${JSON.stringify(indicators[timeframes[i]].bollingerBands[0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Bollinger Bands upper: ${JSON.stringify(indicators[timeframes[i]].bollingerBands[1].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Bollinger Bands lower: ${JSON.stringify(indicators[timeframes[i]].bollingerBands[2].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Bollinger Bands average: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Bollinger Bands upper: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][1].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Bollinger Bands lower: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][2].slice(-slice), null, 2)}\n`;
       }
       if (options.useStochasticOscillator) {
-        message += `${timeframes[i]} Stochastic Oscillator %K: ${JSON.stringify(indicators[timeframes[i]].stochasticOscillator[0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Stochastic Oscillator %D: ${JSON.stringify(indicators[timeframes[i]].stochasticOscillator[1].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Stochastic Oscillator %K: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Stochastic Oscillator %D: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][1].slice(-slice), null, 2)}\n`;
       }
       if (options.useStochasticRSI) {
-        message += `${timeframes[i]} Stochastic RSI %K: ${JSON.stringify(indicators[timeframes[i]].stochasticRSI[0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Stochastic RSI %D: ${JSON.stringify(indicators[timeframes[i]].stochasticRSI[1].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Stochastic RSI %K: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+        message += `${timeframes[i]} Stochastic RSI %D: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][1].slice(-slice), null, 2)}\n`;
       }
     }
     const openai = new OpenAI({

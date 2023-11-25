@@ -71,12 +71,16 @@ export const calculateROI = (
       const currentTrade = tradeHistory[i];
       if (currentTrade.isBuyer) {
         const nextSellTrade = tradeHistory.slice(i, tradeHistory.length).find((trade) => !trade.isBuyer);
-        totalBase += parseFloat(nextSellTrade.qty) - parseFloat(currentTrade.qty);
-        totalQuote += parseFloat(nextSellTrade.quoteQty) - parseFloat(currentTrade.quoteQty)
+        if (nextSellTrade !== undefined) {
+          totalBase += parseFloat(nextSellTrade.qty) - parseFloat(currentTrade.qty);
+          totalQuote += parseFloat(nextSellTrade.quoteQty) - parseFloat(currentTrade.quoteQty);
+        }
       } else {
         const nextBuyTrade = tradeHistory.slice(i, tradeHistory.length).find((trade) => trade.isBuyer);
-        totalBase += parseFloat(nextBuyTrade.qty) - parseFloat(currentTrade.qty);
-        totalQuote += parseFloat(nextBuyTrade.quoteQty) - parseFloat(currentTrade.quoteQty)
+        if (nextBuyTrade !== undefined) {
+          totalBase += parseFloat(nextBuyTrade.qty) - parseFloat(currentTrade.qty);
+          totalQuote += parseFloat(nextBuyTrade.quoteQty) - parseFloat(currentTrade.quoteQty);
+        }
       }
     }
     return [ totalBase, totalQuote ];
@@ -117,7 +121,7 @@ export const getTradeHistory = async (
   let compactedTradeHistory: Trade[] = [];
   let currentTrade: Trade | null = null;
   if (options.startTimestamp !== undefined) {
-    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(options.startTimestamp));
+    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(options.startTimestamp as string));
   }
   for (const trade of tradeHistory) {
     if (currentTrade === null) {
@@ -193,7 +197,7 @@ export const sell = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const baseBalance = options.balances[symbol.split("/")[0]];
+    const baseBalance = options.balances![symbol.split("/")[0]];
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInBase = baseBalance;
@@ -202,7 +206,7 @@ export const sell = async (
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
@@ -223,6 +227,9 @@ export const sell = async (
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
+      if (options.tradeHistory === undefined) {
+        options.tradeHistory = {}
+      }
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       await delay(getSecondsFromInterval(options.candlestickInterval[0]));
       return order;
@@ -234,6 +241,7 @@ export const sell = async (
     logToFile(JSON.stringify(error));
     console.log(error);
   }
+  return false
 }
 
 const maxBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
@@ -246,7 +254,7 @@ const maxBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOpti
   }
 }
 
-const updateBuyAmount = (symbol: string, quoteQuantity, options: ConfigOptions) => {
+const updateBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
   if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
     options.startingMaxBuyAmount[symbol.split("/").join("")] = Math.max(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
   }
@@ -262,7 +270,7 @@ export const buy = async (
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
   try {
-    const quoteBalance = options.balances[symbol.split("/")[1]];
+    const quoteBalance = options.balances![symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
     let maxQuantityuInQuote = quoteBalance;
@@ -273,7 +281,7 @@ export const buy = async (
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
@@ -293,6 +301,9 @@ export const buy = async (
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);
       options.balances = await getCurrentBalances(binance);
+      if (options.tradeHistory === undefined) {
+        options.tradeHistory = {};
+      }
       options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
       await delay(getSecondsFromInterval(options.candlestickInterval[0]));
       return order;
@@ -303,6 +314,7 @@ export const buy = async (
   } catch (error) {
     logToFile(JSON.stringify(error, null, 2));
   }
+  return false
 }
 
 export const checkPreviousTrade = (
@@ -310,7 +322,7 @@ export const checkPreviousTrade = (
   options: ConfigOptions
 ) => {
   let check = 'SELL';
-  if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+  if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if (lastTrade.isBuyer) {
       check = 'BUY';
@@ -355,9 +367,12 @@ export const simulateSell = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+    }
+    if(options.tradeHistory === undefined) {
+      options.tradeHistory = {}
     }
     options.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
@@ -438,9 +453,12 @@ export const simulateBuy = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+    }
+    if(options.tradeHistory === undefined) {
+      options.tradeHistory = {}
     }
     options.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),

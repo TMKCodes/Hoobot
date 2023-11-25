@@ -70,7 +70,7 @@ export const calculateProfitSignals = (
         check = "HOLD"
       }
     } else {
-      if (trend === "UP" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (trend === "UP" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
       } else if (trend === "DOWN" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
@@ -80,7 +80,7 @@ export const calculateProfitSignals = (
     }
   } else if (!lastTrade.isBuyer) { // NEXT BUY
     if (options.holdUntilPositiveTrade === true && options.minimumProfitBuy !== 0) {
-      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
       } else if (trend === "UP" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
@@ -90,7 +90,7 @@ export const calculateProfitSignals = (
         check = "HOLD"
       }
     } else {
-      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
       } else if (trend === "UP" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
@@ -119,45 +119,6 @@ export const checkProfitSignals = (
   let unrealizedPNL: number = 0;
   const force = readForce(symbol.split("/").join(""))
   if (force.skip === "true") {
-    return "SKIP";
-  }
-  if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-    const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-    if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
-      const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
-      if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
-      } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
-      }
-    }
-    if (lastTrade.isBuyer === true) { 
-      const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
-    } else { 
-      const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
-    }
-    if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
-      if (unrealizedPNL > 0) {
-        options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
-      }
-      options.profitCurrentMax[symbol.split("/").join("")] = 0;
-    }
-    if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
-      options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
-    }
-    const signals = calculateProfitSignals(symbol, trend, lastTrade, unrealizedPNL, options);
-    check = signals.check;
-    consoleLogger.push("PNL%", {
-      previous: lastPNL,
-      unrealized: unrealizedPNL - options.tradeFee,
-      currentMax: options.profitCurrentMax[symbol.split("/").join("")],
-      stopLoss: signals.stopLoss,
-      takeProfit: signals.takeProfit,
-      direction: check,
-    });
-  } else {
     check = "SKIP";
     consoleLogger.push("PNL%", {
       previous: 0,
@@ -167,6 +128,54 @@ export const checkProfitSignals = (
       takeProfit: 0,
       direction: check,
     });
+  } else {
+    if(options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
+        const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
+        if(olderTrade.isBuyer) { 
+          lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        } else if(!olderTrade.isBuyer) { 
+          lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        }
+      }
+      if (lastTrade.isBuyer === true) { 
+        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
+      } else { 
+        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
+      }
+      if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
+        if (unrealizedPNL > 0) {
+          options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+        }
+        options.profitCurrentMax[symbol.split("/").join("")] = 0;
+      }
+      if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
+        options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
+      }
+      const signals = calculateProfitSignals(symbol, trend, lastTrade, unrealizedPNL, options);
+      check = signals.check;
+      consoleLogger.push("PNL%", {
+        previous: lastPNL,
+        unrealized: unrealizedPNL - options.tradeFee,
+        currentMax: options.profitCurrentMax[symbol.split("/").join("")],
+        stopLoss: signals.stopLoss,
+        takeProfit: signals.takeProfit,
+        direction: check,
+      });
+    } else {
+      check = "SKIP";
+      consoleLogger.push("PNL%", {
+        previous: 0,
+        unrealized: 0,
+        currentMax: 0,
+        stopLoss: 0,
+        takeProfit: 0,
+        direction: check,
+      });
+    }
   }
   return check;
 }
@@ -182,7 +191,7 @@ export const checkProfitSignalsFromCandlesticks = (
   let check = 'HOLD';
   let lastPNL: number = 0;
   let unrealizedPNL: number = 0;
-  if(options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+  if(options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
     const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];

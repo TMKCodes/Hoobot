@@ -15,7 +15,7 @@ export default {
       option.setName('duration')
         .setDescription('The duration for PNL (1D, 1W, 1M)')
         .setRequired(true)),
-  execute: async (interaction, binance: Binance, options: ConfigOptions) => {
+  execute: async (interaction: { options: { getString: (arg0: string) => string; }; reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
     const symbol: string = interaction.options.getString('symbol').toUpperCase();
     const duration: string = interaction.options.getString('duration').toLowerCase();
     if (duration.toUpperCase() !== '1D' && duration.toUpperCase() !== '1W' && duration.toUpperCase() !== '1M' && duration.toUpperCase() !== '1Y') {

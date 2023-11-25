@@ -51,25 +51,25 @@ export interface Order {
 }
 
 export interface OrderStatus {
-  symbol?: string,
-  orderId?: number;
-  orderListId?: number;
-  clientOrderId?: string;
-  price?: string;
-  origQty?: string;
-  executedQty?: string;
-  status?: string;
-  timeInForce?: string;
-  type?: string,
-  side?: string,
-  stopPrice?: string,
-  icebergQty?: string,
-  time?: number,
-  updateTime?: number,
-  isWorking?: true,
-  workingTime?: number,
-  origQuoteOrderQty?: string,
-  selfTradePreventionMode?: string
+  symbol: string,
+  orderId: number;
+  orderListId: number;
+  clientOrderId: string;
+  price: string;
+  origQty: string;
+  executedQty: string;
+  status: string;
+  timeInForce: string;
+  type: string,
+  side: string,
+  stopPrice: string,
+  icebergQty: string,
+  time: number,
+  updateTime: number,
+  isWorking: true,
+  workingTime: number,
+  origQuoteOrderQty: string,
+  selfTradePreventionMode: string
 }
 
 
@@ -90,7 +90,7 @@ export const cancelOrder = async (
     const response = await binance.cancel(symbol, orderId);
     return response;
   } catch (error) {
-    console.error(`An error occurred while cancelling the order: ${error.message}`);
+    console.error(`An error occurred while cancelling the order: ${error}`);
     throw error;
   }
 };
@@ -150,7 +150,7 @@ export const openOrderDone = (
   options: ConfigOptions,
 ) => {
   if (options.openOrders[ symbol.split("/").join("")] !== undefined) {
-    options.openOrders[ symbol.split("/").join("")] = options.openOrders[ symbol.split("/").join("")].filter(
+    options.openOrders[ symbol.split("/").join("")] = options.openOrders[symbol.split("/").join("")].filter(
       (order) => order.orderId !== orderId
     );
   }
@@ -160,7 +160,7 @@ export const checkOpenOrders = (
   symbol: string,
   options: ConfigOptions,
 ) => {
-  if (options.openOrders[symbol.split("/").join("")] !== undefined && openOrderDone[symbol.split("/").join("")]?.length > 0) {
+  if (options.openOrders[symbol.split("/").join("")] !== undefined && options.openOrders[symbol.split("/").join("")]?.length > 0) {
     return true;
   } else {
     return false;
@@ -246,4 +246,5 @@ export const handleOpenOrder = async (
     logToFile(JSON.stringify(error, null, 2));
     console.log(error);
   }
+  return ""
 };

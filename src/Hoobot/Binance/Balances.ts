@@ -62,7 +62,7 @@ export const getCurrentBalances = async (
 ): Promise<Balances> => {
   try {
     const balances = await binance.balance();
-    const currentBalances = {};
+    const currentBalances: Balances = {}
     for (const symbol in balances) {
       const { available, onOrder } = balances[symbol];
       const availableBalance = parseFloat(available);

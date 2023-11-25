@@ -49,49 +49,61 @@ import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indic
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Binance/Balances";
 import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
-import { time } from "console";
 
 export interface Indicators {
-  avg?: {
+  'avg': {
     [time: string]:  number;
   },
-  renko?: {
+  'renko': {
     [time: string]: RenkoBrick[];
   }
-  sma?: {
-    [time: string]:  number[];
-  },
-  ema?: {
+  'ema': {
     [time: string]: ema;
   },
-  macd?:  {
+  'macd':  {
     [time: string]: macd;
   },
-  rsi?:  {
+  'sma': {
+    [time: string]:  number[];
+  },
+  'rsi':  {
     [time: string]: number[];
   },
-  atr?:  {
+  'atr':  {
     [time: string]: number[];
   },
-  bollingerBands?:  {
+  'obv':  {
+    [time: string]: number[];
+  },
+  'cmf':  {
+    [time: string]: number[];
+  },
+  'stochasticOscillator':  {
+    [time: string]: [number[], number[]];
+  },
+  'stochasticRSI':  {
+    [time: string]: [number[], number[]];
+  },
+  'bollingerBands':  {
     [time: string]: [number[], number[], number[]];
   },
-  stochasticOscillator?:  {
-    [time: string]: [number[], number[]];
-  },
-  stochasticRSI?:  {
-    [time: string]: [number[], number[]];
-  },
-  obv?:  {
-    [time: string]: number[];
-  },
-  cmf?:  {
-    [time: string]: number[];
-  },
+  [key: string]: {},
 }
 
 export const reverseSign = (number: number) => {
   return -number;
+}
+
+interface Weights {
+  [key: string]: number; 
+}
+
+interface Checks {
+  [key: string]: string; 
+}
+
+interface Directions {
+  [key: string]: number; 
 }
 
 export const tradeDirection =  async (
@@ -106,7 +118,7 @@ export const tradeDirection =  async (
   const startTime = Date.now();
   const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
   let direction = 'HOLD';
-  const directions = {
+  const directions: Directions = {
     BUY: 0,
     SELL: 0,
     HOLD: 0,
@@ -121,7 +133,7 @@ export const tradeDirection =  async (
   } else {
     profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
   }
-  const weights = {
+  const weights: Weights = {
     SMAWeight: options.SMAWeight,
     EMAWeight: options.EMAWeight,
     MACDWeight: options.MACDWeight,
@@ -134,7 +146,7 @@ export const tradeDirection =  async (
     RenkoWeight: options.RenkoWeight,
   }
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
-    const checks = {
+    const checks: Checks = {
       SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[timeframeIndex]], options),
       Renko: checkRenkoSignals(consoleLogger, indicators.renko[timeframes[timeframeIndex]], options),
       EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[timeframeIndex]], options),
@@ -173,7 +185,7 @@ export const tradeDirection =  async (
       if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= options.directionAgreement) {
         direction = next;
         break;
-      } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= options.directionAgreement) {
+      } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= options.directionAgreement && next == "SELL") {
         direction = next;
         break;
       } else if (directions[actions[actionsIndex]] >= options.directionAgreement) {
@@ -372,9 +384,10 @@ export const calculateIndicators = (
     }
     logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
     indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
-    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], calculateBrickSize(indicators.atr[timeframes[i]], options));
+    options.renkoBrickSize = calculateBrickSize(indicators.atr[timeframes[i]], options);
+    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], options.renkoBrickSize);
     if (options.useRenko) {
-      logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]]);
+      logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]], options);
       indicators = subCalculateIndicators(consoleLogger, indicators.renko[timeframes[i]] as Candlestick[], symbol, indicators, timeframes[i], options);
     } else {
       indicators = subCalculateIndicators(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], symbol, indicators, timeframes[i], options);

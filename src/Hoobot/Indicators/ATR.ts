@@ -43,7 +43,7 @@ export const calculateATR = (
     const trueRange = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
     atrValues.push(trueRange);
   }
-  const atrSMA = calculateSMA(atrValues.map(atr => ({ close: atr})), period, source);
+  const atrSMA = calculateSMA(atrValues.map(atr => ({ close: atr} as Candlestick)), period, source);
   return atrSMA;
 }
 

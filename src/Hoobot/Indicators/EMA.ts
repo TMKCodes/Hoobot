@@ -26,7 +26,6 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Binance/Candlesticks";
-import { Indicators } from "../Modes/Algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
@@ -53,11 +52,11 @@ export const calculateEMA = (
     prices = candles.map((candle) => candle.low);
   }
   if (prices.length < length) {
-    return undefined;
+    return [];
   }
   let sum = 0;
   for (let i = 0; i < length; i++) {
-    sum += prices[i];
+    sum += prices[i] as number;
   }
   const initialEMA = sum / length;
   const smoothingFactor = 2 / (length + 1);
@@ -87,7 +86,6 @@ export const logEMASignals = (
     } else {
       signal = `Neutral`;
     }
-    let direction = "flat";
     if (prevShortEma !== undefined && prevLongEma !== undefined) {
       const isBullishCrossover = ema.short > ema.long && prevShortEma <= prevLongEma;
       const isBearishCrossover = ema.short < ema.long && prevShortEma >= prevLongEma;

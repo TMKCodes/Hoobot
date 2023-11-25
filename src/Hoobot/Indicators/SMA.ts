@@ -43,11 +43,11 @@ export const calculateSMA = (
   const smaValues: number[] = [];
   let sum = 0;
   for (let i = 0; i < candles.length; i++) {
-    sum += candles[i][source];
+    sum += (candles[i][source] as number);
     if (i >= period - 1) {
       const sma = sum / period;
       smaValues.push(sma);
-      sum -= candles[i - (period - 1)][source];
+      sum -= (candles[i - (period - 1)][source] as number);
     }
   }
   // console.log("SMA Values:", JSON.stringify(smaValues));

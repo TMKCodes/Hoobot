@@ -54,7 +54,7 @@ export const getTradeableSymbols = async (
         return { symbol: symbol.symbol, base: symbol.baseAsset, quote: symbol.quoteAsset }
       });
   } catch (error) {
-    console.error("Error in getTradeableSymbols:", error.message);
+    console.error("Error in getTradeableSymbols:", error);
     return []; // Return an empty array or handle the error as required.
   }
 };

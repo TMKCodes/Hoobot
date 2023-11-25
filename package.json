@@ -12,6 +12,7 @@
   "author": "Toni Lukkaroinen",
   "license": "ISC",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
     "@types/jest": "^29.5.3",
     "@types/node": "^20.4.2",
     "@types/play-sound": "^1.1.0",

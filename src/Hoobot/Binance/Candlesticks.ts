@@ -39,20 +39,21 @@ export interface Candlesticks {
 }
 
 export interface Candlestick {
-  symbol?: string,
-  interval?: string,
-  type?: string,
-  time?: number,
-  open?: number,
-  high?: number,
-  low?: number,
-  close?: number,
-  trades?: number,
-  volume?: number,
-  quoteVolume?: number,
-  buyVolume?: number,
-  quoteBuyVolume?: number,
-  isFinal?: boolean
+  symbol: string,
+  interval: string,
+  type: string,
+  time: number,
+  open: number,
+  high: number,
+  low: number,
+  close: number,
+  trades: number,
+  volume: number,
+  quoteVolume: number,
+  buyVolume: number,
+  quoteBuyVolume: number,
+  isFinal: boolean,
+  [key: string]: string | number | boolean,
 }
 
 export async function getLastCandlesticks(
@@ -159,18 +160,18 @@ export const listenForCandlesticks = async (
 }
 
 interface Candlerow {
-  opentime?: number,
-  open?: number,
-  high?: number,
-  low?: number,
-  close?: number,
-  volume?: number,
-  closetime?: number,
-  quoteVolume?: number,
-  trades?: number,
-  takerQtyBase?: number,
-  takerQtyQuote?: number,
-  unused?: number,
+  opentime: number,
+  open: number,
+  high: number,
+  low: number,
+  close: number,
+  volume: number,
+  closetime: number,
+  quoteVolume: number,
+  trades: number,
+  takerQtyBase: number,
+  takerQtyQuote: number,
+  unused: number,
 }
 
 export const readCsvFile = async (
@@ -220,7 +221,7 @@ export const downloadAndExtractZipFile = async (
     unlinkSync(zipFilePath);
     return true;
   } catch (error) {
-    console.error('Error:', error.message || error);
+    console.error('Error:', error);
   }
   return false;
 }

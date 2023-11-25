@@ -26,7 +26,6 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Binance/Candlesticks";
-import { Indicators } from "../Modes/Algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
@@ -55,7 +54,7 @@ export const logOBVSignals = (
 ) => {
   const currentOBV = obv[obv.length - 1];
   const prevOBV = obv[obv.length - 2];
-  const obvSMA = calculateSMA(obv.map((value) => ({ close: value })), 50, 'close'); 
+  const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
   consoleLogger.push(`OBV Value`, currentOBV.toFixed(7));
   consoleLogger.push(`OBV Smoothed`, obvSMA[obvSMA.length - 1].toFixed(7));
   const isBullish = currentOBV > prevOBV;
@@ -100,7 +99,7 @@ export const checkOBVSignals = (
     for(let i = 1; i < (options.obvHistoryLength + 1); i++) {
       const currentOBV = obv[obv.length - i];
       const prevOBV = obv[obv.length - (i + 1)];
-      const obvSMA = calculateSMA(obv.map((value) => ({ close: value })), 50, 'close'); 
+      const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
       const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
       const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
       const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;

@@ -89,6 +89,9 @@ const main = async () => {
         options.symbols = foundSymbols;
       }
       if (Array.isArray(options.symbols)) {
+        if(options.orderbooks === undefined) {
+          options.orderbooks = {}
+        }
         for (const symbol of options.symbols) {
           options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
         }
@@ -96,9 +99,13 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
+          
           listenForOrderbooks(binance, symbol, (symbol: string, orderbook: Orderbook) => {
-            if(options.orderbooks[symbol.split("/").join("")] === undefined) {
-              options.orderbooks[symbol.split("/").join("")] =  {
+            if(options.orderbooks === undefined) {
+              options.orderbooks = {}
+            }
+            if(options.orderbooks !== undefined && options.orderbooks[symbol.split("/").join("")] === undefined) {
+              options.orderbooks[symbol.split("/").join("")] = {
                 bids: [],
                 asks: []
               }
@@ -112,13 +119,19 @@ const main = async () => {
       }
     } else if (options.mode === "hilow") {
       for (const symbol of options.symbols) {
+        if(options.orderbooks === undefined) {
+          options.orderbooks = {}
+        }
         options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
       }
       for (const symbol of options.symbols) {
         const filter = await getFilters(binance, symbol);
         symbolFilters[symbol.split("/").join("")] = filter;
         listenForOrderbooks(binance, symbol, (_symbol: string, orderbook: Orderbook) => {
-          if(options.orderbooks[symbol.split("/").join("")] === undefined) {
+          if(options.orderbooks === undefined) {
+            options.orderbooks = {}
+          }
+          if(options.orderbooks !== undefined && options.orderbooks[symbol.split("/").join("")] === undefined) {
             options.orderbooks[symbol.split("/").join("")] =  {
               bids: [],
               asks: []
@@ -157,7 +170,7 @@ export const recalculateNewOptions = (options: ConfigOptions) => {
       writeFileSync(filePath, JSON.stringify(options, null, 2));
     }
   } catch (error) {
-    console.error('Error while recalculating options:', error.message);
+    console.error('Error while recalculating options:', error);
   }
 };
 
@@ -167,11 +180,11 @@ const calculateBalance = (options: ConfigOptions): number => {
 
   for (const symbol of options.symbols) {
     const symbolKey = symbol.split('/').join('');
-    if (options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
+    if (options.tradeHistory !== undefined && options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
       const lastTrade = options.tradeHistory[symbolKey].slice(-1)[0];
       const lastPrice = parseFloat(lastTrade.price);
       const [base, quote] = symbol.split('/');
-      if (options.balances[base] !== null) {
+      if (options.balances !== undefined && options.balances[base] !== null) {
         const baseBalance = options.balances[base] * lastPrice;
         balance += baseBalance;
       }
@@ -181,18 +194,28 @@ const calculateBalance = (options: ConfigOptions): number => {
     }
   }
   uniqueQuoteCurrencies.forEach((quote) => {
-    balance += options.balances[quote];
+    if (options.balances !== undefined) {
+      balance += options.balances[quote];
+    }
   });
   return balance;
 };
 
 const updateOptionsForWorseSimulation = (options: ConfigOptions, prevOptions: ConfigOptions) => {
-  options.minimumProfitSell = prevOptions.minimumProfitSell + 0.05;
-  options.minimumProfitBuy = prevOptions.minimumProfitBuy - 0.05;
-  options.stopLossPNL = prevOptions.stopLossPNL + 0.01;
-  options.takeProfitPNL = prevOptions.takeProfitPNL + 0.05;
-  options.takeProfitMinimumPNL = prevOptions.takeProfitMinimumPNL + 0.01;
-  options.takeProfitMinimumPNLDrop = prevOptions.takeProfitMinimumPNLDrop + 0.001;
+  if (prevOptions !== undefined 
+    && prevOptions.minimumProfitSell !== undefined 
+    && prevOptions.minimumProfitBuy !== undefined 
+    && prevOptions.stopLossPNL !== undefined
+    && prevOptions.takeProfitPNL !== undefined
+    && prevOptions.takeProfitMinimumPNL !== undefined
+    && prevOptions.takeProfitMinimumPNLDrop !== undefined) {
+    options.minimumProfitSell = prevOptions.minimumProfitSell + 0.05;
+    options.minimumProfitBuy = prevOptions.minimumProfitBuy - 0.05;
+    options.stopLossPNL = prevOptions.stopLossPNL + 0.01;
+    options.takeProfitPNL = prevOptions.takeProfitPNL + 0.05;
+    options.takeProfitMinimumPNL = prevOptions.takeProfitMinimumPNL + 0.01;
+    options.takeProfitMinimumPNLDrop = prevOptions.takeProfitMinimumPNLDrop + 0.001;
+  }
 };
 
 const initBruteForceOptions = (
@@ -202,12 +225,20 @@ const initBruteForceOptions = (
   if(options.simulateBruteForce) {
     if (existsSync(filePath)) {
       options = JSON.parse(readFileSync(filePath, 'utf-8') || "{}");
-      options.minimumProfitSell = options.minimumProfitSell + 0.05;
-      options.minimumProfitBuy = options.minimumProfitBuy - 0.05;
-      options.stopLossPNL = options.stopLossPNL + 0.01;
-      options.takeProfitPNL = options.takeProfitPNL + 0.05;
-      options.takeProfitMinimumPNL = options.takeProfitMinimumPNL + 0.01;
-      options.takeProfitMinimumPNLDrop = options.takeProfitMinimumPNLDrop + 0.001;
+      if (options !== undefined 
+        && options.minimumProfitSell !== undefined 
+        && options.minimumProfitBuy !== undefined 
+        && options.stopLossPNL !== undefined
+        && options.takeProfitPNL !== undefined
+        && options.takeProfitMinimumPNL !== undefined
+        && options.takeProfitMinimumPNLDrop !== undefined) {
+        options.minimumProfitSell = options?.minimumProfitSell + 0.05;
+        options.minimumProfitBuy = options?.minimumProfitBuy - 0.05;
+        options.stopLossPNL = options?.stopLossPNL + 0.01;
+        options.takeProfitPNL = options?.takeProfitPNL + 0.05;
+        options.takeProfitMinimumPNL = options?.takeProfitMinimumPNL + 0.01;
+        options.takeProfitMinimumPNLDrop = options?.takeProfitMinimumPNLDrop + 0.001;
+      }
     } else {
       options.minimumProfitSell = 0.00;
       options.minimumProfitBuy = 0;
@@ -259,7 +290,7 @@ const simulate = async () => {
         if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
           return;
         }
-        await simulateAlgorithmic(symbol, candlesticks, options, options.balances, symbolFilters[symbol.split("/").join("")]);
+        await simulateAlgorithmic(symbol, candlesticks, options, options.balances!, symbolFilters[symbol.split("/").join("")]);
       });
     }
     recalculateNewOptions(options);

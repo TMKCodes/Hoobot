@@ -26,7 +26,6 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Binance/Candlesticks";
-import { Indicators } from "../Modes/Algorithmic";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMA } from "./EMA";
@@ -112,7 +111,7 @@ export const calculateMACD = (
   for(let i = 0; i < shortEMAs.length; i++) {
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   } 
-  let signalLine = calculateEMA(macdLine.map((value) => ({ close: value })), signalLength, source);
+  let signalLine = calculateEMA(macdLine.map((value) => ({ close: value } as Candlestick)), signalLength, source);
   if(signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
   }

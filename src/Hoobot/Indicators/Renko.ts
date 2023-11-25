@@ -67,10 +67,10 @@ export const calculateRenko = (
   return renko;
 }
 
-
 export const logRenkoSignals = (
   consoleLogger: ConsoleLogger,
-  renkoData: RenkoBrick[]
+  renkoData: RenkoBrick[],
+  options: ConfigOptions
 ) => {
   const lastBrick = renkoData[renkoData.length - 1];
   const prevBrick = renkoData[renkoData.length - 2];
@@ -81,9 +81,10 @@ export const logRenkoSignals = (
     const isUpwardDirection = lastBrick.close > prevBrick.close;
     const isDownwardDirection = lastBrick.close < prevBrick.close;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-    if (isBullishCrossover) {
+    const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= options.renkoBrickSize;
+    if (isBullishCrossover && isPriceMoveBeyondThreshold) {
       signal = `Bullish Crossover`;
-    } else if (isBearishCrossover) {
+    } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
       signal = `Bearish Crossover`;
     } else  if (isUpwardDirection) {
       signal = `Upward`;
@@ -113,18 +114,13 @@ export const checkRenkoSignals = (
     const prevBrick = renkoData[renkoData.length - 2];
     const isBullishCrossover = lastBrick?.color === 'green' && prevBrick?.color === 'red';
     const isBearishCrossover = lastBrick?.color === 'red' && prevBrick?.color === 'green';
-    const isUpwardDirection = lastBrick?.close > prevBrick?.close;
-    const isDownwardDirection = lastBrick?.close < prevBrick?.close;
-    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-    if (isBullishCrossover) {
+    const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= options.renkoBrickSize;
+    if (isBullishCrossover && isPriceMoveBeyondThreshold) {
       options.RenkoWeight = 2;
       check = 'BUY';
-    } else if (isBearishCrossover) {
+    } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
       options.RenkoWeight = 2;
       check = 'SELL';
-    } else if (isFlatDirection) {
-      options.RenkoWeight = 1;
-      check = 'HOLD';
     } else {
       options.RenkoWeight = 1;
       check = 'HOLD';
