@@ -281,6 +281,9 @@ const simulate = async () => {
         symbolFilters[symbol.split("/").join("")] = filter;
       }
       const filePath = `./simulation/${options.startTime}/configuration.json`;
+      if(!existsSync(`./simulation`)) {
+        mkdirSync(`./simulation`);
+      }
       const directory = path.dirname(filePath);
       if (!existsSync(directory)) {
         mkdirSync(directory, { recursive: true });
