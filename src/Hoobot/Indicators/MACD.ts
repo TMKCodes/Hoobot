@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { sign } from "crypto";
 import { Candlestick } from "../Binance/Candlesticks";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -43,53 +44,55 @@ export const logMACDSignals = (
   const macdLine = macd.macdLine[macd.macdLine.length - 1];
   const signalLine = macd.signalLine[macd.signalLine.length - 1];
   const histogram = macd.histogram[macd.histogram.length - 1];
-  const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
-  const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
-  const prevHistogram = macd.histogram[macd.histogram.length - 2];
-  const isBullishCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
-  const isBearishCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
-  const isBullishDivergence = macdLine > prevMacdLine && histogram > prevHistogram;
-  const isBearishDivergence = macdLine < prevMacdLine && histogram < prevHistogram;
-  const isBullishZeroLineCrossover = macdLine > 0 && prevMacdLine <= 0;
-  const isBearishZeroLineCrossover = macdLine < 0 && prevMacdLine >= 0;
-  const isBullishCenterlineCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
-  const isBearishCenterlineCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
-  const isStrongBullishTrend = macdLine > 100 && prevMacdLine <= 100;
-  const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
-  const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
-  const isNegativeHistogramDivergence = histogram < 0 && prevHistogram > 0;
-  let signal = "Neutral";
-  if (isBullishCrossover) {
-    signal = 'Bullish Line Crossover';
-  } else if (isBearishCrossover) {
-    signal = 'Bearish Line Crossover';
-  } else if (isBullishDivergence) {
-    signal = 'Bullish Divergence';
-  } else if (isBearishDivergence) {
-    signal = 'Bearish Divergence';
-  } else if (isBullishZeroLineCrossover) {
-    signal = 'Bullish Zero Line Crossover';
-  } else if (isBearishZeroLineCrossover) {
-    signal = 'Bearish Zero Line Crossover';
-  } else if (isBullishCenterlineCrossover) {
-    signal = 'Bullish Centerline Crossover';
-  } else if (isBearishCenterlineCrossover) {
-    signal = 'Bearish Centerline Crossover';
-  } else if (isStrongBullishTrend) {
-    signal = 'Strong Bullish Trend';
-  } else if (isStrongBearishTrend) {
-    signal = 'Strong Bearish Trend';
-  } else if (isPositiveHistogramDivergence) {
-    signal = 'Positive Histogram Divergence';
-  } else if (isNegativeHistogramDivergence) {
-    signal = 'Negative Histogram Divergence';
+  if(macdLine !== undefined && signalLine !== undefined && histogram !== undefined) {
+    const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
+    const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
+    const prevHistogram = macd.histogram[macd.histogram.length - 2];
+    const isBullishCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
+    const isBearishCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
+    const isBullishDivergence = macdLine > prevMacdLine && histogram > prevHistogram;
+    const isBearishDivergence = macdLine < prevMacdLine && histogram < prevHistogram;
+    const isBullishZeroLineCrossover = macdLine > 0 && prevMacdLine <= 0;
+    const isBearishZeroLineCrossover = macdLine < 0 && prevMacdLine >= 0;
+    const isBullishCenterlineCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
+    const isBearishCenterlineCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
+    const isStrongBullishTrend = macdLine > 100 && prevMacdLine <= 100;
+    const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
+    const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
+    const isNegativeHistogramDivergence = histogram < 0 && prevHistogram > 0;
+    let signal = "Neutral";
+    if (isBullishCrossover) {
+      signal = 'Bullish Line Crossover';
+    } else if (isBearishCrossover) {
+      signal = 'Bearish Line Crossover';
+    } else if (isBullishDivergence) {
+      signal = 'Bullish Divergence';
+    } else if (isBearishDivergence) {
+      signal = 'Bearish Divergence';
+    } else if (isBullishZeroLineCrossover) {
+      signal = 'Bullish Zero Line Crossover';
+    } else if (isBearishZeroLineCrossover) {
+      signal = 'Bearish Zero Line Crossover';
+    } else if (isBullishCenterlineCrossover) {
+      signal = 'Bullish Centerline Crossover';
+    } else if (isBearishCenterlineCrossover) {
+      signal = 'Bearish Centerline Crossover';
+    } else if (isStrongBullishTrend) {
+      signal = 'Strong Bullish Trend';
+    } else if (isStrongBearishTrend) {
+      signal = 'Strong Bearish Trend';
+    } else if (isPositiveHistogramDivergence) {
+      signal = 'Positive Histogram Divergence';
+    } else if (isNegativeHistogramDivergence) {
+      signal = 'Negative Histogram Divergence';
+    }
+    consoleLogger.push("MACD", {
+      line: macdLine.toFixed(7),
+      signalline: signalLine.toFixed(7),
+      histogram: histogram.toFixed(7),
+      signal: signal,
+    })
   }
-  consoleLogger.push("MACD", {
-    line: macdLine.toFixed(7),
-    signalline: signalLine.toFixed(7),
-    histogram: histogram.toFixed(7),
-    signal: signal,
-  })
 }
 
 export const calculateMACD = (
@@ -141,25 +144,27 @@ export const checkMACDSignals = (
     const prevHistogram = macd.histogram[macd.histogram.length - 2];
     const currentMacdLine = macd.macdLine[macd.macdLine.length -1];
     const currentSignalLine = macd.signalLine[macd.signalLine.length -1];
-    const isPrevHistogramPositive = prevHistogram > 0;
-    const isPrevHistogramNegative = prevHistogram < 0;
-    const isHistogramPositive = currentHistogram > 0;
-    const isHistogramNegative = currentHistogram < 0;
-    const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
-    const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
-    const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
-    const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
-    const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
-    const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
-    if(isPrevHistogramNegative && isHistogramPositive) {
-      check = 'BUY';
-    } else if (isPrevHistogramPositive && isHistogramNegative) {
-      check = 'SELL';
-    } else {
-      if (isMacdLineAboveSignalLine && isHistogramNegative) {
+    if(currentHistogram !== undefined && prevHistogram !== undefined && currentMacdLine !== undefined && currentSignalLine !== undefined) {
+      const isPrevHistogramPositive = prevHistogram > 0;
+      const isPrevHistogramNegative = prevHistogram < 0;
+      const isHistogramPositive = currentHistogram > 0;
+      const isHistogramNegative = currentHistogram < 0;
+      const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
+      const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
+      const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
+      const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
+      const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
+      const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
+      if(isPrevHistogramNegative && isHistogramPositive) {
         check = 'BUY';
-      } else if (isMacdLineBelowSignalLine && isHistogramNegative) {
+      } else if (isPrevHistogramPositive && isHistogramNegative) {
         check = 'SELL';
+      } else {
+        if (isMacdLineAboveSignalLine && isHistogramNegative) {
+          check = 'BUY';
+        } else if (isMacdLineBelowSignalLine && isHistogramNegative) {
+          check = 'SELL';
+        }
       }
     }
   }
