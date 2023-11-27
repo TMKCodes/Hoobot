@@ -89,43 +89,47 @@ export const calculateRSI = (
       losses.push(Math.abs(change));
     }
   }
-  let avgGain = gains.slice(0, length).reduce((a, b) => a + b) / length;
-  let avgLoss = losses.slice(0, length).reduce((a, b) => a + b) / length;
-  const rsArray: number[] = [];
-  for (let i = length; i < closePrices.length; i++) {
-    avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
-    avgLoss = ((avgLoss * (length - 1)) + losses[i - 1]) / length;
+  if(gains.length > length && losses.length > length) {
+    let avgGain = gains.slice(0, length).reduce((a, b) => a + b) / length;  
+    let avgLoss = losses.slice(0, length).reduce((a, b) => a + b) / length;
+    const rsArray: number[] = [];
+    for (let i = length; i < closePrices.length; i++) {
+      avgGain = ((avgGain * (length - 1)) + gains[i - 1]) / length;
+      avgLoss = ((avgLoss * (length - 1)) + losses[i - 1]) / length;
 
-    const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-    const rsi = 100 - (100 / (1 + rs));
+      const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+      const rsi = 100 - (100 / (1 + rs));
 
-    rsArray.push(rsi);
-  }
-  if(smoothingType == "SMA" && smoothing > 1) {
-    for (let i = smoothing - 1; i < rsArray.length; i++) {
-      let sum = 0;
-      for (let j = 0; j < smoothing; j++) {
-        sum += rsArray[i - j];
+      rsArray.push(rsi);
+    }
+    if(smoothingType == "SMA" && smoothing > 1) {
+      for (let i = smoothing - 1; i < rsArray.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < smoothing; j++) {
+          sum += rsArray[i - j];
+        }
+        const smoothedRS = sum / smoothing;
+        rsArray[i] = smoothedRS;
       }
-      const smoothedRS = sum / smoothing;
-      rsArray[i] = smoothedRS;
-    }
-  } else if(smoothingType == "EMA" && smoothing > 1) {
-    for (let i = smoothing; i < rsArray.length; i++) {
-      const alpha = 2 / (smoothing + 1);
-      rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
-    }
-  } else if(smoothingType == "WMA" && smoothing > 1) {
-    for (let i = smoothing; i < rsArray.length; i++) {
-      let sum = 0;
-      for (let j = 0; j < smoothing; j++) {
-        sum += rsArray[i - j];
+    } else if(smoothingType == "EMA" && smoothing > 1) {
+      for (let i = smoothing; i < rsArray.length; i++) {
+        const alpha = 2 / (smoothing + 1);
+        rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
       }
-      const weightedAverage = sum / ((smoothing * (smoothing + 1)) / 2);
-      rsArray[i] = weightedAverage;
+    } else if(smoothingType == "WMA" && smoothing > 1) {
+      for (let i = smoothing; i < rsArray.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < smoothing; j++) {
+          sum += rsArray[i - j];
+        }
+        const weightedAverage = sum / ((smoothing * (smoothing + 1)) / 2);
+        rsArray[i] = weightedAverage;
+      }
     }
+    return rsArray;
+  } else {
+    return [];
   }
-  return rsArray;
 }
 
 export const checkRSISignals = (
