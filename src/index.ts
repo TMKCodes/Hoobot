@@ -280,7 +280,8 @@ const simulate = async () => {
         const filter = await getFilters(binance, symbol);
         symbolFilters[symbol.split("/").join("")] = filter;
       }
-      const filePath = `./simulation/${options.startTime}/configuration.json`;
+      const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+      const filePath = `./simulation/${sanitizedStartTime}/configuration.json`;
       if(!existsSync(`./simulation`)) {
         mkdirSync(`./simulation`);
       }

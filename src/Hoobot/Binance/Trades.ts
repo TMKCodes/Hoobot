@@ -393,7 +393,8 @@ export const simulateSell = async (
     const quoteCoin = symbol.split("/")[1];
     balances[baseCoin] = balances[baseCoin] - baseQuantity;
     balances[quoteCoin] = balances[quoteCoin] + quoteQuontityWithoutFee;
-    const filePath = `./simulation/${options.startTime}/trades.json`;
+    const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+    const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
     if (!existsSync(directory)) {
       mkdirSync(directory, { recursive: true });
@@ -479,7 +480,8 @@ export const simulateBuy = async (
     const quoteCoin = symbol.split("/")[1];
     balances[baseCoin] = balances[baseCoin] + baseQuantity;
     balances[quoteCoin] = balances[quoteCoin] - quoteQuantity;
-    const filePath = `./simulation/${options.startTime}/trades.json`;
+    const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+    const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
     if (!existsSync(directory)) {
       mkdirSync(directory, { recursive: true });
