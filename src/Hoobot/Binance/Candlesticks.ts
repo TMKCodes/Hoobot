@@ -27,7 +27,7 @@
 
 import Binance from 'node-binance-api';
 import { CandlestickInterval, ConfigOptions } from '../Utilities/args';
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdir, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import path from 'path';
 import { candlestickArray } from '../..';
@@ -266,6 +266,14 @@ export const downloadHistoricalCandlesticks = async (
           const formattedMonth = addLeadingZero(month);
           const url = `https://data.binance.vision/data/spot/monthly/klines/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}/${intervals[intervalIndex]}/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.zip`;
           const destinationPath = './candlestore/';
+          if (!existsSync(destinationPath)) {
+            try {
+              mkdirSync(destinationPath);
+              console.log(`Directory '${destinationPath}' created successfully.`);
+            } catch (error) {
+              console.error(`Error creating directory '${destinationPath}': ${error.message}`);
+            }
+          }
           const filePath = `./candlestore/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.csv`;
           if(!existsSync(filePath)) {
             const dlresult = await downloadAndExtractZipFile(url, destinationPath);
