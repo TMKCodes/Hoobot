@@ -28,7 +28,7 @@
 import { Orderbook } from "../Binance/Orderbook";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForce } from "../Binance/Trades";
+import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForceSkip } from "../Binance/Trades";
 import { Candlestick } from "../Binance/Candlesticks";
 
 
@@ -117,8 +117,8 @@ export const checkProfitSignals = (
   let check = 'HOLD';
   let lastPNL: number = 0;
   let unrealizedPNL: number = 0;
-  const force = readForce(symbol.split("/").join(""))
-  if (force.skip === "true") {
+  const skip = readForceSkip(symbol.split("/").join(""))
+  if (skip === true) {
     check = "SKIP";
     consoleLogger.push("PNL%", {
       previous: 0,

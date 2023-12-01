@@ -30,7 +30,7 @@ import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder, checkOpenOrders, addOpenOrder } from "./Orders";
+import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
@@ -175,16 +175,16 @@ export const updateForce = (
   writeFileSync(forcePath, JSON.stringify(force));
 }
 
-export const readForce = (
+export const readForceSkip = (
   symbol: string
-) => {
+):boolean => {
   const forcePath = "force.json";
   if(!existsSync(forcePath)) {
     return false;
   }
   const file = readFileSync(forcePath, "utf-8");
   const force = JSON.parse(file !== "" ? file : "{}");
-  return force[symbol.split("/").join("")];
+  return force[symbol.split("/").join("")].skip;
 }
 
 export const sell = async (
@@ -209,7 +209,7 @@ export const sell = async (
       if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
           return false;
         }
       }
@@ -284,7 +284,7 @@ export const buy = async (
       if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForce(symbol.split("/").join("")) === false) {
+        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
           return false;
         }
       }
