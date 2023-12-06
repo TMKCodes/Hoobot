@@ -39,8 +39,12 @@ interface consoleData {
 export const consoleLogger = (): ConsoleLogger => {
   let DisplayData: consoleData = {};
   const push = (key: string, value: any | any[]) => {
-    if(process.env.DEBUG === "true") {
-      console.log(`${key}: ${value}`);
+    if (process.env.DEBUG === "true") {
+      if (typeof value === 'object') {
+        console.log(`${key}: ${JSON.stringify(value, null, 2)}`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
     }
     if (DisplayData[key] !== undefined) {
       return logger;
