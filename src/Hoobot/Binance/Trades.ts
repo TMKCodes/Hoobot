@@ -184,7 +184,14 @@ export const readForceSkip = (
   }
   const file = readFileSync(forcePath, "utf-8");
   const force = JSON.parse(file !== "" ? file : "{}");
-  return force[symbol.split("/").join("")].skip;
+  if(force[symbol.split("/").join("")] === undefined) {
+    return false;
+  }
+  const skip = force[symbol.split("/").join("")].skip;
+  if (skip === undefined) {
+    return false;
+  }
+  return skip;
 }
 
 export const sell = async (
