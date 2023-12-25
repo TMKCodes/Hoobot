@@ -220,9 +220,6 @@ export const sell = async (
           return false;
         }
       }
-      if(await openOrders(binance, symbol) !== false) {
-        return false;
-      }
       const order: Order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
@@ -294,9 +291,6 @@ export const buy = async (
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
           return false;
         }
-      }
-      if(await openOrders(binance, symbol) !== false) {
-        return false;
       }
       const order: Order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       play(soundFile);
