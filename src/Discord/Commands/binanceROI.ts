@@ -26,34 +26,28 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
+import fs from 'fs';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, calculateROI, getTradeHistory } from '../../Hoobot/Binance/Trades';
+import { getBalancesWith } from '../../Hoobot/Binance/Balances';
 
 export default {
   builder: new SlashCommandBuilder()
     .setName("roi")
-    .setDescription("Calculates current possible PNL% for next trade.")
-    .addStringOption(option =>
-      option.setName('symbol')
-        .setDescription('The symbol to check')),
+    .setDescription("Calculates ROI since first recorded balance."),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
-    const symbol: string = interaction.options.getString('symbol').toUpperCase();
-    if (!symbol) {
-      await interaction.reply("Please provide a valid symbol to check.");
-      return;
+    const currentBalances = await getBalancesWith(binance, "USDT");
+    if (!fs.existsSync('balances.json')) {
+      await interaction.reply("There are no stored balances in balances.json file yet. Investigate!");
     }
-    try {
-      const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
-      const roi: number[] = calculateROI(tradeHistory);
-      if (symbol.split("/").length >= 2) {
-        return await interaction.reply(`ROI for ${symbol}: ${roi[0].toFixed(7)} ${symbol.split("/")[0]} / ${roi[1].toFixed(7)} ${symbol.split("/")[1]}.`);
-      } else {
-        return await interaction.reply(`ROI for ${symbol}: ${roi[0].toFixed(7)} quote / ${roi[1].toFixed(7)} base.`);
-      }
-    } catch (error) {
-      console.error('Error fetching trade history:', error);
-      await interaction.reply('An error occurred while fetching trade history.');
-    }
+    const storedBalances = JSON.parse(fs.readFileSync("balances.json", 'utf-8') || "[]");
+    const totalCurrentFiat = Object.values(currentBalances)
+                            .reduce((acc, cur) => acc + cur.fiat, 0);
+    const totalFirstFiat = Object.values(storedBalances[0][Object.keys(storedBalances[0])[0]] as Record<string, { crypto: number, fiat: number }>)
+                            .reduce((acc, cur) => acc + cur.fiat, 0);
+    const diff = totalCurrentFiat - totalFirstFiat;
+    const roi = ((totalCurrentFiat - totalFirstFiat) / totalFirstFiat) * 100;
+
+    await interaction.reply(`Initial balance: ${totalFirstFiat.toFixed(2)} USDT\r\nCurrent balance. ${totalCurrentFiat.toFixed(2)} USDT\r\nDifference: ${diff.toFixed(2)} USDT\r\nROI: ${roi.toFixed(2)} %`);
   }
 }

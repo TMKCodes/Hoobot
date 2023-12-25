@@ -89,8 +89,15 @@ export const getBalancesWith = async (
   for (const symbol of symbols) {
     if (balances[symbol] > 0) {
       let fiatAmount = 0;
-      if (priceSymbols.includes(symbol + fiat)) {
+      if (symbol === fiat) {
+        fiatAmount = balances[symbol];
+      } else if (priceSymbols.includes(symbol + fiat)) {
         fiatAmount = prices[symbol + fiat] * balances[symbol];
+      } else if (priceSymbols.includes(fiat + symbol)) {
+        fiatAmount = balances[symbol] / prices[fiat + symbol];
+      } else {
+        let tempAmount = balances[symbol] / prices['BTC' + symbol];
+        fiatAmount = prices[symbol + fiat] * tempAmount; 
       }
       newBalances[symbol] = { 
         crypto: balances[symbol],
