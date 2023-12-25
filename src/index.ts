@@ -320,8 +320,6 @@ if (options.simulate === true) {
   // }
   simulate();
 } else {
-  while (true) {
-    main();
-  }
+  main();
 }
 
