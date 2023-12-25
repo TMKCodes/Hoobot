@@ -277,9 +277,9 @@ export const buy = async (
     const quoteBalance = options.balances![symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
-    let maxQuantityuInQuote = quoteBalance;
-    maxQuantityuInQuote = maxBuyAmount(symbol, maxQuantityuInQuote, options);
-    const quantityInBase = (maxQuantityuInQuote / price);
+    let maxQuantityInQuote = quoteBalance;
+    maxQuantityInQuote = maxBuyAmount(symbol, maxQuantityInQuote, options);
+    const quantityInBase = (maxQuantityInQuote / price);
     const roundedPrice = binance.roundStep(price, filter.tickSize);
     const roundedQuantityInBase = binance.roundStep(quantityInBase, filter.stepSize);
     const roundedQuantityInQuote = binance.roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
@@ -288,7 +288,12 @@ export const buy = async (
       if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
+        if (options.minimumProfitBuy === 0) {
+          options.minimumProfitBuy = Number.MIN_SAFE_INTEGER;
+        }
         if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
+          const msg = `Hold until positive is true and unrealized PNL is less than minimumProfitBuy and skip is false.`;
+          sendMessageToChannel(discord, options.discordChannelID, msg);
           return false;
         }
       }
