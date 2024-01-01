@@ -1,13 +1,12 @@
 [Unit]
-Description=Binance Bot Service
-After=network.target
+Description=Hoobot Service
 
 [Service]
 Type=simple
-User=tonto
-WorkingDirectory=/home/tonto/Repositories/Binance-Node-bot
-ExecStart=/usr/bin/npm run start
-Restart=on-failure
+Environment=PATH=$HOME/.nvm/versions/node/v20.10.0/bin/:/usr/local/bin:/usr/bin:/bin
+ExecStart=$HOME/.nvm/versions/node/v20.10.0/bin/npm run start
+WorkingDirectory=%h/hoobot-dev
+Restart=always
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

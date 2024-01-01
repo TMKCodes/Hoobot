@@ -47,7 +47,20 @@ export default {
                             .reduce((acc, cur) => acc + cur.fiat, 0);
     const diff = totalCurrentFiat - totalFirstFiat;
     const roi = ((totalCurrentFiat - totalFirstFiat) / totalFirstFiat) * 100;
+    const totalFiatBalances = storedBalances.map((entry: any) => {
+      const balances = entry[Object.keys(entry)[0]] as Record<string, { crypto: number, fiat: number }>;
+      return Object.values(balances).reduce((acc, balance) => acc + balance.fiat, 0);
+    });
+    const validFiatBalances = totalFiatBalances.filter((balance: number) => typeof balance === 'number' && !isNaN(balance));
+    const maxFiat = Math.max(...validFiatBalances);     
+    const maxDiff = maxFiat - totalFirstFiat;
+    const maxRoi = ((maxFiat - totalFirstFiat) / totalFirstFiat) * 100;
 
-    await interaction.reply(`Initial balance: ${totalFirstFiat.toFixed(2)} USDT\r\nCurrent balance. ${totalCurrentFiat.toFixed(2)} USDT\r\nDifference: ${diff.toFixed(2)} USDT\r\nROI: ${roi.toFixed(2)} %`);
+    let msg = '```';
+    msg += `Initial Balance: ${totalFirstFiat.toFixed(2)} USDT\r\n\r\n`;
+    msg += `Current Balance: ${totalCurrentFiat.toFixed(2)} USDT\r\nCurrent Difference: ${diff.toFixed(2)} USDT\r\nCurrent ROI: ${roi.toFixed(2)} %\r\n\r\n`;
+    msg += `Max Balance: ${maxFiat.toFixed(2)} USDT\r\nMax Difference: ${maxDiff.toFixed(2)} USDT\r\nMax ROI: ${maxRoi.toFixed(2)} %\r\n\r\n`;
+    msg += '```';
+    await interaction.reply(msg);
   }
 }
