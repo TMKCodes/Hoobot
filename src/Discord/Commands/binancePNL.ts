@@ -49,7 +49,10 @@ export default {
       }
       pnlPercentage += lastPNL - commission;
     }
-    return await interaction.reply(`PNL% for ${symbol} over ${duration.toUpperCase()}: ${pnlPercentage.toFixed(2)}%.`);
+    let msg = '```';
+    msg += `PNL% for ${symbol} over ${duration.toUpperCase()}: ${pnlPercentage.toFixed(2)}%.\r\n`;
+    msg += '```';
+    return await interaction.reply(``);
   },
 };
 

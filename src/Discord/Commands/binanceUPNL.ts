@@ -51,11 +51,25 @@ export default {
       if (lastTrade.isBuyer === true) {
         const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
         const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice) - options.tradeFee;
-        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **BUY** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentHighestBidPrice}** price: **${pnl.toFixed(2)}%**`);
+        let msg = '```';
+        msg += `Symbol ${lastTrade.symbol}.\r\n`;
+        msg += `Previous BUY order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;
+        msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("FI-fi")}\r\n`;
+        msg += `The order amount in quote asset was ${lastTrade.qty}\r\n`;
+        msg += `Unrealized PNL% at ${currentHighestBidPrice} price: ${pnl.toFixed(2)}%\r\n`;
+        msg += '```';
+        await interaction.reply(msg);
       } else {
         const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); 
         const pnl = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentLowestAskPrice) - options.tradeFee;
-        await interaction.reply(`>>> Symbol **${lastTrade.symbol}**.\r\nPrevious **SELL** order at **${parseFloat(lastTrade.price).toFixed(2)}** price\r\nThe order amount in quote asset was **${lastTrade.qty}**\r\nUnrealized PNL% at **${currentLowestAskPrice}** price: **${pnl.toFixed(2)}%**`);
+        let msg = '```';
+        msg += `Symbol ${lastTrade.symbol}.\r\n`;
+        msg += `Previous SELL order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;
+        msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("FI-fi")}\r\n`;
+        msg += `The order amount in quote asset was ${lastTrade.qty}\r\n`;
+        msg += `Unrealized PNL% at ${currentLowestAskPrice} price: ${pnl.toFixed(2)}%`;
+        msg += '```';
+        await interaction.reply(msg);
       }
 
     } catch (error) {

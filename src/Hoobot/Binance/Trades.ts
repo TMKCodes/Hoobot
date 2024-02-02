@@ -199,6 +199,7 @@ export const sell = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
+  profit: string,
   orderBook: Orderbook,
   filter: Filter,
   options: ConfigOptions,
@@ -216,16 +217,28 @@ export const sell = async (
       if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
-          return false;
+        if (profit !== "STOP_LOSS") { 
+          if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
+            consoleLogger.push("error", "Not positive trade")
+            return false;
+          }
         }
       }
+      console.log("FUCK THIS!");
       const order: Order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
-      const orderMsg = `>>> **SELL** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      logToFile(orderMsg);
+      let msg = '```';
+      msg += `SELL ID: ${order.orderId}\r\n`;
+      msg += `Symbol: ${symbol}\r\n`;
+      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
+      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
+      msg += `Price: ${roundedPrice}\r\n`;
+      msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
+      msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+      msg += '```';
+      sendMessageToChannel(discord, options.discordChannelID, msg);
+      logToFile(msg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
       updateBuyAmount(symbol, roundedQuantityInBase * roundedPrice, options);
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
@@ -269,6 +282,7 @@ export const buy = async (
   binance: Binance,
   consoleLogger: ConsoleLogger,
   symbol: string,
+  profit: string,
   orderBook: any,
   filter: Filter,
   options: ConfigOptions,
@@ -291,18 +305,27 @@ export const buy = async (
         if (options.minimumProfitBuy === 0) {
           options.minimumProfitBuy = Number.MIN_SAFE_INTEGER;
         }
-        if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
-          const msg = `Hold until positive is true and unrealized PNL is less than minimumProfitBuy and skip is false.`;
-          sendMessageToChannel(discord, options.discordChannelID, msg);
-          return false;
+        if (profit !== "STOP_LOSS") {
+          if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
+            consoleLogger.push("error", "Not positive trade")
+            return false;
+          }
         }
       }
       const order: Order = await binance.buy(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
-      const orderMsg = `>>> **BUY** ID: **${order.orderId}**\nSymbol: **${symbol}**\nBase quantity: **${roundedQuantityInBase}**\nQuote quantity: **${roundedQuantityInQuote}**\nPrice: **${roundedPrice}**\nProfit if trade fullfills: **${unrealizedPNL.toFixed(2)}%**\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, options.discordChannelID, orderMsg);
-      logToFile(orderMsg);
+      let msg = '```';
+      msg += `BUY ID: ${order.orderId}\r\n`;
+      msg += `Symbol: ${symbol}\r\n`;
+      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
+      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
+      msg += `Price: ${roundedPrice}\r\n`;
+      msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
+      msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+      msg += '```';
+      sendMessageToChannel(discord, options.discordChannelID, msg);
+      logToFile(msg);
       await handleOpenOrder(discord, binance, symbol, order, orderBook, options);
       options.profitCurrentMax[symbol.split("/").join("")] = 0;
       updateForce(symbol);

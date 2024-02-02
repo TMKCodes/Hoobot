@@ -77,12 +77,12 @@ export const hilow = async (
     if (unrealizedPNL < (maxProfit - options.takeProfitMinimumPNLDrop)) {
       if (lastTrade.isBuyer) {
         if (unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
-          sell(discord, binance, consoleLogger, symbol, orderBook, filter, options);
+          sell(discord, binance, consoleLogger, symbol, "", orderBook, filter, options);
           options.profitCurrentMax[symbol.split("/").join("")] = 0;
         }
       } else {
         if (unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
-          buy(discord, binance, consoleLogger, symbol, orderBook, filter, options);
+          buy(discord, binance, consoleLogger, symbol, "", orderBook, filter, options);
           options.profitCurrentMax[symbol.split("/").join("")] = 0;
         }
       }

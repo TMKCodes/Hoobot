@@ -30,11 +30,13 @@ import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForceSkip } from "../Binance/Trades";
 import { Candlestick } from "../Binance/Candlesticks";
+import { reverseSign } from "../Modes/Algorithmic";
 
 
 export const calculateProfitSignals = (
   symbol: string,
   trend: string,
+  next: string,
   lastTrade: Trade,
   unrealizedPNL: number,
   options: ConfigOptions
@@ -53,16 +55,16 @@ export const calculateProfitSignals = (
   const minProfitBuy = options.minimumProfitBuy + options.tradeFee;
   const timeSinceLastTrade = (Date.now() - lastTrade.time)  / (1000 * 60 * 60);
   if (options.minimumTimeSinceLastTrade > 0 && timeSinceLastTrade > options.minimumTimeSinceLastTrade) {
-    if (trend === "UP" && options.takeProfit === true && unrealizedPNL > 0) {
+    if (options.takeProfit === true && unrealizedPNL > 0) {
       check = "TAKE_PROFIT";
-    } else if (trend === "DOWN" && options.stopLoss === true && unrealizedPNL < 0) {
+    } else if (options.stopLoss === true && unrealizedPNL < 0) {
       check = "STOP_LOSS";
     }
-  } else if (lastTrade.isBuyer) { // NEXT SELL
+  } else if (next === "SELL") { // NEXT SELL
     if (options.holdUntilPositiveTrade === true && options.minimumProfitSell !== 0) {
-      if (trend === "UP" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
-      } else if (trend === "DOWN" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
+      } else if (options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
       } else if (unrealizedPNL > minProfitSell) {
         check = "SELL";
@@ -70,19 +72,19 @@ export const calculateProfitSignals = (
         check = "HOLD"
       }
     } else {
-      if (trend === "UP" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
-      } else if (trend === "DOWN" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
+      } else if (options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
       } else  {
         check = "SELL";
       }
     }
-  } else if (!lastTrade.isBuyer) { // NEXT BUY
+  } else if (next === "BUY") { // NEXT BUY
     if (options.holdUntilPositiveTrade === true && options.minimumProfitBuy !== 0) {
-      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
-      } else if (trend === "UP" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
+      } else if (options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
       } else if (unrealizedPNL > minProfitBuy) {
         check = "BUY";
@@ -90,9 +92,9 @@ export const calculateProfitSignals = (
         check = "HOLD"
       }
     } else {
-      if (trend === "DOWN" && options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
+      if (options.takeProfit === true && unrealizedPNL > options.takeProfitMinimumPNL! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
         check = "TAKE_PROFIT";
-      } else if (trend === "UP" && options.stopLoss === true && unrealizedPNL <= stopLoss) {
+      } else if (options.stopLoss === true && unrealizedPNL <= stopLoss) {
         check = "STOP_LOSS";
       } else {
         check = "BUY";
@@ -139,12 +141,17 @@ export const checkProfitSignals = (
           lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
         }
       }
-      if (lastTrade.isBuyer === true) { 
+      if (lastTrade.isBuyer) { 
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookBids[0]);
-      } else { 
+      } else if (!lastTrade.isBuyer) { 
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
+      }
+      if (lastTrade.isBuyer && next === "BUY") {
+        unrealizedPNL = reverseSign(unrealizedPNL);
+      } else if(!lastTrade.isBuyer && next === "SELL") {
+        unrealizedPNL = reverseSign(unrealizedPNL);
       }
       if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
         if (unrealizedPNL > 0) {
@@ -155,7 +162,7 @@ export const checkProfitSignals = (
       if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
         options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
       }
-      const signals = calculateProfitSignals(symbol, trend, lastTrade, unrealizedPNL, options);
+      const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, options);
       check = signals.check;
       consoleLogger.push("PNL%", {
         previous: lastPNL,
@@ -202,11 +209,15 @@ export const checkProfitSignalsFromCandlesticks = (
       }
     }
     const close = candlesticks[candlesticks.length - 1].close;
-    const time = candlesticks[candlesticks.length - 1].time;
     if (lastTrade.isBuyer === true) { 
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), close);
     } else { 
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), close);
+    }
+    if (lastTrade.isBuyer && next === "BUY") {
+      unrealizedPNL = reverseSign(unrealizedPNL);
+    } else if(!lastTrade.isBuyer && next === "SELL") {
+      unrealizedPNL = reverseSign(unrealizedPNL);
     }
     if (options.profitCurrentMax[symbol.split("/").join("")] === undefined) {
       if (unrealizedPNL > 0) {
@@ -217,7 +228,7 @@ export const checkProfitSignalsFromCandlesticks = (
     if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
       options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
     }
-    const signals = calculateProfitSignals(symbol, trend, lastTrade, unrealizedPNL, options);
+    const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, options);
     check = signals.check;
     consoleLogger.push("PNL%", {
       previous: lastPNL,
