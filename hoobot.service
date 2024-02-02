@@ -3,9 +3,9 @@ Description=Hoobot Service
 
 [Service]
 Type=simple
-Environment=PATH=$HOME/.nvm/versions/node/v20.10.0/bin/:/usr/local/bin:/usr/bin:/bin
-ExecStart=$HOME/.nvm/versions/node/v20.10.0/bin/npm run start
-WorkingDirectory=%h/hoobot-dev
+Environment=PATH=%h/.nvm/versions/node/v18.17.0/bin/:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v18.17.0/bin/npm run start
+WorkingDirectory=%h/Repos/Hoobot
 Restart=always
 
 [Install]
