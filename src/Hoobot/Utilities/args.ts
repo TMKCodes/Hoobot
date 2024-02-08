@@ -157,7 +157,7 @@ export interface ConfigOptions {
   RenkoWeight: number,
   StochasticOscillatorWeight: number,
   StochasticRSIWeight: number,
-  bollingerBandsWeight: number,
+  BollingerBandsWeight: number,
   OBVWeight: number,
   CMFWeight: number,
   stopLoss: boolean,
@@ -178,6 +178,7 @@ export interface ConfigOptions {
   minimumTimeSinceLastTrade: number,
   RenkoBrickMultiplier: number,
   renkoBrickSize: number,
+  stopLossAgingPerHour: number,
   [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
 }
 
@@ -251,7 +252,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     RSIWeight: parseFloat(process.env.RSI_WEIGHT!) || 1,
     StochasticOscillatorWeight: parseFloat(process.env.STOCHASTIC_OSCILLATOR_WEIGHT!) || 1,
     StochasticRSIWeight: parseFloat(process.env.STOCHASTIC_RSI_WEIGHT!) || 1,
-    bollingerBandsWeight: parseFloat(process.env.BOLLINGER_BANDS_WEIGHT!) || 1,
+    BollingerBandsWeight: parseFloat(process.env.BOLLINGER_BANDS_WEIGHT!) || 1,
     OBVWeight: parseFloat(process.env.OBV_WEIGHT!) || 1,
     CMFWeight: parseFloat(process.env.CMF_WEIGHT!) || 1,
     RenkoWeight: parseFloat(process.env.RENKO_WEIGHT!) || 1,
@@ -290,6 +291,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     stopLossStopTrading: process.env.STOP_LOSS_STOP_TRADING === "true" ? true : false,
     stopLossHit: false,
     stopLossPNL: parseFloat(process.env.STOP_LOSS_PNL!) || 1,
+    stopLossAgingPerHour: parseFloat(process.env.STOP_LOSS_PNL_AGING_PER_HOUR!) || 0,
     takeProfit: process.env.TAKE_PROFIT === "true" ? true : false,
     takeProfitMinimumPNL: parseFloat(process.env.TAKE_PROFIT_MINIMUM!) || 0.5,
     takeProfitMinimumPNLDrop: parseFloat(process.env.TAKE_PROFIT_MINIMUM_DROP!) || 0.01,
