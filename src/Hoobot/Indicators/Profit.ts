@@ -39,11 +39,17 @@ export const calculateProfitSignals = (
   next: string,
   lastTrade: Trade,
   unrealizedPNL: number,
+  closeTime: number,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
-  const currentMaxPNL = options.profitCurrentMax[symbol.split("/").join("")]
-  let stopLoss = currentMaxPNL + options.stopLossPNL;
+  const timeSinceLastTrade = (closeTime - lastTrade.time)  / (1000 * 60 * 60);
+  const hoursSinceLastTrade = Math.ceil((closeTime - lastTrade.time)  / (1000 * 60 * 60));
+  // console.log(hoursSinceLastTrade);
+  const currentMaxPNL = options.profitCurrentMax[symbol.split("/").join("")];
+  const stoppLossAging = (options.stopLossAgingPerHour * hoursSinceLastTrade);
+  let stopLoss = currentMaxPNL + options.stopLossPNL + stoppLossAging;
+  // console.log(`${currentMaxPNL} + ${options.stopLossPNL} + ${stoppLossAging} = ${stopLoss}`);
   if (stopLoss > 0) {
     stopLoss == 0;
   }
@@ -53,7 +59,6 @@ export const calculateProfitSignals = (
   }
   const minProfitSell = options.minimumProfitSell + options.tradeFee;
   const minProfitBuy = options.minimumProfitBuy + options.tradeFee;
-  const timeSinceLastTrade = (Date.now() - lastTrade.time)  / (1000 * 60 * 60);
   if (options.minimumTimeSinceLastTrade > 0 && timeSinceLastTrade > options.minimumTimeSinceLastTrade) {
     if (options.takeProfit === true && unrealizedPNL > 0) {
       check = "TAKE_PROFIT";
@@ -114,6 +119,7 @@ export const checkProfitSignals = (
   trend: string,
   symbol: string, 
   orderBook: Orderbook,
+  closeTime: number,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
@@ -162,7 +168,7 @@ export const checkProfitSignals = (
       if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
         options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
       }
-      const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, options);
+      const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, closeTime, options);
       check = signals.check;
       consoleLogger.push("PNL%", {
         previous: lastPNL,
@@ -193,6 +199,7 @@ export const checkProfitSignalsFromCandlesticks = (
   trend: string,
   symbol: string, 
   candlesticks: Candlestick[],
+  closeTime: number,
   options: ConfigOptions
 ) => {
   let check = 'HOLD';
@@ -228,7 +235,7 @@ export const checkProfitSignalsFromCandlesticks = (
     if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
       options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
     }
-    const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, options);
+    const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, closeTime, options);
     check = signals.check;
     consoleLogger.push("PNL%", {
       previous: lastPNL,
