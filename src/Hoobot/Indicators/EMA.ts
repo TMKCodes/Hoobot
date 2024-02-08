@@ -135,10 +135,10 @@ export const checkEMASignals = (
     const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
     const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
     const isFlatDirection = !isUpwardDirection && !isDownwardDirection;if (isBullishCrossover) {
-      options.EMAWeight = 2;
+      options.EMAWeight = 1.1;
       check = 'BUY';
     } else if (isBearishCrossover) {
-      options.EMAWeight = 2;
+      options.EMAWeight = 1.1;
       check = 'SELL';
     } else if (isFlatDirection) {
       options.EMAWeight = 1;

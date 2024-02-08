@@ -116,10 +116,10 @@ export const checkRenkoSignals = (
     const isBearishCrossover = lastBrick?.color === 'red' && prevBrick?.color === 'green';
     const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= options.renkoBrickSize;
     if (isBullishCrossover && isPriceMoveBeyondThreshold) {
-      options.RenkoWeight = 2;
+      options.RenkoWeight = 1.1;
       check = 'BUY';
     } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
-      options.RenkoWeight = 2;
+      options.RenkoWeight = 1.1;
       check = 'SELL';
     } else {
       options.RenkoWeight = 1;

@@ -210,9 +210,17 @@ export const checkStochasticOscillatorSignals = (
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     const rising = K > prevK && D > prevD;
     const dropping = K < prevK && D > prevD;
-    if ((K < oversoldTreshold && rising && KDHigher) || KDCrossover) {
+    if ((D < oversoldTreshold && rising && KDHigher)) {
+      options.StochasticOscillatorWeight = 1.1;
       check = 'BUY';
-    } else if((K > overboughtTreshold && dropping && DKHigher) || DKCrossover) {
+    } else if((D > overboughtTreshold && dropping && DKHigher)) {
+      options.StochasticOscillatorWeight = 1.1;
+      check = 'SELL';
+    } else if (D < oversoldTreshold && KDCrossover) {
+      options.StochasticOscillatorWeight = 1;
+      check = 'BUY';
+    } else if (D > overboughtTreshold && DKCrossover) {
+      options.StochasticOscillatorWeight = 1;
       check = 'SELL';
     }
   }
@@ -240,10 +248,10 @@ export const checkStochasticRSISignals = (
     const rising = K > prevK && D > prevD;
     const dropping = K < prevK && D > prevD;
     if (D < oversoldTreshold && rising && KDHigher) {
-      options.StochasticRSIWeight = 2; 
+      options.StochasticRSIWeight = 1.1; 
       check = 'BUY';
     } else if(D > overboughtTreshold && dropping && DKHigher) {
-      options.StochasticRSIWeight = 2;
+      options.StochasticRSIWeight = 1.1;
       check = 'SELL';
     } else if (D < oversoldTreshold && KDCrossover) {
       options.StochasticRSIWeight = 1;
