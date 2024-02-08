@@ -142,29 +142,46 @@ export const checkMACDSignals = (
     check = 'HOLD';
     const currentHistogram = macd.histogram[macd.histogram.length -1];
     const prevHistogram = macd.histogram[macd.histogram.length - 2];
-    const currentMacdLine = macd.macdLine[macd.macdLine.length -1];
-    const currentSignalLine = macd.signalLine[macd.signalLine.length -1];
+    const currentMacdLine = macd.macdLine[macd.macdLine.length - 1];
+    const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
+    const currentSignalLine = macd.signalLine[macd.signalLine.length - 1];
+    const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
     if(currentHistogram !== undefined && prevHistogram !== undefined && currentMacdLine !== undefined && currentSignalLine !== undefined) {
       const isPrevHistogramPositive = prevHistogram > 0;
       const isPrevHistogramNegative = prevHistogram < 0;
       const isHistogramPositive = currentHistogram > 0;
       const isHistogramNegative = currentHistogram < 0;
-      const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine
-      const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine
+      const isNPCrossover = isPrevHistogramNegative && isHistogramPositive; // BUY
+      const isPNCrossover = isPrevHistogramPositive && isHistogramNegative; // SELL
+      const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
+      const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
+      const isPrevMacdLineAboveSignalLine = prevMacdLine > prevSignalLine;
+      const isPrevMacdLineBelowSignalLine = prevMacdLine < prevSignalLine;
       const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
-      const isSignalLineBelowHistogram = currentSignalLine < currentHistogram
+      const isSignalLineBelowHistogram = currentSignalLine < currentHistogram;
       const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
       const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
-      if(isPrevHistogramNegative && isHistogramPositive) {
+      const isMACDSignalCrossover = isMacdLineAboveSignalLine && isPrevMacdLineBelowSignalLine; // BUY
+      const isSignalMACDCrossover = isMacdLineBelowSignalLine && isPrevMacdLineAboveSignalLine; // SELL
+
+      if(isNPCrossover) {
+        options.EMAWeight = 1.2;
         check = 'BUY';
-      } else if (isPrevHistogramPositive && isHistogramNegative) {
+      } else if (isPNCrossover) {
+        options.MACDWeight = 1.2;
         check = 'SELL';
-      } else {
-        if (isMacdLineAboveSignalLine && isHistogramNegative) {
-          check = 'BUY';
-        } else if (isMacdLineBelowSignalLine && isHistogramNegative) {
-          check = 'SELL';
-        }
+      } else if (isMACDSignalCrossover) {
+        options.EMAWeight = 1.1;
+        check = 'BUY';
+      } else if (isSignalMACDCrossover) {
+        options.MACDWeight = 1.1;
+        check = 'SELL';
+      } else if (isMacdLineAboveSignalLine && isHistogramPositive && isMacdLineBelowHstogram && isSignalLineBelowHistogram) {
+        options.MACDWeight = 1;
+        check = 'BUY';
+      } else if (isMacdLineBelowSignalLine && isHistogramNegative && isMacdLineAboveHistogram && isSignalLineAboveHistogram) {
+        options.MACDWeight = 1;
+        check = 'SELL';
       }
     }
   }
