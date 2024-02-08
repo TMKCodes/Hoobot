@@ -49,6 +49,7 @@ import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indic
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Binance/Balances";
 import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
+import { totalmem } from "os";
 
 export interface Indicators {
   'avg': {
@@ -126,12 +127,13 @@ export const tradeDirection =  async (
   let actions = ['BUY', 'SELL', 'HOLD'];
   let profit = "SKIP";
   const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
+  const closeTime = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].time;
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
   const trend = checkTrendSignal(indicators.ema[timeframes[timeframes.length - 1]]);
   if (orderBook !== undefined) {
-    profit = checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, options);
+    profit = checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, closeTime, options);
   } else {
-    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], options);
+    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, options);
   }
   const weights: Weights = {
     SMAWeight: options.SMAWeight,
@@ -140,11 +142,12 @@ export const tradeDirection =  async (
     RSIWeight: options.RSIWeight,
     StochasticOscillatorWeight: options.StochasticOscillatorWeight,
     StochasticRSIWeight: options.StochasticRSIWeight,
-    BollingerBandsWeight: options.bollingerBandsWeight,
+    BollingerBandsWeight: options.BollingerBandsWeight,
     OBVWeight: options.OBVWeight,
     CMFWeight: options.CMFWeight,
     RenkoWeight: options.RenkoWeight,
   }
+  // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
     const checks: Checks = {
       SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[timeframeIndex]], options),
@@ -158,31 +161,43 @@ export const tradeDirection =  async (
       OBV: checkOBVSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], options),
       CMF: checkCMFSignals(consoleLogger, indicators.cmf[timeframes[timeframeIndex]], options),
     }
-    const keys = Object.keys(checks)
-    .filter(check => checks[check] !== 'SKIP');
-    //consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
+    const keys = Object.keys(checks).filter(check => checks[check] !== 'SKIP');
+    // console.log(`Keys: ${JSON.stringify(keys)}`);
+    const keysLength = keys.length;
+    consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
     for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
       let weightedSum = 0;
       let totalWeight = 0;
-      for (let keysIndex = 0; keysIndex < keys.length; keysIndex++) {
+      // console.log(`Keys length: ${keys.length}`);
+      // console.log(`Constant keys length: ${keysLength}`);
+      for (let keysIndex = 0; keysIndex < keysLength; keysIndex++) {
         const weight = weights[`${keys[keysIndex]}Weight`];
+        // console.log(`weights[${`${keys[keysIndex]}Weight`}] = ${weight}`);
         const signal = checks[keys[keysIndex]];
         if (signal === actions[actionsIndex]) {
           weightedSum += weight;
         }
         totalWeight += weight;
       }
+      // console.log(`Action Index: ${actions[actionsIndex]}`);
+      // console.log(`weightedSum: ${weightedSum}`);
+      // console.log(`totalWeight: ${totalWeight}`);
       if (totalWeight > 0) {
         const percentage = (weightedSum / totalWeight) * 100 / timeframes.length;
+        // console.log(`percentage:${percentage}`);
         directions[actions[actionsIndex]] += percentage;
       }
     }
   }
+  directions.BUY = Number(directions.BUY.toFixed(2));
+  directions.SELL = Number(directions.SELL.toFixed(2));
+  directions.HOLD = Number(directions.HOLD.toFixed(2));
   consoleLogger.push("Directions", directions);
   actions = actions.filter(action => directions[action] !== undefined);
   for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
+    // console.log(`${directions[actions[actionsIndex]]} >= ${options.directionAgreement}`)
     if((profit == actions[actionsIndex] || profit === 'SKIP' || profit === "TAKE_PROFIT" || profit === "STOP_LOSS") && next == actions[actionsIndex]) {
-      if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= options.directionAgreement) {
+      if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= (options.directionAgreement / 2)) {
         direction = next;
         break;
       } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= (options.directionAgreement / 2)) {
