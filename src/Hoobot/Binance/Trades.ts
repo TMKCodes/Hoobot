@@ -224,7 +224,6 @@ export const sell = async (
           }
         }
       }
-      console.log("FUCK THIS!");
       const order: Order = await binance.sell(symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
       play(soundFile);
       logToFile(JSON.stringify(order, null, 4));
@@ -372,6 +371,7 @@ export const simulateSell = async (
   filter: Filter,
   logger: ConsoleLogger
 ) => {
+  // console.log(time);
   if(price === null || quantity === 0) {
     return;
   }
@@ -380,7 +380,7 @@ export const simulateSell = async (
   if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) { 
     let fee = quoteQuantity * (0.075 / 100); 
     let quoteQuontityWithoutFee = quoteQuantity - fee; 
-    let lastTrade: Trade ={
+    let lastTrade: Trade = {
       symbol: "",
       id: 0,
       orderId: 0,
@@ -458,6 +458,7 @@ export const simulateBuy = async (
   filter: Filter,
   logger: ConsoleLogger
 ) => {
+  // console.log(time);
   if(price === null || quantity === 0) {
     return;
   }
@@ -526,7 +527,7 @@ export const simulateBuy = async (
     }, null, 2));
     logger.flush();
     logger.push("Time", (new Date(time)).toLocaleString());
-    logger.push("Bought", "true");
+    logger.push("BOUGHT", "true");
     logger.push("PNL", pnl);
     logger.push("Balances", balances);
     logger.print();
