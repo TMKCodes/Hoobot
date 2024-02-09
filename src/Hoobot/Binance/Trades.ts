@@ -32,7 +32,7 @@ import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
 import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { exists, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
 import { Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
@@ -194,6 +194,31 @@ export const readForceSkip = (
   return skip;
 }
 
+export const isBlocking = async (symbol: string, options: ConfigOptions) => {
+  const folder = `./blocks`;
+  if (!existsSync(folder)) {
+    mkdirSync(folder);
+  }
+  const blockfile = `${folder}/${symbol}.block`;
+  if(existsSync(blockfile)) {
+    const stats = statSync(blockfile);
+    const creationTime = new Date(stats.birthtime).getTime();
+    const nowTime = new Date().getTime();
+    const differenceInSeconds = (nowTime - creationTime) / 1000;
+    const intervalInSeconds = getSecondsFromInterval(options.candlestickInterval[0]);
+    if (differenceInSeconds > intervalInSeconds) {
+      unlinkSync(blockfile);
+      writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
+      return false;
+    } else {
+      return true;
+    }
+  } else {
+    writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
+    return false;
+  }
+}
+
 export const sell = async (
   discord: Client,
   binance: Binance,
@@ -204,6 +229,10 @@ export const sell = async (
   filter: Filter,
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
+  const block = await isBlocking(symbol, options);
+  if (block === true) {
+    return false;
+  }
   try {
     const baseBalance = options.balances![symbol.split("/")[0]];
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
@@ -286,6 +315,10 @@ export const buy = async (
   filter: Filter,
   options: ConfigOptions,
 ): Promise<Order | boolean> => {
+  const block = await isBlocking(symbol, options);
+  if (block === true) {
+    return false;
+  }
   try {
     const quoteBalance = options.balances![symbol.split("/")[1]];
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
