@@ -195,6 +195,7 @@ export const readForceSkip = (
 }
 
 export const isBlocking = async (symbol: string, options: ConfigOptions) => {
+  symbol = symbol.replace("/", "");
   const folder = `./blocks`;
   if (!existsSync(folder)) {
     mkdirSync(folder);
