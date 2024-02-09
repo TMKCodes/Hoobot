@@ -212,6 +212,8 @@ export const isBlocking = async (symbol: string, options: ConfigOptions) => {
       writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
       return false;
     } else {
+      await delay(intervalInSeconds);
+      unlinkSync(blockfile);
       return true;
     }
   } else {
