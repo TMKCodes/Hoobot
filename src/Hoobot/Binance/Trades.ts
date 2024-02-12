@@ -194,7 +194,7 @@ export const readForceSkip = (
   return skip;
 }
 
-export const isBlocking = async (symbol: string, options: ConfigOptions) => {
+export const isBlocking = async (symbol: string, options: ConfigOptions): Promise<boolean> => {
   symbol = symbol.replace("/", "");
   const folder = `./blocks`;
   if (!existsSync(folder)) {
@@ -208,17 +208,17 @@ export const isBlocking = async (symbol: string, options: ConfigOptions) => {
     const differenceInSeconds = (nowTime - creationTime) / 1000;
     const intervalInSeconds = getSecondsFromInterval(options.candlestickInterval[0]);
     if (differenceInSeconds > intervalInSeconds) {
-      unlinkSync(blockfile);
       writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
-      return false;
+      return false; // The action was not blocked.
     } else {
-      await delay(intervalInSeconds);
+      const remainingTimeInMilliSeconds = (intervalInSeconds - differenceInSeconds) * 1000;
+      await delay(remainingTimeInMilliSeconds);
       unlinkSync(blockfile);
-      return true;
+      return true; // The action was blocked and the blocking time was waited.
     }
   } else {
     writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
-    return false;
+    return false; // The action was not blocked.
   }
 }
 

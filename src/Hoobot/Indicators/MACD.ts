@@ -171,16 +171,16 @@ export const checkMACDSignals = (
         options.MACDWeight = 1.2;
         check = 'SELL';
       } else if (isMACDSignalCrossover) {
-        options.EMAWeight = 1.1;
+        options.EMAWeight = 1;
         check = 'BUY';
       } else if (isSignalMACDCrossover) {
-        options.MACDWeight = 1.1;
+        options.MACDWeight = 1;
         check = 'SELL';
       } else if (isMacdLineAboveSignalLine && isHistogramPositive && isMacdLineBelowHstogram && isSignalLineBelowHistogram) {
-        options.MACDWeight = 1;
+        options.MACDWeight = 1.1;
         check = 'BUY';
       } else if (isMacdLineBelowSignalLine && isHistogramNegative && isMacdLineAboveHistogram && isSignalLineAboveHistogram) {
-        options.MACDWeight = 1;
+        options.MACDWeight = 1.1;
         check = 'SELL';
       }
     }
