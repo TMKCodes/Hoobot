@@ -90,4 +90,5 @@ export const hilow = async (
   }
   consoleLogger.print();
   consoleLogger.flush();
+  return true;
 }

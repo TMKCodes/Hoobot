@@ -32,12 +32,15 @@ import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, c
 import { Candlestick } from "../Binance/Candlesticks";
 import { reverseSign } from "../Modes/Algorithmic";
 
+const sleep = async (ms: number) => await new Promise(r => setTimeout(r, ms));
 
-export const calculateProfitSignals = (
+
+export const calculateProfitSignals = async (
   symbol: string,
-  trend: string,
+  newTrend: string,
   next: string,
   lastTrade: Trade,
+  lastPNL: number,
   unrealizedPNL: number,
   closeTime: number,
   options: ConfigOptions
@@ -57,6 +60,22 @@ export const calculateProfitSignals = (
   if (takeProfit < options.takeProfitMinimumPNL) {
     takeProfit = options.takeProfitMinimumPNL
   }
+  if(options.trendEnabled === true) {
+    if (newTrend === "SHORT" && options.currentTrendMode === "LONG" || options.currentTrendMode === undefined) {
+      const temp = options.minimumProfitSell;
+      options.minimumProfitSell = options.minimumProfitBuy;
+      options.minimumProfitBuy = temp;
+      options.currentTrendMode = "SHORT";
+    } else if(newTrend === "LONG" && options.currentTrendMode == "SHORT") {
+      const temp = options.minimumProfitSell;
+      options.minimumProfitSell = options.minimumProfitBuy;
+      options.minimumProfitBuy = temp;
+      options.currentTrendMode = "LONG";
+    } else if ((options.currentTrendMode !== "LONG" && options.currentTrendMode !== "SHORT") || options.currentTrendMode === undefined) {
+      options.currentTrendMode = "LONG";
+    }
+  }
+  
   const minProfitSell = options.minimumProfitSell + options.tradeFee;
   const minProfitBuy = options.minimumProfitBuy + options.tradeFee;
   if (options.minimumTimeSinceLastTrade > 0 && timeSinceLastTrade > options.minimumTimeSinceLastTrade) {
@@ -106,6 +125,9 @@ export const calculateProfitSignals = (
       }
     }
   }
+  if (options.holdUntilPositiveTrade === true && (lastPNL < 0 && unrealizedPNL < 0 && check !== "STOP_LOSS")) {
+    check = "HOLD";
+  }
   return {
     check,
     takeProfit,
@@ -113,7 +135,7 @@ export const calculateProfitSignals = (
   };
 }
 
-export const checkProfitSignals = (
+export const checkProfitSignals = async (
   consoleLogger: ConsoleLogger, 
   next: string,
   trend: string,
@@ -142,9 +164,9 @@ export const checkProfitSignals = (
       if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
         const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
         if(olderTrade.isBuyer) { 
-          lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+          lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
         } else if(!olderTrade.isBuyer) { 
-          lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+          lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
         }
       }
       if (lastTrade.isBuyer) { 
@@ -168,7 +190,7 @@ export const checkProfitSignals = (
       if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
         options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
       }
-      const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, closeTime, options);
+      const signals = await calculateProfitSignals(symbol, trend, next, lastTrade, lastPNL, unrealizedPNL, closeTime, options);
       check = signals.check;
       consoleLogger.push("PNL%", {
         previous: lastPNL,
@@ -193,7 +215,7 @@ export const checkProfitSignals = (
   return check;
 }
 
-export const checkProfitSignalsFromCandlesticks = (
+export const checkProfitSignalsFromCandlesticks = async (
   consoleLogger: ConsoleLogger, 
   next: string,
   trend: string,
@@ -210,9 +232,9 @@ export const checkProfitSignalsFromCandlesticks = (
     if(options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
       const olderTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 2];
       if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
     }
     const close = candlesticks[candlesticks.length - 1].close;
@@ -235,7 +257,7 @@ export const checkProfitSignalsFromCandlesticks = (
     if (unrealizedPNL > options.profitCurrentMax[symbol.split("/").join("")]) {
       options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
     }
-    const signals = calculateProfitSignals(symbol, trend, next, lastTrade, unrealizedPNL, closeTime, options);
+    const signals = await calculateProfitSignals(symbol, trend, next, lastTrade, lastPNL, unrealizedPNL, closeTime, options);
     check = signals.check;
     consoleLogger.push("PNL%", {
       previous: lastPNL,

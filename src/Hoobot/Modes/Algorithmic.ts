@@ -30,28 +30,28 @@ import Binance from "node-binance-api";
 import { Filter } from "../Binance/Filters";
 import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
-import { calculateEMA, logEMASignals, ema, checkEMASignals, checkTrendSignal } from "../Indicators/EMA";
-import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
-import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
+import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend } from "../Indicators/EMA";
+import { calculateRSI, checkRSISignals } from "../Indicators/RSI";
+import { calculateMACD, checkMACDSignals, macd } from "../Indicators/MACD";
 import {  Candlestick, Candlesticks } from "../Binance/Candlesticks";
-import { calculateSMA, checkSMASignals, logSMASignals, sma } from "../Indicators/SMA";
-import { calculateATR, logATRSignals } from "../Indicators/ATR";
-import { calculateBollingerBands, checkBollingerBandsSignals, logBollingerBandsSignals } from "../Indicators/BollingerBands";
-import { calculateStochasticOscillator, calculateStochasticRSI, checkStochasticOscillatorSignals, checkStochasticRSISignals, logStochasticOscillatorSignals, logStochasticRSISignals } from "../Indicators/StochasticOscillator";
-import { buy, calculateROI, getTradeHistory, sell, simulateBuy, simulateSell } from "../Binance/Trades";
-import { calculateOBV, checkOBVSignals, logOBVSignals } from "../Indicators/OBV";
-import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF";
-import { calculateAverage, logAverageSignals } from "../Indicators/Average";
+import { calculateSMA, checkSMASignals } from "../Indicators/SMA";
+import { calculateATR } from "../Indicators/ATR";
+import { calculateBollingerBands, checkBollingerBandsSignals } from "../Indicators/BollingerBands";
+import { calculateStochasticOscillator, calculateStochasticRSI, checkStochasticOscillatorSignals, checkStochasticRSISignals } from "../Indicators/StochasticOscillator";
+import { Trade, buy, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateROI, getTradeHistory, sell, simulateBuy, simulateSell } from "../Binance/Trades";
+import { calculateOBV, checkOBVSignals } from "../Indicators/OBV";
+import { calculateCMF, checkCMFSignals } from "../Indicators/CMF";
+import { calculateAverage } from "../Indicators/Average";
 import { symbolFilters } from "../..";
 import { checkGPTSignals } from "../Indicators/GPT";
 import { Orderbook } from "../Binance/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Binance/Balances";
-import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
-import { totalmem } from "os";
+import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals } from "../Indicators/Renko";
 
 export interface Indicators {
+  'trend' : Trend;
   'avg': {
     [time: string]:  number;
   },
@@ -117,7 +117,7 @@ export const tradeDirection =  async (
   filter: Filter,
 ): Promise<string[]> => {
   const startTime = Date.now();
-  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
+  const timeframes = options.candlestickInterval;
   let direction = 'HOLD';
   const directions: Directions = {
     BUY: 0,
@@ -129,11 +129,11 @@ export const tradeDirection =  async (
   const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
   const closeTime = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].time;
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
-  const trend = checkTrendSignal(indicators.ema[timeframes[timeframes.length - 1]]);
+  const trend = checkTrendSignal(indicators.trend);
   if (orderBook !== undefined) {
-    profit = checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, closeTime, options);
+    profit = await checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, closeTime, options);
   } else {
-    profit = checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, options);
+    profit = await checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, options);
   }
   const weights: Weights = {
     SMAWeight: options.SMAWeight,
@@ -150,16 +150,16 @@ export const tradeDirection =  async (
   // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
     const checks: Checks = {
-      SMA: checkSMASignals(consoleLogger, indicators.sma[timeframes[timeframeIndex]], options),
-      Renko: checkRenkoSignals(consoleLogger, indicators.renko[timeframes[timeframeIndex]], options),
-      EMA: checkEMASignals(consoleLogger, indicators.ema[timeframes[timeframeIndex]], options),
-      MACD: checkMACDSignals(consoleLogger, indicators.macd[timeframes[timeframeIndex]], options),
-      RSI: checkRSISignals(consoleLogger, indicators.rsi[timeframes[timeframeIndex]], options),
-      StochasticOscillator: checkStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframes[timeframeIndex]], options),
-      StochasticRSI: checkStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframes[timeframeIndex]], options),
-      BollingerBands: checkBollingerBandsSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.bollingerBands[timeframes[timeframeIndex]], options),
-      OBV: checkOBVSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], options),
-      CMF: checkCMFSignals(consoleLogger, indicators.cmf[timeframes[timeframeIndex]], options),
+      SMA: checkSMASignals(indicators.sma[timeframes[timeframeIndex]], options),
+      Renko: checkRenkoSignals(indicators.renko[timeframes[timeframeIndex]], options),
+      EMA: checkEMASignals(indicators.ema[timeframes[timeframeIndex]], options),
+      MACD: checkMACDSignals(indicators.macd[timeframes[timeframeIndex]], options),
+      RSI: checkRSISignals(indicators.rsi[timeframes[timeframeIndex]], options),
+      StochasticOscillator: checkStochasticOscillatorSignals(indicators.stochasticOscillator[timeframes[timeframeIndex]], options),
+      StochasticRSI: checkStochasticRSISignals(indicators.stochasticRSI[timeframes[timeframeIndex]], options),
+      BollingerBands: checkBollingerBandsSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.bollingerBands[timeframes[timeframeIndex]], options),
+      OBV: checkOBVSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], options),
+      CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], options),
     }
     const keys = Object.keys(checks).filter(check => checks[check] !== 'SKIP');
     // console.log(`Keys: ${JSON.stringify(keys)}`);
@@ -313,7 +313,7 @@ export const placeTrade = async (
     ask: Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0],
     bid: Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]
   })
-  const indicators = calculateIndicators(consoleLogger, symbol, candlesticks, options);
+  const indicators = calculateIndicators(symbol, candlesticks, options);
   const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
   if (direction === 'SELL') {
     return sell(discord, binance, consoleLogger, symbol, profit, orderBook, filter, options);
@@ -325,9 +325,7 @@ export const placeTrade = async (
 }
 
 const subCalculateIndicators = (
-  consoleLogger: ConsoleLogger,
   candlesticks: Candlestick[],
-  symbol: string,
   indicators: any,
   timeframe: string,
   options: ConfigOptions,
@@ -337,7 +335,7 @@ const subCalculateIndicators = (
     // logSMASignals(consoleLogger, indicators.sma[timeframe]); 
   }
   if (options.useRSI) {
-    indicators.rsi[timeframe] = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source, options.rsiHistoryLength);
+    indicators.rsi[timeframe] = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source);
     // logRSISignals(consoleLogger, indicators.rsi[timeframe], options);
   }
   if (options.useMACD) {
@@ -352,7 +350,7 @@ const subCalculateIndicators = (
     // logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands[timeframe]);
   }
   if (options.useStochasticOscillator) {
-    indicators.stochasticOscillator[timeframe] = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing, options.source);
+    indicators.stochasticOscillator[timeframe] = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing);
     // logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframe]);
   }
   if (options.useStochasticRSI) {
@@ -371,12 +369,12 @@ const subCalculateIndicators = (
 }
 
 export const calculateIndicators = (
-  consoleLogger: ConsoleLogger,
   symbol: string,
   candlesticks: Candlesticks,
   options: ConfigOptions
 ): Indicators => {
   let indicators: Indicators = {
+    trend: {},
     avg: {},
     sma: {},
     ema: {},
@@ -390,7 +388,15 @@ export const calculateIndicators = (
     cmf: {},
     renko: {},
   };
-  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
+  if (candlesticks[symbol.split("/").join("")][options.trendTimeframe] !== undefined) {
+    indicators.trend = {
+      short: calculateEMA(candlesticks[symbol.split("/").join("")][options.trendTimeframe], options.trendEMAShort, 'close'),
+      long: calculateEMA(candlesticks[symbol.split("/").join("")][options.trendTimeframe], options.trendEMALong, 'close'),
+    }
+  } else {
+    // console.log("ERROR");
+  }
+  const timeframes = options.candlestickInterval;
   for (let i = 0; i < timeframes.length; i++) {
     indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
     // logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
@@ -404,9 +410,9 @@ export const calculateIndicators = (
     indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], options.renkoBrickSize);
     if (options.useRenko) {
       // logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]], options);
-      indicators = subCalculateIndicators(consoleLogger, indicators.renko[timeframes[i]] as Candlestick[], symbol, indicators, timeframes[i], options);
+      indicators = subCalculateIndicators(indicators.renko[timeframes[i]] as Candlestick[], indicators, timeframes[i], options);
     } else {
-      indicators = subCalculateIndicators(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], symbol, indicators, timeframes[i], options);
+      indicators = subCalculateIndicators(candlesticks[symbol.split("/").join("")][timeframes[i]], indicators, timeframes[i], options);
     }
     
   }
@@ -510,6 +516,17 @@ export const algorithmic = async (
   } catch (error: any) {
     console.error(JSON.stringify(error));
   }
+  return false;
+}
+
+const getRandomValueBetween = (x: number, close: number): number => {
+  const rangeStart = Math.min(x, close);
+  const rangeEnd = Math.max(x, close);
+  if (rangeEnd - rangeStart < 0.01) {
+    return close;
+  }
+  const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
+  return Number(randomValue.toFixed(2));
 }
 
 export const simulateAlgorithmic = async (
@@ -520,77 +537,89 @@ export const simulateAlgorithmic = async (
   filter: Filter,
 ) => {
   const logger = consoleLogger();
-  logger.push("Simulation", "true");
   if (candlesticks[symbol.split("/").join("")] === undefined) {
     return false;
   }
-  const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
+  if (candlesticks[symbol.split("/").join("")][timeframes[0]] === undefined) {
     return false;
   }
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < 2) {
     return false;
   }
   if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
     options.tradeHistory[symbol.split("/").join("")] = []
   }
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < options.longEma) {
+  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < options.longEma) {
     logger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
     return false;
   }
-  const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1];
-  const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
+  const latestCandle = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1];
+  const prevCandle = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 2];
   const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
   logger.push("Symbol", symbol.split("/").join(""));
-  if (latestCandle !== undefined) {
-    logger.push('Candlestick', {
-      time: candleTime,
-      color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
-      direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
-      open: latestCandle?.open?.toFixed(7),
-      close: latestCandle?.close?.toFixed(7),
-      low: latestCandle?.low?.toFixed(7),
-      high: latestCandle?.high?.toFixed(7)
-    });
-  }
+  // if (latestCandle !== undefined) {
+  //   logger.push('Candlestick', {
+  //     time: candleTime,
+  //     color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
+  //     direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
+  //     open: latestCandle?.open?.toFixed(7),
+  //     close: latestCandle?.close?.toFixed(7),
+  //     low: latestCandle?.low?.toFixed(7),
+  //     high: latestCandle?.high?.toFixed(7)
+  //   });
+  // }
+  logger.push("Time", candleTime);
+  logger.push("Color", (latestCandle.close > latestCandle.open) ? "Green" : "Red");
   logger.push("Balance", {
     base:  options.balances[symbol.split("/")[0]].toFixed(7) + " " + symbol.split("/")[0],
     quote: options.balances[symbol.split("/")[1]].toFixed(7) + " " + symbol.split("/")[1]
   });
-  const indicators: Indicators = calculateIndicators(logger, symbol, candlesticks, options);
+  const emptyLogger = consoleLogger();
+  const indicators: Indicators = calculateIndicators(symbol, candlesticks, options);
   const orderBook = undefined;
-  const [_profit, direction] = await tradeDirection(logger, symbol, orderBook, candlesticks, indicators, options, filter);
-  const high = latestCandle.high;
-  const low = latestCandle.low;
-  const close = latestCandle.close;
-  const open = latestCandle.open;
-  const midpoint = (low + high) / 2;
+  const [profit, direction] = await tradeDirection(emptyLogger, symbol, orderBook, candlesticks, indicators, options, filter);
+  const sellPrice = getRandomValueBetween(latestCandle.high, latestCandle.close);
+  const buyPrice = getRandomValueBetween(latestCandle.low, latestCandle.close); 
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
-    if(options.source === "close") {
-      simulateSell(symbol, balances[baseSymbol], close, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source == "open") {
-      simulateSell(symbol, balances[baseSymbol], open, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "high") {
-      simulateSell(symbol, balances[baseSymbol], high, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "low") {
-      simulateSell(symbol, balances[baseSymbol], low, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "midpoint") {
-      simulateSell(symbol, balances[baseSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
-    }
+    simulateSell(symbol, balances[baseSymbol], sellPrice, balances, profit, options, latestCandle.time, filter, logger);
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
-    if(options.source === "close") {
-      simulateBuy(symbol, balances[quoteSymbol], close, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source == "open") {
-      simulateBuy(symbol, balances[quoteSymbol], open, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "high") {
-      simulateBuy(symbol, balances[quoteSymbol], low, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "low") {
-      simulateBuy(symbol, balances[quoteSymbol], high, balances, options, latestCandle.time, filter, logger);
-    } else if(options.source === "midpoint") {
-      simulateBuy(symbol, balances[quoteSymbol], midpoint, balances, options, latestCandle.time, filter, logger);
+    simulateBuy(symbol, balances[quoteSymbol], buyPrice, balances, profit, options, latestCandle.time, filter, logger);
+  } else {
+    let lastTrade: Trade = {
+      symbol: "",
+      id: 0,
+      orderId: 0,
+      orderListID: 0,
+      price: "",
+      qty: "",
+      quoteQty: "",
+      commission: "",
+      commissionAsset: "",
+      time: 0,
+      isBuyer: true,
+      isMaker: true,
+      isBestMatch: true,
     }
+    let pnl = 0;
+    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
+      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if(lastTrade.isBuyer) {
+        pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), sellPrice);
+      } else {
+        pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), buyPrice);
+      }
+    }
+    logger.push("Trade", "holding");
+    logger.push("PNL", pnl);
   }
+  logger.push("TrendMode", options.currentTrendMode);
+  logger.push("MinSell", options.minimumProfitSell);
+  logger.push("MinBuy", options.minimumProfitBuy);
+  logger.print();
+  logger.flush();
+  return false;
 }
 

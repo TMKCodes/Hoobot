@@ -55,6 +55,7 @@ export interface Trade {
   isBuyer: boolean;
   isMaker: boolean;
   isBestMatch: boolean;
+  profit?: string;
 }
 
 export interface TradeHistory {
@@ -95,11 +96,11 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
   return percentageDifference;
 }
 
-export const calculatePNLPercentageForLong = (entryQty: number, entryPrice: number, exitPrice: number): number => {
+export const calculatePNLPercentageForLong = (entryPrice: number, exitPrice: number): number => {
   return ((exitPrice) - (entryPrice)) / (entryPrice) * 100;
 }
 
-export const calculatePNLPercentageForShort = (entryQty: number, entryPrice: number, exitPrice: number): number => {
+export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: number): number => {
   return ((entryPrice) - (exitPrice)) / (entryPrice) * 100;
 }
 
@@ -173,6 +174,7 @@ export const updateForce = (
     force[symbol.split("/").join("")].skip = false;
   }
   writeFileSync(forcePath, JSON.stringify(force));
+  return true;
 }
 
 export const readForceSkip = (
@@ -402,6 +404,7 @@ export const simulateSell = async (
   quantity: number,
   price: number,
   balances: Balances,
+  profit: string,
   options: ConfigOptions,
   time: number,
   filter: Filter,
@@ -434,7 +437,7 @@ export const simulateSell = async (
     let pnl = 0;
     if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-      pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+      pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), price);
     }
     if(options.tradeHistory === undefined) {
       options.tradeHistory = {}
@@ -453,6 +456,7 @@ export const simulateSell = async (
       isBuyer: false,
       isMaker: true,
       isBestMatch: true,
+      profit: profit
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
@@ -472,15 +476,15 @@ export const simulateSell = async (
       quantity: baseQuantity,
       price: price,
       balances: balances,
-      tradeHistory: options.tradeHistory
+      tradeHistory: options.tradeHistory,
     }, null, 2));
-    logger.flush();
-    logger.push("Time", (new Date(time)).toLocaleString());
-    logger.push("SOLD", "true");
+    // logger.flush();
+    // logger.push("Time", (new Date(time)).toLocaleString());
+    logger.push("trade", "sell");
     logger.push("PNL", pnl);
-    logger.push("Balances", balances);
-    logger.print();
-    logger.flush();
+    // logger.push("Balances", balances);
+    // logger.print();
+    // logger.flush();
   }
 }
 
@@ -489,6 +493,7 @@ export const simulateBuy = async (
   quantity: number,
   price: number,
   balances: Balances,
+  profit: string,
   options: ConfigOptions,
   time: number,
   filter: Filter,
@@ -504,7 +509,7 @@ export const simulateBuy = async (
   if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
     let fee = baseQuantity * (0.075 / 100); 
     let baseQuantityWithoutFee = baseQuantity - fee; 
-    let lastTrade: Trade ={
+    let lastTrade: Trade = {
       symbol: "",
       id: 0,
       orderId: 0,
@@ -520,9 +525,9 @@ export const simulateBuy = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
+    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length >= 2) {
       lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
-      pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), price);
+      pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), price);
     }
     if(options.tradeHistory === undefined) {
       options.tradeHistory = {}
@@ -541,6 +546,7 @@ export const simulateBuy = async (
       isBuyer: true,
       isMaker: true,
       isBestMatch: true,
+      profit: profit
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
@@ -555,18 +561,18 @@ export const simulateBuy = async (
     options.profitCurrentMax[symbol.split("/").join("")] = 0;
     writeFileSync(filePath, JSON.stringify({
       symbol: symbol,
-      direction: 'BUY',
-      quantity: baseQuantityWithoutFee,
+      direction: 'SELL',
+      quantity: baseQuantity,
       price: price,
       balances: balances,
       tradeHistory: options.tradeHistory
     }, null, 2));
-    logger.flush();
-    logger.push("Time", (new Date(time)).toLocaleString());
-    logger.push("BOUGHT", "true");
+    // logger.flush();
+    // logger.push("Time", (new Date(time)).toLocaleString());
+    logger.push("Trade", "buy");
     logger.push("PNL", pnl);
-    logger.push("Balances", balances);
-    logger.print();
-    logger.flush();
+    // logger.push("Balances", balances);
+    // logger.print();
+    // logger.flush();
   }
 }

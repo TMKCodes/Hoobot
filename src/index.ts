@@ -25,12 +25,8 @@
 * the use of this software.
 * ===================================================================== */
 
-// process.on('unhandledRejection', (reason, promise) => {
-//   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-// });
-
 import Binance from 'node-binance-api';
-import { loginDiscord, } from './Discord/discord';
+import { loginDiscord } from './Discord/discord';
 import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from './Hoobot/Binance/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getCurrentBalances, storeBalancesDaily } from './Hoobot/Binance/Balances';
@@ -42,7 +38,6 @@ import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
 import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
 import { hilow } from './Hoobot/Modes/HiLow';
-import { delay, getTradeHistory } from './Hoobot/Binance/Trades';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 
@@ -99,7 +94,6 @@ const main = async () => {
           const filter = await getFilters(binance, symbol);
           symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          
           listenForOrderbooks(binance, symbol, (symbol: string, orderbook: Orderbook) => {
             if(options.orderbooks === undefined) {
               options.orderbooks = {}
@@ -155,12 +149,8 @@ export const recalculateNewOptions = (options: ConfigOptions) => {
     if (existsSync(filePath)) {
       const file = readFileSync(filePath, 'utf-8');
       const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
-
       let prevBalance = calculateBalance(prevOptions);
-      console.log(prevBalance);
       let balance = calculateBalance(options);
-      console.log(balance);
-
       if (prevBalance > balance) {
         updateOptionsForWorseSimulation(options, prevOptions);
       } else if (prevBalance < balance) {
@@ -251,14 +241,14 @@ const initBruteForceOptions = (
   }
 }
 
-export let candlestickArray: Candlestick[];
 const simulate = async () => {
   initBruteForceOptions(options);
   do {
+    const Logger = consoleLogger();
     let startingBalance = 0;
     options.startTime = new Date().toISOString();
     options.balances = {};
-    const candleStore: Candlesticks = {};
+    let candleStore: Candlesticks = {};
     if(options.mode === "algorithmic") {
       if (process.env.GO_CRAZY !== undefined && process.env.GO_CRAZY !== "false") {
         const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
@@ -270,8 +260,15 @@ const simulate = async () => {
         }
         options.symbols = foundSymbols;
       }
-      console.log(JSON.stringify(options.symbols, null, 2));
-      candlestickArray = await downloadHistoricalCandlesticks(options.symbols, options.candlestickInterval);
+      Logger.push("simulation-symbols", options.symbols);
+      Logger.push("simulation-timeframes", options.candlestickInterval);
+      Logger.print();
+      Logger.flush();
+      const intervals = [...options.candlestickInterval];
+      if (!intervals.includes(options.trendTimeframe)) {
+        intervals.push(options.trendTimeframe);
+      }
+      const allCandlesticks = await downloadHistoricalCandlesticks(options.symbols, intervals);
       console.log("Starting simulation with downloaded candlesticks.");
       for (const symbol of options.symbols) {
         options.balances[symbol.split("/")[0]] = 0;
@@ -290,7 +287,7 @@ const simulate = async () => {
         mkdirSync(directory, { recursive: true });
       }
       writeFileSync(filePath, JSON.stringify(options, null, 2));
-      await simulateListenForCandlesticks(options.symbols, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
+      await simulateListenForCandlesticks(options.symbols, allCandlesticks, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
         if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
           return;
         }
@@ -299,7 +296,19 @@ const simulate = async () => {
     }
     recalculateNewOptions(options);
     let balance = calculateBalance(options);
-    console.log(`Final Balance: ${balance}, ROI = ${(balance - startingBalance) / startingBalance}`);
+
+    Logger.push("Starting balance", startingBalance.toFixed(2));
+    Logger.push("Final Balance", balance.toFixed(2));
+    Logger.push("ROI", ((balance - startingBalance) / startingBalance).toFixed(2));
+    for (const symbol of options.symbols) {
+      Logger.push(`${symbol} trades`, options.tradeHistory[symbol.split("/").join("")].length);
+      Logger.push(`${symbol} stop losses`, options.tradeHistory[symbol.split("/").join("")].filter((trade) => trade.profit === 'STOP_LOSS').length);
+      Logger.push(`${symbol} take profits`, options.tradeHistory[symbol.split("/").join("")].filter((trade) => trade.profit === 'TAKE_PROFIT').length);
+      Logger.push(`${symbol} sells`, options.tradeHistory[symbol.split("/").join("")].filter((trade) => trade.profit === 'SELL').length);
+      Logger.push(`${symbol} buys`, options.tradeHistory[symbol.split("/").join("")].filter((trade) => trade.profit === 'BUY').length);
+    }
+    Logger.print();
+    Logger.flush();
   } while(options.simulateBruteForce === true)
 }
 if (options.simulate === true) {

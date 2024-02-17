@@ -45,7 +45,7 @@ export default {
   builder: new SlashCommandBuilder()
     .setName("balances")
     .setDescription("Replices with Binance balances!"),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, config: ConfigOptions) => {
+  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance) => {
     const sortedBalances = await getBalancesWith(binance, "USDT");
     const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.fiat.toFixed(2)} USDT`);
     await interaction.reply(`${JSON.stringify(resultBalances, null, 4)}`);

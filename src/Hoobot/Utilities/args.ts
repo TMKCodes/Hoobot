@@ -68,6 +68,11 @@ export interface OpenOrders {
 }
 
 export interface ConfigOptions {
+  currentTrendMode: string;
+  trendEnabled: boolean;
+  trendTimeframe: CandlestickInterval;
+  trendEMAShort: number;
+  trendEMALong: number;
   startTime: string;
   apiKey: string;
   apiSecret: string;
@@ -189,6 +194,11 @@ export const parseArgs = (args: string[]): ConfigOptions => {
     apiKey: process.env.API_KEY || '',
     apiSecret: process.env.API_SECRET || '',
     // Hoobot
+    trendEnabled: process.env.TREND_ENABLED === "true" ? true : false,
+    currentTrendMode: "LONG",
+    trendTimeframe: process.env.TREND_TIMEFRAME ? process.env.TREND_TIMEFRAME as CandlestickInterval : "1d",
+    trendEMAShort: parseFloat(process.env.TREND_EMA_SHORT!) || 20,
+    trendEMALong: parseFloat(process.env.TREND_EMA_LONG!) || 75,
     simulate: process.env.SIMULATE === "true" ? true : false,
     simulateBruteForce: process.env.SIMULATION_BRUTE_FORCE === "true" ? true : false,
     license: process.env.LICENSE || "",

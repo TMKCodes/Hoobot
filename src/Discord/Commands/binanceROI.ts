@@ -28,14 +28,13 @@
 import { SlashCommandBuilder } from 'discord.js';
 import fs from 'fs';
 import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
 import { getBalancesWith } from '../../Hoobot/Binance/Balances';
 
 export default {
   builder: new SlashCommandBuilder()
     .setName("roi")
     .setDescription("Calculates ROI since first recorded balance."),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
+  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance) => {
     const currentBalances = await getBalancesWith(binance, "USDT");
     if (!fs.existsSync('balances.json')) {
       await interaction.reply("There are no stored balances in balances.json file yet. Investigate!");
@@ -62,5 +61,6 @@ export default {
     msg += `Max Balance: ${maxFiat.toFixed(2)} USDT\r\nMax Difference: ${maxDiff.toFixed(2)} USDT\r\nMax ROI: ${maxRoi.toFixed(2)} %\r\n\r\n`;
     msg += '```';
     await interaction.reply(msg);
+    return true;
   }
 }

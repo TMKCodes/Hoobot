@@ -88,7 +88,6 @@ export const logOBVSignals = (
 
 
 export const checkOBVSignals = (
-  consoleLogger: ConsoleLogger, 
   candlesticks: Candlestick[], 
   obv: number[],
   options: ConfigOptions

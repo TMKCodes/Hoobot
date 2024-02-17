@@ -83,7 +83,6 @@ export const logSMASignals = (
 };
 
 export const checkSMASignals = (
-  consoleLogger: ConsoleLogger, 
   sma: number[],
   options: ConfigOptions
 ) => {

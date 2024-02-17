@@ -17,6 +17,7 @@ trading_logs.txt
 
 # production
 /build
+/build-ts
 
 # misc
 .DS_Store

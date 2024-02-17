@@ -35,7 +35,6 @@ export const calculateStochasticOscillator = (
   kPeriod: number = 14, 
   dPeriod: number = 1, 
   smoothing: number = 3, 
-  source: string = 'close'
 ): [number[], number[]] => {
   const kValues: number[] = [];
   const dValues: number[] = [];
@@ -191,7 +190,6 @@ export const logStochasticRSISignals = (
 }
 
 export const checkStochasticOscillatorSignals = (
-  consoleLogger: ConsoleLogger, 
   stochasticOscillator: [number[], number[]],
   options: ConfigOptions
 ) => {
@@ -228,7 +226,6 @@ export const checkStochasticOscillatorSignals = (
 }
 
 export const checkStochasticRSISignals = (
-  consoleLogger: ConsoleLogger, 
   stochasticRSI: [number[], number[]],
   options: ConfigOptions
 ) => {
@@ -247,17 +244,17 @@ export const checkStochasticRSISignals = (
     const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
     const rising = K > prevK && D > prevD;
     const dropping = K < prevK && D > prevD;
-    if (D < oversoldTreshold && rising && KDHigher) {
-      options.StochasticRSIWeight = 1.1; 
+    if (rising && KDHigher) {
+      options.StochasticRSIWeight = 1; 
       check = 'BUY';
-    } else if(D > overboughtTreshold && dropping && DKHigher) {
-      options.StochasticRSIWeight = 1.1;
+    } else if(dropping && DKHigher) {
+      options.StochasticRSIWeight = 1;
       check = 'SELL';
     } else if (D < oversoldTreshold && KDCrossover) {
-      options.StochasticRSIWeight = 1;
+      options.StochasticRSIWeight = 1.5;
       check = 'BUY';
     } else if (D > overboughtTreshold && DKCrossover) {
-      options.StochasticRSIWeight = 1;
+      options.StochasticRSIWeight = 1.5;
       check = 'SELL';
     }
   }

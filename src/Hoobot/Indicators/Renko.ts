@@ -103,7 +103,6 @@ export const logRenkoSignals = (
 };
 
 export const checkRenkoSignals = (
-  consoleLogger: ConsoleLogger,
   renkoData: RenkoBrick[],
   options: ConfigOptions
 ) => {

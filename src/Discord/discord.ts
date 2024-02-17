@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel } from 'discord.js'; 
+import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel, Interaction, CacheType } from 'discord.js'; 
 import { deployCommands } from './Commands/deploy';
 
 const deployable: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
@@ -79,32 +79,54 @@ deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
 
 
+/*
+
+//home/tonto/hoobot-dev/build/hoobot.js:2:460265)
+    at e.exports.handlePacket (file:///home/tonto/hoobot-dev/build/hoobot.js:2:455027)
+    at Ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:453394)
+    at Ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
+    at ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:92228)
+    at ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
+    at ae.onMessage (file:///home/tonto/hoobot-dev/build/hoobot.js:2:87989)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+//home/tonto/hoobot-dev/build/hoobot.js:2:460265)
+    at e.exports.handlePacket (file:///home/tonto/hoobot-dev/build/hoobot.js:2:455027)
+    at Ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:453394)
+    at Ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
+    at ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:92228)
+    at ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
+    at ae.onMessage (file:///home/tonto/hoobot-dev/build/hoobot.js:2:87989)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+*/
+
 export const loginDiscord = (binance: Binance, options: ConfigOptions): Client => {
   const token = options.discordBotToken;
   const client = new Client({ intents: [GatewayIntentBits.Guilds]});
   if(token === undefined) {
+    console.log(JSON.stringify(process.env));
     console.log("Discord bot token has not been set.");
   } else {
-    deployCommands(deployable);
+    deployCommands(deployable, options);
     client.once(Events.ClientReady, (c) => {
       console.log(`Logged in as ${c.user.tag}`);
     });
-    client.on(Events.InteractionCreate, async (interaction) => {
-        if(!interaction.isChatInputCommand()) return;
-        commands.forEach(async (command) => {
-          if(command.name == interaction.commandName) {
-            try {
-              await command.execute(interaction, binance, options);
-            } catch (error) {
-              console.log(error);
-              if(interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-              } else {
-                await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    client.on(Events.InteractionCreate, (interaction: Interaction<CacheType>) => {
+      const handleInteraction = async (interaction: Interaction<CacheType>) => {
+        try {
+          if(interaction.isChatInputCommand()) {
+            commands.forEach(async (command) => {
+              if(command.name == interaction.commandName) {
+                return await command.execute(interaction, binance, options);
               }
-            }
+            });
           }
-        });
+        } catch (error) {
+          console.log(error);
+        }
+      }
+      return handleInteraction(interaction);
     });
     client.on(Events.Error, (error: Error) => {
       console.log(JSON.stringify(error));

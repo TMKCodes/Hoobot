@@ -30,7 +30,7 @@ import { CandlestickInterval, ConfigOptions } from '../Utilities/args';
 import { existsSync, mkdir, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import path from 'path';
-import { candlestickArray } from '../..';
+import { time } from 'console';
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -92,7 +92,7 @@ export async function getLastCandlesticks(
 export const listenForCandlesticks = async (
   binance: Binance, 
   symbol: string, 
-  timeframe: CandlestickInterval[], 
+  intervals: CandlestickInterval[], 
   candleStore: Candlesticks, 
   historyLength: number, 
   options: ConfigOptions,
@@ -100,6 +100,10 @@ export const listenForCandlesticks = async (
 ): Promise<void> => {
   symbol = symbol.split("/").join("");
   const maxCandlesticks = 5000;
+  let timeframe = [...intervals];
+  if (!intervals.includes(options.trendTimeframe)) {
+    timeframe.push(options.trendTimeframe);
+  }
   try {
     for (let i = 0; i < timeframe.length; i++) {
       if (candleStore[symbol] === undefined) {
@@ -314,28 +318,27 @@ export const downloadHistoricalCandlesticks = async (
 
 export const simulateListenForCandlesticks = async (
   symbols: string[],
+  candlesticks: Candlestick[],
   candleStore: Candlesticks, 
   options: ConfigOptions,
   callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>
 ) => {
   const maxCandlesticks = 2000;
-  for (let candleIndex = 0; candleIndex < candlestickArray.length; candleIndex++) {
-    const candlestick = candlestickArray[candleIndex];
-    const symbol = candlestickArray[candleIndex]?.symbol;
-    const interval = candlestickArray[candleIndex]?.interval;
-    if (candleStore[symbol] == undefined) {
-      candleStore[symbol] = {}
-      if(candleStore[symbol][interval] == undefined) {
-        candleStore[symbol] = {
-          [interval]: [],
-        }
-      }
+  for (let candleIndex = 0; candleIndex < candlesticks.length; candleIndex++) {
+    const candlestick = candlesticks[candleIndex];
+    const symbol = candlesticks[candleIndex]?.symbol;
+    const interval = candlesticks[candleIndex]?.interval;
+    if (!(symbol in candleStore)) {
+      candleStore[symbol] = {};
     }
-    candleStore[symbol][interval]?.push(candlestick);
+    if (!(interval in candleStore[symbol])) {
+      candleStore[symbol][interval] = [];
+    }
+    candleStore[symbol][interval].push(candlestick);
     if (candleStore[symbol][interval]?.length > maxCandlesticks) {
       candleStore[symbol][interval] = candleStore[symbol][interval].slice(-maxCandlesticks)
     }
-    if (candleStore[symbol][interval]?.length >= 1000) {
+    if (candleStore[symbol][interval]?.length > 250) {
       let splittedSymbol = "";
       for (let symbolsIndex = 0; symbolsIndex < symbols.length; symbolsIndex++) {
         if(symbol == symbols[symbolsIndex].split("/").join("")) {

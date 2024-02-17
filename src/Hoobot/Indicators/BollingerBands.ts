@@ -99,7 +99,6 @@ export const logBollingerBandsSignals = (
 }
 
 export const checkBollingerBandsSignals = (
-  consoleLogger: ConsoleLogger,
   candlesticks: Candlestick[],
   bollingerBands: [number[], number[], number[]],
   options: ConfigOptions

@@ -133,7 +133,6 @@ export const calculateMACD = (
 }
 
 export const checkMACDSignals = (
-  consoleLogger: ConsoleLogger, 
   macd: macd, 
   options: ConfigOptions
 ) => {

@@ -28,12 +28,10 @@
 import { Candlestick } from '../Binance/Candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
-import { Indicators } from '../Modes/Algorithmic';
 
 export const logRSISignals = (
   consoleLogger: ConsoleLogger,
   rsi: number[], 
-  options: ConfigOptions
 ) => {
   let signal = "Neutral";
   if (rsi[rsi.length - 1] > 80) {
@@ -62,7 +60,6 @@ export const calculateRSI = (
   smoothingType: string = "SMA", 
   smoothing: number = 1, 
   source: string = 'close', 
-  amount: number = 5
 ): number[] => {
   let closePrices: number[] = [];
   if (source === 'close') {
@@ -133,7 +130,6 @@ export const calculateRSI = (
 }
 
 export const checkRSISignals = (
-  consoleLogger: ConsoleLogger, 
   rsi: number[], 
   options: ConfigOptions
 ): string => {
@@ -160,7 +156,6 @@ export const checkRSISignals = (
           }
         }
       }
-      consoleLogger.push("RSI Check", check);
     }
   }
   return check;

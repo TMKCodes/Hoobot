@@ -95,7 +95,6 @@ export const logCMFSignals = (
 };
 
 export const checkCMFSignals = (
-  consoleLogger: ConsoleLogger, 
   cmfValues: number[],
   options: ConfigOptions
 ) => {

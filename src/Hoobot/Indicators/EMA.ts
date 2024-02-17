@@ -35,6 +35,11 @@ export interface ema {
   long: number[];
 }
 
+export interface Trend {
+  short?: number[];
+  long?: number[];
+}
+
 export const calculateEMA = (
   candles: Candlestick[], 
   length: number = 7, 
@@ -115,7 +120,6 @@ export const logEMASignals = (
 };
 
 export const checkEMASignals = (
-  consoleLogger: ConsoleLogger, 
   ema: ema, 
   options: ConfigOptions
 ) => {
@@ -151,11 +155,13 @@ export const checkEMASignals = (
   return check;
 }
 
+
+
 export const checkTrendSignal = (
-  ema: ema,
+  ema: Trend,
 ) => {
   let trend = 'LONG'
-  if (ema !== undefined) {
+  if (ema.long !== undefined && ema.short !== undefined) {
     const currentShortEma = ema.short[ema.short.length - 1];
     const currentLongEma = ema.long[ema.long.length - 1];
     const prevShortEma = ema.short[ema.short.length - 2];
@@ -168,10 +174,12 @@ export const checkTrendSignal = (
     const isLongDownwardDirection = currentLongEma < prevLongEma;
     const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
     const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
+    const diff = currentShortEma - currentLongEma;
+    
     if (isUpwardDirection && isBullish) {
-      trend = 'UP';
+      trend = 'LONG';
     } else if (isDownwardDirection && isBearish) {
-      trend = 'DOWN';
+      trend = 'SHORT';
     }
   }
   return trend;

@@ -29,9 +29,9 @@ export default {
       let lastPNL: number = 0;
       let commission: number = 0;
       if(olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       } else if(!olderTrade.isBuyer) { 
-        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.quoteQty), parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+        lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
       }
       if (parseFloat(olderTrade.commission) > 0) {
         if (olderTrade.commissionAsset === "BNB") {
