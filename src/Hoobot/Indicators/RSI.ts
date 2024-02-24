@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { Candlestick } from '../Binance/Candlesticks';
+import { Candlestick } from '../Exchanges/Candlesticks';
 import { ConfigOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 

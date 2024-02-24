@@ -25,39 +25,15 @@
 * the use of this software.
 * ===================================================================== */
 
-import { SlashCommandBuilder } from 'discord.js';
-import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, TradeHistory, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
+import Binance from "node-binance-api";
+import { Xeggex } from "./Xeggex/Xeggex";
 
-export default {
-  builder: new SlashCommandBuilder()
-    .setName("trades")
-    .setDescription("Replis with last 10 trades on symbol.")
-    .addStringOption(option =>
-      option.setName('symbol')
-        .setDescription('The symbol to check')),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
-    const symbol: string = interaction.options.getString('symbol').toUpperCase(); 
-    if (!symbol) {
-      await interaction.reply("Please provide a valid symbol to check.");
-      return;
-    }
-    const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
-    const trades = tradeHistory.map((trade) => {
-      return {
-        orderId: trade.orderId,
-        price: trade.price,
-        qty: trade.qty,
-        quoteQty: trade.quoteQty,
-        commission: trade.commission,
-        commissionAsset: trade.commissionAsset,
-        isBuyer: trade.isBuyer,
-        isMaker: trade.isMaker,
-        isBestMatch: trade.isBestMatch,
-        time: (new Date(trade.time).toLocaleString("fi-FI")),
-      }
-    })
-    await interaction.reply(`${symbol}: ${JSON.stringify(trades, null, 4)}`);
-  }
+export type Exchange = Binance | Xeggex;
+
+export function isBinance(exchange: any): exchange is Binance {
+  return exchange !== undefined && 'candlesticks' in exchange;
+}
+
+export function isXeggex(exchange: any): exchange is Xeggex {
+  return exchange !== undefined && 'subscribeCandles' in exchange;
 }

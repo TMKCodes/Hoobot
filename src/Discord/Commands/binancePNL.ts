@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Binance/Trades';
+import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 
 export default {
   builder: new SlashCommandBuilder()

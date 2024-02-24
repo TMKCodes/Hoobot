@@ -26,13 +26,13 @@
 * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { sendMessageToChannel } from "../../Discord/discord";
+import { sendMessageToChannel } from "../../../../Discord/discord";
 import { Client } from "discord.js";
-import { ConfigOptions } from "../Utilities/args";
-import { consoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions } from "../../../Utilities/args";
+import { consoleLogger } from "../../../Utilities/consoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../../../Utilities/logToFile";
 
 export interface Order {
   quoteQty: string;

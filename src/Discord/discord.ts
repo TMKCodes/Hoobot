@@ -74,6 +74,7 @@ commands.push({name: server.builder.name, execute: server.execute});
 import fkick from './Commands/fkick';
 import { ConfigOptions } from '../Hoobot/Utilities/args';
 import Binance from 'node-binance-api';
+import { Exchange } from 'src/Hoobot/Exchanges/Exchange';
 
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
@@ -101,7 +102,7 @@ commands.push({name: fkick.builder.name, execute: fkick.execute});
 
 */
 
-export const loginDiscord = (binance: Binance, options: ConfigOptions): Client => {
+export const loginDiscord = (exchange: Exchange, options: ConfigOptions): Client => {
   const token = options.discordBotToken;
   const client = new Client({ intents: [GatewayIntentBits.Guilds]});
   if(token === undefined) {
@@ -118,7 +119,7 @@ export const loginDiscord = (binance: Binance, options: ConfigOptions): Client =
           if(interaction.isChatInputCommand()) {
             commands.forEach(async (command) => {
               if(command.name == interaction.commandName) {
-                return await command.execute(interaction, binance, options);
+                return await command.execute(interaction, exchange, options);
               }
             });
           }

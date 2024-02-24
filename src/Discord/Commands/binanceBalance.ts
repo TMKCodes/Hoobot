@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { Balances, getBalancesWith, getCurrentBalances } from '../../Hoobot/Binance/Balances';
+import { Balances, getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
@@ -46,8 +46,8 @@ export default {
     .setName("balances")
     .setDescription("Replices with Binance balances!"),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance) => {
-    const sortedBalances = await getBalancesWith(binance, "USDT");
-    const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.fiat.toFixed(2)} USDT`);
+    const sortedBalances = await getCurrentBalances(binance);
+    const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.usdt.toFixed(2)} USDT`);
     await interaction.reply(`${JSON.stringify(resultBalances, null, 4)}`);
   }
 }

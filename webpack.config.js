@@ -6,7 +6,7 @@ import webpack from 'webpack';
 
 export default (_env, argv) => {
   const isDevelopment = argv.mode === 'development'
-  const buildDir = 'build';
+  const buildDir = isDevelopment ? 'build-dev': 'build';
   return {
     devtool: "source-map",
     mode: isDevelopment ? "production" : "development",

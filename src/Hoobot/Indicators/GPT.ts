@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 import OpenAI from 'openai';
-import { Candlesticks } from '../Binance/Candlesticks';
+import { Candlesticks } from '../Exchanges/Candlesticks';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/Algorithmic';
 import { ConfigOptions } from '../Utilities/args';

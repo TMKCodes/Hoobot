@@ -24,40 +24,42 @@
 * not be liable for any losses, damages, or liabilities arising from
 * the use of this software.
 * ===================================================================== */
+import fs from 'fs';
+import Binance from "node-binance-api";
+import { Exchange, isBinance } from './Exchange';
 
-import { SlashCommandBuilder } from 'discord.js';
-import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, TradeHistory, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
-
-export default {
-  builder: new SlashCommandBuilder()
-    .setName("trades")
-    .setDescription("Replis with last 10 trades on symbol.")
-    .addStringOption(option =>
-      option.setName('symbol')
-        .setDescription('The symbol to check')),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance, options: ConfigOptions) => {
-    const symbol: string = interaction.options.getString('symbol').toUpperCase(); 
-    if (!symbol) {
-      await interaction.reply("Please provide a valid symbol to check.");
-      return;
-    }
-    const tradeHistory: Trade[] = await getTradeHistory(binance, symbol, options);
-    const trades = tradeHistory.map((trade) => {
-      return {
-        orderId: trade.orderId,
-        price: trade.price,
-        qty: trade.qty,
-        quoteQty: trade.quoteQty,
-        commission: trade.commission,
-        commissionAsset: trade.commissionAsset,
-        isBuyer: trade.isBuyer,
-        isMaker: trade.isMaker,
-        isBestMatch: trade.isBestMatch,
-        time: (new Date(trade.time).toLocaleString("fi-FI")),
-      }
-    })
-    await interaction.reply(`${symbol}: ${JSON.stringify(trades, null, 4)}`);
-  }
+export interface SymbolInfo {
+  symbol: string;
+  base: string;
+  quote: string;
 }
+
+// Function to get all symbols from Binance
+export const getTradeableSymbols = async (
+  exchange: Exchange,
+  quote: string,
+): Promise<SymbolInfo[]> => {
+  try {
+    let symbolInfos: SymbolInfo[] = [];
+    if (isBinance(exchange)) {
+      if (!exchange || typeof exchange.exchangeInfo !== "function") {
+        throw new Error("Invalid 'exchange' object or missing 'exchangeInfo' function.");
+      }
+  
+      const exchangeInfo = await exchange.exchangeInfo();
+      fs.writeFileSync("./exchange-info.json", JSON.stringify(exchangeInfo, null, 4));
+      
+      symbolInfos = exchangeInfo.symbols
+      .filter((symbol: any) => symbol.quoteAsset === quote)
+        .filter((symbol: any) => symbol.status === "TRADING")
+        .filter((symbol: any) => symbol.isSpotTradingAllowed)
+        .map((symbol: any) => {  
+          return { symbol: symbol.symbol, base: symbol.baseAsset, quote: symbol.quoteAsset }
+        });
+    }
+    return symbolInfos;
+  } catch (error) {
+    console.error("Error in getTradeableSymbols:", error);
+    return []; // Return an empty array or handle the error as required.
+  }
+};

@@ -27,8 +27,8 @@
 
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions } from "../Utilities/args";
-import { Filter } from "../Binance/Filters";
-import { checkPreviousTrade } from "../Binance/Trades";
+import { Filter } from "../Exchanges/Filters";
+import { checkPreviousTrade } from "../Exchanges/Trades";
 
 export const checkBalanceSignals = (
   consoleLogger: ConsoleLogger, 
@@ -38,15 +38,15 @@ export const checkBalanceSignals = (
   filter: Filter,
 ) => {
   let check = 'HOLD';
-  const baseBalance = options.balances[symbol.split("/")[0]];
-  const quoteBalance = options.balances[symbol.split("/")[1]];
+  const baseBalance = options.balances[symbol.split("/")[0]].crypto;
+  const quoteBalance = options.balances[symbol.split("/")[1]].crypto;
   const baseBalanceConverted = (baseBalance * closePrice);
   const tradeCheck = checkPreviousTrade(symbol, options);
   if (tradeCheck === 'SELL') {
     if (quoteBalance > parseFloat(filter.minNotional)) {
       check = 'BUY';
     } else {
-      if (baseBalanceConverted > parseFloat(filter.minNotional)) {
+      if (baseBalanceConverted >= parseFloat(filter.minNotional)) {
         check = 'SELL';
       } else {
         check = 'HOLD';
@@ -56,7 +56,7 @@ export const checkBalanceSignals = (
     if (baseBalanceConverted > parseFloat(filter.minNotional)) {
       check = 'SELL'
     } else {
-      if (quoteBalance > parseFloat(filter.minNotional)) {
+      if (quoteBalance >= parseFloat(filter.minNotional)) {
         check = 'BUY';
       } else {
         check = 'HOLD';

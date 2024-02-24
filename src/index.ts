@@ -27,20 +27,23 @@
 
 import Binance from 'node-binance-api';
 import { loginDiscord } from './Discord/discord';
-import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from './Hoobot/Binance/Candlesticks';
+import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from './Hoobot/Exchanges/Candlesticks';
 import { ConfigOptions, parseArgs } from './Hoobot/Utilities/args';
-import { getCurrentBalances, storeBalancesDaily } from './Hoobot/Binance/Balances';
+import { getCurrentBalances, storeBalances } from './Hoobot/Exchanges/Balances';
 import { consoleLogger } from './Hoobot/Utilities/consoleLogger';
-import { Filters, getFilters } from './Hoobot/Binance/Filters';
+import { Filters, getFilters } from './Hoobot/Exchanges/Filters';
 import dotenv from 'dotenv';
 import { algorithmic, simulateAlgorithmic } from './Hoobot/Modes/Algorithmic';
-import { getTradeableSymbols } from './Hoobot/Binance/Symbols';
+import { getTradeableSymbols } from './Hoobot/Exchanges/Symbols';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
-import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Binance/Orderbook';
+import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Exchanges/Orderbook';
 import { hilow } from './Hoobot/Modes/HiLow';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
+import { Xeggex, XeggexResponse } from './Hoobot/Exchanges/Xeggex/Xeggex';
+import { Exchange } from './Hoobot/Exchanges/Exchange';
 
+export var symbolFilters: Filters = {};
 
 // Get configuration options from command-line arguments and dotenv.
 dotenv.config();
@@ -48,14 +51,22 @@ const args = process.argv.slice(2);
 const options = parseArgs(args) as ConfigOptions;
 
 // Initialize Binance client
-const binance = new Binance().options({
-  APIKEY: options.apiKey,
-  APISECRET: options.apiSecret,
-  useServerTime: true, 
-  family: 4,
-});
+var exchange: Exchange;
 
-export let symbolFilters: Filters = {};
+if (options.exchange === 'binance') {
+  exchange = new Binance();
+  exchange.options({
+    APIKEY: options.apiKey,
+    APISECRET: options.apiSecret,
+    useServerTime: true, 
+    family: 4,
+  });
+} else if (options.exchange === 'xeggex') {
+  // rename xeggex to exchange for testing xeggex..
+  exchange = new Xeggex(options.apiKey, options.apiSecret);
+  await exchange.waitConnect();
+}
+
 const main = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -65,22 +76,21 @@ const main = async () => {
     }
     let discord: any = undefined;
     if(options.discordEnabled === true) {
-      discord = loginDiscord(binance, options);
+      discord = loginDiscord(exchange, options);
     }
-    options.balances = await getCurrentBalances(binance);
-    storeBalancesDaily(binance, "USDT");
+    options.balances = await getCurrentBalances(exchange);
+    storeBalances(exchange, options.balances);
     const candlesticksToPreload = 1000;
     const symbolCandlesticks: Candlesticks = {};
     if(options.mode === "algorithmic") {
       if (process.env.GO_CRAZY !== undefined && process.env.GO_CRAZY !== "false") {
-        const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
+        const symbolInfo = await getTradeableSymbols(exchange, process.env.GO_CRAZY);
         const foundSymbols: string[] = [];
         for (const symbol of symbolInfo) {
           if (symbol.quote === process.env.GO_CRAZY) {
             foundSymbols.push(symbol.base + "/" + symbol.quote);
           }
         }
-        console.log(JSON.stringify(foundSymbols, null, 2));
         options.symbols = foundSymbols;
       }
       if (Array.isArray(options.symbols)) {
@@ -88,26 +98,26 @@ const main = async () => {
           options.orderbooks = {}
         }
         for (const symbol of options.symbols) {
-          options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
+          options.orderbooks[symbol.split("/").join("")] = await getOrderbook(exchange, symbol);
         }
         for (const symbol of options.symbols) {
-          const filter = await getFilters(binance, symbol);
+          const filter = await getFilters(exchange, symbol);
           symbolFilters[symbol.split("/").join("")] = filter;
           const logger = consoleLogger();
-          listenForOrderbooks(binance, symbol, (symbol: string, orderbook: Orderbook) => {
+          listenForOrderbooks(exchange, symbol, (symbol: string, orderbook: Orderbook) => {
             if(options.orderbooks === undefined) {
               options.orderbooks = {}
             }
             if(options.orderbooks !== undefined && options.orderbooks[symbol.split("/").join("")] === undefined) {
               options.orderbooks[symbol.split("/").join("")] = {
-                bids: [],
-                asks: []
+                bids: {},
+                asks: {}
               }
             }
             options.orderbooks[symbol.split("/").join("")] = orderbook;
           });
-          listenForCandlesticks(binance, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, options, async (candlesticks: Candlesticks) => {
-            await algorithmic(discord, binance, logger, symbol, candlesticks, options);
+          listenForCandlesticks(exchange, symbol, options.candlestickInterval, symbolCandlesticks, candlesticksToPreload, options, async (candlesticks: Candlesticks) => {
+            await algorithmic(discord, exchange, logger, symbol, candlesticks, options);
           });
         }
       }
@@ -116,24 +126,24 @@ const main = async () => {
         if(options.orderbooks === undefined) {
           options.orderbooks = {}
         }
-        options.orderbooks[symbol.split("/").join("")] = await getOrderbook(binance, symbol);
+        options.orderbooks[symbol.split("/").join("")] = await getOrderbook(exchange, symbol);
       }
       for (const symbol of options.symbols) {
-        const filter = await getFilters(binance, symbol);
+        const filter = await getFilters(exchange, symbol);
         symbolFilters[symbol.split("/").join("")] = filter;
-        listenForOrderbooks(binance, symbol, (_symbol: string, orderbook: Orderbook) => {
+        listenForOrderbooks(exchange, symbol, (_symbol: string, orderbook: Orderbook) => {
           if(options.orderbooks === undefined) {
             options.orderbooks = {}
           }
           if(options.orderbooks !== undefined && options.orderbooks[symbol.split("/").join("")] === undefined) {
             options.orderbooks[symbol.split("/").join("")] =  {
-              bids: [],
-              asks: []
+              bids: {},
+              asks: {}
             }
           }
           options.orderbooks[symbol.split("/").join("")] = orderbook;
           const logger = consoleLogger();
-          hilow(discord, binance, logger, symbol, options);
+          hilow(discord, exchange, logger, symbol, options);
         });
       }
     }
@@ -175,7 +185,7 @@ const calculateBalance = (options: ConfigOptions): number => {
       const lastPrice = parseFloat(lastTrade.price);
       const [base, quote] = symbol.split('/');
       if (options.balances !== undefined && options.balances[base] !== null) {
-        const baseBalance = options.balances[base] * lastPrice;
+        const baseBalance = options.balances[base].crypto * lastPrice;
         balance += baseBalance;
       }
       uniqueQuoteCurrencies.add(quote);
@@ -185,7 +195,7 @@ const calculateBalance = (options: ConfigOptions): number => {
   }
   uniqueQuoteCurrencies.forEach((quote) => {
     if (options.balances !== undefined) {
-      balance += options.balances[quote];
+      balance += options.balances[quote].crypto;
     }
   });
   return balance;
@@ -251,7 +261,7 @@ const simulate = async () => {
     let candleStore: Candlesticks = {};
     if(options.mode === "algorithmic") {
       if (process.env.GO_CRAZY !== undefined && process.env.GO_CRAZY !== "false") {
-        const symbolInfo = await getTradeableSymbols(binance, process.env.GO_CRAZY);
+        const symbolInfo = await getTradeableSymbols(exchange, process.env.GO_CRAZY);
         const foundSymbols: string[] = [];
         for (const symbol of symbolInfo) {
           if (symbol.quote === process.env.GO_CRAZY) {
@@ -271,10 +281,16 @@ const simulate = async () => {
       const allCandlesticks = await downloadHistoricalCandlesticks(options.symbols, intervals);
       console.log("Starting simulation with downloaded candlesticks.");
       for (const symbol of options.symbols) {
-        options.balances[symbol.split("/")[0]] = 0;
-        options.balances[symbol.split("/")[1]] = options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length;
+        options.balances[symbol.split("/")[0]] = {
+          crypto: 0,
+          usdt: 0,
+        }
+        options.balances[symbol.split("/")[1]] = {
+          crypto: options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length,
+          usdt: 0,
+        } 
         startingBalance += options.startingMaxBuyAmount[symbol.split("/").join("")] * options.symbols.length;
-        const filter = await getFilters(binance, symbol);
+        const filter = await getFilters(exchange, symbol);
         symbolFilters[symbol.split("/").join("")] = filter;
       }
       const sanitizedStartTime = options.startTime.replace(/:/g, '-');

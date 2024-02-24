@@ -28,27 +28,27 @@
 import { SlashCommandBuilder } from 'discord.js';
 import fs from 'fs';
 import Binance from 'node-binance-api';
-import { getBalancesWith } from '../../Hoobot/Binance/Balances';
+import { Balance, getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
 
 export default {
   builder: new SlashCommandBuilder()
     .setName("roi")
     .setDescription("Calculates ROI since first recorded balance."),
   execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance) => {
-    const currentBalances = await getBalancesWith(binance, "USDT");
+    const currentBalances = await getCurrentBalances(binance);
     if (!fs.existsSync('balances.json')) {
       await interaction.reply("There are no stored balances in balances.json file yet. Investigate!");
     }
     const storedBalances = JSON.parse(fs.readFileSync("balances.json", 'utf-8') || "[]");
     const totalCurrentFiat = Object.values(currentBalances)
-                            .reduce((acc, cur) => acc + cur.fiat, 0);
-    const totalFirstFiat = Object.values(storedBalances[0][Object.keys(storedBalances[0])[0]] as Record<string, { crypto: number, fiat: number }>)
-                            .reduce((acc, cur) => acc + cur.fiat, 0);
+                            .reduce((acc, cur: Balance) => acc + cur.usdt, 0);
+    const totalFirstFiat = Object.values(storedBalances[0][Object.keys(storedBalances[0])[0]] as Record<string, { crypto: number, usdt: number }>)
+                            .reduce((acc, cur) => acc + cur.usdt, 0);
     const diff = totalCurrentFiat - totalFirstFiat;
     const roi = ((totalCurrentFiat - totalFirstFiat) / totalFirstFiat) * 100;
     const totalFiatBalances = storedBalances.map((entry: any) => {
-      const balances = entry[Object.keys(entry)[0]] as Record<string, { crypto: number, fiat: number }>;
-      return Object.values(balances).reduce((acc, balance) => acc + balance.fiat, 0);
+      const balances = entry[Object.keys(entry)[0]] as Record<string, { crypto: number, usdt: number }>;
+      return Object.values(balances).reduce((acc, balance) => acc + balance.usdt, 0);
     });
     const validFiatBalances = totalFiatBalances.filter((balance: number) => typeof balance === 'number' && !isNaN(balance));
     const maxFiat = Math.max(...validFiatBalances);     

@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { CandlestickInterval, ConfigOptions } from '../Utilities/args';
+import { CandlestickInterval, ConfigOptions } from '../../../Utilities/args';
 import { existsSync, mkdir, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import path from 'path';

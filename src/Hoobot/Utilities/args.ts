@@ -25,10 +25,10 @@
 * the use of this software.
 * ===================================================================== */
 
-import { Balances } from "../Binance/Balances";
-import { Orderbooks } from "../Binance/Orderbook";
-import { TradeHistory } from "../Binance/Trades";
-import { Order } from "../Binance/Orders";
+import { Balances } from "../Exchanges/Balances";
+import { Orderbooks } from "../Exchanges/Orderbook";
+import { TradeHistory } from "../Exchanges/Trades";
+import { Order } from "../Exchanges/Orders";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
@@ -59,6 +59,27 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
   return intervalToSeconds[interval];
 }
 
+export const getMinutesFromInterval = (interval: CandlestickInterval): number => {
+  const intervalToSeconds: Record<CandlestickInterval, number> = {
+    "1m": 1,
+    "3m": 3,
+    "5m": 5,
+    "15m": 15,
+    "30m": 30,
+    "1h": 60,
+    "2h": 60 * 2,
+    "4h": 60 * 4,
+    "6h": 60 * 6,
+    "8h": 60 * 8,
+    "12h": 60 * 12,
+    "1d": 60 * 24,
+    "3d": 60 * 24 * 3,
+    "1w": 60 * 24 * 7,
+    "1M": 60 * 24 * 30, // Assuming 30 days in a month
+  }
+  return intervalToSeconds[interval];
+}
+
 export interface GrowingMaxBuy {
   [symbol: string]: number;
 } 
@@ -74,6 +95,7 @@ export interface ConfigOptions {
   trendEMAShort: number;
   trendEMALong: number;
   startTime: string;
+  exchange: string;
   apiKey: string;
   apiSecret: string;
   simulate: boolean;
@@ -191,6 +213,7 @@ export const parseArgs = (args: string[]): ConfigOptions => {
   const options: ConfigOptions = {
     // Binance
     startTime: new Date().toISOString(),
+    exchange: process.env.EXCHANGE || 'binance',
     apiKey: process.env.API_KEY || '',
     apiSecret: process.env.API_SECRET || '',
     // Hoobot

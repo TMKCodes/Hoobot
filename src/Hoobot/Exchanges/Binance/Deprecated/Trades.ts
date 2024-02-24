@@ -27,16 +27,16 @@
 
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
-import { Filter } from "./Filters";
-import { handleOpenOrder, openOrders, Order, checkBeforePlacingOrder } from "./Orders";
-import { sendMessageToChannel } from "../../Discord/discord";
-import { exists, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
-import { play } from "../Utilities/playSound";
+import { ConsoleLogger } from "../../../Utilities/consoleLogger";
+import { ConfigOptions, getSecondsFromInterval } from "../../../Utilities/args";
+import { Filter } from "../../Filters";
+import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
+import { sendMessageToChannel } from "../../../../Discord/discord";
+import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
+import { play } from "../../../Utilities/playSound";
 import { Orderbook } from "./Orderbook";
-import { Balances, getCurrentBalances } from "./Balances";
-import { logToFile } from "../Utilities/logToFile";
+import { Balances, getCurrentBalances } from "../../Balances";
+import { logToFile } from "../../../Utilities/logToFile";
 import path from "path";
 
 const soundFile = './alarm.mp3'
@@ -239,7 +239,7 @@ export const sell = async (
     return false;
   }
   try {
-    const baseBalance = options.balances![symbol.split("/")[0]];
+    const baseBalance = options.balances![symbol.split("/")[0]].crypto;
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInBase = baseBalance;
@@ -325,7 +325,7 @@ export const buy = async (
     return false;
   }
   try {
-    const quoteBalance = options.balances![symbol.split("/")[1]];
+    const quoteBalance = options.balances![symbol.split("/")[1]].crypto;
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
     let maxQuantityInQuote = quoteBalance;
@@ -460,8 +460,8 @@ export const simulateSell = async (
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
-    balances[baseCoin] = balances[baseCoin] - baseQuantity;
-    balances[quoteCoin] = balances[quoteCoin] + quoteQuontityWithoutFee;
+    balances[baseCoin].crypto = balances[baseCoin].crypto - baseQuantity;
+    balances[quoteCoin].crypto = balances[quoteCoin].crypto + quoteQuontityWithoutFee;
     const sanitizedStartTime = options.startTime.replace(/:/g, '-');
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
@@ -550,8 +550,8 @@ export const simulateBuy = async (
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
-    balances[baseCoin] = balances[baseCoin] + baseQuantity;
-    balances[quoteCoin] = balances[quoteCoin] - quoteQuantity;
+    balances[baseCoin].crypto = balances[baseCoin].crypto + baseQuantity;
+    balances[quoteCoin].crypto = balances[quoteCoin].crypto - quoteQuantity;
     const sanitizedStartTime = options.startTime.replace(/:/g, '-');
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);

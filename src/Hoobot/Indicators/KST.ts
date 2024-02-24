@@ -1,4 +1,4 @@
-import { Candlestick } from "../Binance/Candlesticks";
+import { Candlestick } from "../Exchanges/Candlesticks";
 import { calculateSMA } from "./SMA";
 
 

@@ -27,21 +27,21 @@
 
 import { Client } from "discord.js";
 import { symbolFilters } from "../..";
-import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { ConfigOptions } from "../Utilities/args";
-import { buy, calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory, sell } from "../Binance/Trades";
+import { buy, calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory, sell } from "../Exchanges/Trades";
+import { Exchange } from "../Exchanges/Exchange";
 
 export const hilow = async (
   discord: Client, 
-  binance: Binance, 
+  exchange: Exchange, 
   consoleLogger: ConsoleLogger, 
   symbol: string, 
   options: ConfigOptions
 ) => {
   const filter = symbolFilters[symbol.split("/").join("")];
   if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-    options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(binance, symbol, options);
+    options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
   }
   const tradeHistory = options.tradeHistory[symbol.split("/").join("")];
   const lastTrade = tradeHistory[tradeHistory.length - 1];
@@ -77,12 +77,12 @@ export const hilow = async (
     if (unrealizedPNL < (maxProfit - options.takeProfitMinimumPNLDrop)) {
       if (lastTrade.isBuyer) {
         if (unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
-          sell(discord, binance, consoleLogger, symbol, "", orderBook, filter, options);
+          sell(discord, exchange, consoleLogger, symbol, "", orderBook, filter, options);
           options.profitCurrentMax[symbol.split("/").join("")] = 0;
         }
       } else {
         if (unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
-          buy(discord, binance, consoleLogger, symbol, "", orderBook, filter, options);
+          buy(discord, exchange, consoleLogger, symbol, "", orderBook, filter, options);
           options.profitCurrentMax[symbol.split("/").join("")] = 0;
         }
       }

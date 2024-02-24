@@ -25,11 +25,11 @@
 * the use of this software.
 * ===================================================================== */
 
-import { Orderbook } from "../Binance/Orderbook";
+import { Orderbook } from "../Exchanges/Orderbook";
 import { ConfigOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForceSkip } from "../Binance/Trades";
-import { Candlestick } from "../Binance/Candlesticks";
+import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForceSkip } from "../Exchanges/Trades";
+import { Candlestick } from "../Exchanges/Candlesticks";
 import { reverseSign } from "../Modes/Algorithmic";
 
 const sleep = async (ms: number) => await new Promise(r => setTimeout(r, ms));
@@ -125,7 +125,7 @@ export const calculateProfitSignals = async (
       }
     }
   }
-  if (options.holdUntilPositiveTrade === true && (lastPNL < 0 && unrealizedPNL < 0 && check !== "STOP_LOSS")) {
+  if (options.holdUntilPositiveTrade === true && (lastPNL < 0 && unrealizedPNL < 0 && check !== "STOP_LOSS" && check !== "BUY")) {
     check = "HOLD";
   }
   return {
