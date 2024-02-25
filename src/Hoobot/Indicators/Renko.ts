@@ -1,5 +1,5 @@
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 export interface RenkoBrick {
@@ -14,13 +14,19 @@ export interface RenkoBrick {
 
 export const calculateBrickSize = (
   atr: number[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   const averageAtr = atr
       .filter((atr) => atr !== undefined)
       .reduce((sum, atr) => sum + atr, 0) / atr.length;
-  if (options.RenkoBrickMultiplier > 0) {
-    return averageAtr * options.RenkoBrickMultiplier;
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.renko !== undefined) {
+      if(symbolOptions.indicators.renko.enabled) {
+        if (symbolOptions.indicators.renko.brickSize > 0) {
+          return averageAtr * symbolOptions.indicators.renko.brickSize;
+        }
+      }
+    }
   }
   return averageAtr;
 }
@@ -70,28 +76,34 @@ export const calculateRenko = (
 export const logRenkoSignals = (
   consoleLogger: ConsoleLogger,
   renkoData: RenkoBrick[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   const lastBrick = renkoData[renkoData.length - 1];
   const prevBrick = renkoData[renkoData.length - 2];
   let signal = "";
-  if (prevBrick !== undefined) {
-    const isBullishCrossover = lastBrick?.color === 'green' && prevBrick.color === 'red';
-    const isBearishCrossover = lastBrick?.color === 'red' && prevBrick.color === 'green';
-    const isUpwardDirection = lastBrick.close > prevBrick.close;
-    const isDownwardDirection = lastBrick.close < prevBrick.close;
-    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-    const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= options.renkoBrickSize;
-    if (isBullishCrossover && isPriceMoveBeyondThreshold) {
-      signal = `Bullish Crossover`;
-    } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
-      signal = `Bearish Crossover`;
-    } else  if (isUpwardDirection) {
-      signal = `Upward`;
-    } else if (isDownwardDirection) {
-      signal = `Downward`;
-    } else if (isFlatDirection) {
-      signal = `Flat`;
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.renko !== undefined) {
+      if(symbolOptions.indicators.renko.enabled) {
+        if (prevBrick !== undefined) {
+          const isBullishCrossover = lastBrick?.color === 'green' && prevBrick.color === 'red';
+          const isBearishCrossover = lastBrick?.color === 'red' && prevBrick.color === 'green';
+          const isUpwardDirection = lastBrick.close > prevBrick.close;
+          const isDownwardDirection = lastBrick.close < prevBrick.close;
+          const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
+          const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= symbolOptions.indicators.renko.brickSize;
+          if (isBullishCrossover && isPriceMoveBeyondThreshold) {
+            signal = `Bullish Crossover`;
+          } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
+            signal = `Bearish Crossover`;
+          } else  if (isUpwardDirection) {
+            signal = `Upward`;
+          } else if (isDownwardDirection) {
+            signal = `Downward`;
+          } else if (isFlatDirection) {
+            signal = `Flat`;
+          }
+        }
+      }
     }
   }
   consoleLogger.push("Renko", {
@@ -104,27 +116,30 @@ export const logRenkoSignals = (
 
 export const checkRenkoSignals = (
   renkoData: RenkoBrick[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useRenko) {
-    check = 'HOLD';
-    const lastBrick = renkoData[renkoData.length - 1];
-    const prevBrick = renkoData[renkoData.length - 2];
-    const isBullishCrossover = lastBrick?.color === 'green' && prevBrick?.color === 'red';
-    const isBearishCrossover = lastBrick?.color === 'red' && prevBrick?.color === 'green';
-    const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= options.renkoBrickSize;
-    if (isBullishCrossover && isPriceMoveBeyondThreshold) {
-      options.RenkoWeight = 1.1;
-      check = 'BUY';
-    } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
-      options.RenkoWeight = 1.1;
-      check = 'SELL';
-    } else {
-      options.RenkoWeight = 1;
-      check = 'HOLD';
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.renko !== undefined) {
+      if(symbolOptions.indicators.renko.enabled) {
+        check = 'HOLD';
+        const lastBrick = renkoData[renkoData.length - 1];
+        const prevBrick = renkoData[renkoData.length - 2];
+        const isBullishCrossover = lastBrick?.color === 'green' && prevBrick?.color === 'red';
+        const isBearishCrossover = lastBrick?.color === 'red' && prevBrick?.color === 'green';
+        const isPriceMoveBeyondThreshold = Math.abs(lastBrick?.close - prevBrick?.close) >= symbolOptions.indicators.renko.brickSize;
+        if (isBullishCrossover && isPriceMoveBeyondThreshold) {
+          symbolOptions.indicators.renko.weight = 1.1;
+          check = 'BUY';
+        } else if (isBearishCrossover && isPriceMoveBeyondThreshold) {
+          symbolOptions.indicators.renko.weight = 1.1;
+          check = 'SELL';
+        } else {
+          symbolOptions.indicators.renko.weight = 1;
+          check = 'HOLD';
+        }
+      }
     }
   }
-
   return check;
 };

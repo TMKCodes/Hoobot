@@ -27,7 +27,7 @@
 
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { Indicators } from "../Modes/Algorithmic";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 export interface sma {
@@ -84,22 +84,24 @@ export const logSMASignals = (
 
 export const checkSMASignals = (
   sma: number[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useSMA) {
-    check = 'HOLD';
-    const currentSMA = sma[sma.length - 1];
-    const prevSMA = sma[sma.length - 2];
-    const isBullishCrossover = currentSMA > prevSMA;
-    const isBearishCrossover = currentSMA < prevSMA;
-    const isFlatDirection = currentSMA == prevSMA;
-    if (isBullishCrossover) {
-      check = 'BUY';
-    } else if (isBearishCrossover) {
-      check = 'SELL';
-    } else if (isFlatDirection) {
-      check = 'HOLD'
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.sma && symbolOptions.indicators.sma.enabled) {
+      check = 'HOLD';
+      const currentSMA = sma[sma.length - 1];
+      const prevSMA = sma[sma.length - 2];
+      const isBullishCrossover = currentSMA > prevSMA;
+      const isBearishCrossover = currentSMA < prevSMA;
+      const isFlatDirection = currentSMA == prevSMA;
+      if (isBullishCrossover) {
+        check = 'BUY';
+      } else if (isBearishCrossover) {
+        check = 'SELL';
+      } else if (isFlatDirection) {
+        check = 'HOLD'
+      }
     }
   }
   return check;

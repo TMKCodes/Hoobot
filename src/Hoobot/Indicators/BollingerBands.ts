@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from '../Exchanges/Candlesticks';
-import { ConfigOptions } from '../Utilities/args';
+import { ConfigOptions, SymbolOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { calculateEMA } from './EMA';
 import { calculateSMA } from './SMA';
@@ -101,24 +101,28 @@ export const logBollingerBandsSignals = (
 export const checkBollingerBandsSignals = (
   candlesticks: Candlestick[],
   bollingerBands: [number[], number[], number[]],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = 'SKIP';
-  if (options.useBollingerBands) {
-    check = 'HOLD';
-    for(let i = 1; i < options.bollingerBandsHistoryLength + 1; i++) {
-      const currentLow = candlesticks[candlesticks.length - i].low;
-      const currentHigh = candlesticks[candlesticks.length - i].high;    
-      const currentUpperBand = bollingerBands[1][bollingerBands[1].length - i];
-      const currentLowerBand = bollingerBands[0][bollingerBands[0].length - i];
-      const isAboveUpperBand = currentHigh > currentUpperBand;
-      const isBelowLowerBand = currentLow < currentLowerBand;
-      if (isAboveUpperBand) {
-        check = 'SELL';
-        break;
-      } else if (isBelowLowerBand) {
-        check = 'BUY';
-        break;
+  if (symbolOptions.indicators !== undefined) {
+    if(symbolOptions.indicators.bb !== undefined) {
+      if (symbolOptions.indicators.bb.enabled) {
+        check = 'HOLD';
+        for(let i = 1; i < symbolOptions.indicators.bb.length + 1; i++) {
+          const currentLow = candlesticks[candlesticks.length - i].low;
+          const currentHigh = candlesticks[candlesticks.length - i].high;    
+          const currentUpperBand = bollingerBands[1][bollingerBands[1].length - i];
+          const currentLowerBand = bollingerBands[0][bollingerBands[0].length - i];
+          const isAboveUpperBand = currentHigh > currentUpperBand;
+          const isBelowLowerBand = currentLow < currentLowerBand;
+          if (isAboveUpperBand) {
+            check = 'SELL';
+            break;
+          } else if (isBelowLowerBand) {
+            check = 'BUY';
+            break;
+          }
+        }
       }
     }
   }

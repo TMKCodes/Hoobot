@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { CandlestickInterval, ConfigOptions, getMinutesFromInterval } from '../Utilities/args';
+import { CandlestickInterval, ConfigOptions, ExchangeOptions, SymbolOptions, getMinutesFromInterval } from '../Utilities/args';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import path from 'path';
@@ -124,14 +124,14 @@ export const listenForCandlesticks = async (
   intervals: CandlestickInterval[], 
   candleStore: Candlesticks, 
   historyLength: number, 
-  options: ConfigOptions,
+  symbolOptions: SymbolOptions,
   callback: (candlesticks: Candlesticks) => Promise<void>
 ): Promise<void> => {
   const maxCandlesticks = 5000;
   let timeframe = [...intervals];
   if (isBinance(exchange)) {
-    if (!intervals.includes(options.trendTimeframe)) {
-      timeframe.push(options.trendTimeframe);
+    if (!intervals.includes(symbolOptions.trend?.timeframe!)) {
+      timeframe.push(symbolOptions.trend?.timeframe!);
     }
   }
   try {
@@ -172,7 +172,7 @@ export const listenForCandlesticks = async (
           if (candleStore[symbol][timeframe[i]].length > maxCandlesticks) {
             candleStore[symbol][timeframe[i]] = candleStore[symbol][timeframe[i]].slice(-maxCandlesticks);
           }
-          if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
+          if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
             await callback(candleStore);
           } else {
             websocket.terminate();
@@ -212,7 +212,7 @@ export const listenForCandlesticks = async (
             if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
               candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
             }
-            if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
+            if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
               await callback(candleStore);
             } else {
               exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));
@@ -257,7 +257,7 @@ export const listenForCandlesticks = async (
             if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
               candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
             }
-            if (!(options.stopLossHit === true && options.stopLossStopTrading === true)) {
+            if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
               await callback(candleStore);
             } else {
               exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));

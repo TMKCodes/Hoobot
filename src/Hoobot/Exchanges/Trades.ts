@@ -28,7 +28,7 @@
 import { Client } from "discord.js";
 import Binance from "node-binance-api";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/args";
 import { Filter } from "./Filters";
 import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -117,7 +117,7 @@ export const calculateUnrealizedPNLPercentageForShort = (entryQty: number, entry
 export const getTradeHistory = async (
   exchange: Exchange,
   symbol: string,
-  options: ConfigOptions
+  processOptions: ConfigOptions
 ) => {
   let tradeHistory: Trade[] = [];
   if (isBinance(exchange)) {
@@ -143,8 +143,8 @@ export const getTradeHistory = async (
   }
   let compactedTradeHistory: Trade[] = [];
   let currentTrade: Trade | null = null;
-  if (options.startTimestamp !== undefined) {
-    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(options.startTimestamp as string));
+  if (processOptions.startTime !== undefined) {
+    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(processOptions.startTime as string));
   }
   for (const trade of tradeHistory) {
     if (currentTrade === null) {
@@ -218,7 +218,7 @@ export const readForceSkip = (
   return skip;
 }
 
-export const isBlocking = async (symbol: string, options: ConfigOptions): Promise<boolean> => {
+export const isBlocking = async (symbol: string, symbolOptions: SymbolOptions): Promise<boolean> => {
   symbol = symbol.replace("/", "");
   const folder = `./blocks`;
   if (!existsSync(folder)) {
@@ -230,7 +230,7 @@ export const isBlocking = async (symbol: string, options: ConfigOptions): Promis
     const creationTime = new Date(stats.birthtime).getTime();
     const nowTime = new Date().getTime();
     const differenceInSeconds = (nowTime - creationTime) / 1000;
-    const intervalInSeconds = getSecondsFromInterval(options.candlestickInterval[0]);
+    const intervalInSeconds = getSecondsFromInterval(symbolOptions.timeframes[0]);
     if (differenceInSeconds > intervalInSeconds) {
       writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
       return false; // The action was not blocked.
@@ -349,14 +349,16 @@ export const sell = async (
   profit: string,
   orderBook: Orderbook,
   filter: Filter,
-  options: ConfigOptions,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions, 
+  symbolOptions: SymbolOptions
 ): Promise<Order | boolean> => {
-  const block = await isBlocking(symbol, options);
+  const block = await isBlocking(symbol, symbolOptions);
   if (block === true) {
     return false;
   }
   try {
-    const baseBalance = options.balances![symbol.split("/")[0]].crypto;
+    const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let price = orderBookAsks[0] - parseFloat(filter.tickSize);
     let maxQuantityInBase = baseBalance;
@@ -365,11 +367,11 @@ export const sell = async (
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (profit !== "STOP_LOSS") { 
-          if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitSell + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
+        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS") { 
+          if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
             consoleLogger.push("error", "Not positive trade")
             return false;
           }
@@ -387,18 +389,20 @@ export const sell = async (
       msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += '```';
-      sendMessageToChannel(discord, options.discordChannelID, msg);
+      sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       logToFile(msg);
-      await handleOpenOrder(discord, exchange, symbol, order, orderBook, options);
-      updateBuyAmount(symbol, roundedQuantityInBase * roundedPrice, options);
-      options.profitCurrentMax[symbol.split("/").join("")] = 0;
-      updateForce(symbol);
-      options.balances = await getCurrentBalances(exchange);
-      if (options.tradeHistory === undefined) {
-        options.tradeHistory = {}
+      await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+      updateBuyAmount(roundedQuantityInBase * roundedPrice, symbolOptions);
+      if (symbolOptions.takeProfit !== undefined) {
+        symbolOptions.takeProfit.current = 0;
       }
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
-      await delay(getSecondsFromInterval(options.candlestickInterval[0]));
+      updateForce(symbol);
+      exchangeOptions.balances = await getCurrentBalances(exchange);
+      if (exchangeOptions.tradeHistory === undefined) {
+        exchangeOptions.tradeHistory = {}
+      }
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
       return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
@@ -411,19 +415,25 @@ export const sell = async (
   return false
 }
 
-const maxBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
-  if (options.startingMaxBuyAmount[symbol.split("/").join("")] === undefined) {
-    return quoteQuantity;
-  } else if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
-    return quoteQuantity = Math.min(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
+const maxBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
+  if(symbolOptions.growingMax) {
+    if (symbolOptions.growingMax.buy === undefined) {
+      return quoteQuantity;
+    } else if (symbolOptions.growingMax.buy > 0) {
+      return quoteQuantity = Math.min(quoteQuantity, symbolOptions.growingMax.buy);
+    } else {
+      return quoteQuantity;
+    }
   } else {
     return quoteQuantity;
   }
 }
 
-const updateBuyAmount = (symbol: string, quoteQuantity: number, options: ConfigOptions) => {
-  if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0) {
-    options.startingMaxBuyAmount[symbol.split("/").join("")] = Math.max(quoteQuantity, options.startingMaxBuyAmount[symbol.split("/").join("")]);
+const updateBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
+  if(symbolOptions.growingMax) {
+    if (symbolOptions.growingMax.buy > 0) {
+      symbolOptions.growingMax.buy = Math.max(quoteQuantity, symbolOptions.growingMax.buy);
+    }
   }
 }
 
@@ -435,32 +445,34 @@ export const buy = async (
   profit: string,
   orderBook: any,
   filter: Filter,
-  options: ConfigOptions,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions, 
+  symbolOptions: SymbolOptions
 ): Promise<Order | boolean> => {
-  const block = await isBlocking(symbol, options);
+  const block = await isBlocking(symbol, symbolOptions);
   if (block === true) {
     return false;
   }
   try {
-    const quoteBalance = options.balances![symbol.split("/")[1]].crypto;
+    const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0] + parseFloat(filter.tickSize);
     let maxQuantityInQuote = quoteBalance;
-    maxQuantityInQuote = maxBuyAmount(symbol, maxQuantityInQuote, options);
+    maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
     const quantityInBase = (maxQuantityInQuote / price);
     const roundedPrice = roundStep(price, filter.tickSize);
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (options.minimumProfitBuy === 0) {
-          options.minimumProfitBuy = Number.MIN_SAFE_INTEGER;
+        if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
+          symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
         }
-        if (profit !== "STOP_LOSS") {
-          if (options.holdUntilPositiveTrade === true && unrealizedPNL < options.minimumProfitBuy + options.tradeFee && readForceSkip(symbol.split("/").join("")) === false) {
+        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS") {
+          if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
             consoleLogger.push("error", "Not positive trade")
             return false;
           }
@@ -478,17 +490,19 @@ export const buy = async (
       msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += '```';
-      sendMessageToChannel(discord, options.discordChannelID, msg);
+      sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       logToFile(msg);
-      await handleOpenOrder(discord, exchange, symbol, order, orderBook, options);
-      options.profitCurrentMax[symbol.split("/").join("")] = 0;
-      updateForce(symbol);
-      options.balances = await getCurrentBalances(exchange);
-      if (options.tradeHistory === undefined) {
-        options.tradeHistory = {};
+      await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+      if (symbolOptions.takeProfit !== undefined) {
+        symbolOptions.takeProfit.current = 0;
       }
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
-      await delay(getSecondsFromInterval(options.candlestickInterval[0]));
+      updateForce(symbol);
+      exchangeOptions.balances = await getCurrentBalances(exchange);
+      if (exchangeOptions.tradeHistory === undefined) {
+        exchangeOptions.tradeHistory = {};
+      }
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
       return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
@@ -502,11 +516,11 @@ export const buy = async (
 
 export const checkPreviousTrade = (
   symbol: string,
-  options: ConfigOptions
+  exchangeOptions: ExchangeOptions
 ) => {
   let check = 'SELL';
-  if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
-    const lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+  if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
+    const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
     if (lastTrade.isBuyer) {
       check = 'BUY';
     } else {
@@ -523,6 +537,8 @@ export const simulateSell = async (
   balances: Balances,
   profit: string,
   options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
   logger: ConsoleLogger
@@ -552,14 +568,14 @@ export const simulateSell = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
-      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
+      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), price);
     }
-    if(options.tradeHistory === undefined) {
-      options.tradeHistory = {}
+    if(exchangeOptions.tradeHistory === undefined) {
+      exchangeOptions.tradeHistory = {}
     }
-    options.tradeHistory[symbol.split("/").join("")].push({
+    exchangeOptions.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
       id: 0,
       orderId: 0,
@@ -585,15 +601,17 @@ export const simulateSell = async (
     if (!existsSync(directory)) {
       mkdirSync(directory, { recursive: true });
     }
-    options.profitCurrentMax[symbol.split("/").join("")] = 0;
-    updateBuyAmount(symbol, quoteQuantity, options)
+    if (symbolOptions.takeProfit !== undefined) {
+      symbolOptions.takeProfit.current = 0;
+    }
+    updateBuyAmount(quoteQuantity, symbolOptions)
     writeFileSync(filePath, JSON.stringify({
       symbol: symbol,
       direction: 'SELL',
       quantity: baseQuantity,
       price: price,
       balances: balances,
-      tradeHistory: options.tradeHistory,
+      tradeHistory: exchangeOptions.tradeHistory,
     }, null, 2));
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());
@@ -612,6 +630,8 @@ export const simulateBuy = async (
   balances: Balances,
   profit: string,
   options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
   logger: ConsoleLogger
@@ -621,7 +641,7 @@ export const simulateBuy = async (
     return;
   }
   let quoteQuantity = quantity;
-  quoteQuantity = maxBuyAmount(symbol, quoteQuantity, options);
+  quoteQuantity = maxBuyAmount(quoteQuantity, symbolOptions);
   let baseQuantity = quoteQuantity / price;
   if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
     let fee = baseQuantity * (0.075 / 100); 
@@ -642,14 +662,14 @@ export const simulateBuy = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length >= 2) {
-      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (options.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length >= 2) {
+      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), price);
     }
     if(options.tradeHistory === undefined) {
       options.tradeHistory = {}
     }
-    options.tradeHistory[symbol.split("/").join("")].push({
+    exchangeOptions.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
       id: 0,
       orderId: 0,
@@ -675,7 +695,9 @@ export const simulateBuy = async (
     if (!existsSync(directory)) {
       mkdirSync(directory, { recursive: true });
     }
-    options.profitCurrentMax[symbol.split("/").join("")] = 0;
+    if (symbolOptions.takeProfit !== undefined) {
+      symbolOptions.takeProfit.current = 0;
+    }
     writeFileSync(filePath, JSON.stringify({
       symbol: symbol,
       direction: 'SELL',

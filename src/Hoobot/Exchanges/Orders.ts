@@ -28,7 +28,7 @@
 import Binance from "node-binance-api";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/args";
 import { consoleLogger } from "../Utilities/consoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
@@ -156,22 +156,22 @@ export const checkBeforePlacingOrder = (
 export const addOpenOrder = (
   symbol: string,
   order: Order,
-  options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
 ) => {
-  if (options.openOrders[symbol.split("/").join("")] === undefined) {
-    options.openOrders[symbol.split("/").join("")] = [ order ];
+  if (exchangeOptions.openOrders[symbol.split("/").join("")] === undefined) {
+    exchangeOptions.openOrders[symbol.split("/").join("")] = [ order ];
   } else {
-    options.openOrders[symbol.split("/").join("")].push(order);
+    exchangeOptions.openOrders[symbol.split("/").join("")].push(order);
   }
 }
 
 export const openOrderDone = (
   symbol: string,
   orderId: number,
-  options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
 ) => {
-  if (options.openOrders[ symbol.split("/").join("")] !== undefined) {
-    options.openOrders[ symbol.split("/").join("")] = options.openOrders[symbol.split("/").join("")].filter(
+  if (exchangeOptions.openOrders[ symbol.split("/").join("")] !== undefined) {
+    exchangeOptions.openOrders[ symbol.split("/").join("")] = exchangeOptions.openOrders[symbol.split("/").join("")].filter(
       (order) => order.orderId !== orderId
     );
   }
@@ -179,9 +179,9 @@ export const openOrderDone = (
 
 export const checkOpenOrders = (
   symbol: string,
-  options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
 ) => {
-  if (options.openOrders[symbol.split("/").join("")] !== undefined && options.openOrders[symbol.split("/").join("")]?.length > 0) {
+  if (exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined && exchangeOptions.openOrders[symbol.split("/").join("")]?.length > 0) {
     return true;
   } else {
     return false;
@@ -194,7 +194,8 @@ export const handleOpenOrder = async (
   symbol: string,
   order: Order,
   orderBook: Orderbook, 
-  options: ConfigOptions,
+  processOptions: ConfigOptions,
+  symbolOptions: SymbolOptions
 ): Promise<string> => {
   try {
     if(isBinance(exchange)) {
@@ -217,34 +218,34 @@ export const handleOpenOrder = async (
         let tryToCancel = false;
         if (orderStatus.status === "CANCELED") {
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "CANCELED";
         } else if (orderStatus.status === "EXPIRED") {
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "EXPIRED";
         } else if (orderStatus.status === "FILLED") {
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "FILLED";
         } else if (orderStatus.status === "NEW") {
           tryToCancel = true;
         } else if (orderStatus.status === "PARTIALLY_FILLED") {
           if (partiallyFilledSent === false) {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             partiallyFilledSent = true;
           }
         } else if (orderStatus.status === "REJECTED") {
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "REJECTED";
         }
         if (tryToCancel === true) {
-          if (orderAgeSeconds > options.maxOrderAge) {
+          if (orderAgeSeconds > symbolOptions.maximumAgeOfOrder!) {
             await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             return "CANCELED";
           } else {
             let unrealizedPNL = 0;
@@ -255,10 +256,10 @@ export const handleOpenOrder = async (
               const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
               unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
             }
-            if (unrealizedPNL < options.closePercentage) {
+            if (unrealizedPNL < symbolOptions.closePercentage!) {
               await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
               const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+              sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
               return "CANCELED";
             }
           }
@@ -277,24 +278,24 @@ export const handleOpenOrder = async (
         for (const filledOrder of filledOrders) {
           if (parseFloat(filledOrder.id) === order.orderId) {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             return "FILLED";
           }
         }
         for (const cancelledOrder of cancelledOrders) {
           if (parseFloat(cancelledOrder.id) === order.orderId) {
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-            sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             return "CANCELED";
           }
         }
         for (const activeOrder of activeOrders) {
           if (parseFloat(activeOrders.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
-            if (orderAgeSeconds > options.maxOrderAge) {
+            if (orderAgeSeconds > symbolOptions.maximumAgeOfOrder!) {
               await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
               const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+              sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
               return "CANCELED";
             } else {
               let unrealizedPNL = 0;
@@ -305,10 +306,10 @@ export const handleOpenOrder = async (
                 const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
                 unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
               }
-              if (unrealizedPNL < options.closePercentage) {
+              if (unrealizedPNL < symbolOptions.closePercentage!) {
                 await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-                sendMessageToChannel(discord, options.discordChannelID, orderMsg);
+                sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
                 return "CANCELED";
               }
             }

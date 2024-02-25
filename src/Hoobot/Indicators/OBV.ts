@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
@@ -90,27 +90,29 @@ export const logOBVSignals = (
 export const checkOBVSignals = (
   candlesticks: Candlestick[], 
   obv: number[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useOBV) {
-    check = 'HOLD';
-    for(let i = 1; i < (options.obvHistoryLength + 1); i++) {
-      const currentOBV = obv[obv.length - i];
-      const prevOBV = obv[obv.length - (i + 1)];
-      const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
-      const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
-      const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
-      const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;
-      const isBearishDivergence = currentOBV < prevOBV && candlesticks[candlesticks.length - i].close > candlesticks[candlesticks.length - (i + 1)].close;
-      if (isBullishCrossover) {
-        check = 'BUY';
-      } else if (isBearishCrossover) {
-        check = 'SELL';
-      } else if (isBullishDivergence) {
-        check = 'BUY'; 
-      } else if (isBearishDivergence) {
-        check = 'SELL'; 
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.obv && symbolOptions.indicators.obv.enabled) {
+      check = 'HOLD';
+      for(let i = 1; i < (symbolOptions.indicators.obv.length + 1); i++) {
+        const currentOBV = obv[obv.length - i];
+        const prevOBV = obv[obv.length - (i + 1)];
+        const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
+        const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
+        const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
+        const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;
+        const isBearishDivergence = currentOBV < prevOBV && candlesticks[candlesticks.length - i].close > candlesticks[candlesticks.length - (i + 1)].close;
+        if (isBullishCrossover) {
+          check = 'BUY';
+        } else if (isBearishCrossover) {
+          check = 'SELL';
+        } else if (isBullishDivergence) {
+          check = 'BUY'; 
+        } else if (isBearishDivergence) {
+          check = 'SELL'; 
+        }
       }
     }
   }

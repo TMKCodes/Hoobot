@@ -28,7 +28,7 @@
 import { Client } from "discord.js";
 import { symbolFilters } from "../..";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/args";
 import { buy, calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory, sell } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
 
@@ -37,22 +37,24 @@ export const hilow = async (
   exchange: Exchange, 
   consoleLogger: ConsoleLogger, 
   symbol: string, 
-  options: ConfigOptions
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
 ) => {
   const filter = symbolFilters[symbol.split("/").join("")];
-  if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-    options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
   }
-  const tradeHistory = options.tradeHistory[symbol.split("/").join("")];
+  const tradeHistory = exchangeOptions.tradeHistory[symbol.split("/").join("")];
   const lastTrade = tradeHistory[tradeHistory.length - 1];
   consoleLogger.push("Symbol", symbol.split("/").join(""));
-  const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
+  const roi = calculateROI(exchangeOptions.tradeHistory[symbol.split("/").join("")]);
   consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
   consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
-  if (options.startingMaxBuyAmount[symbol.split("/").join("")] > 0 && options.startingMaxBuyAmount !== undefined) {
-    consoleLogger.push("Max buy amount", options.startingMaxBuyAmount + " " + symbol.split("/")[1]);
+  if (symbolOptions.growingMax?.buy! > 0) {
+    consoleLogger.push("Max buy amount", symbolOptions.growingMax?.buy + " " + symbol.split("/")[1]);
   }
-  const orderBook = options.orderbooks[symbol.split("/").join("")];
+  const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
   const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
   const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
   let unrealizedPNL: number = 0;
@@ -65,25 +67,27 @@ export const hilow = async (
   } else { 
     unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), orderBookAsks[0]);
   }
-  const maxProfit = (options.profitCurrentMax[symbol.split("/").join("")] === undefined) ? 0 : options.profitCurrentMax[symbol.split("/").join("")];
-  const minMaxProfitDrop = maxProfit - options.takeProfitMinimumPNLDrop;
-  consoleLogger.push("PANIC Current MAX PNL%", maxProfit);
-  consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
-  consoleLogger.push("PANIC Current PANIC PNL%", minMaxProfitDrop);
-  if (unrealizedPNL > options.takeProfitMinimumPNL) {
-    if (unrealizedPNL > maxProfit) {
-      options.profitCurrentMax[symbol.split("/").join("")] = unrealizedPNL;
-    }
-    if (unrealizedPNL < (maxProfit - options.takeProfitMinimumPNLDrop)) {
-      if (lastTrade.isBuyer) {
-        if (unrealizedPNL > options.minimumProfitSell + options.tradeFee) {
-          sell(discord, exchange, consoleLogger, symbol, "", orderBook, filter, options);
-          options.profitCurrentMax[symbol.split("/").join("")] = 0;
-        }
-      } else {
-        if (unrealizedPNL > options.minimumProfitBuy + options.tradeFee) {
-          buy(discord, exchange, consoleLogger, symbol, "", orderBook, filter, options);
-          options.profitCurrentMax[symbol.split("/").join("")] = 0;
+  if (symbolOptions.takeProfit !== undefined && symbolOptions.takeProfit.enabled == true) {
+    const maxProfit = (symbolOptions.takeProfit?.current === undefined) ? 0 : symbolOptions.takeProfit.current;
+    const minMaxProfitDrop = maxProfit - symbolOptions.takeProfit?.drop!;
+    consoleLogger.push("PANIC Current MAX PNL%", maxProfit);
+    consoleLogger.push("PANIC Current PNL%", unrealizedPNL);
+    consoleLogger.push("PANIC Current PANIC PNL%", minMaxProfitDrop);
+    if (unrealizedPNL > symbolOptions.takeProfit?.minimum!) {
+      if (unrealizedPNL > maxProfit) {
+        symbolOptions.takeProfit.current = unrealizedPNL;
+      }
+      if (unrealizedPNL < (maxProfit - symbolOptions.takeProfit?.drop!)) {
+        if (lastTrade.isBuyer) {
+          if (unrealizedPNL > symbolOptions.profit?.minimumSell! + symbolOptions.tradeFeePercentage!) {
+            sell(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+            symbolOptions.takeProfit.current = 0;
+          }
+        } else {
+          if (unrealizedPNL > symbolOptions.profit?.minimumBuy! + symbolOptions.tradeFeePercentage!) {
+            buy(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+            symbolOptions.takeProfit.current = 0;
+          }
         }
       }
     }

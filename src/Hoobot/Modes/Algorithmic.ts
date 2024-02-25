@@ -27,7 +27,7 @@
 
 import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
-import { ConfigOptions, getSecondsFromInterval } from "../Utilities/args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
 import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend, logEMASignals } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
@@ -113,11 +113,12 @@ export const tradeDirection =  async (
   orderBook: Orderbook | undefined,
   candlesticks: Candlesticks, 
   indicators: Indicators,
-  options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   filter: Filter,
 ): Promise<string[]> => {
   const startTime = Date.now();
-  const timeframes = options.candlestickInterval;
+  const timeframes = symbolOptions.timeframes;
   let direction = 'HOLD';
   const directions: Directions = {
     BUY: 0,
@@ -128,38 +129,41 @@ export const tradeDirection =  async (
   let profit = "SKIP";
   const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
   const closeTime = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].time;
-  const next = checkBalanceSignals(consoleLogger, symbol, closePrice, options, filter);
+  const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
   if (orderBook !== undefined) {
-    profit = await checkProfitSignals(consoleLogger, next, trend, symbol, orderBook, closeTime, options);
+    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions,symbolOptions);
   } else {
-    profit = await checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, symbol, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, options);
+    profit = await checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, exchangeOptions, symbolOptions);
+  }
+  if (symbolOptions.indicators === undefined) {
+    return [profit, "HOLD"];
   }
   const weights: Weights = {
-    SMAWeight: options.SMAWeight,
-    EMAWeight: options.EMAWeight,
-    MACDWeight: options.MACDWeight,
-    RSIWeight: options.RSIWeight,
-    StochasticOscillatorWeight: options.StochasticOscillatorWeight,
-    StochasticRSIWeight: options.StochasticRSIWeight,
-    BollingerBandsWeight: options.BollingerBandsWeight,
-    OBVWeight: options.OBVWeight,
-    CMFWeight: options.CMFWeight,
-    RenkoWeight: options.RenkoWeight,
+    SMAWeight: symbolOptions.indicators.sma?.weight!,
+    EMAWeight: symbolOptions.indicators.ema?.weight!,
+    MACDWeight: symbolOptions.indicators.macd?.weight!,
+    RSIWeight: symbolOptions.indicators.rsi?.weight!,
+    StochasticOscillatorWeight: symbolOptions.indicators.so?.weight!,
+    StochasticRSIWeight: symbolOptions.indicators.srsi?.weight!,
+    BollingerBandsWeight: symbolOptions.indicators.bb?.weight!,
+    OBVWeight: symbolOptions.indicators.obv?.weight!,
+    CMFWeight: symbolOptions.indicators.cmf?.weight!,
+    RenkoWeight: symbolOptions.indicators.renko?.weight!,
   }
   // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
     const checks: Checks = {
-      SMA: checkSMASignals(indicators.sma[timeframes[timeframeIndex]], options),
-      Renko: checkRenkoSignals(indicators.renko[timeframes[timeframeIndex]], options),
-      EMA: checkEMASignals(indicators.ema[timeframes[timeframeIndex]], options),
-      MACD: checkMACDSignals(indicators.macd[timeframes[timeframeIndex]], options),
-      RSI: checkRSISignals(indicators.rsi[timeframes[timeframeIndex]], options),
-      StochasticOscillator: checkStochasticOscillatorSignals(indicators.stochasticOscillator[timeframes[timeframeIndex]], options),
-      StochasticRSI: checkStochasticRSISignals(indicators.stochasticRSI[timeframes[timeframeIndex]], options),
-      BollingerBands: checkBollingerBandsSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.bollingerBands[timeframes[timeframeIndex]], options),
-      OBV: checkOBVSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], options),
-      CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], options),
+      SMA: checkSMASignals(indicators.sma[timeframes[timeframeIndex]], symbolOptions),
+      Renko: checkRenkoSignals(indicators.renko[timeframes[timeframeIndex]], symbolOptions),
+      EMA: checkEMASignals(indicators.ema[timeframes[timeframeIndex]], symbolOptions),
+      MACD: checkMACDSignals(indicators.macd[timeframes[timeframeIndex]], symbolOptions),
+      RSI: checkRSISignals(indicators.rsi[timeframes[timeframeIndex]], symbolOptions),
+      StochasticOscillator: checkStochasticOscillatorSignals(indicators.stochasticOscillator[timeframes[timeframeIndex]], symbolOptions),
+      StochasticRSI: checkStochasticRSISignals(indicators.stochasticRSI[timeframes[timeframeIndex]], symbolOptions),
+      BollingerBands: checkBollingerBandsSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.bollingerBands[timeframes[timeframeIndex]], symbolOptions),
+      OBV: checkOBVSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], symbolOptions),
+      CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], symbolOptions),
     }
     const keys = Object.keys(checks).filter(check => checks[check] !== 'SKIP');
     // console.log(`Keys: ${JSON.stringify(keys)}`);
@@ -197,22 +201,22 @@ export const tradeDirection =  async (
   for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
     // console.log(`${directions[actions[actionsIndex]]} >= ${options.directionAgreement}`)
     if((profit == actions[actionsIndex] || profit === 'SKIP' || profit === "TAKE_PROFIT" || profit === "STOP_LOSS") && next == actions[actionsIndex]) {
-      if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= (options.directionAgreement / 2)) {
+      if(profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= (symbolOptions.agreement / 2)) {
         direction = next;
         break;
-      } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= (options.directionAgreement / 2)) {
+      } else if(profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= (symbolOptions.agreement / 2)) {
         direction = next;
         break;
-      } else if (directions[actions[actionsIndex]] >= options.directionAgreement) {
+      } else if (directions[actions[actionsIndex]] >= symbolOptions.agreement) {
         direction = actions[actionsIndex];
         break;
       }
     }
   }
   
-  if (options.useGPT) {
-    const checkGPT = await checkGPTSignals(consoleLogger, symbol, candlesticks, indicators, options);
-    if (options.openaiOverwrite === true) {
+  if (symbolOptions.indicators.OpenAI !== undefined && symbolOptions.indicators.OpenAI.enabled) {
+    const checkGPT = await checkGPTSignals(consoleLogger, symbol, candlesticks, indicators, symbolOptions);
+    if (symbolOptions.indicators.OpenAI.overwrite === true) {
       direction = checkGPT;
     } else {
       if (checkGPT !== "SKIP" && checkGPT !== direction) {
@@ -298,27 +302,29 @@ export const placeTrade = async (
   symbol: string,
   candlesticks: Candlesticks,
   filter: Filter,
-  options: ConfigOptions,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
 ) => {
-  if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-    const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+    const lastTradeTime = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1].time;
     const currentTime = Date.now();
     const timeDifferenceInSeconds = (currentTime - lastTradeTime) / 1000;
-    if (timeDifferenceInSeconds < getSecondsFromInterval(options.candlestickInterval[0])) {
+    if (timeDifferenceInSeconds < getSecondsFromInterval(symbolOptions.timeframes[0])) {
       return false; 
     }
   }
-  const orderBook = options.orderbooks[symbol.split("/").join("")];
+  const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
   consoleLogger.push("Orderbook", {
     ask: Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0],
     bid: Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]
   })
-  const indicators = calculateIndicators(symbol, candlesticks, options, consoleLogger);
-  const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, options, filter);
+  const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
+  const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
   if (direction === 'SELL') {
-    return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, options);
-  } else if (direction === 'BUY' && options.stopLossHit === false) {
-    return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, options);
+    return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+  } else if (direction === 'BUY' && symbolOptions.stopLoss?.hit === false) {
+    return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
   } else {
     return false;
   }
@@ -328,51 +334,53 @@ const subCalculateIndicators = (
   candlesticks: Candlestick[],
   indicators: any,
   timeframe: string,
-  options: ConfigOptions,
+  symbolOptions: SymbolOptions,
   consoleLogger: ConsoleLogger,
 ) => {
-  indicators.sma[timeframe] = calculateSMA(candlesticks, options.smaLength, options.source);
-  if (options.useSMA) {
-    logSMASignals(consoleLogger, indicators.sma[timeframe]); 
+  if (symbolOptions.indicators !== undefined) {
+    indicators.sma[timeframe] = calculateSMA(candlesticks, symbolOptions.indicators?.sma?.length!, symbolOptions.source);
+    if (symbolOptions.indicators.sma?.enabled) {
+      logSMASignals(consoleLogger, indicators.sma[timeframe]); 
+    }
+    if (symbolOptions.indicators.rsi?.enabled) {
+      indicators.rsi[timeframe] = calculateRSI(candlesticks, symbolOptions.indicators.rsi.length, symbolOptions.indicators.rsi.smoothing?.type, symbolOptions.indicators.rsi.smoothing?.length, symbolOptions.source);
+      logRSISignals(consoleLogger, indicators.rsi[timeframe]);
+    }
+    if (symbolOptions.indicators.macd?.enabled) {
+      indicators.macd[timeframe] = calculateMACD(candlesticks, symbolOptions.indicators.macd.fast, symbolOptions.indicators.macd.slow, symbolOptions.indicators.macd.signal, symbolOptions.source);
+      logMACDSignals(consoleLogger, indicators.macd[timeframe]);
+    }
+    if (symbolOptions.indicators.atr?.enabled) {
+      logATRSignals(consoleLogger, indicators.atr[timeframe]);
+    }
+    if (symbolOptions.indicators.bb?.enabled) {
+      indicators.bollingerBands[timeframe] = calculateBollingerBands(candlesticks, symbolOptions.indicators.bb.average, symbolOptions.indicators.bb.length, symbolOptions.indicators.bb.multiplier, symbolOptions.source);
+      logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands[timeframe]);
+    }
+    if (symbolOptions.indicators.so?.enabled) {
+      indicators.stochasticOscillator[timeframe] = calculateStochasticOscillator(candlesticks, symbolOptions.indicators.so.kPeriod, symbolOptions.indicators.so.dPeriod, symbolOptions.indicators.so.smoothing);
+      logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframe]);
+    }
+    if (symbolOptions.indicators.srsi?.enabled) {
+      indicators.stochasticRSI[timeframe] = calculateStochasticRSI(candlesticks, symbolOptions.indicators.srsi.rsiLength, symbolOptions.indicators.srsi.stochLength, symbolOptions.indicators.srsi.smoothK, symbolOptions.indicators.srsi.smoothD, symbolOptions.indicators.rsi?.smoothing?.type, symbolOptions.source);
+      logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframe]);
+    }
+    if (symbolOptions.indicators.obv?.enabled) {
+      indicators.obv[timeframe] = calculateOBV(candlesticks);
+      logOBVSignals(consoleLogger, candlesticks, indicators.obv[timeframe]);
+    }
+    if (symbolOptions.indicators.cmf?.enabled) {
+      indicators.cmf[timeframe] = calculateCMF(candlesticks, symbolOptions.indicators.cmf.length);
+      logCMFSignals(consoleLogger, indicators.cmf[timeframe], symbolOptions);
+    }
+    return indicators;
   }
-  if (options.useRSI) {
-    indicators.rsi[timeframe] = calculateRSI(candlesticks, options.rsiLength, options.rsiSmoothingType, options.rsiSmoothing, options.source);
-    logRSISignals(consoleLogger, indicators.rsi[timeframe]);
-  }
-  if (options.useMACD) {
-    indicators.macd[timeframe] = calculateMACD(candlesticks, options.fastMacd, options.slowMacd, options.signalMacd, options.source);
-    logMACDSignals(consoleLogger, indicators.macd[timeframe]);
-  }
-  if (options.useATR) {
-    logATRSignals(consoleLogger, indicators.atr[timeframe]);
-  }
-  if (options.useBollingerBands) {
-    indicators.bollingerBands[timeframe] = calculateBollingerBands(candlesticks, options.bollingerBandsAverageType, options.bollingerBandsLength, options.bollingerBandsMultiplier, options.source);
-    logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands[timeframe]);
-  }
-  if (options.useStochasticOscillator) {
-    indicators.stochasticOscillator[timeframe] = calculateStochasticOscillator(candlesticks, options.stochasticOscillatorKPeriod, options.stochasticOscillatorDPeriod, options.stochasticOscillatorSmoothing);
-    logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframe]);
-  }
-  if (options.useStochasticRSI) {
-    indicators.stochasticRSI[timeframe] = calculateStochasticRSI(candlesticks, options.stochasticRSILengthRSI, options.stochasticRSILengthStoch, options.stochasticRSISmoothK, options.stochasticRSISmoothD, options.rsiSmoothingType, options.source);
-    logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframe]);
-  }
-  if (options.useOBV) {
-    indicators.obv[timeframe] = calculateOBV(candlesticks);
-    logOBVSignals(consoleLogger, candlesticks, indicators.obv[timeframe]);
-  }
-  if (options.useCMF) {
-    indicators.cmf[timeframe] = calculateCMF(candlesticks, options.cmfLength);
-    logCMFSignals(consoleLogger, indicators.cmf[timeframe], options);
-  }
-  return indicators;
 }
 
 export const calculateIndicators = (
   symbol: string,
   candlesticks: Candlesticks,
-  options: ConfigOptions,
+  symbolOptions: SymbolOptions,
   consoleLogger: ConsoleLogger,
 ): Indicators => {
   let indicators: Indicators = {
@@ -390,33 +398,34 @@ export const calculateIndicators = (
     cmf: {},
     renko: {},
   };
-  if (candlesticks[symbol.split("/").join("")][options.trendTimeframe] !== undefined) {
+  if (candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!] !== undefined) {
     indicators.trend = {
-      short: calculateEMA(candlesticks[symbol.split("/").join("")][options.trendTimeframe], options.trendEMAShort, 'close'),
-      long: calculateEMA(candlesticks[symbol.split("/").join("")][options.trendTimeframe], options.trendEMALong, 'close'),
+      short: calculateEMA(candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!], symbolOptions.indicators?.ema?.short!, 'close'),
+      long: calculateEMA(candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!], symbolOptions.indicators?.ema?.long!, 'close'),
     }
   } else {
     // console.log("ERROR");
   }
-  const timeframes = options.candlestickInterval;
+  const timeframes = symbolOptions.timeframes;
   for (let i = 0; i < timeframes.length; i++) {
-    indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
-    logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
-    indicators.ema[timeframes[i]] = {
-      short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.shortEma, options.source),
-      long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], options.longEma, options.source),
+    if(symbolOptions.indicators !== undefined) {
+      indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
+      //logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
+      indicators.ema[timeframes[i]] = {
+        short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.long!, symbolOptions.source),
+        long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.short!, symbolOptions.source),
+      }
+      //logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
+      indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.atr?.length, symbolOptions.source);
+      if (symbolOptions.indicators.renko !== undefined && symbolOptions.indicators.renko.enabled) {
+        symbolOptions.indicators.renko.brickSize = calculateBrickSize(indicators.atr[timeframes[i]], symbolOptions);
+        indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators.renko.brickSize);
+        //logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]], options);
+        indicators = subCalculateIndicators(indicators.renko[timeframes[i]] as Candlestick[], indicators, timeframes[i], symbolOptions, consoleLogger);
+      } else {
+        indicators = subCalculateIndicators(candlesticks[symbol.split("/").join("")][timeframes[i]], indicators, timeframes[i], symbolOptions, consoleLogger);
+      }
     }
-    logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
-    indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], options.atrLength, options.source);
-    options.renkoBrickSize = calculateBrickSize(indicators.atr[timeframes[i]], options);
-    indicators.renko[timeframes[i]] = calculateRenko(candlesticks[symbol.split("/").join("")][timeframes[i]], options.renkoBrickSize);
-    if (options.useRenko) {
-      logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]], options);
-      indicators = subCalculateIndicators(indicators.renko[timeframes[i]] as Candlestick[], indicators, timeframes[i], options, consoleLogger);
-    } else {
-      indicators = subCalculateIndicators(candlesticks[symbol.split("/").join("")][timeframes[i]], indicators, timeframes[i], options, consoleLogger);
-    }
-    
   }
   return indicators;
 }
@@ -427,7 +436,9 @@ export const algorithmic = async (
   consoleLogger: ConsoleLogger, 
   symbol: string, 
   candlesticks: Candlesticks, 
-  options: ConfigOptions
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
 ) => {
   try {
     const startTime = Date.now();
@@ -442,10 +453,14 @@ export const algorithmic = async (
     if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
       return false;
     }
-    if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
+    if (exchangeOptions.tradeHistory === undefined) {
+      exchangeOptions.tradeHistory = {};
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
     }
-    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < options.longEma) {
+    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    }
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
       return false;
     }
@@ -453,8 +468,8 @@ export const algorithmic = async (
     const prevCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2];
     const candleTime = (new Date(latestCandle.time)).toLocaleString('fi-FI');
     consoleLogger.push("Symbol", symbol.split("/").join(""));
-    if (options.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-      const lastTradeTime = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1].time;
+    if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+      const lastTradeTime = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1].time;
       const lastTradeDate = new Date(lastTradeTime);
       consoleLogger.push("Last trade time", lastTradeDate.toLocaleString("fi-FI"));
     } else {
@@ -484,31 +499,31 @@ export const algorithmic = async (
     //   });
     // }
     consoleLogger.push("Balance", {
-      base:  options.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
-      quote: options.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
+      base:  exchangeOptions.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
+      quote: exchangeOptions.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
     });
-    const placedTrade = await placeTrade(discord, exchange, consoleLogger, symbol, candlesticks, filter, options);
+    const placedTrade = await placeTrade(discord, exchange, consoleLogger, symbol, candlesticks, filter, processOptions, exchangeOptions, symbolOptions);
     const stopTime = Date.now();
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
     if (latestCandle.isFinal === true) {
-      options.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, options);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
     } else if (placedTrade == true) {
       consoleLogger.writeJSONTofile('./trades.json');
     }
-    if (options.consoleUpdate === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
+    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
       consoleLogger.print();
       consoleLogger.flush();
-    } else if (options.consoleUpdate === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
+    } else if (exchangeOptions.console === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
       consoleLogger.flush();
-    } else if (options.consoleUpdate === "trade" && placedTrade === true) {
+    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
       consoleLogger.print();
       consoleLogger.flush();
-    } else if (options.consoleUpdate === "trade" && placedTrade === false) {
+    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
       consoleLogger.flush();
-    } else if (options.consoleUpdate === "final" && latestCandle.isFinal === true) {
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
       consoleLogger.print();
       consoleLogger.flush();
-    } else if (options.consoleUpdate === "final" && latestCandle.isFinal === false) {
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
       consoleLogger.flush();
     } else {
       consoleLogger.print();
@@ -534,7 +549,9 @@ const getRandomValueBetween = (x: number, close: number): number => {
 export const simulateAlgorithmic = async (
   symbol: string, 
   candlesticks: Candlesticks, 
-  options: ConfigOptions,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   balances: Balances,
   filter: Filter,
 ) => {
@@ -549,10 +566,10 @@ export const simulateAlgorithmic = async (
   if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < 2) {
     return false;
   }
-  if (options.tradeHistory[symbol.split("/").join("")] === undefined) {
-    options.tradeHistory[symbol.split("/").join("")] = []
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = []
   }
-  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < options.longEma) {
+  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < symbolOptions.indicators?.ema?.long!) {
     logger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
     return false;
   }
@@ -574,21 +591,21 @@ export const simulateAlgorithmic = async (
   logger.push("Time", candleTime);
   logger.push("Color", (latestCandle.close > latestCandle.open) ? "Green" : "Red");
   logger.push("Balance", {
-    base:  options.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
-    quote: options.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
+    base:  exchangeOptions.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
+    quote: exchangeOptions.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
   });
   const emptyLogger = consoleLogger();
-  const indicators: Indicators = calculateIndicators(symbol, candlesticks, options, logger);
+  const indicators: Indicators = calculateIndicators(symbol, candlesticks, symbolOptions, logger);
   const orderBook = undefined;
-  const [profit, direction] = await tradeDirection(emptyLogger, symbol, orderBook, candlesticks, indicators, options, filter);
+  const [profit, direction] = await tradeDirection(emptyLogger, symbol, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
   const sellPrice = getRandomValueBetween(latestCandle.high, latestCandle.close);
   const buyPrice = getRandomValueBetween(latestCandle.low, latestCandle.close); 
   if (direction === 'SELL') {
     const baseSymbol = symbol.split("/")[0];
-    simulateSell(symbol, balances[baseSymbol].crypto, sellPrice, balances, profit, options, latestCandle.time, filter, logger);
+    simulateSell(symbol, balances[baseSymbol].crypto, sellPrice, balances, profit, processOptions, exchangeOptions, symbolOptions, latestCandle.time, filter, logger);
   } else if (direction === 'BUY') {
     const quoteSymbol = symbol.split("/")[1];
-    simulateBuy(symbol, balances[quoteSymbol].crypto, buyPrice, balances, profit, options, latestCandle.time, filter, logger);
+    simulateBuy(symbol, balances[quoteSymbol].crypto, buyPrice, balances, profit, processOptions, exchangeOptions, symbolOptions, latestCandle.time, filter, logger);
   } else {
     let lastTrade: Trade = {
       symbol: "",
@@ -606,8 +623,8 @@ export const simulateAlgorithmic = async (
       isBestMatch: true,
     }
     let pnl = 0;
-    if (options.tradeHistory !== undefined && options.tradeHistory[symbol.split("/").join("")].length > 0) {
-      lastTrade = options.tradeHistory[symbol.split("/").join("")][options.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
+      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
       if(lastTrade.isBuyer) {
         pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), sellPrice);
       } else {
@@ -617,9 +634,9 @@ export const simulateAlgorithmic = async (
     logger.push("Trade", "holding");
     logger.push("PNL", pnl);
   }
-  logger.push("TrendMode", options.currentTrendMode);
-  logger.push("MinSell", options.minimumProfitSell);
-  logger.push("MinBuy", options.minimumProfitBuy);
+  logger.push("TrendMode", symbolOptions.trend?.current);
+  logger.push("MinSell", symbolOptions.profit?.minimumSell);
+  logger.push("MinBuy", symbolOptions.profit?.minimumBuy);
   logger.print();
   logger.flush();
   return false;

@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from '../Exchanges/Candlesticks';
-import { ConfigOptions } from '../Utilities/args';
+import { ConfigOptions, SymbolOptions } from '../Utilities/args';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 
 export const logRSISignals = (
@@ -131,15 +131,15 @@ export const calculateRSI = (
 
 export const checkRSISignals = (
   rsi: number[], 
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ): string => {
   let check = 'SKIP';
-  if (options.useRSI) {
-    check = 'HOLD';
-    const rsiValues = rsi.slice(-options.rsiHistoryLength);
-    if (options.useRSI) {
-      const overboughtTreshold = options.overboughtTreshold !== undefined ? options.overboughtTreshold : 70;
-      const oversoldTreshold = options.oversoldTreshold !== undefined ? options.oversoldTreshold : 30; 
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.rsi && symbolOptions.indicators.rsi.enabled) {
+      check = 'HOLD';
+      const rsiValues = rsi.slice(-symbolOptions.indicators.rsi?.history);
+      const overboughtTreshold = symbolOptions.indicators.rsi.tresholds.overbought !== undefined ? symbolOptions.indicators.rsi.tresholds.overbought : 80;
+      const oversoldTreshold = symbolOptions.indicators.rsi.tresholds.oversold !== undefined ? symbolOptions.indicators.rsi.tresholds.oversold : 20; 
       for (let i = rsiValues.length - 1; i >= 0; i--) {
         const prevRsi = rsiValues[i];
         if (prevRsi > overboughtTreshold) {

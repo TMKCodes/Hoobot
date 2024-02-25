@@ -102,8 +102,8 @@ commands.push({name: fkick.builder.name, execute: fkick.execute});
 
 */
 
-export const loginDiscord = (exchange: Exchange, options: ConfigOptions): Client => {
-  const token = options.discordBotToken;
+export const loginDiscord = (exchanges: Exchange[], options: ConfigOptions): Client => {
+  const token = options.discord.token;
   const client = new Client({ intents: [GatewayIntentBits.Guilds]});
   if(token === undefined) {
     console.log(JSON.stringify(process.env));
@@ -119,7 +119,7 @@ export const loginDiscord = (exchange: Exchange, options: ConfigOptions): Client
           if(interaction.isChatInputCommand()) {
             commands.forEach(async (command) => {
               if(command.name == interaction.commandName) {
-                return await command.execute(interaction, exchange, options);
+                return await command.execute(interaction, exchanges, options);
               }
             });
           }

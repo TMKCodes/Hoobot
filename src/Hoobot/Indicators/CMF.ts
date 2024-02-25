@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateSMA } from "./SMA";
 
@@ -58,7 +58,7 @@ export const calculateCMF = (
 export const logCMFSignals = (
   consoleLogger: ConsoleLogger,
   cmfValues: number[],
-  options: ConfigOptions,
+  symbolOptions: SymbolOptions,
 ) => {
   const currentCMF = cmfValues[cmfValues.length - 1];
   if (currentCMF !== undefined) {
@@ -66,8 +66,8 @@ export const logCMFSignals = (
     const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
     const isBullishCrossover = currentCMF > cmfSMA[cmfSMA.length - 1] && prevCMF < cmfSMA[cmfSMA.length - 1];
     const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - 1] && prevCMF > cmfSMA[cmfSMA.length - 1];
-    const isOverbought = currentCMF > options.cmfOverboughtTreshold; 
-    const isOversold = currentCMF < options.cmfOversoldTreshold; 
+    const isOverbought = currentCMF > symbolOptions.indicators?.cmf?.tresholds.overbought!; 
+    const isOversold = currentCMF < symbolOptions.indicators?.cmf?.tresholds.oversold!; 
     let signal = "Neutral";
     if (isBullishCrossover) {
       signal = `Bullish Crossover`;
@@ -96,34 +96,39 @@ export const logCMFSignals = (
 
 export const checkCMFSignals = (
   cmfValues: number[],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = 'SKIP';
-  if (options.useCMF) {
-    check = 'HOLD';
-    cmfValues = cmfValues.slice(-options.cmfHistoryLength);
-    const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
-    for (let i = cmfValues.length; i > 0; i--) {
-      const currentCMF = cmfValues[i];
-      const prevCMF = cmfValues[i - 1];
-      const isBullishCrossover = currentCMF > cmfSMA[i] && prevCMF < cmfSMA[i];
-      const isBearishCrossover = currentCMF < cmfSMA[i] && prevCMF > cmfSMA[i];
-      const isOverbought = currentCMF > options.cmfOverboughtTreshold;
-      const isOversold = currentCMF < options.cmfOversoldTreshold;
-      if (isBullishCrossover) {
-        check = 'BUY';
-        break;
-      } else if (isBearishCrossover) {
-        check = 'SELL';
-        break;
-      } else if (isOverbought) {
-        check = 'SELL'; 
-        break;
-      } else if (isOversold) {
-        check = 'BUY'; 
-        break;
+  if (symbolOptions.indicators !== undefined) {
+    if(symbolOptions.indicators.cmf !== undefined) {
+      if (symbolOptions.indicators.cmf.enabled) {
+        check = 'HOLD';
+        cmfValues = cmfValues.slice(-symbolOptions.indicators.cmf.history);
+        const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
+        for (let i = cmfValues.length; i > 0; i--) {
+          const currentCMF = cmfValues[i];
+          const prevCMF = cmfValues[i - 1];
+          const isBullishCrossover = currentCMF > cmfSMA[i] && prevCMF < cmfSMA[i];
+          const isBearishCrossover = currentCMF < cmfSMA[i] && prevCMF > cmfSMA[i];
+          const isOverbought = currentCMF > symbolOptions.indicators.cmf.tresholds.overbought;
+          const isOversold = currentCMF < symbolOptions.indicators.cmf.tresholds.oversold;
+          if (isBullishCrossover) {
+            check = 'BUY';
+            break;
+          } else if (isBearishCrossover) {
+            check = 'SELL';
+            break;
+          } else if (isOverbought) {
+            check = 'SELL'; 
+            break;
+          } else if (isOversold) {
+            check = 'BUY'; 
+            break;
+          }
+        }
       }
     }
   }
+  
   return check;
 }

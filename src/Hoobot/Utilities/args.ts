@@ -24,7 +24,7 @@
 * not be liable for any losses, damages, or liabilities arising from
 * the use of this software.
 * ===================================================================== */
-
+import fs from 'fs';
 import { Balances } from "../Exchanges/Balances";
 import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
@@ -80,282 +80,201 @@ export const getMinutesFromInterval = (interval: CandlestickInterval): number =>
   return intervalToSeconds[interval];
 }
 
-export interface GrowingMaxBuy {
-  [symbol: string]: number;
-} 
-
 export interface OpenOrders {
   [symbol: string]: Order[];
 }
 
-export interface ConfigOptions {
-  currentTrendMode: string;
-  trendEnabled: boolean;
-  trendTimeframe: CandlestickInterval;
-  trendEMAShort: number;
-  trendEMALong: number;
-  startTime: string;
-  exchange: string;
-  apiKey: string;
-  apiSecret: string;
-  simulate: boolean;
-  simulateBruteForce: boolean;
-  mode: BotMode;
-  symbols: string[];
-  candlestickInterval: CandlestickInterval[];
-  consoleUpdate: string;
-  smaLength: number;
-  atrLength: number;
-  cmfLength: number;
-  cmfHistoryLength: number;
-  cmfOverboughtTreshold: number;
-  cmfOversoldTreshold: number;
-  obvHistoryLength: number;
-  bollingerBandsLength: number;
-  bollingerBandsMultiplier: number;
-  bollingerBandsAverageType: string;
-  bollingerBandsHistoryLength: number;
-  stochasticOscillatorKPeriod: number;
-  stochasticOscillatorDPeriod: number;
-  stochasticOscillatorSmoothing: number;
-  stochasticOscillatorOverboughtTreshold: number;
-  stochasticOscillatorOversoldTreshold: number;
-  stochasticOscillatorHistoryLength: number;
-  stochasticRSIOverboughtTreshold: number;
-  stochasticRSIOversoldTreshold: number;
-  stochasticRSILengthRSI: number;
-  stochasticRSILengthStoch: number;
-  stochasticRSISmoothK: number;
-  stochasticRSISmoothD: number;
-  stochasticRSIHistoryLength: number;
-  shortEma: number;
-  longEma: number;
-  fastMacd: number;
-  slowMacd: number;
-  signalMacd: number;
-  source: string;
-  rsiLength: number;
-  rsiSmoothing: number;
-  rsiSmoothingType: string;
-  rsiHistoryLength: number;
-  useSMA: boolean;
-  useEMA: boolean; 
-  useMACD: boolean; 
-  useRSI: boolean;
-  useATR: boolean;
-  useOBV: boolean;
-  useCMF: boolean;
-  useGPT: boolean;
-  useRenko: boolean;
-  useBollingerBands: boolean;
-  useStochasticOscillator: boolean;
-  useStochasticRSI: boolean;
-  startingMaxBuyAmount: GrowingMaxBuy;
-  closePercentage: number;
-  overboughtTreshold: number;
-  oversoldTreshold: number;
-  maxOrderAge: number;
-  tradeFee: number;
-  pairMinVolume: number;
-  pairMinPriceChang: number;
-  holdUntilPositiveTrade: boolean;
-  minimumProfitSell: number;
-  minimumProfitBuy: number;
-  license: string;
-  debug: boolean;
-  discordEnabled: boolean,
-  discordBotToken: string,
-  discordApplicationID: string,
-  discordServerID: string,
-  discordChannelID:  string,
-  openaiApiKey: string,
-  openaiModel: string,
-  openaiHistoryLength: number,
-  openaiOverwrite: boolean,
-  startTimestamp: string,
-  directionAgreement: number,
-  tradeHistory: TradeHistory,
-  orderbooks: Orderbooks,
-  balances: Balances,
-  SMAWeight: number,
-  EMAWeight: number,
-  MACDWeight: number,
-  RSIWeight: number,
-  RenkoWeight: number,
-  StochasticOscillatorWeight: number,
-  StochasticRSIWeight: number,
-  BollingerBandsWeight: number,
-  OBVWeight: number,
-  CMFWeight: number,
-  stopLoss: boolean,
-  stopLossStopTrading: boolean,
-  stopLossPNL: number,
-  stopLossHit: boolean,
-  profitCurrentMax: CurrentProfitMax,
-  takeProfit: boolean,
-  takeProfitPNL: number,
-  takeProfitMinimumPNL: number,
-  takeProfitMinimumPNLDrop: number,
-  maxPNL: number,
-  openOrders: OpenOrders,
-  StochOscillatorkBelowThreshold: boolean,
-  StochOscillatorkAboveThreshold: boolean,
-  StochRSIkBelowThreshold: boolean,
-  StochRSIkAboveThreshold: boolean,
-  minimumTimeSinceLastTrade: number,
-  RenkoBrickMultiplier: number,
-  renkoBrickSize: number,
-  stopLossAgingPerHour: number,
-  [key: string]: string | string[] | number | boolean | undefined | number | GrowingMaxBuy | TradeHistory | Orderbooks | CurrentProfitMax | Balances | OpenOrders; // Index signature
+export interface ExchangeOptions {
+  name: string;
+  key: string;
+  secret: string;
+  mode: "algorithmic" | "highlow" | "arbitrage";
+  console: string;
+  openOrders: OpenOrders;
+  balances: Balances;
+  tradeHistory: TradeHistory;
+  orderbooks: Orderbooks;
+  symbols: SymbolOptions[];
 }
 
-export const parseArgs = (args: string[]): ConfigOptions => {
-  const options: ConfigOptions = {
-    // Binance
-    startTime: new Date().toISOString(),
-    exchange: process.env.EXCHANGE || 'binance',
-    apiKey: process.env.API_KEY || '',
-    apiSecret: process.env.API_SECRET || '',
-    // Hoobot
-    trendEnabled: process.env.TREND_ENABLED === "true" ? true : false,
-    currentTrendMode: "LONG",
-    trendTimeframe: process.env.TREND_TIMEFRAME ? process.env.TREND_TIMEFRAME as CandlestickInterval : "1d",
-    trendEMAShort: parseFloat(process.env.TREND_EMA_SHORT!) || 20,
-    trendEMALong: parseFloat(process.env.TREND_EMA_LONG!) || 75,
-    simulate: process.env.SIMULATE === "true" ? true : false,
-    simulateBruteForce: process.env.SIMULATION_BRUTE_FORCE === "true" ? true : false,
-    license: process.env.LICENSE || "",
-    mode: process.env.MODE as BotMode || 'algorithmic',
-    symbols: process.env.SYMBOLS ? process.env.SYMBOLS.replace(/ /g, "").split(",") : [],
-    candlestickInterval: process.env.CANDLESTICK_INTERVAL ? (process.env.CANDLESTICK_INTERVAL.replace(/ /g, "").split(",")) as CandlestickInterval[] : ["1m"],
-    source: process.env.SOURCE || "close",
-    consoleUpdate: process.env.CONSOLE_UPDATE || "final",
-    // Indicators to use
-    useEMA: process.env.USE_EMA === "true" ? true : false,
-    useMACD: process.env.USE_MACD === "true" ? true : false,
-    useRSI: process.env.USE_RSI === "true" ? true : false,
-    useSMA: process.env.USE_SMA === "true" ? true : false,
-    useATR: process.env.USE_ATR === "true" ? true : false,
-    useOBV: process.env.USE_OBV === "true" ? true : false,
-    useCMF: process.env.USE_CMF === "true" ? true : false,
-    useGPT: process.env.USE_GPT === "true" ? true : false,
-    useRenko: process.env.USE_RENKO === "true" ? true : false,
-    useBollingerBands: process.env.USE_BOLLINGER_BANDS === "true" ? true : false,
-    useStochasticOscillator: process.env.USE_STOCHASTIC_OSCILLATOR === "true" ? true : false,
-    useStochasticRSI: process.env.USE_STOCHASTIC_RSI === "true" ? true : false,
-    // Indicator parameters
-    smaLength: parseFloat(process.env.SMA_LENGTH!) || 7,
-    shortEma: parseFloat(process.env.EMA_SHORT!) || 7,
-    longEma: parseFloat(process.env.EMA_LONG!) || 26,
-    fastMacd: parseFloat(process.env.MACD_FAST!) || 7,
-    slowMacd: parseFloat(process.env.MACD_SLOW!) || 26,
-    signalMacd: parseFloat(process.env.MACD_SIGNAL!) || 9,
-    rsiLength: parseFloat(process.env.RSI_LENGTH!) || 9,
-    rsiSmoothing: parseFloat(process.env.RSI_SMOOTHING!) || 12,
-    rsiSmoothingType: process.env.RSI_SMOOTHING_TYPE || "SMA",
-    rsiHistoryLength: parseFloat(process.env.RSI_HISTORY_LENGTH!) || 5,
-    overboughtTreshold: parseFloat(process.env.RSI_OVERBOUGHT_TRESHOLD!) || 70,
-    oversoldTreshold: parseFloat(process.env.RSI_OVERSOLD_TRESHOLD!) || 30,
-    atrLength: parseFloat(process.env.ATR_LENGTH!) || 14,
-    cmfLength: parseFloat(process.env.CMF_LENGTH!) || 20,
-    obvHistoryLength: parseFloat(process.env.OBV_HISTORY_LENGTH!) || 5,
-    cmfHistoryLength: parseFloat(process.env.CMF_HISTORY_LENGTH!) || 5,
-    cmfOverboughtTreshold: parseFloat(process.env.CMF_OVERBOUGHT_TRESHOLD!) || 0.5,
-    cmfOversoldTreshold: parseFloat(process.env.CMF_OVERSOLD_TRESHOLD!) || -0.5,
-    bollingerBandsLength: parseFloat(process.env.BOLLINGER_BANDS_LENGTH!) || 20,
-    bollingerBandsMultiplier: parseFloat(process.env.BOLLINGER_BANDS_MULTIPLIER!) || 2,
-    bollingerBandsAverageType: process.env.BOLLINGER_BANDS_AVERAGE_TYPE || 'EMA',
-    bollingerBandsHistoryLength: parseFloat(process.env.BOLLINGER_BANDS_HISTORY_LENGTH!) || 5,
-    stochasticOscillatorKPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_KPERIOD!) || 14,
-    stochasticOscillatorDPeriod: parseFloat(process.env.STOCHASTIC_OSCILLATOR_DPERIOD!) || 1,
-    stochasticOscillatorSmoothing: parseFloat(process.env.STOCHASTIC_OSCILLATOR_SMOOTHING!) || 3,
-    stochasticOscillatorOverboughtTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD!) || 80,
-    stochasticOscillatorOversoldTreshold: parseFloat(process.env.STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD!) || 20,
-    stochasticOscillatorHistoryLength: parseFloat(process.env.STOCHASTIC_OSCILLATOR_HISTORY_LENGTH!) || 5,
-    stochasticRSILengthRSI: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_RSI!) || 14,
-    stochasticRSILengthStoch: parseFloat(process.env.STOCHASTIC_RSI_LENGTH_STOCHASTIC!) || 14,
-    stochasticRSISmoothK: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_K!) || 3,
-    stochasticRSISmoothD: parseFloat(process.env.STOCHASTIC_RSI_SMOOTH_D!) || 3,
-    stochasticRSIOverboughtTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD!) || 80,
-    stochasticRSIOversoldTreshold: parseFloat(process.env.STOCHASTIC_RSI_OVERSOLD_TRESHOLD!) || 20,
-    stochasticRSIHistoryLength: parseFloat(process.env.STOCHASTIC_RSI_HISTORY_LENGTH!) || 5,
-    SMAWeight: parseFloat(process.env.SMA_WEIGHT!) || 1,
-    EMAWeight: parseFloat(process.env.EMA_WEIGHT!) || 1,
-    MACDWeight: parseFloat(process.env.MACD_WEIGHT!) || 1,
-    RSIWeight: parseFloat(process.env.RSI_WEIGHT!) || 1,
-    StochasticOscillatorWeight: parseFloat(process.env.STOCHASTIC_OSCILLATOR_WEIGHT!) || 1,
-    StochasticRSIWeight: parseFloat(process.env.STOCHASTIC_RSI_WEIGHT!) || 1,
-    BollingerBandsWeight: parseFloat(process.env.BOLLINGER_BANDS_WEIGHT!) || 1,
-    OBVWeight: parseFloat(process.env.OBV_WEIGHT!) || 1,
-    CMFWeight: parseFloat(process.env.CMF_WEIGHT!) || 1,
-    RenkoWeight: parseFloat(process.env.RENKO_WEIGHT!) || 1,
-    // Limits
-    startingMaxBuyAmount: {},
-    closePercentage: parseFloat(process.env.CLOSE_PERCENTAGE!) || 1,
-    maxOrderAge: parseFloat(process.env.MAX_ORDER_AGE_SECONDS!) || 60,
-    tradeFee: parseFloat(process.env.TRADE_FEE_PERCENTAGE!) || 0.075,
-    holdUntilPositiveTrade: process.env.HOLD_UNTIL_POSITIVE_TRADE === "true" ? true : false,
-    minimumProfitSell: parseFloat(process.env.MINIMUM_PROFIT_SELL!) || 0,
-    minimumProfitBuy: parseFloat(process.env.MINIMUM_PROFIT_BUY!) || 0,
-    // Discord
-    discordEnabled: process.env.DISCORD_ENABLED === "true" ? true : false || false,
-    discordBotToken: process.env.DISCORD_BOT_TOKEN || "",
-    discordApplicationID: process.env.DISCORD_APPLICATION_ID || "",
-    discordServerID: process.env.DISCORD_SERVER_ID || "",
-    discordChannelID: process.env.DISCORD_CHANNEL_ID || "",
-    // OpenAI
-    openaiApiKey: process.env.GPT_API_KEY || "",
-    openaiModel: process.env.GPT_MODEL || "gpt-3.5-turbo",
-    openaiHistoryLength: parseFloat(process.env.GPT_HISTORY_LENGTH!) || 5,
-    openaiOverwrite: process.env.GPT_OVERWRITE === "true" ? true : false || false,
-    // Timeframe agreement
-    directionAgreement: parseFloat(process.env.DIRECTION_AGREEMENT!) || 100,
-    // Developer
-    debug: process.env.DEBUG === "true" ? true : false || false,
-    // Arbitrage
-    pairMinVolume: parseFloat(process.env.PAIR_MIN_VOLUME!) || 100,
-    pairMinPriceChange: parseFloat(process.env.PAIR_MIN_PRICE_CHANGE!) || 5,
-    startTimestamp: process.env.START_TIMESTAMP || "",
-    tradeHistory: {},
-    orderbooks: {},
-    profitCurrentMax: {},
-    balances: {},
-    stopLoss: process.env.STOP_LOSS === "true" ? true : false,
-    stopLossStopTrading: process.env.STOP_LOSS_STOP_TRADING === "true" ? true : false,
-    stopLossHit: false,
-    stopLossPNL: parseFloat(process.env.STOP_LOSS_PNL!) || 1,
-    stopLossAgingPerHour: parseFloat(process.env.STOP_LOSS_PNL_AGING_PER_HOUR!) || 0,
-    takeProfit: process.env.TAKE_PROFIT === "true" ? true : false,
-    takeProfitMinimumPNL: parseFloat(process.env.TAKE_PROFIT_MINIMUM!) || 0.5,
-    takeProfitMinimumPNLDrop: parseFloat(process.env.TAKE_PROFIT_MINIMUM_DROP!) || 0.01,
-    takeProfitPNL: parseFloat(process.env.TAKE_PROFIT_LIMIT!) || 0.01,
-    maxPNL: 0,
-    minimumTimeSinceLastTrade: parseFloat(process.env.TIME_SINCE_LAST_TRADE_FORCE_TRADE!) || 0,
-    RenkoBrickMultiplier: parseFloat(process.env.RENKO_BRICK_MULTIPLIER!) || 0,
-    openOrders: {},
-    StochOscillatorkBelowThreshold: false,
-    StochOscillatorkAboveThreshold: false,
-    StochRSIkBelowThreshold: false,
-    StochRSIkAboveThreshold: false,
-    renkoBrickSize: 0,
-    pairMinPriceChang: 0
-  };
-  for (let i = 0; i < options.symbols.length; i++) {
-    options.startingMaxBuyAmount[options.symbols[i].split("/").join("")] = parseFloat(process.env.STARTING_MAX_BUY_AMOUNT!) || 0;
-  }
-  if (args.length === 0) {
-    return options;
-  }
-  for (let i = 0; i < args.length; i += 2) {
-    const argName = args[i].substring(2);
-    const argValue = args[i + 1];
-    if (options.hasOwnProperty(argName as keyof ConfigOptions)) {
-      if (argValue === 'false') {
-        options[argName as keyof ConfigOptions] = false;
-      } else {
-        options[argName as keyof ConfigOptions] = argValue;
-      }
+export interface SymbolOptions {
+  minimumTimeSinceLastTrade: number;
+  name: string;
+  timeframes: CandlestickInterval[];
+  agreement: number;
+  source: "close" | "high" | "low";
+  trend?: {
+    current: string;
+    enabled: boolean;
+    timeframe: CandlestickInterval;
+    ema: {
+      short: number;
+      long: number;
     }
+  };
+  profit?: {
+    enabled: boolean;
+    minimumSell: number;
+    minimumBuy: number;
+  };
+  growingMax?: {
+    buy: number;
+    sell: number;
+  };
+  closePercentage?: number;
+  maximumAgeOfOrder?: number;
+  tradeFeePercentage?: number;
+  stopLoss?: {
+    enabled: boolean;
+    stopTrading: boolean;
+    pnl: number;
+    agingPerHour: number;
+    hit: boolean;
+  };
+  takeProfit?: {
+    enabled: boolean;
+    limit: number;
+    minimum: number;
+    drop: number;
+    current: number;
+  };
+  indicators?: {
+    sma?: {
+      enabled: boolean;
+      length: number;
+      weight?: number;
+    };
+    renko?: {
+      enabled: boolean;
+      weight: number;
+      multiplier: number;
+      brickSize: number;
+    };
+    ema?: {
+      enabled?: boolean;
+      short: number;
+      long: number;
+      weight?: number;
+    };
+    macd?: {
+      enabled: boolean;
+      fast: number;
+      slow: number;
+      signal: number;
+      weight?: number;
+    };
+    rsi?: {
+      enabled: boolean;
+      length: number;
+      smoothing?: {
+        type: "EMA" | "SMA";
+        length: number;
+      };
+      history: number;
+      tresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    atr?: {
+      enabled: boolean;
+      length: number;
+    };
+    obv?: {
+      enabled: boolean;
+      length: number;
+      weight?: number;
+    };
+    cmf?: {
+      enabled: boolean;
+      length: number;
+      history: number;
+      tresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    bb?: {
+      enabled: boolean;
+      length: number;
+      multiplier: number;
+      average: "SMA" | "EMA";
+      history: number;
+      weight?: number;
+    };
+    so?: {
+      enabled: boolean;
+      kPeriod: number;
+      dPeriod: number;
+      smoothing: number;
+      tresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    srsi?: {
+      enabled: boolean;
+      rsiLength: number;
+      stochLength: number;
+      kPeriod: number;
+      dPeriod: number;
+      smoothK: number;
+      smoothD: number;
+      history: number;
+      tresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    OpenAI?: {
+      enabled: boolean;
+      key: string;
+      model: string;
+      history: string;
+      overwrite: boolean;
+    };
+  };
+}
+
+
+export interface DiscordOptions {
+  enabled?: boolean;
+  token?: string;
+  applicationId?: string;
+  serverId?: string;
+  channelId?: string;
+}
+
+export interface ConfigOptions {
+  debug: boolean;
+  startTime: string;
+  exchanges: ExchangeOptions[];
+  license: string;
+  simulate: boolean;
+  discord: DiscordOptions;
+  [key: string]: ExchangeOptions[] | DiscordOptions | string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | Balances | OpenOrders; // Index signature
+}
+
+export const parseArgs = (): ConfigOptions => {
+  var options: ConfigOptions = {
+    debug: false,
+    startTime: '',
+    exchanges: [],
+    license: '',
+    simulate: process.env.SIMULATE === "true" ? true : false,
+    discord: {}
+  };
+  for (let i = 0; i < options.exchanges.length; i++) {
+    options.exchanges[i].tradeHistory = {};
+  }
+  const optionsFilename = "./hoobot-options.json";
+  if (fs.existsSync(optionsFilename)) {
+    const optionsFile = fs.readFileSync(optionsFilename);
+    options = JSON.parse(optionsFile.toString('utf-8'));
   }
   return options;
 }

@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 
 
@@ -121,35 +121,37 @@ export const logEMASignals = (
 
 export const checkEMASignals = (
   ema: ema, 
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useEMA && ema !== undefined) {
-    check = 'HOLD';
-    const currentShortEma = ema.short[ema.short.length - 1];
-    const currentLongEma = ema.long[ema.long.length - 1];
-    const prevShortEma = ema.short[ema.short.length - 2];
-    const prevLongEma = ema.long[ema.long.length - 2];
-    const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
-    const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
-    const isShortUpwardDirection = currentShortEma > prevShortEma;
-    const isShortDownwardDirection = currentShortEma < prevShortEma;
-    const isLongUpwardDirection = currentLongEma > prevLongEma;
-    const isLongDownwardDirection = currentLongEma < prevLongEma;
-    const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
-    const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
-    const isFlatDirection = !isUpwardDirection && !isDownwardDirection;if (isBullishCrossover) {
-      options.EMAWeight = 1.1;
-      check = 'BUY';
-    } else if (isBearishCrossover) {
-      options.EMAWeight = 1.1;
-      check = 'SELL';
-    } else if (isFlatDirection) {
-      options.EMAWeight = 1;
-      check = 'HOLD'
-    } else {
-      options.EMAWeight = 1;
-      check = 'HOLD'
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.ema && symbolOptions.indicators.ema.enabled) {
+      check = 'HOLD';
+      const currentShortEma = ema.short[ema.short.length - 1];
+      const currentLongEma = ema.long[ema.long.length - 1];
+      const prevShortEma = ema.short[ema.short.length - 2];
+      const prevLongEma = ema.long[ema.long.length - 2];
+      const isBullishCrossover = currentShortEma > currentLongEma && prevShortEma <= prevLongEma;
+      const isBearishCrossover = currentShortEma < currentLongEma && prevShortEma >= prevLongEma;
+      const isShortUpwardDirection = currentShortEma > prevShortEma;
+      const isShortDownwardDirection = currentShortEma < prevShortEma;
+      const isLongUpwardDirection = currentLongEma > prevLongEma;
+      const isLongDownwardDirection = currentLongEma < prevLongEma;
+      const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
+      const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
+      const isFlatDirection = !isUpwardDirection && !isDownwardDirection;if (isBullishCrossover) {
+        symbolOptions.indicators.ema.weight = 1.1;
+        check = 'BUY';
+      } else if (isBearishCrossover) {
+        symbolOptions.indicators.ema.weight = 1.1;
+        check = 'SELL';
+      } else if (isFlatDirection) {
+        symbolOptions.indicators.ema.weight = 1;
+        check = 'HOLD'
+      } else {
+        symbolOptions.indicators.ema.weight = 1;
+        check = 'HOLD'
+      }
     }
   }
   return check;

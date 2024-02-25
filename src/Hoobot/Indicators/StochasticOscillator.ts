@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions } from "../Utilities/args";
+import { ConfigOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { calculateRSI } from "./RSI";
 
@@ -191,35 +191,37 @@ export const logStochasticRSISignals = (
 
 export const checkStochasticOscillatorSignals = (
   stochasticOscillator: [number[], number[]],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useStochasticOscillator) {
-    check = 'HOLD';
-    const K = stochasticOscillator[0][stochasticOscillator[0].length - 1];
-    const prevK = stochasticOscillator[0][stochasticOscillator[0].length - 2];
-    const D =  stochasticOscillator[1][stochasticOscillator[1].length - 1];
-    const prevD =  stochasticOscillator[1][stochasticOscillator[1].length - 2];
-    const KDHigher = K > D;
-    const DKHigher = D > K;
-    const KDCrossover = K > D && prevK < prevD;
-    const DKCrossover = K < D && prevK > prevD 
-    const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
-    const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
-    const rising = K > prevK && D > prevD;
-    const dropping = K < prevK && D > prevD;
-    if ((D < oversoldTreshold && rising && KDHigher)) {
-      options.StochasticOscillatorWeight = 1.1;
-      check = 'BUY';
-    } else if((D > overboughtTreshold && dropping && DKHigher)) {
-      options.StochasticOscillatorWeight = 1.1;
-      check = 'SELL';
-    } else if (D < oversoldTreshold && KDCrossover) {
-      options.StochasticOscillatorWeight = 1;
-      check = 'BUY';
-    } else if (D > overboughtTreshold && DKCrossover) {
-      options.StochasticOscillatorWeight = 1;
-      check = 'SELL';
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.so && symbolOptions.indicators.so.enabled) {
+      check = 'HOLD';
+      const K = stochasticOscillator[0][stochasticOscillator[0].length - 1];
+      const prevK = stochasticOscillator[0][stochasticOscillator[0].length - 2];
+      const D =  stochasticOscillator[1][stochasticOscillator[1].length - 1];
+      const prevD =  stochasticOscillator[1][stochasticOscillator[1].length - 2];
+      const KDHigher = K > D;
+      const DKHigher = D > K;
+      const KDCrossover = K > D && prevK < prevD;
+      const DKCrossover = K < D && prevK > prevD 
+      const overboughtTreshold = symbolOptions.indicators.so.tresholds.overbought !== undefined ? symbolOptions.indicators.so.tresholds.overbought : 80;
+      const oversoldTreshold = symbolOptions.indicators.so.tresholds.oversold !== undefined ? symbolOptions.indicators.so.tresholds.oversold : 20; 
+      const rising = K > prevK && D > prevD;
+      const dropping = K < prevK && D > prevD;
+      if ((D < oversoldTreshold && rising && KDHigher)) {
+        symbolOptions.indicators.so.weight = 1.1;
+        check = 'BUY';
+      } else if((D > overboughtTreshold && dropping && DKHigher)) {
+        symbolOptions.indicators.so.weight = 1.1;
+        check = 'SELL';
+      } else if (D < oversoldTreshold && KDCrossover) {
+        symbolOptions.indicators.so.weight = 1;
+        check = 'BUY';
+      } else if (D > overboughtTreshold && DKCrossover) {
+        symbolOptions.indicators.so.weight = 1;
+        check = 'SELL';
+      }
     }
   }
   return check;
@@ -227,35 +229,37 @@ export const checkStochasticOscillatorSignals = (
 
 export const checkStochasticRSISignals = (
   stochasticRSI: [number[], number[]],
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'SKIP';
-  if (options.useStochasticRSI) {
-    check = 'HOLD';
-    const K = stochasticRSI[0][stochasticRSI[0].length - 1];
-    const prevK = stochasticRSI[0][stochasticRSI[0].length - 2];
-    const D = stochasticRSI[1][stochasticRSI[1].length - 1];
-    const prevD =  stochasticRSI[1][stochasticRSI[1].length - 2];
-    const KDHigher = K > D;
-    const DKHigher = D > K;
-    const KDCrossover = K > D && prevK < prevD;
-    const DKCrossover = K < D && prevK > prevD 
-    const overboughtTreshold = options.stochasticRSIOverboughtTreshold !== undefined ? options.stochasticRSIOverboughtTreshold : 80;
-    const oversoldTreshold = options.stochasticRSIOversoldTreshold !== undefined ? options.stochasticRSIOversoldTreshold : 20; 
-    const rising = K > prevK && D > prevD;
-    const dropping = K < prevK && D > prevD;
-    if (rising && KDHigher) {
-      options.StochasticRSIWeight = 1; 
-      check = 'BUY';
-    } else if(dropping && DKHigher) {
-      options.StochasticRSIWeight = 1;
-      check = 'SELL';
-    } else if (D < oversoldTreshold && KDCrossover) {
-      options.StochasticRSIWeight = 1.5;
-      check = 'BUY';
-    } else if (D > overboughtTreshold && DKCrossover) {
-      options.StochasticRSIWeight = 1.5;
-      check = 'SELL';
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.srsi && symbolOptions.indicators.srsi.enabled) {
+      check = 'HOLD';
+      const K = stochasticRSI[0][stochasticRSI[0].length - 1];
+      const prevK = stochasticRSI[0][stochasticRSI[0].length - 2];
+      const D = stochasticRSI[1][stochasticRSI[1].length - 1];
+      const prevD =  stochasticRSI[1][stochasticRSI[1].length - 2];
+      const KDHigher = K > D;
+      const DKHigher = D > K;
+      const KDCrossover = K > D && prevK < prevD;
+      const DKCrossover = K < D && prevK > prevD 
+      const overboughtTreshold = symbolOptions.indicators.srsi.tresholds.overbought !== undefined ? symbolOptions.indicators.srsi.tresholds.overbought : 80;
+      const oversoldTreshold = symbolOptions.indicators.srsi.tresholds.oversold !== undefined ? symbolOptions.indicators.srsi.tresholds.oversold : 20; 
+      const rising = K > prevK && D > prevD;
+      const dropping = K < prevK && D > prevD;
+      if (rising && KDHigher) {
+        symbolOptions.indicators.srsi.weight = 1; 
+        check = 'BUY';
+      } else if(dropping && DKHigher) {
+        symbolOptions.indicators.srsi.weight = 1;
+        check = 'SELL';
+      } else if (D < oversoldTreshold && KDCrossover) {
+        symbolOptions.indicators.srsi.weight = 1.5;
+        check = 'BUY';
+      } else if (D > overboughtTreshold && DKCrossover) {
+        symbolOptions.indicators.srsi.weight = 1.5;
+        check = 'SELL';
+      }
     }
   }
   return check;

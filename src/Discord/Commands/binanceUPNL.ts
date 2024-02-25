@@ -50,7 +50,7 @@ export default {
       const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
       if (lastTrade.isBuyer === true) {
         const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 
-        const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice) - options.tradeFee;
+        const pnl = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentHighestBidPrice);
         let msg = '```';
         msg += `Symbol ${lastTrade.symbol}.\r\n`;
         msg += `Previous BUY order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;
@@ -61,7 +61,7 @@ export default {
         await interaction.reply(msg);
       } else {
         const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!); 
-        const pnl = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentLowestAskPrice) - options.tradeFee;
+        const pnl = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), currentLowestAskPrice);
         let msg = '```';
         msg += `Symbol ${lastTrade.symbol}.\r\n`;
         msg += `Previous SELL order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;

@@ -28,94 +28,93 @@ import OpenAI from 'openai';
 import { Candlesticks } from '../Exchanges/Candlesticks';
 import { ConsoleLogger } from '../Utilities/consoleLogger';
 import { Indicators } from '../Modes/Algorithmic';
-import { ConfigOptions } from '../Utilities/args';
+import { ConfigOptions, SymbolOptions } from '../Utilities/args';
 
 export const checkGPTSignals = async (
   consoleLogger: ConsoleLogger, 
   symbol: string,
   candlesticks: Candlesticks, 
   indicators: Indicators, 
-  options: ConfigOptions
+  symbolOptions: SymbolOptions
 ) => {
   symbol = symbol.split("/").join("");
   let check = "SKIP";
-  if(options.openaiApiKey !== undefined && options.openaiModel !== undefined) {
-    check = 'HOLD';
-    const slice = options.openaiHistoryLength; 
-    let message = "I give you this trade data, I want you to decide from them if I should BUY, SELL or HOLD.  Data in arrays are oldest to newest order. Please reply only with one word HOLD, BUY or SELL!\n\n";
-    message += `Traded symbol is: ${symbol}\n`;
-    const timeframes = Object.keys(indicators[symbol]);
-    message += `Candle timeframes: ${JSON.stringify(timeframes, null, 2)}\n`;
-    for (let i = 0; i < timeframes.length; i++) {
-      const latestCandles = candlesticks[symbol][timeframes[i]].slice(-slice);
-      const high = latestCandles.map((candle) => candle.high);
-      message += `${timeframes[i]} Candle high: ${JSON.stringify(high, null, 2)}\n`;
-      const low = latestCandles.map((candle) => candle.low);
-      message += `${timeframes[i]} Candle low: ${JSON.stringify(low, null, 2)}\n`;
-      const open = latestCandles.map((candle) => candle.open);
-      message += `${timeframes[i]} Candle open: ${JSON.stringify(open, null, 2)}\n`;
-      const close = latestCandles.map((candle) => candle.close);
-      message += `${timeframes[i]} Candle close: ${JSON.stringify(close, null, 2)}\n`;
-      const volume = latestCandles.map((candle) => candle.volume);
-      message += `${timeframes[i]} Candle volume: ${JSON.stringify(volume, null, 2)}\n`;
-      if (options.useEMA) {
-        const emalong = indicators.ema[timeframes[i]].long.slice(-slice);
-        message += `${timeframes[i]} EMA long: ${JSON.stringify(emalong, null, 2)}\n`;
-        const emashort = indicators.ema[timeframes[i]].short.slice(-slice);
-        message += `${timeframes[i]} EMA short: ${JSON.stringify(emashort, null, 2)}\n`;
+  if (symbolOptions.indicators !== undefined) {
+    if (symbolOptions.indicators.OpenAI !== undefined && symbolOptions.indicators.OpenAI?.enabled) {
+      check = 'HOLD';
+      const slice = symbolOptions.indicators.OpenAI.history; 
+      let message = "I give you this trade data, I want you to decide from them if I should BUY, SELL or HOLD.  Data in arrays are oldest to newest order. Please reply only with one word HOLD, BUY or SELL!\n\n";
+      message += `Traded symbol is: ${symbol}\n`;
+      const timeframes = Object.keys(indicators[symbol]);
+      message += `Candle timeframes: ${JSON.stringify(timeframes, null, 2)}\n`;
+      for (let i = 0; i < timeframes.length; i++) {
+        const latestCandles = candlesticks[symbol][timeframes[i]].slice(-slice);
+        const high = latestCandles.map((candle) => candle.high);
+        message += `${timeframes[i]} Candle high: ${JSON.stringify(high, null, 2)}\n`;
+        const low = latestCandles.map((candle) => candle.low);
+        message += `${timeframes[i]} Candle low: ${JSON.stringify(low, null, 2)}\n`;
+        const open = latestCandles.map((candle) => candle.open);
+        message += `${timeframes[i]} Candle open: ${JSON.stringify(open, null, 2)}\n`;
+        const close = latestCandles.map((candle) => candle.close);
+        message += `${timeframes[i]} Candle close: ${JSON.stringify(close, null, 2)}\n`;
+        const volume = latestCandles.map((candle) => candle.volume);
+        message += `${timeframes[i]} Candle volume: ${JSON.stringify(volume, null, 2)}\n`;
+        if (symbolOptions.indicators.ema?.enabled) {
+          const emalong = indicators.ema[timeframes[i]].long.slice(-slice);
+          message += `${timeframes[i]} EMA long: ${JSON.stringify(emalong, null, 2)}\n`;
+          const emashort = indicators.ema[timeframes[i]].short.slice(-slice);
+          message += `${timeframes[i]} EMA short: ${JSON.stringify(emashort, null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.macd?.enabled) {
+          const macdline = indicators.macd[timeframes[i]]?.macdLine?.slice(-slice);
+          message += `${timeframes[i]} MACD line: ${JSON.stringify(macdline, null, 2)}\n`;
+          const macdsignal = indicators.macd[timeframes[i]]?.signalLine.slice(-slice);
+          message += `${timeframes[i]} MACD line: ${JSON.stringify(macdsignal, null, 2)}\n`;
+          const macdhistogram = indicators.macd[timeframes[i]]?.histogram.slice(-slice);
+          message += `${timeframes[i]} MACD line: ${JSON.stringify(macdhistogram, null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.atr?.enabled) {
+          const atr = indicators.atr[timeframes[i]].slice(-slice);
+          message += `${timeframes[i]} ATR: ${JSON.stringify(atr, null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.rsi?.enabled) {
+          const rsi = indicators.rsi[timeframes[i]].slice(-slice);
+          message += `${timeframes[i]} RSI: ${JSON.stringify(rsi, null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.bb?.enabled) {
+          message += `${timeframes[i]} Bollinger Bands average: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+          message += `${timeframes[i]} Bollinger Bands upper: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][1].slice(-slice), null, 2)}\n`;
+          message += `${timeframes[i]} Bollinger Bands lower: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][2].slice(-slice), null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.so?.enabled) {
+          message += `${timeframes[i]} Stochastic Oscillator %K: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+          message += `${timeframes[i]} Stochastic Oscillator %D: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][1].slice(-slice), null, 2)}\n`;
+        }
+        if (symbolOptions.indicators.srsi?.enabled) {
+          message += `${timeframes[i]} Stochastic RSI %K: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][0].slice(-slice), null, 2)}\n`;
+          message += `${timeframes[i]} Stochastic RSI %D: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][1].slice(-slice), null, 2)}\n`;
+        }
       }
-      if (options.useMACD) {
-        const macdline = indicators.macd[timeframes[i]]?.macdLine?.slice(-slice);
-        message += `${timeframes[i]} MACD line: ${JSON.stringify(macdline, null, 2)}\n`;
-        const macdsignal = indicators.macd[timeframes[i]]?.signalLine.slice(-slice);
-        message += `${timeframes[i]} MACD line: ${JSON.stringify(macdsignal, null, 2)}\n`;
-        const macdhistogram = indicators.macd[timeframes[i]]?.histogram.slice(-slice);
-        message += `${timeframes[i]} MACD line: ${JSON.stringify(macdhistogram, null, 2)}\n`;
-      }
-      if (options.useATR) {
-        const atr = indicators.atr[timeframes[i]].slice(-slice);
-        message += `${timeframes[i]} ATR: ${JSON.stringify(atr, null, 2)}\n`;
-      }
-      if (options.useRSI) {
-        const rsi = indicators.rsi[timeframes[i]].slice(-slice);
-        message += `${timeframes[i]} RSI: ${JSON.stringify(rsi, null, 2)}\n`;
-      }
-      if (options.useBollingerBands) {
-        message += `${timeframes[i]} Bollinger Bands average: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Bollinger Bands upper: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][1].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Bollinger Bands lower: ${JSON.stringify(indicators.bollingerBands[timeframes[i]][2].slice(-slice), null, 2)}\n`;
-      }
-      if (options.useStochasticOscillator) {
-        message += `${timeframes[i]} Stochastic Oscillator %K: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Stochastic Oscillator %D: ${JSON.stringify(indicators.stochasticOscillator[timeframes[i]][1].slice(-slice), null, 2)}\n`;
-      }
-      if (options.useStochasticRSI) {
-        message += `${timeframes[i]} Stochastic RSI %K: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][0].slice(-slice), null, 2)}\n`;
-        message += `${timeframes[i]} Stochastic RSI %D: ${JSON.stringify(indicators.stochasticRSI[timeframes[i]][1].slice(-slice), null, 2)}\n`;
-      }
-    }
-    const openai = new OpenAI({
-      apiKey: options.openaiApiKey, 
-    });
-    const chatCompletion = await openai.chat.completions.create({
-      messages: [{ role: 'user', content: message }],
-      model: options.openaiModel,
-    });
-    for (let i = 0; i < chatCompletion.choices.length; i++) {
-      if(chatCompletion.choices[i].message.role === "assistant") {
-        if(chatCompletion.choices[i].finish_reason === "stop") {
-          const content = chatCompletion.choices[i].message.content;
-          if (content === "HOLD" || content === "SELL" || content === "BUY") {
-            check = content
-            break;
+      const openai = new OpenAI({
+        apiKey: symbolOptions.indicators.OpenAI.key, 
+      });
+      const chatCompletion = await openai.chat.completions.create({
+        messages: [{ role: 'user', content: message }],
+        model: symbolOptions.indicators.OpenAI.model,
+      });
+      for (let i = 0; i < chatCompletion.choices.length; i++) {
+        if(chatCompletion.choices[i].message.role === "assistant") {
+          if(chatCompletion.choices[i].finish_reason === "stop") {
+            const content = chatCompletion.choices[i].message.content;
+            if (content === "HOLD" || content === "SELL" || content === "BUY") {
+              check = content
+              break;
+            }
           }
         }
       }
+      consoleLogger.push("GPT Check", check);
     }
-    if(options.debug === true) {
-      console.log(JSON.stringify(chatCompletion, null, 2));
-    }
-    consoleLogger.push("GPT Check", check);
   }
   return check;
 }

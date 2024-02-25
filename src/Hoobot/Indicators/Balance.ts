@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions } from "../Utilities/args";
+import { ExchangeOptions } from "../Utilities/args";
 import { Filter } from "../Exchanges/Filters";
 import { checkPreviousTrade } from "../Exchanges/Trades";
 
@@ -34,43 +34,46 @@ export const checkBalanceSignals = (
   consoleLogger: ConsoleLogger, 
   symbol: string,
   closePrice: number,  
-  options: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
   filter: Filter,
 ) => {
   let check = 'HOLD';
-  const baseBalance = options.balances[symbol.split("/")[0]].crypto;
-  const quoteBalance = options.balances[symbol.split("/")[1]].crypto;
-  const baseBalanceConverted = (baseBalance * closePrice);
-  const tradeCheck = checkPreviousTrade(symbol, options);
-  if (tradeCheck === 'SELL') {
-    if (quoteBalance > parseFloat(filter.minNotional)) {
-      check = 'BUY';
-    } else {
-      if (baseBalanceConverted >= parseFloat(filter.minNotional)) {
-        check = 'SELL';
-      } else {
-        check = 'HOLD';
-      }
-    }
-  } else if (tradeCheck === 'BUY') {
-    if (baseBalanceConverted > parseFloat(filter.minNotional)) {
-      check = 'SELL'
-    } else {
-      if (quoteBalance >= parseFloat(filter.minNotional)) {
+  if (exchangeOptions.balances !== undefined) {
+    const baseBalance = exchangeOptions.balances[symbol.split("/")[0]].crypto;
+    const quoteBalance = exchangeOptions.balances[symbol.split("/")[1]].crypto;
+    const baseBalanceConverted = (baseBalance * closePrice);
+    const tradeCheck = checkPreviousTrade(symbol, exchangeOptions);
+    if (tradeCheck === 'SELL') {
+      if (quoteBalance > parseFloat(filter.minNotional)) {
         check = 'BUY';
       } else {
-        check = 'HOLD';
+        if (baseBalanceConverted >= parseFloat(filter.minNotional)) {
+          check = 'SELL';
+        } else {
+          check = 'HOLD';
+        }
+      }
+    } else if (tradeCheck === 'BUY') {
+      if (baseBalanceConverted > parseFloat(filter.minNotional)) {
+        check = 'SELL'
+      } else {
+        if (quoteBalance >= parseFloat(filter.minNotional)) {
+          check = 'BUY';
+        } else {
+          check = 'HOLD';
+        }
       }
     }
+    if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
+      check = 'HOLD';
+    } else if (check === 'BUY' && (quoteBalance < parseFloat(filter.minNotional) || quoteBalance > parseFloat(filter.maxNotional))) {
+      check = 'HOLD';
+    }
+    consoleLogger.push("Trades", {
+      previous: tradeCheck,
+      next: check,
+    })
   }
-  if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
-    check = 'HOLD';
-  } else if (check === 'BUY' && (quoteBalance < parseFloat(filter.minNotional) || quoteBalance > parseFloat(filter.maxNotional))) {
-    check = 'HOLD';
-  }
-  consoleLogger.push("Trades", {
-    previous: tradeCheck,
-    next: check,
-  })
+  
   return check;
 }

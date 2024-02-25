@@ -33,7 +33,7 @@ import { ConfigOptions } from 'src/Hoobot/Utilities/args';
 // const guildId = process.env.DISCORD_SERVER_ID;
 
 export const deployCommands = (commands: RESTPostAPIChatInputApplicationCommandsJSONBody[], options: ConfigOptions) => {
-  if(options.discordBotToken === undefined) {
+  if(options.discord.token === undefined) {
     console.log(JSON.stringify(process.env));
     console.log("Discord bot token has not been set.");
   } else if(options.discordApplicationID === undefined) {
@@ -43,12 +43,12 @@ export const deployCommands = (commands: RESTPostAPIChatInputApplicationCommands
     console.log(JSON.stringify(process.env));
     console.log("Discord bot token has not been set.");
   } else {
-    const rest = new REST({version: '10'}).setToken(options.discordBotToken);
+    const rest = new REST({version: '10'}).setToken(options.discord.token);
     (async () => {
       try {
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
         await rest.put(
-          Routes.applicationGuildCommands(options.discordApplicationID, options.discordServerID),
+          Routes.applicationGuildCommands(options.discord.applicationId!, options.discord.channelId!),
           { body: commands }
         );
         console.log(`Succesfully reloaded application (/) commands.`);
