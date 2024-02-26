@@ -15,16 +15,12 @@ in crypto trading.
 sell, and trade various cryptocurrencies. It provides a wide range of services, including spot trading, futures trading, staking, 
 savings accounts, and more. 
 
+### Xeggex
+[Xeggex.com](https://xeggex.com) strives to provide its users with the best trading experience and give small and medium market cap assets a reliable trading hub. Our goal is to maintain a fast and user friendly system while also concentrating on security to keep users, data, and assets safe. Security of our users' data & assets is always our top priority and we are focused on building an easy to use digital asset trading platform for everyone to enjoy.
+
 ## How to use Hoobot
 
 Hoobot has been programmed with Typescript on top of Node. So the requirements are node version manager (nvm), node package manager (npm) and at least Node version 18.17.0. 
-
-Here is a list of npm packages that are required:
-
-- `discord.js`
-- `dotenv`
-- `node-binance-api`
-- `play-sound`
 
 ### With Windows
 
@@ -98,156 +94,180 @@ Here is a list of npm packages that are required:
 8. Copy `.env_default` to `.env`, notice no `.txt` or such at the end of .env file. 
 9. Open `.env` with text editor 
 10. Add your Binance API keys and Hoobot License and if you want Discord API keys
-11. Change Hoobot settings how you want in the .env file.
+11. Change Hoobot settings how you want in the hoobot-options.json file.
 12. Save and close the file.
+13. Run command `npm run build` to build Hoobot.
 13. Run command `npm run start` to start Hoobot. 
 
 ## .env Configuration Values
 
-Below is an explanation of the various configuration values present in the `.env` file for the Hoobot:
+Below is an explanation of the various configuration values present in the `hoobot-options.json` file for the Hoobot:
 
 ```
-#Binance Bot configuration
-API_KEY=""
-API_SECRET=""
-
-# Hoobot license
-LICENSE=""
-
-# Discord configuration
-DISCORD_ENABLED="false"
-DISCORD_BOT_TOKEN=""
-DISCORD_APPLICATION_ID=""
-DISCORD_SERVER_ID=""
-DISCORD_CHANNEL_ID=""
-
-# Hoobot trading mode "algorithmic", "hilow"
-MODE="algorithmic"
-
-# Symbols to trade. Supports multiple coins seperated with comma 'ETH/TUSD,BTC/TUSD'.
-SYMBOLS="BTC/TUSD"
-
-# Interval of candlesticks
-CANDLESTICK_INTERVAL="15m"
-
-# Default source of candlestick to use for calculations
-SOURCE="close"
-
-# How often to update terminal: "update", "final", "trade", "trade/final".
-CONSOLE_UPDATE="trade/final"
-
-# Indicator parameters
-SMA_LENGTH=7
-
-# Exponetial Moving Average configuration
-USE_EMA="false"
-EMA_SHORT=20
-EMA_LONG=50
-
-# Moving average convergence/divergence configuration
-USE_MACD="false"
-MACD_FAST=5
-MACD_SLOW=15
-MACD_SIGNAL=6
-
-# Relative Strength Index configuration
-USE_RSI="false"
-RSI_LENGTH=5
-RSI_SMOOTHING=12
-RSI_SMOOTHING_TYPE="EMA"
-RSI_HISTORY_LENGTH=5
-RSI_OVERBOUGHT_TRESHOLD=70
-RSI_OVERSOLD_TRESHOLD=30
-
-# Average True Range configuration
-USE_ATR="false"
-ATR_LENGTH=14
-
-# On-Balance Volume configuration
-USE_OBV="false"
-OBV_HISTORY_LENGTH=5
-
-# Chaikin Money Flow configuration
-USE_CMF="false"
-CMF_LEGNTH=20
-CMF_HISTORY_LENGTH=3
-CMF_OVERBOUGHT_TRESHOLD=0.15
-CMF_OVERSOLD_TRESHOLD=-0.15
-
-# Bollinger Bands configuration
-USE_BOLLINGER_BANDS="false"
-BOLLINGER_BANDS_LENGTH=20
-BOLLINGER_BANDS_MULTIPLIER=2
-BOLLINGER_BANDS_AVERAGE_TYPE="SMA"
-BOLLINGER_BANDS_HISTORY_LENGTH=5
-
-# Stochastic Oscillator configuration
-USE_STOCHASTIC_OSCILLATOR="false"
-STOCHASTIC_OSCILLATOR_KPERIOD=14
-STOCHASTIC_OSCILLATOR_DPERIOD=1
-STOCHASTIC_OSCILLATOR_SMOOTHING=3
-STOCHASTIC_OSCILLATOR_OVERBOUGHT_TRESHOLD=80
-STOCHASTIC_OSCILLATOR_OVERSOLD_TRESHOLD=20
-
-# Stochastic RSI configuration
-USE_STOCHASTIC_RSI="true"
-STOCHASTIC_RSI_LENGTH_RSI=14
-STOCHASTIC_RSI_LENGTH_STOCHASTIC=14
-STOCHASTIC_RSI_SMOOTH_K=3
-STOCHASTIC_RSI_SMOOTH_D=3
-STOCHASTIC_RSI_OVERBOUGHT_TRESHOLD=80
-STOCHASTIC_RSI_OVERSOLD_TRESHOLD=20
-STOCHASTIC_RSI_HISTORY_LENGTH=5
-
-# OpenAI GPT
-USE_GPT="false"
-USE_GPT_API_KEY=""
-USE_GPT_MODEL=""
-USE_GPT_HISTORY_LENGTH=""
-USE_GPT_OVERWRITE="false"
-
-# Growing MAX buy and sell amount for quote coin.
-STARTING_MAX_BUY_AMOUNT=8
-STARTING_MAX_SELL_AMOUNT=0
-
-# Percentage of price change when to cancel order 
-CLOSE_PERCENTAGE=0.25
-
-# Maximum age of order, cancel afterwwards
-MAX_ORDER_AGE_SECONDS=60
-
-# Trade fee 
-TRADE_FEE_PERCENTAGE=0.075
-
-# Don't allow trading until these PNL are met. False to disable both, 0 to either one disables.
-HOLD_UNTIL_POSITIVE_TRADE="false"
-MINIMUM_PROFIT_SELL=0.25
-MINIMUM_PROFIT_BUY=0
-
-# STOP_LOSS
-STOP_LOSS="true"
-STOP_LOSS_STOP_TRADING="false"
-STOP_LOSS_PNL=-2
-
-# TAKE_PROFIT 
-TAKE_PROFIT="true"
-TAKE_PROFIT_LIMIT=0.05
-TAKE_PROFIT_MINIMUM=0.5
-TAKE_PROFIT_MINIMUM_DROP=0.05
-
-# Developer
-DEBUG="true"
-
-# Trading start date in unix timestamp
-START_TIMESTAMP="1698789600"
-
-# Simulation
-SIMULATION="true"
-SIMULATION_BRUTE_FORCE="false"
+{
+  "debug": true,
+  "startTime": "1698789600",
+  "license": "",
+  "discord": {
+    "enabled": true,
+    "token": "",
+    "applicationId": "",
+    "serverId": "",
+    "channelId": ""
+  },
+  "exchanges": [
+    {
+      "name": "binance",
+      "key": "",
+      "secret": "",
+      "mode": "algorithmic",
+      "console": "trade",
+      "symbols": [
+        {
+          "name": "BTC/USDT",
+          "timeframes": ["3m"],
+          "agreement": 75,
+          "source": "close",
+          "trend": {
+            "enabled": true,
+            "timeframe": "1d",
+            "ema": {
+              "short": 8,
+              "long": 26
+            }
+          },
+          "profit": {
+            "enabled": true,
+            "minimumSell": 0.15,
+            "minimumBuy": 0
+          },
+          "growingMax": {
+            "buy": 20,
+            "sell": 0
+          },
+          "closePercentage": 0.25,
+          "maximumAgeOfOrder": 60,
+          "tradeFeePercentage": 0.1,
+          "stopLoss": {
+            "enabled": true,
+            "stopTrading": false,
+            "pnl": -25,
+            "agingPerHour": 0.1
+          },
+          "takeProfit": {
+            "enabled": true,
+            "limit": 0.125,
+            "minimum": 1.5,
+            "drop": 0.05
+          },
+          "indicators": {
+            "sma": {
+              "enabled": false,
+              "length": 7,
+              "weight": 1
+            },
+            "renko": {
+              "enabled": false,
+              "weight": 1,
+              "multiplier": 1
+            },
+            "ema": {
+              "enabled": false,
+              "short": 100,
+              "long": 200,
+              "weight": 1
+            },
+            "macd": {
+              "enabled": true,
+              "fast": 5,
+              "slow": 15,
+              "signal": 6,
+              "weight": 1
+            },
+            "rsi": {
+              "enabled": false,
+              "length": 5,
+              "smoothing": {
+                "type": "EMA",
+                "length": 12
+              },
+              "history": 5,
+              "tresholds": {
+                "overbought": 70,
+                "oversold": 30
+              },
+              "weight": 1
+            },
+            "atr": {
+              "enabled": false,
+              "length": 14
+            },
+            "obv": {
+              "enabled": false,
+              "length": 14,
+              "weight": 1
+            },
+            "cmf": {
+              "enabled": false,
+              "length": 20,
+              "history": 3,
+              "tresholds": {
+                "overbought": 0.1,
+                "oversold": 0.1
+              },
+              "weight": 1
+            },
+            "bb": {
+              "enabled": false,
+              "length": 20,
+              "multiplier": 2,
+              "average": "SMA",
+              "history": 5,
+              "weight": 1
+            },
+            "so": {
+              "enabled": false,
+              "kPeriod": 14,
+              "dPeriod": 1,
+              "smoothing": 3,
+              "tresholds": {
+                "overbought": 80,
+                "oversold": 20
+              },
+              "weight": 1
+            },
+            "srsi": {
+              "enabled": false,
+              "rsiLength": 14,
+              "stochLength": 14,
+              "kPeriod": 14,
+              "dPeriod": 1,
+              "smoothK": 3,
+              "smoothD": 3,
+              "history": 5,
+              "tresholds": {
+                "overbought": 80,
+                "oversold": 20
+              },
+              "weight": 1
+            },
+            "OpenAI": {
+              "enabled": false,
+              "key": "",
+              "model": "",
+              "history": "",
+              "overwrite": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+} 
 ```
 
 ## Usage
-1. Copy the provided `.env` file and fill in the necessary values for the parameters.
+1. Copy the provided `hoobot-options.json` file and fill in the necessary values for the parameters.
 2. Save the file in your project directory.
 3. Use the configuration in your bot code.
 
@@ -264,6 +284,26 @@ Force.json is a file where you can force allow negative trade for one trade as i
     "skip": false
   }
 }
+```
+
+
+## Simulation
+
+You can run simulations with command `npm run simulate`, simulations currently support symbols available from Binance and you can adjust simulation configuration from file `hoobot-options-simulate.json`. The simulate file has same format as `hoobot-options.json` but exists only to seperate simulation options from Hoobot live options. 
+
+At the end of simulation you get results like this:
+```
+{
+    "Starting balance": "20.00",
+    "Final Balance": "2870.05",
+    "ROI": "142.50",
+    "BTC/USDT trades": 4037,
+    "BTC/USDT stop losses": 96,
+    "BTC/USDT take profits": 246,
+    "BTC/USDT sells": 1745,
+    "BTC/USDT buys": 1949
+}
+
 ```
 
 ## Funds low? 

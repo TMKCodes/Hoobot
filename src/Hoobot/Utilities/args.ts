@@ -271,10 +271,18 @@ export const parseArgs = (): ConfigOptions => {
   for (let i = 0; i < options.exchanges.length; i++) {
     options.exchanges[i].tradeHistory = {};
   }
-  const optionsFilename = "./hoobot-options.json";
-  if (fs.existsSync(optionsFilename)) {
-    const optionsFile = fs.readFileSync(optionsFilename);
-    options = JSON.parse(optionsFile.toString('utf-8'));
+  if(process.env.SIMULATE === "false") {
+    const optionsFilename = "./hoobot-options.json";
+    if (fs.existsSync(optionsFilename)) {
+      const optionsFile = fs.readFileSync(optionsFilename);
+      options = JSON.parse(optionsFile.toString('utf-8'));
+    }
+  } else {
+    const optionsFilename = "./hoobot-options-simulate.json";
+    if (fs.existsSync(optionsFilename)) {
+      const optionsFile = fs.readFileSync(optionsFilename);
+      options = JSON.parse(optionsFile.toString('utf-8'));
+    }
   }
   return options;
 }

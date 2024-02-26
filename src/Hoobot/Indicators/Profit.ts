@@ -53,7 +53,7 @@ export const calculateProfitSignals = async (
   if (stopLoss > 0) {
     stopLoss == 0;
   }
-  let takeProfit = currentMaxPNL - symbolOptions.takeProfit?.current!;
+  let takeProfit = currentMaxPNL - symbolOptions.takeProfit?.drop!;
   if (takeProfit < symbolOptions.takeProfit?.minimum!) {
     takeProfit = symbolOptions.takeProfit?.minimum!
   }

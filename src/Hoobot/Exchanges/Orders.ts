@@ -315,7 +315,7 @@ export const handleOpenOrder = async (
             }
           }
         }
-        
+        delay(2000);
       } while (true);
     }
   } catch (error) {

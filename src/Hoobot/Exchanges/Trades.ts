@@ -249,7 +249,11 @@ export const isBlocking = async (symbol: string, symbolOptions: SymbolOptions): 
 const roundStep = (price: number, size: number): number => {
    const tickSizePrecision = Math.floor(Math.log10(Math.abs(size))) * -1;
    const roundedPrice = Math.round(price / size) * size;
-   return Number(roundedPrice.toFixed(tickSizePrecision));
+   if (tickSizePrecision > 0 && tickSizePrecision < 100) {
+    return Number(roundedPrice.toFixed(tickSizePrecision));
+   } else {
+    return Number(roundedPrice);
+   }
 }
 
 const placeSellOrder = async (
@@ -257,43 +261,31 @@ const placeSellOrder = async (
   symbol: string, 
   quantity: number, 
   price: number
-): Promise<Order> => {
+): Promise<Order | undefined> => {
   if(isBinance(exchange)) {
     return await exchange.sell(symbol.split("/").join(""), quantity, price);
   } else if(isXeggex(exchange)) {
-    const response = await exchange.createOrder("", symbol, "sell", "limit", quantity.toString(), price.toString(), false);
-    const order = {
-      symbol: symbol.split("/").join(""),
-      orderId: response.id,
-      price: response.price,
-      qty: response.quantity,
-      quoteQty: (parseFloat(response.quantity) * parseFloat(response.price)).toString(),
-      commission: "",
-      commissionAsset: "",
-      time: response.createdAt,
-      isBuyer: (response.side === "buy" ? true : false),
-      isMaker: true,
-      isBestMatch: true,
-      orderStatus: 'NEW',
-      tradeId: response.id,
+    const response = await exchange.createOrder(symbol, "sell", "limit", quantity.toString(), price.toString());
+    if (response) {
+      const order = {
+        symbol: symbol.split("/").join(""),
+        orderId: response.id,
+        price: response.price,
+        qty: response.quantity,
+        quoteQty: (parseFloat(response.quantity) * parseFloat(response.price)).toString(),
+        commission: "",
+        commissionAsset: "",
+        time: response.createdAt,
+        isBuyer: (response.side === "buy" ? true : false),
+        isMaker: true,
+        isBestMatch: true,
+        orderStatus: 'NEW',
+        tradeId: response.id,
+      }
+      return order;
     }
-    return order;
   }
-  return {
-    symbol: "",
-    orderId: 0,
-    price: "",
-    qty: "",
-    quoteQty: "",
-    commission: "",
-    commissionAsset: "",
-    time: 0,
-    isBuyer: false,
-    isMaker: false,
-    isBestMatch: false,
-    orderStatus: "",
-    tradeId: 0,
-  }
+  return undefined
 }
 
 const placeBuyOrder = async (
@@ -301,11 +293,11 @@ const placeBuyOrder = async (
   symbol: string, 
   quantity: number, 
   price: number
-): Promise<Order>  => {
+): Promise<Order | undefined>  => {
   if(isBinance(exchange)) {
     return await exchange.buy(symbol.split("/").join(""), quantity, price);
   } else if(isXeggex(exchange)) {
-    const response = await exchange.createOrder("", symbol, "buy", "limit", quantity.toString(), price.toString(), false);
+    const response = await exchange.createOrder(symbol, "buy", "limit", quantity.toString(), price.toString());
     const order = {
       symbol: symbol.split("/").join(""),
       orderId: response.id,
@@ -323,21 +315,7 @@ const placeBuyOrder = async (
     }
     return order;
   }
-  return {
-    symbol: "",
-    orderId: 0,
-    price: "",
-    qty: "",
-    quoteQty: "",
-    commission: "",
-    commissionAsset: "",
-    time: 0,
-    isBuyer: false,
-    isMaker: false,
-    isBestMatch: false,
-    orderStatus: "",
-    tradeId: 0,
-  }
+  return undefined
 }
 
 
@@ -370,40 +348,44 @@ export const sell = async (
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
         const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS") { 
+        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT") { 
           if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
             consoleLogger.push("error", "Not positive trade")
             return false;
           }
         }
       }
-      const order: Order = await placeSellOrder(exchange, symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      play(soundFile);
-      logToFile(JSON.stringify(order, null, 4));
-      let msg = '```';
-      msg += `SELL ID: ${order.orderId}\r\n`;
-      msg += `Symbol: ${symbol}\r\n`;
-      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
-      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
-      msg += `Price: ${roundedPrice}\r\n`;
-      msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
-      msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-      msg += '```';
-      sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-      logToFile(msg);
-      await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
-      updateBuyAmount(roundedQuantityInBase * roundedPrice, symbolOptions);
-      if (symbolOptions.takeProfit !== undefined) {
-        symbolOptions.takeProfit.current = 0;
+      const order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
+      if (order !== undefined) {
+        play(soundFile);
+        logToFile(JSON.stringify(order, null, 4));
+        let msg = '```';
+        msg += `SELL ID: ${order.orderId}\r\n`;
+        msg += `Symbol: ${symbol}\r\n`;
+        msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
+        msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
+        msg += `Price: ${roundedPrice}\r\n`;
+        msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
+        msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+        msg += '```';
+        sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+        logToFile(msg);
+        await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+        updateBuyAmount(roundedQuantityInBase * roundedPrice, symbolOptions);
+        if (symbolOptions.takeProfit !== undefined) {
+          symbolOptions.takeProfit.current = 0;
+        }
+        updateForce(symbol);
+        exchangeOptions.balances = await getCurrentBalances(exchange);
+        if (exchangeOptions.tradeHistory === undefined) {
+          exchangeOptions.tradeHistory = {}
+        }
+        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+        await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
+        return order;
+      } else {
+        return false;
       }
-      updateForce(symbol);
-      exchangeOptions.balances = await getCurrentBalances(exchange);
-      if (exchangeOptions.tradeHistory === undefined) {
-        exchangeOptions.tradeHistory = {}
-      }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-      await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
-      return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
       return false;
@@ -471,39 +453,45 @@ export const buy = async (
         if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
           symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
         }
-        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS") {
+        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT") {
           if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
             consoleLogger.push("error", "Not positive trade")
             return false;
           }
         }
       }
-      const order: Order = await placeBuyOrder(exchange, symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
-      play(soundFile);
-      logToFile(JSON.stringify(order, null, 4));
-      let msg = '```';
-      msg += `BUY ID: ${order.orderId}\r\n`;
-      msg += `Symbol: ${symbol}\r\n`;
-      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
-      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
-      msg += `Price: ${roundedPrice}\r\n`;
-      msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
-      msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-      msg += '```';
-      sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-      logToFile(msg);
-      await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
-      if (symbolOptions.takeProfit !== undefined) {
-        symbolOptions.takeProfit.current = 0;
+      const order = await placeBuyOrder(exchange, symbol.split("/").join(""), roundedQuantityInBase, roundedPrice);
+      if(order !== undefined) {
+        play(soundFile);
+        logToFile(JSON.stringify(order, null, 4));
+        let msg = '```';
+        msg += `BUY ID: ${order.orderId}\r\n`;
+        msg += `Symbol: ${symbol}\r\n`;
+        msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
+        msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
+        msg += `Price: ${roundedPrice}\r\n`;
+        msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
+        msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+        msg += '```';
+        sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+        logToFile(msg);
+        if (order.orderId !== 0) {
+          await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+        }
+        if (symbolOptions.takeProfit !== undefined) {
+          symbolOptions.takeProfit.current = 0;
+        }
+        updateForce(symbol);
+        exchangeOptions.balances = await getCurrentBalances(exchange);
+        if (exchangeOptions.tradeHistory === undefined) {
+          exchangeOptions.tradeHistory = {};
+        }
+        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+        await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
+        return order;
+      } else {
+        return false;
       }
-      updateForce(symbol);
-      exchangeOptions.balances = await getCurrentBalances(exchange);
-      if (exchangeOptions.tradeHistory === undefined) {
-        exchangeOptions.tradeHistory = {};
-      }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-      await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
-      return order;
     } else {
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
       return false;

@@ -45,3 +45,6 @@ logs.txt
 trades.json
 balances*
 exchange-info.json
+hoobot-options-simulate.json
+hoobot-options.json
+hoobot-options2.json

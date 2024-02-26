@@ -1,7 +1,6 @@
 
 import crypto from 'crypto';
 import EventEmitter from 'events';
-import { resolve } from 'path';
 import { URL } from 'url';
 import WebSocket from 'ws';
 
@@ -221,6 +220,25 @@ export interface XeggexMarket {
   imageUUID : string
 }
 
+
+const delay = (
+  ms: number
+) => {
+  return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
+var xeggexBlocked: boolean = false;
+
+const waitToBlock = async () => {
+  while (xeggexBlocked === true) {
+    await delay(5);
+  }
+  xeggexBlocked = true;
+}
+
+const unBlock = async () => {
+  xeggexBlocked = false;
+} 
 
 /*
  * Utility class to map numbers to callbacks. 
@@ -528,7 +546,8 @@ export class Xeggex {
     });
   }
 
-  public subscribeReports = (callback: (response: XeggexResponse) => void) => {
+  public subscribeReports = async (callback: (response: XeggexResponse) => void) => {
+    await waitToBlock();
     let messageId = this.messageId++;
     this.send({
       method: "subscribeReports",
@@ -537,6 +556,7 @@ export class Xeggex {
     });
     this.reportsCallbackId = messageId;
     this.callbackMap.add(messageId, callback);
+    await unBlock();
   }
 
   public unsubscribeReports = () => {
@@ -657,7 +677,8 @@ export class Xeggex {
     this.callbackMap.add(messageId, callback);
   }
 
-  public subscribeTicker = (symbol: string, callback: (response: XeggexResponse) => void) => {
+  public subscribeTicker = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+    await waitToBlock();
     let messageId = this.messageId++;
     this.send({
       method: "subscribeTicker",
@@ -668,6 +689,7 @@ export class Xeggex {
     });
     this.tickerCallbackId = messageId;
     this.callbackMap.add(messageId, callback);
+    await unBlock();
   }
 
   public unsubscribeTicker = async (symbol: string): Promise<boolean> => {
@@ -691,7 +713,8 @@ export class Xeggex {
     });
   }
 
-  public subscribeOrderbook = (symbol: string, callback: (response: XeggexResponse) => void) => {
+  public subscribeOrderbook = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+    await waitToBlock();
     let messageId = this.messageId++;
     this.send({
       method: "subscribeOrderbook",
@@ -702,6 +725,7 @@ export class Xeggex {
     });
     this.orderbookCallbackId = messageId;
     this.callbackMap.add(messageId, callback);
+    await unBlock()
   }
 
   public unsubscribeOrderbook = async (symbol: string): Promise<boolean> => {
@@ -725,10 +749,11 @@ export class Xeggex {
     });
   }
 
-  public subscribeTrades = (symbol: string, callback: (response: XeggexResponse) => void) => {
-    let messageId = ++this.messageId;
+  public subscribeTrades = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+    await waitToBlock();
+    let messageId = this.messageId++;
     this.send({
-      method: "subscribeTrades",
+      method: "tradesTrades",
       params: {
         symbol: symbol
       },
@@ -736,10 +761,11 @@ export class Xeggex {
     });
     this.tradesCallbackId = messageId;
     this.callbackMap.add(messageId, callback);
+    await unBlock();
   }
 
   public unsubscribeTrades = async (symbol: string): Promise<boolean> => {
-    let messageId = ++this.messageId;
+    let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTrades",
       params: {
@@ -759,13 +785,14 @@ export class Xeggex {
     });
   }
 
-  public subscribeCandles = (
+  public subscribeCandles = async (
     symbol: string, 
     period: number,
     callback: (response: XeggexResponse) => void,
     limit: number = 100,
   ) => {
-    let messageId = ++this.messageId;
+    await waitToBlock();
+    let messageId = this.messageId++;
     this.send({
       method: "subscribeCandles",
       params: {
@@ -777,6 +804,7 @@ export class Xeggex {
     });
     this.candlesCallbackId = messageId;
     this.callbackMap.add(messageId, callback);
+    await unBlock();
   }
 
   public unsubscribeCandles = async (symbol: string, period: number): Promise<boolean> => {
@@ -806,7 +834,7 @@ export class Xeggex {
   private apiCall = async (route: string, method: string, body: object, params: urlParams): Promise<any> => {
     let uri = `${this.ApiURL}${route}`;
     try {
-      if (params) {
+      if (params && Object.keys(params).length > 0) {
         const queryString = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
           if (Array.isArray(value)) {
@@ -816,19 +844,27 @@ export class Xeggex {
           }
         }
         uri += `?${queryString.toString()}`;
-        const response = await fetch(new URL(uri), {
+        const url = new URL(uri);
+        const response = await fetch(url, {
           method: method,
           headers: {
             "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
             "Content-Type": "application/json",
           }
         });
+        // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
-          throw new Error(`API call failed with status ${response}`);
+          try {
+            const json = response.json();
+            throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
+          } catch (error) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
         }
         return await response.json();
       } else  {
-        const response = await fetch(new URL(uri), {
+        const url = new URL(uri);
+        const response = await fetch(url, {
           method: method,
           headers: {
             "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
@@ -836,8 +872,14 @@ export class Xeggex {
           },
           body: JSON.stringify(body)
         });
+        // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
-          throw new Error(`API call failed with status ${response}`);
+          try {
+            const json = response.json();
+            throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
+          } catch (error) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
         }
         return await response.json();
       }
@@ -998,22 +1040,18 @@ export class Xeggex {
   }
 
   public createOrder = async (
-    useProvidedId: string,
     symbol: string,
     side: string,
     type: string,
     quantity: string,
     price: string,
-    strictValidate: boolean
   ) => {
     return this.apiCall(`/createorder/`, "POST", {
-      useProvidedId: useProvidedId,
       symbol: symbol,
       side: side,
       type: type,
       quantity: quantity,
       price: price,
-      strictValidate: strictValidate
     }, {});
   }
 

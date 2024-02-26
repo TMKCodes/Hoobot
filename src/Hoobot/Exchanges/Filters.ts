@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { Exchange, isBinance } from "./Exchange";
+import { Exchange, isBinance, isXeggex } from "./Exchange";
 
 export interface Filter {
   minPrice: any;
@@ -79,15 +79,15 @@ export const getFilters = async (
   return {
     minPrice: 0,
     maxPrice: 100000000000000,
-    tickSize: 0,
-    minQty: 0,
+    tickSize: 0.0001,
+    minQty: 0.0001,
     maxQty: 100000000000000,
-    stepSize: 0,
-    minNotional: 0,
+    stepSize: 0.0001,
+    minNotional: 0.0001,
     maxNotional: 100000000000000,
-    bidMultiplierUp: 0,
-    bidMultiplierDown: 0,
-    askMultiplierUp: 0,
-    askMultiplierDown: 0
+    bidMultiplierUp: 0.0001,
+    bidMultiplierDown: 0.0001,
+    askMultiplierUp: 0.0001,
+    askMultiplierDown: 0.0001
   }
 }

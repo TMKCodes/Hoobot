@@ -480,24 +480,8 @@ export const algorithmic = async (
         time: candleTime,
         color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
         direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
-        // open: latestCandle?.open?.toFixed(7),
-        // close: latestCandle?.close?.toFixed(7),
-        // low: latestCandle?.low?.toFixed(7),
-        // high: latestCandle?.high?.toFixed(7)
       });
     }
-    // if (options.tradeHistory[symbol.split("/").join("")]?.length > 1) {
-    //   const roi = calculateROI(options.tradeHistory[symbol.split("/").join("")]);
-    //   consoleLogger.push("Profit", {
-    //     base: roi[0].toFixed(7) + " " + symbol.split("/")[0],
-    //     quote: roi[1].toFixed(7) + " " + symbol.split("/")[1]
-    //   });
-    // } else {
-    //   consoleLogger.push("Profit", {
-    //     base: "0 " + symbol.split("/")[0],
-    //     quote: "0 " + symbol.split("/")[1]
-    //   });
-    // }
     consoleLogger.push("Balance", {
       base:  exchangeOptions.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
       quote: exchangeOptions.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
@@ -566,8 +550,12 @@ export const simulateAlgorithmic = async (
   if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < 2) {
     return false;
   }
+  if (exchangeOptions.tradeHistory === undefined) {
+    exchangeOptions.tradeHistory = {};
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = [];
+  }
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = []
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = [];
   }
   if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < symbolOptions.indicators?.ema?.long!) {
     logger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);

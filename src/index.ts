@@ -180,9 +180,10 @@ const calculateBalance = (options: ExchangeOptions): number => {
 
 const simulate = async () => {
   const exchange = new Binance();
+  const exchangeOptions: ExchangeOptions = options.exchanges.filter(exchangeOption => exchangeOption.name === "binance")[0];
   exchange.options({
-    APIKEY: options.apiKey,
-    APISECRET: options.apiSecret,
+    APIKEY: exchangeOptions.key,
+    APISECRET: exchangeOptions.secret,
     useServerTime: true, 
     family: 4,
   });
@@ -190,85 +191,66 @@ const simulate = async () => {
   let startingBalance = 0;
   options.startTime = new Date().toISOString();
   let candleStore: Candlesticks = {};
-  if(options.mode === "algorithmic") {
-    for (const exchangeOptions of options.exchanges) {
-      exchangeOptions.balances = {}
-      Logger.push("simulation-symbols", exchangeOptions.symbols);
-      Logger.print();
-      Logger.flush();
-      const symbols = exchangeOptions.symbols.map(symbol => symbol.name);
-      const timeframes = [...new Set(exchangeOptions.symbols.flatMap(symbol => symbol.timeframes))];
-      const allCandlesticks = await downloadHistoricalCandlesticks(symbols, timeframes);
-      console.log("Starting simulation with downloaded candlesticks.");
-      for (const symbolOptions of exchangeOptions.symbols) {
-        const timeframes = [...symbolOptions.timeframes];
-        if (!timeframes.includes(symbolOptions.trend?.timeframe!)) {
-          timeframes.push(symbolOptions.trend?.timeframe!);
-        }
-        exchangeOptions.balances[symbolOptions.name.split("/")[0]] = {
-          crypto: 0,
-          usdt: 0,
-        }
-        exchangeOptions.balances[symbolOptions.name.split("/")[1]] = {
-          crypto: symbolOptions.growingMax?.buy!,
-          usdt: 0,
-        } 
-        startingBalance += symbolOptions.growingMax?.buy! * symbols.length;
-        const filter = await getFilters(exchange, symbolOptions.name);
-        symbolFilters[symbolOptions.name.split("/").join("")] = filter;
-        const sanitizedStartTime = options.startTime.replace(/:/g, '-');
-        const filePath = `./simulation/${sanitizedStartTime}/configuration.json`;
-        if(!existsSync(`./simulation`)) {
-          mkdirSync(`./simulation`);
-        }
-        const directory = path.dirname(filePath);
-        if (!existsSync(directory)) {
-          mkdirSync(directory, { recursive: true });
-        }
-        writeFileSync(filePath, JSON.stringify(options, null, 2));
-        await simulateListenForCandlesticks(symbols, allCandlesticks, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
-          if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
-            return;
-          }
-          await simulateAlgorithmic(symbol, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
-        });
+  if(exchangeOptions.mode === "algorithmic") {
+    exchangeOptions.balances = {}
+    Logger.push("simulation-symbols", exchangeOptions.symbols);
+    Logger.print();
+    Logger.flush();
+    const symbols = exchangeOptions.symbols.map(symbol => symbol.name);
+    const timeframes = [...new Set(exchangeOptions.symbols.flatMap(symbol => symbol.timeframes))];
+    const allCandlesticks = await downloadHistoricalCandlesticks(symbols, timeframes);
+    console.log("Starting simulation with downloaded candlesticks.");
+    for (const symbolOptions of exchangeOptions.symbols) {
+      const timeframes = [...symbolOptions.timeframes];
+      if (!timeframes.includes(symbolOptions.trend?.timeframe!)) {
+        timeframes.push(symbolOptions.trend?.timeframe!);
       }
-    }
-    for (const exchangeOptions of options.exchanges) {
-      let balance = calculateBalance(exchangeOptions);
-      Logger.push("Starting balance", startingBalance.toFixed(2));
-      Logger.push("Final Balance", balance.toFixed(2));
-      Logger.push("ROI", ((balance - startingBalance) / startingBalance).toFixed(2));
-      for (const symbol of exchangeOptions.symbols) {
-        Logger.push(`${symbol} trades`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].length);
-        Logger.push(`${symbol} stop losses`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'STOP_LOSS').length);
-        Logger.push(`${symbol} take profits`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'TAKE_PROFIT').length);
-        Logger.push(`${symbol} sells`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'SELL').length);
-        Logger.push(`${symbol} buys`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'BUY').length);
+      exchangeOptions.balances[symbolOptions.name.split("/")[0]] = {
+        crypto: 0,
+        usdt: 0,
       }
-      Logger.print();
-      Logger.flush();
+      exchangeOptions.balances[symbolOptions.name.split("/")[1]] = {
+        crypto: symbolOptions.growingMax?.buy!,
+        usdt: 0,
+      } 
+      startingBalance += symbolOptions.growingMax?.buy! * symbols.length;
+      const filter = await getFilters(exchange, symbolOptions.name);
+      symbolFilters[symbolOptions.name.split("/").join("")] = filter;
+      const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+      const filePath = `./simulation/${sanitizedStartTime}/configuration.json`;
+      if(!existsSync(`./simulation`)) {
+        mkdirSync(`./simulation`);
+      }
+      const directory = path.dirname(filePath);
+      if (!existsSync(directory)) {
+        mkdirSync(directory, { recursive: true });
+      }
+      writeFileSync(filePath, JSON.stringify(options, null, 2));
+      await simulateListenForCandlesticks(symbols, allCandlesticks, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
+        if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
+          return;
+        }
+        await simulateAlgorithmic(symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
+      });
     }
+    let balance = calculateBalance(exchangeOptions);
+    Logger.push("Starting balance", startingBalance.toFixed(2));
+    Logger.push("Final Balance", balance.toFixed(2));
+    Logger.push("ROI", ((balance - startingBalance) / startingBalance).toFixed(2));
+    for (const symbol of exchangeOptions.symbols) {
+      Logger.push(`${symbol.name} trades`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].length);
+      Logger.push(`${symbol.name} stop losses`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'STOP_LOSS').length);
+      Logger.push(`${symbol.name} take profits`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'TAKE_PROFIT').length);
+      Logger.push(`${symbol.name} sells`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'SELL').length);
+      Logger.push(`${symbol.name} buys`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'BUY').length);
+    }
+    Logger.print();
+    Logger.flush();
   } 
 }
 
 
-if (options.simulate === true) {
-  // compare file manually to best-configuration
-
-  // const configurationPath = `simulation/2023-11-19T13:40:38.665Z/configuration.json`;
-  // const TradesPath = `simulation/2023-11-19T13:40:38.665Z/trades.json`;
-  // if (existsSync(configurationPath)) {
-  //   const file = readFileSync(configurationPath, 'utf-8');
-  //   const prevOptions: ConfigOptions = JSON.parse(file) as ConfigOptions;
-  //   if (existsSync(TradesPath)) {
-  //     const tradesFile = readFileSync(TradesPath, 'utf-8');
-  //     const trades = JSON.parse(tradesFile);
-  //     prevOptions.balances = trades.balances;
-  //     prevOptions.tradeHistory = trades.tradeHistory;
-  //     recalculateNewOptions(prevOptions)
-  //   }
-  // }
+if (process.env.SIMULATE === "true") {
   simulate();
 } else {
   main();

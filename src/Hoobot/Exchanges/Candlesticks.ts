@@ -32,6 +32,8 @@ import AdmZip from 'adm-zip';
 import path from 'path';
 import { Exchange, isBinance, isXeggex } from './Exchange';
 import { XeggexCandles, XeggexResponse, XeggexTicker } from './Xeggex/Xeggex';
+import { delay } from './Trades';
+import binanceBalance from 'src/Discord/Commands/binanceBalance';
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -179,47 +181,48 @@ export const listenForCandlesticks = async (
           }
         });
       } else if(isXeggex(exchange)) {
-        exchange.subscribeTicker(symbol, async (response: XeggexResponse) => {
-          if (response.method === "ticker") {
-            const ticker = (response.params as XeggexTicker);
-            const newCandlestick: Candlestick = {
-              symbol: symbol,
-              interval: timeframe[i],
-              type: "kline",
-              time: new Date(ticker.updatedAt).getTime(),
-              open: parseFloat(ticker.lastPrice),
-              high: parseFloat(ticker.highPrice),
-              low: parseFloat(ticker.lowPrice),
-              close: parseFloat(ticker.lastPrice),
-              trades: 0,
-              volume: parseFloat(ticker.volume),
-              quoteVolume: 0,
-              buyVolume: 0,
-              quoteBuyVolume: 0,
-              isFinal: false,
-            };
-            if (candleStore[symbol.split("/").join("")] === undefined) {
-              candleStore[symbol.split("/").join("")] = {
-                [timeframe[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick]
-              }
-            } else if (candleStore[symbol.split("/").join("")][timeframe[i]] === undefined) {
-              candleStore[symbol.split("/").join("")][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
-            } else if(newCandlestick.isFinal === true) {
-              candleStore[symbol.split("/").join("")][timeframe[i]].push(newCandlestick);
-            } else {
-              candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1] = newCandlestick;
-            } 
-            if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
-              candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
-            }
-            if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
-              await callback(candleStore);
-            } else {
-              exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));
-              exchange.unsubscribeTicker(symbol);
-            }
-          }
-        });
+        // exchange.subscribeTicker(symbol, async (response: XeggexResponse) => {
+        //   console.log(JSON.stringify(response, null, 4));
+        //   if (response.method === "ticker") {
+        //     const ticker = (response.params as XeggexTicker);
+        //     const newCandlestick: Candlestick = {
+        //       symbol: symbol,
+        //       interval: timeframe[i],
+        //       type: "kline",
+        //       time: new Date(ticker.updatedAt).getTime(),
+        //       open: parseFloat(ticker.lastPrice),
+        //       high: parseFloat(ticker.highPrice),
+        //       low: parseFloat(ticker.lowPrice),
+        //       close: parseFloat(ticker.lastPrice),
+        //       trades: 0,
+        //       volume: parseFloat(ticker.volume),
+        //       quoteVolume: 0,
+        //       buyVolume: 0,
+        //       quoteBuyVolume: 0,
+        //       isFinal: false,
+        //     };
+        //     if (candleStore[symbol.split("/").join("")] === undefined) {
+        //       candleStore[symbol.split("/").join("")] = {
+        //         [timeframe[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick]
+        //       }
+        //     } else if (candleStore[symbol.split("/").join("")][timeframe[i]] === undefined) {
+        //       candleStore[symbol.split("/").join("")][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
+        //     } else if(newCandlestick.isFinal === true) {
+        //       candleStore[symbol.split("/").join("")][timeframe[i]].push(newCandlestick);
+        //     } else {
+        //       candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1] = newCandlestick;
+        //     } 
+        //     if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
+        //       candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
+        //     }
+        //     if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
+        //       await callback(candleStore);
+        //     } else {
+        //       exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));
+        //       exchange.unsubscribeTicker(symbol);
+        //     }
+        //   }
+        // });
         exchange.subscribeCandles(symbol, getMinutesFromInterval(timeframe[i]), async (response: XeggexResponse) => {
           if (response.method === "updateCandles") {
             const candles = (response.params as XeggexCandles).data;
