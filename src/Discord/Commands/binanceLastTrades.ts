@@ -28,7 +28,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
-import { Trade, TradeHistory, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
+import { Trade, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 
 export default {
   builder: new SlashCommandBuilder()

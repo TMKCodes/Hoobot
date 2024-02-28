@@ -1,6 +1,7 @@
 
 import crypto from 'crypto';
 import EventEmitter from 'events';
+import { logToFile } from '../../../Hoobot/Utilities/logToFile';
 import { URL } from 'url';
 import WebSocket from 'ws';
 
@@ -341,7 +342,6 @@ export class Xeggex {
 
   public waitConnect = () => {
     return new Promise((resolve, _reject) => {
-      console.log("Waited Xeggex connect and login.");
       this.emitter.on("logged", () => {
         resolve(true);
       });
@@ -858,6 +858,7 @@ export class Xeggex {
             const json = response.json();
             throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
           } catch (error) {
+            logToFile("./logs/error.log", JSON.stringify(error));
             throw new Error(`API call failed with status ${response.status}`);
           }
         }
@@ -878,6 +879,7 @@ export class Xeggex {
             const json = response.json();
             throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
           } catch (error) {
+            logToFile("./logs/error.log", JSON.stringify(error));
             throw new Error(`API call failed with status ${response.status}`);
           }
         }

@@ -29,6 +29,7 @@ import fs from 'fs';
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
 import { Exchange, isBinance, isXeggex } from './Exchange';
+import { logToFile } from '../Utilities/logToFile';
 
 export interface DatedBalances {
   [date: string] : Balances,
@@ -122,6 +123,7 @@ export const getCurrentBalances = async (
     }
     return Object.fromEntries(Object.entries(currentBalances).sort((a, b) => b[1].usdt - a[1].usdt));
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error('Error fetching balances:', error);
     throw error;
   }
@@ -135,6 +137,7 @@ export const getCurrentBalance = async (
     const balances = await getCurrentBalances(exchange);
     return balances[asset];
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error('Error fetching balances:', error);
     throw error;
   }
@@ -150,7 +153,7 @@ export const storeBalances = async (
   if(isXeggex(exchange)) {
     ex = "xeggex"
   }
-  const filePath = `balances${ex}.json`;
+  const filePath = `./logs/balances-${ex}.json`;
   let existingBalances: DatedBalances[] = [];
   if(fs.existsSync(filePath)) {
     const fileContent = fs.readFileSync(filePath, 'utf8');

@@ -25,6 +25,8 @@
 * the use of this software.
 * ===================================================================== */
 
+import { logToFile } from "./logToFile";
+
 
 // Function to check if the provided license key is valid
 export const checkLicenseValidity = async (license: string): Promise<boolean> => {
@@ -46,9 +48,10 @@ export const checkLicenseValidity = async (license: string): Promise<boolean> =>
       return false;
     }
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error('License check failed:', error);
-    return false; // Return false if there was an error during the license check
   }
+  return false;
 }
 
 

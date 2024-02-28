@@ -26,21 +26,27 @@
 * ===================================================================== */
 
 import playSound from 'play-sound';
+import { logToFile } from './logToFile';
 
 export const play = (file: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if (process.env.PLAY_AUDIO !== "false") {
-      const player = playSound({});
-      player.play(file, { mplayer: ['-volume', 100] }, (error: any) => {
-        if (error) {
-          console.error('Error playing sound:', error);
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
-    } else {
-      resolve();
+    try {
+      if (process.env.PLAY_AUDIO !== "false") {
+        const player = playSound({});
+        player.play(file, { mplayer: ['-volume', 100] }, (error: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    } catch (error) {
+      logToFile("./logs/error.log", JSON.stringify(error));
+      console.error(JSON.stringify(error));
+      reject();
     }
   });
 }

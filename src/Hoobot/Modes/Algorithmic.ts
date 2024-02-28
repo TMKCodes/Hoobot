@@ -49,6 +49,7 @@ import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Exchanges/Balances";
 import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
 import { Exchange } from "../Exchanges/Exchange";
+import { logToFile } from "../Utilities/logToFile";
 
 export interface Indicators {
   'trend' : Trend;
@@ -315,15 +316,13 @@ export const placeTrade = async (
     }
   }
   const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
-  consoleLogger.push("Orderbook", {
-    ask: Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b)[0],
-    bid: Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a)[0]
-  })
   const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
   const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
   if (direction === 'SELL') {
+    logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
     return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
   } else if (direction === 'BUY' && symbolOptions.stopLoss?.hit === false) {
+    logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
     return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
   } else {
     return false;
@@ -480,6 +479,7 @@ export const algorithmic = async (
         time: candleTime,
         color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
         direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
+        final: latestCandle.isFinal,
       });
     }
     consoleLogger.push("Balance", {
@@ -491,8 +491,6 @@ export const algorithmic = async (
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
     if (latestCandle.isFinal === true) {
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-    } else if (placedTrade == true) {
-      consoleLogger.writeJSONTofile('./trades.json');
     }
     if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
       consoleLogger.print();
@@ -514,20 +512,27 @@ export const algorithmic = async (
       consoleLogger.flush();
     }
     return true;
-  } catch (error: any) {
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error(JSON.stringify(error));
   }
   return false;
 }
 
 const getRandomValueBetween = (x: number, close: number): number => {
-  const rangeStart = Math.min(x, close);
-  const rangeEnd = Math.max(x, close);
-  if (rangeEnd - rangeStart < 0.01) {
-    return close;
+  try {
+    const rangeStart = Math.min(x, close);
+    const rangeEnd = Math.max(x, close);
+    if (rangeEnd - rangeStart < 0.01) {
+      return close;
+    }
+    const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
+    return Number(randomValue.toFixed(2));
+  }  catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(JSON.stringify(error));
   }
-  const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
-  return Number(randomValue.toFixed(2));
+  return close;
 }
 
 export const simulateAlgorithmic = async (

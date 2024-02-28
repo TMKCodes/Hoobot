@@ -27,6 +27,9 @@
 
 import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel, Interaction, CacheType } from 'discord.js'; 
 import { deployCommands } from './Commands/deploy';
+import { ConfigOptions } from '../Hoobot/Utilities/args';
+import { Exchange } from '../Hoobot/Exchanges/Exchange';
+import { logToFile } from '../Hoobot/Utilities/logToFile';
 
 const deployable: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 interface command {
@@ -72,35 +75,9 @@ deployable.push(server.builder.toJSON());
 commands.push({name: server.builder.name, execute: server.execute});
 
 import fkick from './Commands/fkick';
-import { ConfigOptions } from '../Hoobot/Utilities/args';
-import Binance from 'node-binance-api';
-import { Exchange } from 'src/Hoobot/Exchanges/Exchange';
 
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
-
-
-/*
-
-//home/tonto/hoobot-dev/build/hoobot.js:2:460265)
-    at e.exports.handlePacket (file:///home/tonto/hoobot-dev/build/hoobot.js:2:455027)
-    at Ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:453394)
-    at Ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
-    at ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:92228)
-    at ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
-    at ae.onMessage (file:///home/tonto/hoobot-dev/build/hoobot.js:2:87989)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-
-//home/tonto/hoobot-dev/build/hoobot.js:2:460265)
-    at e.exports.handlePacket (file:///home/tonto/hoobot-dev/build/hoobot.js:2:455027)
-    at Ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:453394)
-    at Ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
-    at ae.<anonymous> (file:///home/tonto/hoobot-dev/build/hoobot.js:2:92228)
-    at ae.emit (file:///home/tonto/hoobot-dev/build/hoobot.js:2:152412)
-    at ae.onMessage (file:///home/tonto/hoobot-dev/build/hoobot.js:2:87989)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-
-*/
 
 export const loginDiscord = (exchanges: Exchange[], options: ConfigOptions): Client => {
   const token = options.discord.token;
@@ -124,7 +101,8 @@ export const loginDiscord = (exchanges: Exchange[], options: ConfigOptions): Cli
             });
           }
         } catch (error) {
-          console.log(error);
+          logToFile("./logs/error.log", JSON.stringify(error));
+          console.error(error);
         }
       }
       return handleInteraction(interaction);
@@ -152,6 +130,7 @@ export const sendMessageToChannel = async (client: Client, channelId: string, me
       console.log(`Channel with ID ${channelId} not found or is not a text channel.`);
     }
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error(`Error sending message to channel with ID ${channelId}: ${error}`);
   }
 };

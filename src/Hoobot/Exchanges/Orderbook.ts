@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
+import { logToFile } from '../Utilities/logToFile';
 import { Exchange, isBinance, isXeggex } from './Exchange';
 import { XeggexOrderbook, XeggexResponse } from './Xeggex/Xeggex';
 
@@ -143,7 +144,8 @@ export const listenForOrderbooks = async (
         }
       })
     }
-  } catch (error: any) {
-    console.log(error);
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(error);
   }
 }

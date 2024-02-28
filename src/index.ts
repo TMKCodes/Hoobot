@@ -40,7 +40,8 @@ import { hilow } from './Hoobot/Modes/HiLow';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { Xeggex } from './Hoobot/Exchanges/Xeggex/Xeggex';
-import { Exchange } from './Hoobot/Exchanges/Exchange';
+import { Exchange, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
+import { logToFile } from './Hoobot/Utilities/logToFile';
 
 export var symbolFilters: Filters = {};
 
@@ -61,6 +62,7 @@ const runExchange = async (
   const candlesticksToPreload = 1000;
   const symbolCandlesticks: Candlesticks = {};
   if(exchangeOptions.mode === "algorithmic") {
+    console.log(`Start running exchange ${exchangeOptions.name} on algorithmic mode.`);
     if (Array.isArray(exchangeOptions.symbols)) {
       if(exchangeOptions.orderbooks === undefined) {
         exchangeOptions.orderbooks = {}
@@ -70,7 +72,6 @@ const runExchange = async (
       }
       for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
-        const logger = consoleLogger();
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if(exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {}
@@ -84,11 +85,13 @@ const runExchange = async (
           exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
         });
         listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
+          const logger = consoleLogger();
           await algorithmic(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
         });
       }
     }
-  } else if (exchangeOptions.mode === "highlow") {
+  } else if (exchangeOptions.mode === "hilow") {
+    console.log(`Start running exchange  ${exchangeOptions.name} on hilow mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
       if(exchangeOptions.orderbooks === undefined) {
         exchangeOptions.orderbooks = {}
@@ -135,46 +138,62 @@ const main = async () => {
           family: 4,
         });
         exchanges.push(exchange);
-        runExchange(exchange, discord, exchangeOptions);
       } else if (exchangeOptions.name === 'xeggex') {
         const exchange = new Xeggex(exchangeOptions.key, exchangeOptions.secret);
         await exchange.waitConnect();
         exchanges.push(exchange);
-        runExchange(exchange, discord, exchangeOptions);
       }
     }
     if(options.discordEnabled === true) {
       discord = loginDiscord(exchanges, options);
     }
-  } catch (error: any) {
+    for (var exchange of exchanges) {
+      const exchangeOption = options.exchanges.filter((exchangeOption) => {
+        if(isBinance(exchange)) {
+          if (exchangeOption.name === "binance") {
+            return true;
+          }
+        } else if(isXeggex(exchange)) {
+          if (exchangeOption.name === "xeggex") {
+            return true
+          }
+        }
+        return false;
+      })[0];
+      runExchange(exchange, discord, exchangeOption);
+    }
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error(JSON.stringify(error));
   }
 }
 
 const calculateBalance = (options: ExchangeOptions): number => {
   let balance = 0;
-  const uniqueQuoteCurrencies = new Set<string>();
-
-  for (const symbolOptions of options.symbols) {
-    const symbolKey = symbolOptions.name.split('/').join('');
-    if (options.tradeHistory !== undefined && options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
-      const lastTrade = options.tradeHistory[symbolKey].slice(-1)[0];
-      const lastPrice = parseFloat(lastTrade.price);
-      const [base, quote] = symbolOptions.name.split('/');
-      if (options.balances !== undefined && options.balances[base] !== null) {
-        const baseBalance = options.balances[base].crypto * lastPrice;
-        balance += baseBalance;
+  try {
+    const uniqueQuoteCurrencies = new Set<string>();
+    for (const symbolOptions of options.symbols) {
+      const symbolKey = symbolOptions.name.split('/').join('');
+      if (options.tradeHistory !== undefined && options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
+        const lastTrade = options.tradeHistory[symbolKey].slice(-1)[0];
+        const lastPrice = parseFloat(lastTrade.price);
+        const [base, quote] = symbolOptions.name.split('/');
+        if (options.balances !== undefined && options.balances[base] !== null) {
+          const baseBalance = options.balances[base].crypto * lastPrice;
+          balance += baseBalance;
+        }
+        uniqueQuoteCurrencies.add(quote);
       }
-      uniqueQuoteCurrencies.add(quote);
-    } else {
-      console.error(`Trade history not available for symbol: ${symbolOptions.name}`);
     }
+    uniqueQuoteCurrencies.forEach((quote) => {
+      if (options.balances !== undefined) {
+        balance += options.balances[quote].crypto;
+      }
+    });
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(error);
   }
-  uniqueQuoteCurrencies.forEach((quote) => {
-    if (options.balances !== undefined) {
-      balance += options.balances[quote].crypto;
-    }
-  });
   return balance;
 };
 
@@ -227,10 +246,15 @@ const simulate = async () => {
       }
       writeFileSync(filePath, JSON.stringify(options, null, 2));
       await simulateListenForCandlesticks(symbols, allCandlesticks, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
-        if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
-          return;
+        try {
+          if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
+            return;
+          }
+          await simulateAlgorithmic(symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
+        } catch (error) {
+          logToFile("./logs/error.log", JSON.stringify(error));
+          console.error(error);
         }
-        await simulateAlgorithmic(symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
       });
     }
     let balance = calculateBalance(exchangeOptions);

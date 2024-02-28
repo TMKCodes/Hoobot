@@ -27,6 +27,7 @@
 
 import { REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
 import { ConfigOptions } from 'src/Hoobot/Utilities/args';
+import { logToFile } from '../../Hoobot/Utilities/logToFile';
 
 // const token = process.env.DISCORD_BOT_TOKEN;
 // const clientId = process.env.DISCORD_APPLICATION_ID;
@@ -53,7 +54,8 @@ export const deployCommands = (commands: RESTPostAPIChatInputApplicationCommands
         );
         console.log(`Succesfully reloaded application (/) commands.`);
       } catch (error) {
-        console.log(error);
+        logToFile("./logs/error.log", JSON.stringify(error));
+        console.error(error);
       }
     })();
   }

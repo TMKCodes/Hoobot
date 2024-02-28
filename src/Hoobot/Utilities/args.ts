@@ -29,6 +29,7 @@ import { Balances } from "../Exchanges/Balances";
 import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
 import { Order } from "../Exchanges/Orders";
+import { logToFile } from './logToFile';
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
@@ -88,7 +89,7 @@ export interface ExchangeOptions {
   name: string;
   key: string;
   secret: string;
-  mode: "algorithmic" | "highlow" | "arbitrage";
+  mode: "algorithmic" | "hilow" | "arbitrage";
   console: string;
   openOrders: OpenOrders;
   balances: Balances;
@@ -268,21 +269,27 @@ export const parseArgs = (): ConfigOptions => {
     simulate: process.env.SIMULATE === "true" ? true : false,
     discord: {}
   };
-  for (let i = 0; i < options.exchanges.length; i++) {
-    options.exchanges[i].tradeHistory = {};
-  }
-  if(process.env.SIMULATE === "false") {
-    const optionsFilename = "./hoobot-options.json";
-    if (fs.existsSync(optionsFilename)) {
-      const optionsFile = fs.readFileSync(optionsFilename);
-      options = JSON.parse(optionsFile.toString('utf-8'));
+  try {
+    for (let i = 0; i < options.exchanges.length; i++) {
+      options.exchanges[i].tradeHistory = {};
     }
-  } else {
-    const optionsFilename = "./hoobot-options-simulate.json";
-    if (fs.existsSync(optionsFilename)) {
-      const optionsFile = fs.readFileSync(optionsFilename);
-      options = JSON.parse(optionsFile.toString('utf-8'));
+    if(process.env.SIMULATE === "true") {
+      const optionsFilename = "./settings/hoobot-options-simulate.json";
+      if (fs.existsSync(optionsFilename)) {
+        const optionsFile = fs.readFileSync(optionsFilename);
+        options = JSON.parse(optionsFile.toString('utf-8'));
+      }
+    } else {
+      const optionsFilename = "./settings/hoobot-options.json";
+      if (fs.existsSync(optionsFilename)) {
+        const optionsFile = fs.readFileSync(optionsFilename);
+        options = JSON.parse(optionsFile.toString('utf-8'));
+      }
     }
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(JSON.stringify(error));
   }
+  
   return options;
 }

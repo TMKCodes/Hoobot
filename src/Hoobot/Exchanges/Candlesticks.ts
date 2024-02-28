@@ -34,6 +34,7 @@ import { Exchange, isBinance, isXeggex } from './Exchange';
 import { XeggexCandles, XeggexResponse, XeggexTicker } from './Xeggex/Xeggex';
 import { delay } from './Trades';
 import binanceBalance from 'src/Discord/Commands/binanceBalance';
+import { logToFile } from '../Utilities/logToFile';
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -87,6 +88,7 @@ export async function getLastCandlesticks(
           }));
           resolve(parsedData);
         } catch (error) {
+          logToFile("./logs/error.log", JSON.stringify(error));
           console.error(error);
         }
       }, { limit: limit });
@@ -161,8 +163,9 @@ export const listenForCandlesticks = async (
             isFinal: isFinal,
           };
           if (candleStore[symbol] === undefined) {
+            const oldCandlesticks = await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength);
             candleStore[symbol] = {
-              [timeframe[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick]
+              [timeframe[i]]: [...oldCandlesticks, newCandlestick]
             }
           } else if (candleStore[symbol][timeframe[i]] === undefined) {
             candleStore[symbol][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
@@ -230,11 +233,22 @@ export const listenForCandlesticks = async (
               return;
             }
             const candle = candles[0];
+            const timeOfCandle = new Date(candle.timestamp).getTime();
+            // const currentTime = new Date().getTime() - (30 * 1000);
+            let isFinal = false;
+            if (candleStore[symbol.split("/").join("")] !== undefined && candleStore[symbol.split("/").join("")][timeframe[i]] !== undefined && candleStore[symbol.split("/").join("")][timeframe[i]].length > 0) {
+              const previousCandle = candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1];
+              if (previousCandle.time !== timeOfCandle) {
+                isFinal = true;
+              }
+            } else if (candleStore[symbol.split("/").join("")] === undefined) {
+              isFinal = true;
+            }
             const newCandlestick: Candlestick = {
               symbol: symbol,
               interval: timeframe[i],
               type: "",
-              time: new Date(candle.timestamp).getTime(),
+              time: timeOfCandle,
               open: parseFloat(candle.open),
               high: parseFloat(candle.max),
               low: parseFloat(candle.min),
@@ -244,7 +258,7 @@ export const listenForCandlesticks = async (
               quoteVolume: 0,
               buyVolume: 0,
               quoteBuyVolume: 0,
-              isFinal: true,
+              isFinal: isFinal,
             };
             if (candleStore[symbol.split("/").join("")] === undefined) {
               candleStore[symbol.split("/").join("")] = {
@@ -270,8 +284,9 @@ export const listenForCandlesticks = async (
         }, 10)
       }
     }
-  } catch (error: any) {
-    console.log(error);
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(error);
   }
 }
 
@@ -317,8 +332,10 @@ export const readCsvFile = async (
     }
     return rows;
   } catch (error) {
-    throw error;
+    logToFile("./logs/error.log", JSON.stringify(error));
+    console.error(error);
   }
+  return [];
 }
 
 export const downloadAndExtractZipFile = async (
@@ -337,6 +354,7 @@ export const downloadAndExtractZipFile = async (
     unlinkSync(zipFilePath);
     return true;
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error('Error:', error);
   }
   return false;
@@ -387,6 +405,7 @@ export const downloadHistoricalCandlesticks = async (
               mkdirSync(destinationPath);
               console.log(`Directory '${destinationPath}' created successfully.`);
             } catch (error) {
+              logToFile("./logs/error.log", JSON.stringify(error));
               console.error(`Error creating directory '${destinationPath}': ${error}`);
             }
           }

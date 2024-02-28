@@ -25,6 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 import fs from 'fs';
+import { logToFile } from './logToFile';
 export interface ConsoleLogger {
   push: (key: string, value: any | any[]) => ConsoleLogger;
   print: () => void;
@@ -41,9 +42,9 @@ export const consoleLogger = (): ConsoleLogger => {
   const push = (key: string, value: any | any[]) => {
     if (process.env.DEBUG === "true") {
       if (typeof value === 'object') {
-        console.log(`${key}: ${JSON.stringify(value, null, 2)}`);
+        logToFile("./logs/debug.log", `ConsoleLogger.push(${key}, ${JSON.stringify(value, null, 2)})`);
       } else {
-        console.log(`${key}: ${value}`);
+        logToFile("./logs/debug.log", `ConsoleLogger.push(${key}, ${value}}`);
       }
     }
     if (DisplayData[key] !== undefined) {

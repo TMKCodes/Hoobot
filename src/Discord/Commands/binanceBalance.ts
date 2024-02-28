@@ -26,9 +26,8 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { Balances, getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
+import { getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
 import Binance from 'node-binance-api';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
 export interface balancesWithUSDT { 
   [symbol: string]: {

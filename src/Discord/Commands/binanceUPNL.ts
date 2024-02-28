@@ -30,6 +30,7 @@ import Binance from 'node-binance-api';
 import { ConfigOptions } from '../../Hoobot/Utilities/args';
 import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 import { Orderbook } from '../../Hoobot/Exchanges/Orderbook';
+import { logToFile } from '../../Hoobot/Utilities/logToFile';
 
 export default {
   builder: new SlashCommandBuilder()
@@ -73,6 +74,7 @@ export default {
       }
 
     } catch (error) {
+      logToFile("./logs/error.log", JSON.stringify(error));
       console.error('Error fetching trade history:', error);
       await interaction.reply('An error occurred while fetching trade history.');
     }

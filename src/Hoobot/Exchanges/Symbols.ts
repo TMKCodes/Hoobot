@@ -27,6 +27,7 @@
 import fs from 'fs';
 import Binance from "node-binance-api";
 import { Exchange, isBinance } from './Exchange';
+import { logToFile } from '../Utilities/logToFile';
 
 export interface SymbolInfo {
   symbol: string;
@@ -47,7 +48,6 @@ export const getTradeableSymbols = async (
       }
   
       const exchangeInfo = await exchange.exchangeInfo();
-      fs.writeFileSync("./exchange-info.json", JSON.stringify(exchangeInfo, null, 4));
       
       symbolInfos = exchangeInfo.symbols
       .filter((symbol: any) => symbol.quoteAsset === quote)
@@ -59,7 +59,8 @@ export const getTradeableSymbols = async (
     }
     return symbolInfos;
   } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error));
     console.error("Error in getTradeableSymbols:", error);
-    return []; // Return an empty array or handle the error as required.
   }
-};
+  return []; 
+}

@@ -28,7 +28,7 @@ Hoobot has been programmed with Typescript on top of Node. So the requirements a
 
 1. Open Command Prompt with administrator privileges by searching for "cmd" in the Start menu, right-clicking on "Command Prompt," and selecting "Run as administrator."
 2. Navigate to the Hoobot directory with `cd`.
-3. Run the script `configure-windows.bat` to set up the required dependencies on Windows.
+3. Run the script `windows.bat` to set up the required dependencies on Windows.
 4. Run `npm run start` to start Hoobot.
 5. Wait for profit!
 
@@ -46,8 +46,8 @@ Hoobot has been programmed with Typescript on top of Node. So the requirements a
 
 1. Open terminal
 2. Navigate to the Hoobot directory with `cd`.
-3. Change file mode `sudo chmod +x configure-linux.sh`.
-4. Run `sudo ./configure-linux.sh` to set up the required dependencies on Linux.
+3. Change file mode `sudo chmod +x linux.sh`.
+4. Run `sudo ./linux.sh` to set up the required dependencies on Linux.
 3. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
 6. Run `npm run start` to start Hoobot.
 7. Wait for profit!
@@ -67,8 +67,8 @@ Hoobot has been programmed with Typescript on top of Node. So the requirements a
 
 1. Open terminal
 2. Navigate to the Hoobot directory with `cd`.
-3. Change file ode `sudo chmod +x configure-osx.sh`
-4. Run `sudo ./configure-osx.sh` to set up the required dependencies on OS X.
+3. Change file ode `sudo chmod +x osx.sh`
+4. Run `sudo ./osx.sh` to set up the required dependencies on OS X.
 5. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
 6. Run `npm run start` to start Hoobot.
 7. Wait for profit!
