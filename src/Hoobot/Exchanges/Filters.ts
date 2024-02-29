@@ -80,7 +80,7 @@ export const getFilters = async (
     minPrice: 0,
     maxPrice: 100000000000000,
     tickSize: 0.0001,
-    minQty: 0.0001,
+    minQty: 0.05,
     maxQty: 100000000000000,
     stepSize: 0.0001,
     minNotional: 0.0001,

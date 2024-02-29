@@ -97,8 +97,8 @@ export const hilow = async (
     consoleLogger.print();
     consoleLogger.flush();
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
-    console.error(JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
   }
   return true;
 }

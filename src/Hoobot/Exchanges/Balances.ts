@@ -123,7 +123,7 @@ export const getCurrentBalances = async (
     }
     return Object.fromEntries(Object.entries(currentBalances).sort((a, b) => b[1].usdt - a[1].usdt));
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error('Error fetching balances:', error);
     throw error;
   }
@@ -137,7 +137,7 @@ export const getCurrentBalance = async (
     const balances = await getCurrentBalances(exchange);
     return balances[asset];
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error('Error fetching balances:', error);
     throw error;
   }

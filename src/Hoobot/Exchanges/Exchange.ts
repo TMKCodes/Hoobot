@@ -27,13 +27,40 @@
 
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
+import { ConfigOptions, ExchangeOptions } from "../Utilities/args";
 
 export type Exchange = Binance | Xeggex;
 
-export function isBinance(exchange: any): exchange is Binance {
+export const isBinance = (exchange: any): exchange is Binance => {
   return exchange !== undefined && 'candlesticks' in exchange;
 }
 
-export function isXeggex(exchange: any): exchange is Xeggex {
+export const isXeggex = (exchange: any): exchange is Xeggex => {
   return exchange !== undefined && 'subscribeCandles' in exchange;
+}
+
+export const getExchangeOption = (exchange: Exchange, options: ConfigOptions): ExchangeOptions => {
+  const exchangeOption = options.exchanges.filter((exchangeOption) => {
+    if(isBinance(exchange)) {
+      if (exchangeOption.name === "binance") {
+        return true;
+      }
+    } else if(isXeggex(exchange)) {
+      if (exchangeOption.name === "xeggex") {
+        return true
+      }
+    }
+    return false;
+  })[0];
+  return exchangeOption;
+} 
+
+export const getExchangeByName = (name: string, exchanges: Exchange[], options: ConfigOptions): Exchange | undefined => {
+  for(const exchange of exchanges) {
+    const exchangeOption = getExchangeOption(exchange, options);
+    if(exchangeOption.name === name) {
+      return exchange;
+    }
+  }
+  return undefined;
 }

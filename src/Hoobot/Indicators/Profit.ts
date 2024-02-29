@@ -39,7 +39,7 @@ export const calculateProfitSignals = async (
   newTrend: string,
   next: string,
   lastTrade: Trade,
-  lastPNL: number,
+  _lastPNL: number,
   unrealizedPNL: number,
   closeTime: number,
   symbolOptions: SymbolOptions
@@ -57,17 +57,16 @@ export const calculateProfitSignals = async (
   if (takeProfit < symbolOptions.takeProfit?.minimum!) {
     takeProfit = symbolOptions.takeProfit?.minimum!
   }
-
-  if(symbolOptions.profit !== undefined && symbolOptions.trend !== undefined && symbolOptions.trend.enabled === true) {
-    if (newTrend === "SHORT" && symbolOptions.trend.current === "LONG" || symbolOptions.trend.current === undefined) {
+  if(symbolOptions.profit && symbolOptions.trend && symbolOptions.trend.enabled === true) {
+    if (newTrend === "SHORT" && (symbolOptions.trend.current === "LONG")) {
       const temp = symbolOptions.profit.minimumSell;
       symbolOptions.profit.minimumSell = symbolOptions.profit.minimumBuy;
       symbolOptions.profit.minimumBuy = temp;
       symbolOptions.trend.current = "SHORT";
-    } else if(newTrend === "LONG" && symbolOptions.trend.current == "SHORT") {
-      const temp = symbolOptions.profit.minimumSell;
-      symbolOptions.profit.minimumSell = symbolOptions.profit.minimumBuy;
-      symbolOptions.profit.minimumBuy = temp;
+    } else if(newTrend === "LONG" && (symbolOptions.trend.current == "SHORT")) {
+      const temp = symbolOptions.profit.minimumBuy;
+      symbolOptions.profit.minimumBuy = symbolOptions.profit.minimumSell;
+      symbolOptions.profit.minimumSell = temp;
       symbolOptions.trend.current = "LONG";
     } else if ((symbolOptions.trend.current !== "LONG" && symbolOptions.trend.current !== "SHORT") || symbolOptions.trend.current === undefined) {
       symbolOptions.trend.current = "LONG";
@@ -76,56 +75,57 @@ export const calculateProfitSignals = async (
   
   const minProfitSell = symbolOptions.profit?.minimumSell! + symbolOptions.tradeFeePercentage!;
   const minProfitBuy = symbolOptions.profit?.minimumBuy! + symbolOptions.tradeFeePercentage!;
+  const shouldTakeProfit = unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit;
+  const shouldStopLoss = unrealizedPNL <= stopLoss;
+  if (symbolOptions.trend?.current === "LONG") {
+    if (next == "SELL") {
+      if (symbolOptions.takeProfit?.enabled === true && shouldTakeProfit === true) {
+        check = 'TAKE_PROFIT';
+      } else  if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
+        check = "STOP_LOSS";
+      } else if (unrealizedPNL < minProfitSell && symbolOptions.profit?.minimumSell !== 0) {
+        check = 'HOLD';
+      }  else {
+        check = 'SELL';
+      }
+    } else if (next == "BUY") {
+      if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
+        check = 'TAKE_PROFIT';
+      } else if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
+        check = "STOP_LOSS";
+      } else {
+        check = 'BUY';
+      }
+    }
+  } else if (symbolOptions.trend?.current === "SHORT") {
+    if (next == "SELL") {
+      if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
+        check = 'TAKE_PROFIT';
+      } else  if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
+        check = "STOP_LOSS";
+      } else {
+        check = 'SELL';
+      }
+    } else if (next == "BUY") {
+      if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
+        check = 'TAKE_PROFIT';
+      } else if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
+        check = "STOP_LOSS";
+      } else if (unrealizedPNL < minProfitBuy && symbolOptions.profit?.minimumBuy !== 0) {
+        check = 'HOLD';
+      } else {
+        check = 'BUY';
+      }
+    }
+  }
   if (symbolOptions.minimumTimeSinceLastTrade > 0 && timeSinceLastTrade > symbolOptions.minimumTimeSinceLastTrade) {
-    if (symbolOptions.profit?.enabled === true && unrealizedPNL > 0) {
+    if (symbolOptions.takeProfit?.enabled === true && shouldTakeProfit === true) {
       check = "TAKE_PROFIT";
-    } else if (symbolOptions.stopLoss?.enabled === true && unrealizedPNL < 0) {
+    } else if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
       check = "STOP_LOSS";
     }
-  } else if (next === "SELL") { // NEXT SELL
-    if (symbolOptions.profit?.enabled === true && symbolOptions.profit?.minimumSell !== 0) {
-      if (symbolOptions.profit?.enabled === true && unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
-        check = "TAKE_PROFIT";
-      } else if (symbolOptions.stopLoss?.enabled === true && unrealizedPNL <= stopLoss) {
-        check = "STOP_LOSS";
-      } else if (unrealizedPNL > minProfitSell) {
-        check = "SELL";
-      } else {
-        check = "HOLD"
-      }
-    } else {
-      if (symbolOptions.profit?.enabled === true && unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
-        check = "TAKE_PROFIT";
-      } else if (symbolOptions.stopLoss?.enabled === true && unrealizedPNL <= stopLoss) {
-        check = "STOP_LOSS";
-      } else  {
-        check = "SELL";
-      }
-    }
-  } else if (next === "BUY") { // NEXT BUY
-    if (symbolOptions.profit?.enabled === true && symbolOptions.profit?.minimumBuy !== 0) {
-      if (symbolOptions.profit?.enabled === true && unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
-        check = "TAKE_PROFIT";
-      } else if (symbolOptions.stopLoss?.enabled === true && unrealizedPNL <= stopLoss) {
-        check = "STOP_LOSS";
-      } else if (unrealizedPNL > minProfitBuy) {
-        check = "BUY";
-      } else {
-        check = "HOLD"
-      }
-    } else {
-      if (symbolOptions.profit?.enabled === true && unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit) {
-        check = "TAKE_PROFIT";
-      } else if (symbolOptions.stopLoss?.enabled === true && unrealizedPNL <= stopLoss) {
-        check = "STOP_LOSS";
-      } else {
-        check = "BUY";
-      }
-    }
   }
-  if (symbolOptions.profit?.enabled === true && (lastPNL < 0 && unrealizedPNL < 0 && check !== "STOP_LOSS" && check !== "BUY")) {
-    check = "HOLD";
-  }
+  
   return {
     check,
     takeProfit,
@@ -193,8 +193,9 @@ export const checkProfitSignals = async (
       const signals = await calculateProfitSignals(trend, next, lastTrade, lastPNL, unrealizedPNL, closeTime, symbolOptions);
       check = signals.check;
       consoleLogger.push("PNL%", {
+        trend: trend,
         previous: lastPNL,
-        unrealized: unrealizedPNL - symbolOptions.tradeFeePercentage!,
+        unrealized: unrealizedPNL,
         currentMax: symbolOptions.takeProfit?.current,
         stopLoss: signals.stopLoss,
         takeProfit: signals.takeProfit,
@@ -203,6 +204,7 @@ export const checkProfitSignals = async (
     } else {
       check = "SKIP";
       consoleLogger.push("PNL%", {
+        trend: trend,
         previous: 0,
         unrealized: 0,
         currentMax: 0,

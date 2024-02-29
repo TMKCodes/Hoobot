@@ -45,26 +45,26 @@ import ping from './Commands/ping';
 deployable.push(ping.builder.toJSON());
 commands.push({name: ping.builder.name, execute: ping.execute});
 
-import binanceBalance from './Commands/binanceBalance';
-deployable.push(binanceBalance.builder.toJSON());
-commands.push({name: binanceBalance.builder.name, execute: binanceBalance.execute});
+import balance from './Commands/Balance';
+deployable.push(balance.builder.toJSON());
+commands.push({name: balance.builder.name, execute: balance.execute});
 
-import binancePossibleProfit from './Commands/binanceUPNL';
-deployable.push(binancePossibleProfit.builder.toJSON());
-commands.push({name: binancePossibleProfit.builder.name, execute: binancePossibleProfit.execute});
+import upnl from './Commands/UPNL';
+deployable.push(upnl.builder.toJSON());
+commands.push({name: upnl.builder.name, execute: upnl.execute});
 
-import binancePNL from './Commands/binancePNL';
-deployable.push(binancePNL.builder.toJSON());
-commands.push({name: binancePNL.builder.name, execute: binancePNL.execute});
+import pnl from './Commands/PNL';
+deployable.push(pnl.builder.toJSON());
+commands.push({name: pnl.builder.name, execute: pnl.execute});
 
 
-import binanceROI from './Commands/binanceROI';
-deployable.push(binanceROI.builder.toJSON());
-commands.push({name: binanceROI.builder.name, execute: binanceROI.execute});
+import roi from './Commands/ROI';
+deployable.push(roi.builder.toJSON());
+commands.push({name: roi.builder.name, execute: roi.execute});
 
-import binanceLastTrades from './Commands/binanceLastTrades';
-deployable.push(binanceLastTrades.builder.toJSON());
-commands.push({name: binanceLastTrades.builder.name, execute: binanceLastTrades.execute});
+import lasttrades from './Commands/LastTrades';
+deployable.push(lasttrades.builder.toJSON());
+commands.push({name: lasttrades.builder.name, execute: lasttrades.execute});
 
 import avatar from './Commands/avatar';
 deployable.push(avatar.builder.toJSON());
@@ -79,14 +79,12 @@ import fkick from './Commands/fkick';
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
 
-export const loginDiscord = (exchanges: Exchange[], options: ConfigOptions): Client => {
-  const token = options.discord.token;
+export const loginDiscord = async (exchanges: Exchange[], options: ConfigOptions): Promise<Client> => {
   const client = new Client({ intents: [GatewayIntentBits.Guilds]});
-  if(token === undefined) {
-    console.log(JSON.stringify(process.env));
+  if(options.discord.token === undefined) {
     console.log("Discord bot token has not been set.");
   } else {
-    deployCommands(deployable, options);
+    await deployCommands(deployable, options);
     client.once(Events.ClientReady, (c) => {
       console.log(`Logged in as ${c.user.tag}`);
     });
@@ -101,16 +99,16 @@ export const loginDiscord = (exchanges: Exchange[], options: ConfigOptions): Cli
             });
           }
         } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error));
+          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
           console.error(error);
         }
       }
       return handleInteraction(interaction);
     });
     client.on(Events.Error, (error: Error) => {
-      console.log(JSON.stringify(error));
+      console.log(JSON.stringify(error, null, 4));
     });
-    client.login(token);
+    client.login(options.discord.token);
     return client;
   }
   return client;
@@ -130,7 +128,7 @@ export const sendMessageToChannel = async (client: Client, channelId: string, me
       console.log(`Channel with ID ${channelId} not found or is not a text channel.`);
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(`Error sending message to channel with ID ${channelId}: ${error}`);
   }
 };

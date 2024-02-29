@@ -112,11 +112,11 @@ export const cancelOrder = async (
       const response = await exchange.cancel(symbol, orderId);
       return response;
     } else if (isXeggex(exchange)) {
-      const response = await exchange.cancelOrderByID(orderId.toString());
+      const response = await exchange.cancelOrder(orderId.toString());
       return response;
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(`An error occurred while cancelling the order: ${error}`);
   }
 };
@@ -276,24 +276,6 @@ export const handleOpenOrder = async (
         const filledOrders = await exchange.getAllOrders(symbol, 'filled', 500, 0);
         const cancelledOrders = await exchange.getAllOrders(symbol, 'cancelled', 500, 0);
         if(activeOrders !== undefined) {
-          for (const filledOrder of filledOrders) {
-            if (parseFloat(filledOrder.id) === order.orderId) {
-              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
-              return "FILLED";
-            }
-          }
-        }
-        if(cancelledOrders !== undefined) {
-          for (const cancelledOrder of cancelledOrders) {
-            if (parseFloat(cancelledOrder.id) === order.orderId) {
-              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
-              return "CANCELED";
-            }
-          }
-        }
-        if(activeOrders !== undefined) {
           for (const activeOrder of activeOrders) {
             if (parseFloat(activeOrders.id) === order.orderId) {
               const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
@@ -320,6 +302,26 @@ export const handleOpenOrder = async (
               }
             }
           }
+          let found = false;
+          for (const filledOrder of filledOrders) {
+            if (parseFloat(filledOrder.id) === order.orderId) {
+              found = true;
+            }
+          }
+          if (found == false) {
+            if(cancelledOrders !== undefined) {
+              for (const cancelledOrder of cancelledOrders) {
+                if (parseFloat(cancelledOrder.id) === order.orderId) {
+                  const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                  sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+                  return "CANCELED";
+                }
+              }
+            }
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+            return "FILLED";
+          }
         } else {
           return "DOES NOT EXIST"
         }
@@ -327,7 +329,7 @@ export const handleOpenOrder = async (
       } while (true);
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
   return ""

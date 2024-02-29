@@ -31,10 +31,9 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from '
 import AdmZip from 'adm-zip';
 import path from 'path';
 import { Exchange, isBinance, isXeggex } from './Exchange';
-import { XeggexCandles, XeggexResponse, XeggexTicker } from './Xeggex/Xeggex';
-import { delay } from './Trades';
-import binanceBalance from 'src/Discord/Commands/binanceBalance';
+import { XeggexCandles, XeggexResponse } from './Xeggex/Xeggex';
 import { logToFile } from '../Utilities/logToFile';
+import { delay } from './Trades';
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -88,7 +87,7 @@ export async function getLastCandlesticks(
           }));
           resolve(parsedData);
         } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error));
+          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
           console.error(error);
         }
       }, { limit: limit });
@@ -132,18 +131,18 @@ export const listenForCandlesticks = async (
   callback: (candlesticks: Candlesticks) => Promise<void>
 ): Promise<void> => {
   const maxCandlesticks = 5000;
-  let timeframe = [...intervals];
-  if (isBinance(exchange)) {
+  let timeframes = [...intervals];
+  if (isBinance(exchange) && symbolOptions.trend?.enabled) {
     if (!intervals.includes(symbolOptions.trend?.timeframe!)) {
-      timeframe.push(symbolOptions.trend?.timeframe!);
+      timeframes.push(symbolOptions.trend?.timeframe!);
     }
   }
   try {
-    for (let i = 0; i < timeframe.length; i++) {
+    for (let i = 0; i < timeframes.length; i++) {
       if (isBinance(exchange)) {
         const websocket = exchange.websockets;
         symbol = symbol.split("/").join("");
-        websocket.candlesticks(symbol, timeframe[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
+        websocket.candlesticks(symbol, timeframes[i], async (candlestick: { e: any; E: any; s: any; k: any; }) => {
           let { e:eventType, E:eventTime, s:symbol, k:ticks } = candlestick;
           let { o:open, h:high, l:low, c:close, v:volume, n:trades, i:interval, x:isFinal, q:quoteVolume, V:buyVolume, Q:quoteBuyVolume } = ticks;
           const newCandlestick: Candlestick = {
@@ -163,19 +162,19 @@ export const listenForCandlesticks = async (
             isFinal: isFinal,
           };
           if (candleStore[symbol] === undefined) {
-            const oldCandlesticks = await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength);
+            const oldCandlesticks = await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength);
             candleStore[symbol] = {
-              [timeframe[i]]: [...oldCandlesticks, newCandlestick]
+              [timeframes[i]]: [...oldCandlesticks, newCandlestick]
             }
-          } else if (candleStore[symbol][timeframe[i]] === undefined) {
-            candleStore[symbol][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
+          } else if (candleStore[symbol][timeframes[i]] === undefined) {
+            candleStore[symbol][timeframes[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick];
           } else if(newCandlestick.isFinal === true) {
-            candleStore[symbol][timeframe[i]].push(newCandlestick);
+            candleStore[symbol][timeframes[i]].push(newCandlestick);
           } else {
-            candleStore[symbol][timeframe[i]][candleStore[symbol][timeframe[i]].length - 1] = newCandlestick;
+            candleStore[symbol][timeframes[i]][candleStore[symbol][timeframes[i]].length - 1] = newCandlestick;
           } 
-          if (candleStore[symbol][timeframe[i]].length > maxCandlesticks) {
-            candleStore[symbol][timeframe[i]] = candleStore[symbol][timeframe[i]].slice(-maxCandlesticks);
+          if (candleStore[symbol][timeframes[i]].length > maxCandlesticks) {
+            candleStore[symbol][timeframes[i]] = candleStore[symbol][timeframes[i]].slice(-maxCandlesticks);
           }
           if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
             await callback(candleStore);
@@ -226,7 +225,7 @@ export const listenForCandlesticks = async (
         //     }
         //   }
         // });
-        exchange.subscribeCandles(symbol, getMinutesFromInterval(timeframe[i]), async (response: XeggexResponse) => {
+        exchange.subscribeCandles(symbol, getMinutesFromInterval(timeframes[i]), async (response: XeggexResponse) => {
           if (response.method === "updateCandles") {
             const candles = (response.params as XeggexCandles).data;
             if (candles.length < 1) {
@@ -236,8 +235,8 @@ export const listenForCandlesticks = async (
             const timeOfCandle = new Date(candle.timestamp).getTime();
             // const currentTime = new Date().getTime() - (30 * 1000);
             let isFinal = false;
-            if (candleStore[symbol.split("/").join("")] !== undefined && candleStore[symbol.split("/").join("")][timeframe[i]] !== undefined && candleStore[symbol.split("/").join("")][timeframe[i]].length > 0) {
-              const previousCandle = candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1];
+            if (candleStore[symbol.split("/").join("")] !== undefined && candleStore[symbol.split("/").join("")][timeframes[i]] !== undefined && candleStore[symbol.split("/").join("")][timeframes[i]].length > 0) {
+              const previousCandle = candleStore[symbol.split("/").join("")][timeframes[i]][candleStore[symbol.split("/").join("")][timeframes[i]].length - 1];
               if (previousCandle.time !== timeOfCandle) {
                 isFinal = true;
               }
@@ -246,7 +245,7 @@ export const listenForCandlesticks = async (
             }
             const newCandlestick: Candlestick = {
               symbol: symbol,
-              interval: timeframe[i],
+              interval: timeframes[i],
               type: "",
               time: timeOfCandle,
               open: parseFloat(candle.open),
@@ -262,22 +261,22 @@ export const listenForCandlesticks = async (
             };
             if (candleStore[symbol.split("/").join("")] === undefined) {
               candleStore[symbol.split("/").join("")] = {
-                [timeframe[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick]
+                [timeframes[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick]
               }
-            } else if (candleStore[symbol.split("/").join("")][timeframe[i]] === undefined) {
-              candleStore[symbol.split("/").join("")][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
+            } else if (candleStore[symbol.split("/").join("")][timeframes[i]] === undefined) {
+              candleStore[symbol.split("/").join("")][timeframes[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick];
             } else if(newCandlestick.isFinal === true) {
-              candleStore[symbol.split("/").join("")][timeframe[i]].push(newCandlestick);
+              candleStore[symbol.split("/").join("")][timeframes[i]].push(newCandlestick);
             } else {
-              candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1] = newCandlestick;
+              candleStore[symbol.split("/").join("")][timeframes[i]][candleStore[symbol.split("/").join("")][timeframes[i]].length - 1] = newCandlestick;
             } 
-            if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
-              candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
+            if (candleStore[symbol.split("/").join("")][timeframes[i]].length > maxCandlesticks) {
+              candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][timeframes[i]].slice(-maxCandlesticks);
             }
             if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
               await callback(candleStore);
             } else {
-              exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));
+              exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframes[i]));
               exchange.unsubscribeTicker(symbol);
             }
           }
@@ -285,7 +284,7 @@ export const listenForCandlesticks = async (
       }
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
 }
@@ -332,7 +331,7 @@ export const readCsvFile = async (
     }
     return rows;
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
   return [];
@@ -354,7 +353,7 @@ export const downloadAndExtractZipFile = async (
     unlinkSync(zipFilePath);
     return true;
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error('Error:', error);
   }
   return false;
@@ -405,7 +404,7 @@ export const downloadHistoricalCandlesticks = async (
               mkdirSync(destinationPath);
               console.log(`Directory '${destinationPath}' created successfully.`);
             } catch (error) {
-              logToFile("./logs/error.log", JSON.stringify(error));
+              logToFile("./logs/error.log", JSON.stringify(error, null, 4));
               console.error(`Error creating directory '${destinationPath}': ${error}`);
             }
           }

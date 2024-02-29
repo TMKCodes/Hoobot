@@ -49,24 +49,24 @@ export const getOrderbook = async (
 ): Promise<Orderbook> => {
   let orderbook: Orderbook = {
     bids: {},
-    asks: {},
+    asks: {}
   }
   if (isBinance(exchange)) {
     orderbook = await exchange.depth(symbol.split("/").join(""))
   } else if (isXeggex(exchange)) {
-    const fetchedOrderbook = await exchange.getOrderbook(symbol.split("/").join("_"), "1");
-    for(const ask of fetchedOrderbook.asks) {
-      if(orderbook.asks[ask.price] !== undefined) {
-        orderbook.asks[ask.price] = typeof(ask.quantity) !== 'string' ? ask.quantity : parseFloat(ask.quantity);
-      } else {
-        orderbook.asks[ask.price] += typeof(ask.quantity) !== 'string' ? ask.quantity : parseFloat(ask.quantity);
+    const fetchedOrderbook = await exchange.getOrderbook(symbol, "1");
+    if(fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
+      for(const ask of fetchedOrderbook.asks) {
+        if(orderbook.asks[ask[0]] !== undefined) {
+          orderbook.asks[ask[0]] = parseFloat(ask[1]);
+        }
       }
     }
-    for(const bid of fetchedOrderbook.bids) {
-      if(orderbook.bids[bid.price] !== undefined) {
-        orderbook.bids[bid.price] = typeof(bid.quantity) !== 'string' ? bid.quantity : parseFloat(bid.quantity);
-      } else {
-        orderbook.bids[bid.price] += typeof(bid.quantity) !== 'string' ? bid.quantity : parseFloat(bid.quantity);
+    if(fetchedOrderbook.bids && fetchedOrderbook.bids.length > 0) {
+      for(const bid of fetchedOrderbook.bids) {
+        if(orderbook.bids[bid[0]] !== undefined) {
+          orderbook.bids[bid[0]] = parseFloat(bid[1]);
+        }
       }
     }
   }
@@ -145,7 +145,7 @@ export const listenForOrderbooks = async (
       })
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
 }

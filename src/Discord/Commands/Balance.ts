@@ -25,9 +25,10 @@
 * the use of this software.
 * ===================================================================== */
 
-import { SlashCommandBuilder } from 'discord.js';
+import { CacheType, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
-import Binance from 'node-binance-api';
+import { Exchange, getExchangeByName } from '../../Hoobot/Exchanges/Exchange';
+import { ConfigOptions } from '../../Hoobot/Utilities/args';
 
 export interface balancesWithUSDT { 
   [symbol: string]: {
@@ -43,10 +44,24 @@ export interface result {
 export default {
   builder: new SlashCommandBuilder()
     .setName("balances")
-    .setDescription("Replices with Binance balances!"),
-  execute: async (interaction: { options: any, reply: (arg0: string) => any; }, binance: Binance) => {
-    const sortedBalances = await getCurrentBalances(binance);
-    const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.usdt.toFixed(2)} USDT`);
-    await interaction.reply(`${JSON.stringify(resultBalances, null, 4)}`);
+    .setDescription("Replices with exchange balances!")
+    .addStringOption(option =>
+      option.setName('exchange')
+        .setDescription('The name of exchange to check')
+        .setRequired(true)),
+  execute: async (interaction: ChatInputCommandInteraction<CacheType>, exchanges: Exchange[], options: ConfigOptions) => {
+    const exchangeName = interaction.options.getString('exchange'); 
+    if (exchangeName !== null) {
+      const exchangeByName = getExchangeByName(exchangeName, exchanges, options); 
+      if(exchangeByName !== undefined) {
+        const sortedBalances = await getCurrentBalances(exchangeByName);
+        const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.usdt.toFixed(2)} USDT`);
+        await interaction.reply(`${exchangeName} balances: \r\n${JSON.stringify(resultBalances, null, 4)}`);
+      } else {
+        await interaction.reply(`Sorry exchange does not exist or has not been implemented.`);
+      }
+    } else {
+      await interaction.reply("Please provide a valid exchange name to check.");
+    }
   }
 }

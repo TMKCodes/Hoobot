@@ -35,12 +35,12 @@ import { Filters, getFilters } from './Hoobot/Exchanges/Filters';
 import dotenv from 'dotenv';
 import { algorithmic, simulateAlgorithmic } from './Hoobot/Modes/Algorithmic';
 import { checkLicenseValidity } from './Hoobot/Utilities/license';
-import { Orderbook, getOrderbook, listenForOrderbooks } from './Hoobot/Exchanges/Orderbook';
+import { Orderbook, listenForOrderbooks } from './Hoobot/Exchanges/Orderbook';
 import { hilow } from './Hoobot/Modes/HiLow';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { Xeggex } from './Hoobot/Exchanges/Xeggex/Xeggex';
-import { Exchange, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
+import { Exchange, getExchangeOption, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
 import { logToFile } from './Hoobot/Utilities/logToFile';
 
 export var symbolFilters: Filters = {};
@@ -68,9 +68,6 @@ const runExchange = async (
         exchangeOptions.orderbooks = {}
       }
       for (const symbolOptions of exchangeOptions.symbols) {
-        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(exchange, symbolOptions.name);
-      }
-      for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if(exchangeOptions.orderbooks === undefined) {
@@ -92,12 +89,6 @@ const runExchange = async (
     }
   } else if (exchangeOptions.mode === "hilow") {
     console.log(`Start running exchange  ${exchangeOptions.name} on hilow mode.`);
-    for (const symbolOptions of exchangeOptions.symbols) {
-      if(exchangeOptions.orderbooks === undefined) {
-        exchangeOptions.orderbooks = {}
-      }
-      exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(exchange, symbolOptions.name);
-    }
     for (const symbolOptions of exchangeOptions.symbols) {
       const filter = await getFilters(exchange, symbolOptions.name);
       symbolFilters[symbolOptions.name.split("/").join("")] = filter;
@@ -144,27 +135,16 @@ const main = async () => {
         exchanges.push(exchange);
       }
     }
-    if(options.discordEnabled === true) {
-      discord = loginDiscord(exchanges, options);
+    if(options.discord.enabled === true) {
+      discord = await loginDiscord(exchanges, options);
     }
     for (var exchange of exchanges) {
-      const exchangeOption = options.exchanges.filter((exchangeOption) => {
-        if(isBinance(exchange)) {
-          if (exchangeOption.name === "binance") {
-            return true;
-          }
-        } else if(isXeggex(exchange)) {
-          if (exchangeOption.name === "xeggex") {
-            return true
-          }
-        }
-        return false;
-      })[0];
+      const exchangeOption = getExchangeOption(exchange, options);
       runExchange(exchange, discord, exchangeOption);
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
-    console.error(JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
   }
 }
 
@@ -191,7 +171,7 @@ const calculateBalance = (options: ExchangeOptions): number => {
       }
     });
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
   return balance;
@@ -216,13 +196,15 @@ const simulate = async () => {
     Logger.print();
     Logger.flush();
     const symbols = exchangeOptions.symbols.map(symbol => symbol.name);
-    const timeframes = [...new Set(exchangeOptions.symbols.flatMap(symbol => symbol.timeframes))];
+    const timeframes = [...new Set(exchangeOptions.symbols.flatMap(symbol => symbol.timeframes)), ...new Set(exchangeOptions.symbols.flatMap(symbol => symbol.trend?.timeframe!))];
     const allCandlesticks = await downloadHistoricalCandlesticks(symbols, timeframes);
     console.log("Starting simulation with downloaded candlesticks.");
     for (const symbolOptions of exchangeOptions.symbols) {
       const timeframes = [...symbolOptions.timeframes];
-      if (!timeframes.includes(symbolOptions.trend?.timeframe!)) {
-        timeframes.push(symbolOptions.trend?.timeframe!);
+      if (symbolOptions.trend?.enabled) {
+        if (!timeframes.includes(symbolOptions.trend?.timeframe!)) {
+          timeframes.push(symbolOptions.trend?.timeframe!);
+        }
       }
       exchangeOptions.balances[symbolOptions.name.split("/")[0]] = {
         crypto: 0,
@@ -252,7 +234,7 @@ const simulate = async () => {
           }
           await simulateAlgorithmic(symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
         } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error));
+          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
           console.error(error);
         }
       });
@@ -262,6 +244,7 @@ const simulate = async () => {
     Logger.push("Final Balance", balance.toFixed(2));
     Logger.push("ROI", ((balance - startingBalance) / startingBalance).toFixed(2));
     for (const symbol of exchangeOptions.symbols) {
+      Logger.push(`${symbol.name} max trade`, symbol.growingMax);
       Logger.push(`${symbol.name} trades`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].length);
       Logger.push(`${symbol.name} stop losses`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'STOP_LOSS').length);
       Logger.push(`${symbol.name} take profits`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === 'TAKE_PROFIT').length);

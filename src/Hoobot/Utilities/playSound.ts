@@ -44,8 +44,8 @@ export const play = (file: string): Promise<void> => {
         resolve();
       }
     } catch (error) {
-      logToFile("./logs/error.log", JSON.stringify(error));
-      console.error(JSON.stringify(error));
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(JSON.stringify(error, null, 4));
       reject();
     }
   });

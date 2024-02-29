@@ -318,10 +318,10 @@ export const placeTrade = async (
   const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
   const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
   const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
-  if (direction === 'SELL') {
+  if (direction === 'SELL' && profit !== 'BUY') {
     logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
     return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
-  } else if (direction === 'BUY' && symbolOptions.stopLoss?.hit === false) {
+  } else if (direction === 'BUY' && profit !== 'SELL') {
     logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
     return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
   } else {
@@ -397,13 +397,11 @@ export const calculateIndicators = (
     cmf: {},
     renko: {},
   };
-  if (candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!] !== undefined) {
+  if (symbolOptions.trend?.enabled && candlesticks[symbol.split("/").join("")][symbolOptions.trend.timeframe] !== undefined) {
     indicators.trend = {
       short: calculateEMA(candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!], symbolOptions.indicators?.ema?.short!, 'close'),
       long: calculateEMA(candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!], symbolOptions.indicators?.ema?.long!, 'close'),
     }
-  } else {
-    // console.log("ERROR");
   }
   const timeframes = symbolOptions.timeframes;
   for (let i = 0; i < timeframes.length; i++) {
@@ -411,8 +409,8 @@ export const calculateIndicators = (
       indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
       //logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
       indicators.ema[timeframes[i]] = {
-        short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.long!, symbolOptions.source),
-        long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.short!, symbolOptions.source),
+        short: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.short!, symbolOptions.source),
+        long: calculateEMA(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.ema?.long!, symbolOptions.source),
       }
       //logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
       indicators.atr[timeframes[i]] = calculateATR(candlesticks[symbol.split("/").join("")][timeframes[i]], symbolOptions.indicators?.atr?.length, symbolOptions.source);
@@ -513,8 +511,8 @@ export const algorithmic = async (
     }
     return true;
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
-    console.error(JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
   }
   return false;
 }
@@ -529,8 +527,8 @@ const getRandomValueBetween = (x: number, close: number): number => {
     const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
     return Number(randomValue.toFixed(2));
   }  catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
-    console.error(JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
   }
   return close;
 }
@@ -600,32 +598,7 @@ export const simulateAlgorithmic = async (
     const quoteSymbol = symbol.split("/")[1];
     simulateBuy(symbol, balances[quoteSymbol].crypto, buyPrice, balances, profit, processOptions, exchangeOptions, symbolOptions, latestCandle.time, filter, logger);
   } else {
-    let lastTrade: Trade = {
-      symbol: "",
-      id: 0,
-      orderId: 0,
-      orderListID: 0,
-      price: "",
-      qty: "",
-      quoteQty: "",
-      commission: "",
-      commissionAsset: "",
-      time: 0,
-      isBuyer: true,
-      isMaker: true,
-      isBestMatch: true,
-    }
-    let pnl = 0;
-    if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
-      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
-      if(lastTrade.isBuyer) {
-        pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), sellPrice);
-      } else {
-        pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), buyPrice);
-      }
-    }
-    logger.push("Trade", "holding");
-    logger.push("PNL", pnl);
+    return false;
   }
   logger.push("TrendMode", symbolOptions.trend?.current);
   logger.push("MinSell", symbolOptions.profit?.minimumSell);

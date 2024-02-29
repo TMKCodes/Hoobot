@@ -462,8 +462,8 @@ export class Xeggex {
         useProvidedId: useProvidedId,
         side: side,
         type: type,
-        quantity: quantity,
-        price: price,
+        quantity: quantity.toString(),
+        price: price.toString(),
         strictValidate: strictValidate,
       },
       id: messageId
@@ -853,14 +853,10 @@ export class Xeggex {
           }
         });
         // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
+        logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
-          try {
-            const json = response.json();
-            throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
-          } catch (error) {
-            logToFile("./logs/error.log", JSON.stringify(error));
-            throw new Error(`API call failed with status ${response.status}`);
-          }
+          logToFile("./logs/error.log", JSON.stringify(response.status));
+          throw new Error(`API call failed with status ${response.status}`);
         }
         return await response.json();
       } else  {
@@ -874,18 +870,15 @@ export class Xeggex {
           body: JSON.stringify(body)
         });
         // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
+        logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
-          try {
-            const json = response.json();
-            throw new Error(`API call failed with status ${response.status} ${JSON.stringify(json, null, 4)}`);
-          } catch (error) {
-            logToFile("./logs/error.log", JSON.stringify(error));
-            throw new Error(`API call failed with status ${response.status}`);
-          }
+          logToFile("./logs/error.log", JSON.stringify(response.status));
+          throw new Error(`API call failed with status ${response.status}`);
         }
         return await response.json();
       }
     } catch (error) {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(`Error fetching ${uri} :`, error);
     }
   }

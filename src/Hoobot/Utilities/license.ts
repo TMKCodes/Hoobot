@@ -48,7 +48,7 @@ export const checkLicenseValidity = async (license: string): Promise<boolean> =>
       return false;
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error));
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error('License check failed:', error);
   }
   return false;
