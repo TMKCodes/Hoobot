@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { logToFile } from '../Utilities/logToFile';
-import { Exchange, isBinance, isXeggex } from './Exchange';
+import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
 import { XeggexOrderbook, XeggexResponse } from './Xeggex/Xeggex';
 
 
@@ -53,7 +53,7 @@ export const getOrderbook = async (
   }
   if (isBinance(exchange)) {
     orderbook = await exchange.depth(symbol.split("/").join(""))
-  } else if (isXeggex(exchange)) {
+  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
     const fetchedOrderbook = await exchange.getOrderbook(symbol, "1");
     if(fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
       for(const ask of fetchedOrderbook.asks) {
@@ -89,7 +89,7 @@ export const listenForOrderbooks = async (
         };
         returnCallback(symbol, book);
       });
-    } else if (isXeggex(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       const book: Orderbook = {
         asks: {},
         bids: {},

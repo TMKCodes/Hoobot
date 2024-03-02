@@ -1,7 +1,7 @@
 
 import crypto from 'crypto';
 import EventEmitter from 'events';
-import { logToFile } from '../../../Hoobot/Utilities/logToFile';
+import { logToFile } from '../../Utilities/logToFile';
 import { URL } from 'url';
 import WebSocket from 'ws';
 
@@ -10,33 +10,33 @@ interface urlParams {
   [key: string]: string | string[];   
 }
 
-export interface XeggexOptions {
+export interface NonKYCOptions {
   wssHost: string,
   key: string,
   secret: string,
 }
 
-export interface XeggexError {
+export interface NonKYCError {
   code: string;
   message: string;
 }
 
-export interface XeggexResponse {
+export interface NonKYCResponse {
   jsonrpc: string;
   method?: string;
-  params?: XeggexTicker | XeggexOrderbook | XeggexCandles;
-  result?: XeggexAsset | XeggexAsset[] | XeggexMarket | XeggexMarket[] | XeggexBalance[] | XeggexOrder | XeggexOrder[] | boolean;
-  error?: XeggexError;
+  params?: NonKYCTicker | NonKYCOrderbook | NonKYCCandles;
+  result?: NonKYCAsset | NonKYCAsset[] | NonKYCMarket | NonKYCMarket[] | NonKYCBalance[] | NonKYCOrder | NonKYCOrder[] | boolean;
+  error?: NonKYCError;
   id: number;
 }
 
-export interface XeggexBalance {
+export interface NonKYCBalance {
   asset: string,
   available: string,
   held: string,
 }
 
-export interface XeggexOrder {
+export interface NonKYCOrder {
   id: string,
   userProvidedId: string,
   symbol: string,
@@ -58,13 +58,13 @@ export interface XeggexOrder {
   reportType: string
 }
 
-export interface XeggexCandles {
-  data: XeggexCandle[],
+export interface NonKYCCandles {
+  data: NonKYCCandle[],
   symbol: string,
   period: number
 }
 
-export interface XeggexCandle {
+export interface NonKYCCandle {
   timestamp: string,
   open: string,
   close: string,
@@ -73,25 +73,25 @@ export interface XeggexCandle {
   volume: string,
 }
 
-export interface XeggexOrderbook {
-  asks: XeggexAsks[];
-  bids: XeggexBids[];
+export interface NonKYCOrderbook {
+  asks: NonKYCAsks[];
+  bids: NonKYCBids[];
   symbol: string;
   timestamp: string;
   sequence: number;
 }
 
-export interface XeggexAsks {
+export interface NonKYCAsks {
   price: string;
   quantity: string | number;
 }
 
-export interface XeggexBids {
+export interface NonKYCBids {
   price: string;
   quantity: string | number;
 }
 
-export interface XeggexTicker {
+export interface NonKYCTicker {
   symbol: string
   lastPrice: string, 
   lastPriceUpDown: string,
@@ -117,7 +117,7 @@ export interface XeggexTicker {
   sequence: number
 }
 
-export interface XeggexSocialLinks {
+export interface NonKYCSocialLinks {
   Reddit: string;
   Twitter: string;
   Facebook: string;
@@ -125,7 +125,7 @@ export interface XeggexSocialLinks {
   Github: string;
 }
 
-export interface XeggexAsset {
+export interface NonKYCAsset {
   _id: string;
   createdAt: number;
   updatedAt: number;
@@ -163,7 +163,7 @@ export interface XeggexAsset {
   nomics: string;
   addressRegEx: string;
   payidRegEx: string;
-  socialCommunity: XeggexSocialLinks;
+  socialCommunity: NonKYCSocialLinks;
   coinGeckoApiId: string;
   tokenOf: string | null;
   lastPriceUpdate: number;
@@ -179,7 +179,7 @@ export interface XeggexAsset {
   imageUUID: string;
 }
 
-export interface XeggexMarket {
+export interface NonKYCMarket {
   _id : string,
   createdAt : number,
   updatedAt : number,
@@ -281,13 +281,13 @@ class CallbackMap {
 }
 
 /* 
- * Xeggex WebSocket API
- * const xeggex = new Xeggex("key", "secret");
+ * NonKYC WebSocket API
+ * const xeggex = new NonKYC("key", "secret");
  * await xeggex.waitConnect();
  * ...
  */
 
-export class Xeggex {
+export class NonKYC {
   private readonly WebSocketURL: string;
   private readonly ApiURL: string;
   private key: string;
@@ -306,8 +306,8 @@ export class Xeggex {
   private emitter: EventEmitter;
 
   constructor(key: string, secret: string) {
-    this.WebSocketURL = "wss://api.xeggex.com";
-    this.ApiURL = "https://api.xeggex.com/api/v2";
+    this.WebSocketURL = "wss://ws.nonkyc.io";
+    this.ApiURL = "https://api.nonkyc.io/api/v2";
     this.key = key;
     this.secret = secret;
     this.callbackMap = new CallbackMap();
@@ -315,10 +315,10 @@ export class Xeggex {
     this.connect();
   }
 
-
-  public Xeggex = () => {
-    return "Xeggex"
+  public NonKYC = () => {
+    return "NonKYC"
   }
+
   // WebSocket handling
 
   private heartBeat = () => {
@@ -400,7 +400,7 @@ export class Xeggex {
     if(!this.ws) {
       throw new Error('WebSocket connection not established');
     }
-    const response: XeggexResponse = JSON.parse(event.data.toString('utf-8'));
+    const response: NonKYCResponse = JSON.parse(event.data.toString('utf-8'));
     if (response.error) {
       throw new Error(`Message error: ${JSON.stringify(response.error, null, 4)}`);
     }
@@ -419,7 +419,7 @@ export class Xeggex {
     }
   }
 
-  // Private Xeggex Websocket API calls
+  // Private NonKYC Websocket API calls
 
   private login = async (): Promise<boolean> => {
     let nonce = crypto.randomBytes(10).toString("hex");
@@ -438,7 +438,7 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = (response.result as boolean);
         if (result == true) {
           resolve(result);
@@ -457,7 +457,7 @@ export class Xeggex {
     price: number = 0,
     useProvidedId: string | null = null,
     strictValidate: boolean = false,
-  ): Promise<XeggexOrder> => {
+  ): Promise<NonKYCOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "newOrder",
@@ -473,8 +473,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCOrder);
         if (result) {
           resolve(result);
         } else {
@@ -486,7 +486,7 @@ export class Xeggex {
 
   public cancelOrder = async (
     orderId: string,
-  ): Promise<XeggexOrder> => {
+  ): Promise<NonKYCOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "cancelOrder",
@@ -497,8 +497,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCOrder);
         if (result) {
           resolve(result);
         } else {
@@ -510,7 +510,7 @@ export class Xeggex {
 
   public getOrders = async (
     symbol: string,
-  ): Promise<XeggexOrder[]> => {
+  ): Promise<NonKYCOrder[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getOrders",
@@ -520,8 +520,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder[]);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCOrder[]);
         if (result) {
           resolve(result);
         } else {
@@ -531,7 +531,7 @@ export class Xeggex {
     });
   }
 
-  public getTradingBalance = async (): Promise<XeggexBalance[]> => {
+  public getTradingBalance = async (): Promise<NonKYCBalance[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getTradingBalance",
@@ -539,8 +539,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexBalance[]);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCBalance[]);
         if (result) {
           resolve(result);
         } else {
@@ -550,7 +550,7 @@ export class Xeggex {
     });
   }
 
-  public subscribeReports = async (callback: (response: XeggexResponse) => void) => {
+  public subscribeReports = async (callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let messageId = this.messageId++;
     this.send({
@@ -574,9 +574,9 @@ export class Xeggex {
   }
 
 
-  // Public Xeggex Websocket API calls
+  // Public NonKYC Websocket API calls
 
-  public getAsset = async (ticker: string): Promise<XeggexAsset> => {
+  public getAsset = async (ticker: string): Promise<NonKYCAsset> => {
     let messageId = this.messageId++;
     this.send({
       method: "getAsset",
@@ -586,8 +586,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexAsset);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCAsset);
         if (result) {
           resolve(result);
         } else {
@@ -597,7 +597,7 @@ export class Xeggex {
     });
   }
 
-  public getAssets = async (): Promise<XeggexAsset[]> => {
+  public getAssets = async (): Promise<NonKYCAsset[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getAssets",
@@ -605,8 +605,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexAsset[]);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCAsset[]);
         if (result) {
           resolve(result);
         } else {
@@ -616,7 +616,7 @@ export class Xeggex {
     });
   }
 
-  public getMarket = async (symbol: string): Promise<XeggexMarket> => {
+  public getMarket = async (symbol: string): Promise<NonKYCMarket> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarket",
@@ -626,8 +626,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexMarket);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCMarket);
         if (result) {
           resolve(result);
         } else {
@@ -637,7 +637,7 @@ export class Xeggex {
     });
   }
 
-  public getMarkets = async (): Promise<XeggexMarket[]> => {
+  public getMarkets = async (): Promise<NonKYCMarket[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarkets",
@@ -645,8 +645,8 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexMarket[]);
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
+        const result = (response.result as NonKYCMarket[]);
         if (result) {
           resolve(result);
         } else {
@@ -658,7 +658,7 @@ export class Xeggex {
 
   public getTrades = (
     symbol: string, 
-    callback: (response: XeggexResponse) => void, 
+    callback: (response: NonKYCResponse) => void, 
     limit: number = 100, 
     offset: number = 0, 
     sort: string | null = null,
@@ -681,7 +681,7 @@ export class Xeggex {
     this.callbackMap.add(messageId, callback);
   }
 
-  public subscribeTicker = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+  public subscribeTicker = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let messageId = this.messageId++;
     this.send({
@@ -706,7 +706,7 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = (response.result as boolean);
         if (result) {
           resolve(result);
@@ -717,7 +717,7 @@ export class Xeggex {
     });
   }
 
-  public subscribeOrderbook = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+  public subscribeOrderbook = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let messageId = this.messageId++;
     this.send({
@@ -742,7 +742,7 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = (response.result as boolean);
         if (result) {
           resolve(result);
@@ -753,7 +753,7 @@ export class Xeggex {
     });
   }
 
-  public subscribeTrades = async (symbol: string, callback: (response: XeggexResponse) => void) => {
+  public subscribeTrades = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let messageId = this.messageId++;
     this.send({
@@ -778,7 +778,7 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = (response.result as boolean);
         if (result) {
           resolve(result);
@@ -792,7 +792,7 @@ export class Xeggex {
   public subscribeCandles = async (
     symbol: string, 
     period: number,
-    callback: (response: XeggexResponse) => void,
+    callback: (response: NonKYCResponse) => void,
     limit: number = 100,
   ) => {
     await waitToBlock();
@@ -822,7 +822,7 @@ export class Xeggex {
       id: messageId
     });
     return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
+      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = (response.result as boolean);
         if (result) {
           resolve(result);
@@ -833,7 +833,7 @@ export class Xeggex {
     });
   }
 
-  // Xeggex REST API calls
+  // NonKYC REST API calls
 
   private apiCall = async (route: string, method: string, body: object, params: urlParams): Promise<any> => {
     let uri = `${this.ApiURL}${route}`;

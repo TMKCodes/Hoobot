@@ -58,7 +58,6 @@ export default {
           const tradeHistory: Trade[] = await getTradeHistory(exchangeByName, symbol, options);
           const exchangeOption = getExchangeOption(exchangeByName, options)
           const orderBook: Orderbook = exchangeOption.orderbooks[symbol.split("/").join("")];
-          console.log(orderBook);
           const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
           if (lastTrade.isBuyer === true) {
             const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!); 

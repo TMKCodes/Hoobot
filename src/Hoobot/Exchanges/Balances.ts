@@ -28,7 +28,7 @@
 import fs from 'fs';
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
-import { Exchange, isBinance, isXeggex } from './Exchange';
+import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
 import { logToFile } from '../Utilities/logToFile';
 
 export interface DatedBalances {
@@ -87,7 +87,7 @@ export const getCurrentBalances = async (
           }
         }
       }
-    } else if (isXeggex(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       const balances = await exchange.getTradingBalance();
       const prices = await exchange.getMarkets();
       const symbols = prices.map((price) => price.symbol.split("/").join(""));
@@ -150,7 +150,7 @@ export const storeBalances = async (
 ) => {
   const currentDate = new Date().toLocaleString();
   let ex = "binance";
-  if(isXeggex(exchange)) {
+  if(isXeggex(exchange) || isNonKYC(exchange)) {
     ex = "xeggex"
   }
   const filePath = `./logs/balances-${ex}.json`;

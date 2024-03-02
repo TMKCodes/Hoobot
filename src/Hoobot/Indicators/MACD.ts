@@ -163,16 +163,16 @@ export const checkMACDSignals = (
         const isMACDSignalCrossover = isMacdLineAboveSignalLine && isPrevMacdLineBelowSignalLine; // BUY
         const isSignalMACDCrossover = isMacdLineBelowSignalLine && isPrevMacdLineAboveSignalLine; // SELL
         if (isNPCrossover && isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
-          symbolOptions.indicators.macd.weight = 1.5;
+          symbolOptions.indicators.macd.weight = 1.1;
           check = 'BUY';
         } else if (isPNCrossover && isMacdLineBelowSignalLine && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight = 1.5;
+          symbolOptions.indicators.macd.weight = 1.1;
           check = 'SELL';
-        }if (isMACDSignalCrossover && isNPCrossover) {
-          symbolOptions.indicators.macd.weight = 1.1;
+        }if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
+          symbolOptions.indicators.macd.weight = 1.5;
           check = 'BUY';
-        } else if (isSignalMACDCrossover && isPNCrossover) {
-          symbolOptions.indicators.macd.weight = 1.1;
+        } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
+          symbolOptions.indicators.macd.weight = 1.5;
           check = 'SELL';
         } else if (isMacdLineAboveSignalLine && isHistogramPositive && isMacdLineBelowHstogram && isSignalLineBelowHistogram ) {
           symbolOptions.indicators.macd.weight = 1;

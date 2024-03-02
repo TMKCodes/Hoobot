@@ -15,8 +15,8 @@
     "build:development": "npm-run-all -s clean:dev webpack:development",
     "build:production": "npm-run-all -s clean:build webpack:production",
     "build": "npm-run-all -s clean:ts build:production clean:ts",
-    "start": "node --experimental-modules build/hoobot.js",
-    "start:development": "node --experimental-modules build-dev/hoobot.js",
+    "start": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js",
+    "start:development": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build-dev/hoobot.js",
     "dev": "npm-run-all -s clean:ts build:development clean:ts start:development",
     "simulate": "cross-env SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js"
   },

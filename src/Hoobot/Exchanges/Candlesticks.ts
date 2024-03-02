@@ -30,7 +30,7 @@ import { CandlestickInterval, ConfigOptions, ExchangeOptions, SymbolOptions, get
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import path from 'path';
-import { Exchange, isBinance, isXeggex } from './Exchange';
+import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
 import { XeggexCandles, XeggexResponse } from './Xeggex/Xeggex';
 import { logToFile } from '../Utilities/logToFile';
 import { delay } from './Trades';
@@ -91,7 +91,7 @@ export async function getLastCandlesticks(
           console.error(error);
         }
       }, { limit: limit });
-    } else if (isXeggex(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       const candlesticks = await exchange.getCandles(symbol, null, null, getMinutesFromInterval(interval), limit, 1);
       const parsedData: Candlestick[] = candlesticks.bars.map((candle: { 
         time: number, 
@@ -182,7 +182,7 @@ export const listenForCandlesticks = async (
             websocket.terminate();
           }
         });
-      } else if(isXeggex(exchange)) {
+      } else if(isXeggex(exchange) || isNonKYC(exchange)) {
         // exchange.subscribeTicker(symbol, async (response: XeggexResponse) => {
         //   console.log(JSON.stringify(response, null, 4));
         //   if (response.method === "ticker") {

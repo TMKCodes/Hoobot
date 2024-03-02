@@ -33,7 +33,7 @@ import { consoleLogger } from "../Utilities/consoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/logToFile";
-import { Exchange, isBinance, isXeggex } from "./Exchange";
+import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 
 export interface Order {
   symbol: string;
@@ -81,7 +81,7 @@ export const getOpenOrders = async (
 ): Promise<Order[] | boolean> => {
   if (isBinance(exchange)) {
     return await exchange.openOrders(symbol.split("/").join(""));
-  } else if(isXeggex(exchange)) {
+  } else if(isXeggex(exchange) || isNonKYC(exchange)) {
     const orders = await exchange.getAllOrders(symbol, "active", 500, 0);
     return orders.map((order: { id: any; price: string; quantity: string; createdAt: any; side: string; }) => ({
       symbol: symbol.split("/").join(""),
@@ -111,7 +111,7 @@ export const cancelOrder = async (
     if (isBinance(exchange)) {
       const response = await exchange.cancel(symbol, orderId);
       return response;
-    } else if (isXeggex(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       const response = await exchange.cancelOrder(orderId.toString());
       return response;
     }
@@ -269,7 +269,7 @@ export const handleOpenOrder = async (
         orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
         delay(1500);
       } while(true);
-    } else if(isXeggex(exchange)) {
+    } else if(isXeggex(exchange) || isNonKYC(exchange)) {
       do {
         const currentTime = Date.now();
         const activeOrders = await exchange.getAllOrders(symbol, 'active', 500, 0);

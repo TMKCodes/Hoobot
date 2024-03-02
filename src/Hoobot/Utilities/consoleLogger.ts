@@ -28,7 +28,7 @@ import fs from 'fs';
 import { logToFile } from './logToFile';
 export interface ConsoleLogger {
   push: (key: string, value: any | any[]) => ConsoleLogger;
-  print: () => void;
+  print: (color?: string) => void;
   writeJSONTofile: (filePath: string) => void;
   flush: () => ConsoleLogger;
 }
@@ -36,6 +36,15 @@ export interface ConsoleLogger {
 interface consoleData {
   [key: string]: any | any[];
 }
+
+
+const reset = "\x1b[0m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m";
+const blue = "\x1b[34m";
+const magenta = "\x1b[35m";
+const cyan = "\x1b[36m";
 
 export const consoleLogger = (): ConsoleLogger => {
   let DisplayData: consoleData = {};
@@ -54,8 +63,22 @@ export const consoleLogger = (): ConsoleLogger => {
     DisplayData = createImmutableData(updatedData);
     return logger;
   };
-  const print = () => {
-    console.log(JSON.stringify(DisplayData, null, 4));
+  const print = (color?: string) => {
+    if(color == "red") {
+      console.log(`${red}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else if(color == "green") {
+      console.log(`${green}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else if(color == "yellow") {
+      console.log(`${yellow}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else if(color == "blue") {
+      console.log(`${blue}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else if(color == "magenta") {
+      console.log(`${magenta}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else if(color == "cyan") {
+      console.log(`${cyan}${JSON.stringify(DisplayData, null, 4)}${reset}`);
+    } else {
+      console.log(JSON.stringify(DisplayData, null, 4));
+    }
   };
   const writeJSONTofile = (filePath: string) => {
     try {

@@ -490,27 +490,51 @@ export const algorithmic = async (
     if (latestCandle.isFinal === true) {
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
     }
-    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
-      consoleLogger.print();
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
-      consoleLogger.print();
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
-      consoleLogger.print();
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
-      consoleLogger.flush();
-    } else {
-      consoleLogger.print();
-      consoleLogger.flush();
+    if (exchangeOptions.name === "binance") {
+      if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && placedTrade === true) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && placedTrade === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      }
+    } else if(exchangeOptions.name === "xeggex") {
+      if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade/final" && (placedTrade === false && latestCandle.isFinal === false)) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && placedTrade === true) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && placedTrade === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      }
     }
+    
     return true;
   } catch (error) {
+    consoleLogger.flush();
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(JSON.stringify(error, null, 4));
   }
