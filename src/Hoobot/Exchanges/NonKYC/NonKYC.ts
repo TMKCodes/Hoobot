@@ -857,7 +857,7 @@ export class NonKYC {
           }
         });
         // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
-        logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+        // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
           logToFile("./logs/error.log", JSON.stringify(response.status));
           throw new Error(`API call failed with status ${response.status}`);
@@ -874,7 +874,7 @@ export class NonKYC {
           body: JSON.stringify(body)
         });
         // console.log(`API CALL: ${url} ${JSON.stringify(body)}`);
-        logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+        // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
         if(!response.ok) {
           logToFile("./logs/error.log", JSON.stringify(response.status));
           throw new Error(`API call failed with status ${response.status}`);

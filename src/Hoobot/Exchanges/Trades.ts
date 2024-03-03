@@ -217,25 +217,31 @@ export const readForceSkip = (
   return skip;
 }
 
+var blocks: string[] = [];
+
 export const isBlocking = async (symbol: string): Promise<boolean> => {
   try {
     symbol = symbol.replace("/", "");
-    const folder = "./blocks";
-    const blockfile = `${folder}/${symbol}.block`;
-    return existsSync(blockfile);
+    if(blocks.length > 0) {
+      for(const block of blocks) {
+        if (block === symbol) {
+          logToFile("./logs/blocks.log", "Was blocked.");
+          return true;
+        }
+      }
+    }
   } catch (error) {
     logToFile("./logs/error.log", `isBlocking: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
   }
+  logToFile("./logs/blocks.log", "Was not blocked.");
   return false;
 }
 
 export const createBlock = async (symbol: string) => {
   try {
-    symbol = symbol.replace("/", "");
-    const folder = "./blocks";
-    const blockfile = `${folder}/${symbol}.block`;
-    writeFileSync(blockfile, "TEMPORARY_BLOCK_FILE");
+    blocks = [...blocks, symbol.replace("/", "")];
+    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4));
   } catch (error) {
     logToFile("./logs/error.log", `createBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
@@ -245,11 +251,8 @@ export const createBlock = async (symbol: string) => {
 export const removeBlock = async (symbol: string) => {
   try {
     symbol = symbol.replace("/", "");
-    const folder = "./blocks";
-    const blockfile = `${folder}/${symbol}.block`;
-    if(existsSync(blockfile) === true) {
-      unlinkSync(blockfile);
-    }
+    blocks = blocks.filter((block) => block !== symbol);
+    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4)); 
   } catch (error) {
     logToFile("./logs/error.log", `removeBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
@@ -370,7 +373,7 @@ export const sell = async (
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let price = orderBookBids[0];
-    let maxQuantityInBase = baseBalance; 
+    let maxQuantityInBase = baseBalance * 0.98; 
     maxQuantityInBase = maxSellAmount(maxQuantityInBase, symbolOptions);
     const roundedPrice = roundStep(price, filter.tickSize);
     const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
@@ -432,7 +435,7 @@ export const sell = async (
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
-  return false
+  return false;
 }
 
 const maxBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
@@ -497,7 +500,7 @@ export const buy = async (
     let price = orderBookAsks[0];
     let maxQuantityInQuote = quoteBalance;
     maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
-    const quantityInBase = (maxQuantityInQuote / price);
+    const quantityInBase = (maxQuantityInQuote / price)  * 0.98;
     const roundedPrice = roundStep(price, filter.tickSize);
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
@@ -521,12 +524,7 @@ export const buy = async (
         return false;
       }
       createBlock(symbol);
-      let order;
-      if (isBinance(exchange)) {
-        order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
-      } else if(isXeggex(exchange) || isNonKYC(exchange)) {
-        order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase - (roundedQuantityInBase * 0.004), roundedPrice);
-      }
+      let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       removeBlock(symbol);
       if(order !== undefined) {
         play(soundFile);
