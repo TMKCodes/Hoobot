@@ -22,4 +22,5 @@ package-lock.json
 /simulation/*
 
 # Configuration
-/settings/*
+/settings/hoobot-options-simulate.json
+/settings/hoobot-options.json

@@ -1,0 +1,160 @@
+{
+  "debug": true,
+  "startTime": "1698789600",
+  "license": "",
+  "discord": {
+    "enabled": true,
+    "token": "4",
+    "applicationId": "",
+    "serverId": "",
+    "channelId": ""
+  },
+  "exchanges": [
+    {
+      "name": "binance",
+      "key": "",
+      "secret": "",
+      "mode": "algorithmic",
+      "console": "trade",
+      "symbols": [
+        {
+          "name": "BTC/USDT",
+          "timeframes": ["3m"],
+          "agreement": 75,
+          "source": "close",
+          "trend": {
+            "enabled": true,
+            "timeframe": "1d",
+            "ema": {
+              "short": 8,
+              "long": 26
+            }
+          },
+          "profit": {
+            "enabled": true,
+            "minimumSell": 0.15,
+            "minimumBuy": 0
+          },
+          "growingMax": {
+            "buy": 20,
+            "sell": 0
+          },
+          "closePercentage": 0.25,
+          "maximumAgeOfOrder": 60,
+          "tradeFeePercentage": 0.1,
+          "stopLoss": {
+            "enabled": true,
+            "stopTrading": false,
+            "pnl": -20,
+            "agingPerHour": 0.01
+          },
+          "takeProfit": {
+            "enabled": true,
+            "limit": 0.125,
+            "minimum": 1.5,
+            "drop": 0.05
+          },
+          "indicators": {
+            "sma": {
+              "enabled": false,
+              "length": 7,
+              "weight": 1
+            },
+            "renko": {
+              "enabled": false,
+              "weight": 1,
+              "multiplier": 1
+            },
+            "ema": {
+              "enabled": false,
+              "short": 100,
+              "long": 200,
+              "weight": 1
+            },
+            "macd": {
+              "enabled": true,
+              "fast": 5,
+              "slow": 15,
+              "signal": 6,
+              "weight": 1
+            },
+            "rsi": {
+              "enabled": false,
+              "length": 5,
+              "smoothing": {
+                "type": "EMA",
+                "length": 12
+              },
+              "history": 5,
+              "tresholds": {
+                "overbought": 70,
+                "oversold": 30
+              },
+              "weight": 1
+            },
+            "atr": {
+              "enabled": false,
+              "length": 14
+            },
+            "obv": {
+              "enabled": false,
+              "length": 14,
+              "weight": 1
+            },
+            "cmf": {
+              "enabled": false,
+              "length": 20,
+              "history": 3,
+              "tresholds": {
+                "overbought": 0.1,
+                "oversold": 0.1
+              },
+              "weight": 1
+            },
+            "bb": {
+              "enabled": false,
+              "length": 20,
+              "multiplier": 2,
+              "average": "SMA",
+              "history": 5,
+              "weight": 1
+            },
+            "so": {
+              "enabled": false,
+              "kPeriod": 14,
+              "dPeriod": 1,
+              "smoothing": 3,
+              "tresholds": {
+                "overbought": 80,
+                "oversold": 20
+              },
+              "weight": 1
+            },
+            "srsi": {
+              "enabled": false,
+              "rsiLength": 14,
+              "stochLength": 14,
+              "kPeriod": 14,
+              "dPeriod": 1,
+              "smoothK": 3,
+              "smoothD": 3,
+              "history": 5,
+              "tresholds": {
+                "overbought": 80,
+                "oversold": 20
+              },
+              "weight": 1
+            },
+            "OpenAI": {
+              "enabled": false,
+              "key": "",
+              "model": "",
+              "history": "",
+              "overwrite": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
