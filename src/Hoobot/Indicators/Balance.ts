@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ExchangeOptions } from "../Utilities/args";
+import { ExchangeOptions, SymbolOptions } from "../Utilities/args";
 import { Filter } from "../Exchanges/Filters";
 import { checkPreviousTrade } from "../Exchanges/Trades";
 
@@ -35,6 +35,7 @@ export const checkBalanceSignals = (
   symbol: string,
   closePrice: number,  
   exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   filter: Filter,
 ) => {
   let check = 'HOLD';
@@ -42,7 +43,12 @@ export const checkBalanceSignals = (
     const baseBalance = exchangeOptions.balances[symbol.split("/")[0]].crypto;
     const quoteBalance = exchangeOptions.balances[symbol.split("/")[1]].crypto;
     const baseBalanceConverted = (baseBalance * closePrice);
-    const tradeCheck = checkPreviousTrade(symbol, exchangeOptions);
+    let tradeCheck = checkPreviousTrade(symbol, exchangeOptions);
+    if(symbolOptions.consectutive === "SELL" && baseBalanceConverted >= parseFloat(filter.minNotional)) {
+      tradeCheck = "SELL";
+    } else if (symbolOptions.consectutive === "BUY" && quoteBalance >= parseFloat(filter.minNotional)) {
+      tradeCheck = "BUY";
+    }
     if (tradeCheck === 'SELL') {
       if (quoteBalance > parseFloat(filter.minNotional)) {
         check = 'BUY';

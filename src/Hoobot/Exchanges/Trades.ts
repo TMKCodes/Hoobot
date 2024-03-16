@@ -31,7 +31,7 @@ import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval }
 import { Filter } from "./Filters";
 import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
-import fs, { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/playSound";
 import { Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
