@@ -1,26 +1,28 @@
 {
   "debug": true,
   "startTime": "1698789600",
-  "license": "",
+  "license": "xxxx",
   "discord": {
-    "enabled": false,
-    "token": "4",
-    "applicationId": "",
-    "serverId": "",
-    "channelId": ""
+    "enabled": true,
+    "token": "xxxx",
+    "applicationId": "xxxx",
+    "serverId": "xxxx",
+    "channelId": "xxxx"
   },
   "exchanges": [
     {
-      "name": "binance",
-      "key": "",
-      "secret": "",
+      "name": "xeggex",
+      "key": "xxxx",
+      "secret": "xxxx",
       "mode": "algorithmic",
-      "console": "trade",
+      "console": "update",
       "symbols": [
         {
-          "name": "XPB/USDT",
+          "name": "NTL/USDT",
           "consectutive": "SELL",
-          "timeframes": ["5m"],
+          "timeframes": [
+            "5m"
+          ],
           "agreement": 75,
           "source": "close",
           "trend": {
@@ -33,26 +35,26 @@
           },
           "profit": {
             "enabled": true,
-            "minimumSell": 0.15,
+            "minimumSell": 0.273,
             "minimumBuy": 0
           },
           "growingMax": {
             "buy": 0,
-            "sell": 100
+            "sell": 500
           },
-          "closePercentage": 0.25,
+          "closePercentage": 0.15,
           "maximumAgeOfOrder": 60,
           "tradeFeePercentage": 0.1,
           "stopLoss": {
             "enabled": true,
             "stopTrading": false,
             "pnl": -20,
-            "agingPerHour": 0.01
+            "agingPerHour": 0.1
           },
           "takeProfit": {
             "enabled": true,
-            "limit": 0.125,
-            "minimum": 1.5,
+            "limit": 0.05,
+            "minimum": 1.25,
             "drop": 0.05
           },
           "indicators": {

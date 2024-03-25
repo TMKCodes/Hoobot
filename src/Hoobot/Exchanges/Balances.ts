@@ -93,7 +93,7 @@ export const getCurrentBalances = async (
       const symbols = prices.map((price) => price.symbol.split("/").join(""));
       if (balances.length > 0) {
         for (const balance of balances) {
-          const amount = parseFloat(balance.available) + parseFloat(balance.held);
+          const amount = parseFloat(balance.available);
           if (balance.asset === "USDT") {
             currentBalances[balance.asset] = {
               crypto: amount,

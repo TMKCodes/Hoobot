@@ -34,6 +34,7 @@ import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercenta
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/logToFile";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
+import { Filters } from "./Filters";
 
 export interface Order {
   symbol: string;

@@ -1,26 +1,21 @@
 {
-  "debug": true,
-  "startTime": "1698789600",
-  "license": "",
-  "discord": {
-    "enabled": false,
-    "token": "4",
-    "applicationId": "",
-    "serverId": "",
-    "channelId": ""
+  "discord-hoosat": {
+    "token": "MTA4ODE2MjM1MTA2NjM5MDUzOA.GSgkbF.uQDkqgwlutxhtdWZhk8PcNvIWxpmmBhLNmcc54",
+    "applicationId": "1088162351066390538",
+    "serverId": "1062417255914295376",
+    "channelId": "1133114701136547961"
   },
-  "exchanges": [
+  "exchange": [
     {
       "name": "binance",
-      "key": "",
-      "secret": "",
+      "key": "qgWNWyeB62GJVVWOsFMcdWtHwPE766m7cbI5L8FXROSopqBOHhjzfUGrHnbnx8xa",
+      "secret": "4Tbs18fd3wSoRPM8KetyODhbK4sRZShzPcjynTSnWcsFOKSpk1Pq7dytZu8e8IbJ",
       "mode": "algorithmic",
-      "console": "trade",
+      "console": "update",
       "symbols": [
         {
-          "name": "XPB/USDT",
-          "consectutive": "SELL",
-          "timeframes": ["5m"],
+          "name": "BTC/USDT",
+          "timeframes": ["3m"],
           "agreement": 75,
           "source": "close",
           "trend": {
@@ -38,7 +33,7 @@
           },
           "growingMax": {
             "buy": 0,
-            "sell": 100
+            "sell": 0
           },
           "closePercentage": 0.25,
           "maximumAgeOfOrder": 60,
@@ -46,8 +41,8 @@
           "stopLoss": {
             "enabled": true,
             "stopTrading": false,
-            "pnl": -20,
-            "agingPerHour": 0.01
+            "pnl": -25,
+            "agingPerHour": 0.1
           },
           "takeProfit": {
             "enabled": true,
@@ -158,4 +153,5 @@
       ]
     }
   ]
+
 }

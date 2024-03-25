@@ -28,6 +28,7 @@ export interface XeggexResponse {
   result?: XeggexAsset | XeggexAsset[] | XeggexMarket | XeggexMarket[] | XeggexBalance[] | XeggexOrder | XeggexOrder[] | boolean;
   error?: XeggexError;
   id: number;
+  name?: string;
 }
 
 export interface XeggexBalance {
@@ -287,22 +288,27 @@ class CallbackMap {
  * ...
  */
 
+interface symbolCallbacks {
+  symbol: string;
+  tickerCallbackId: number;
+  orderbookCallbackId: number; 
+  tradesCallbackId: number;
+  candlesCallbackId: number;
+}
+
 export class Xeggex {
   private readonly WebSocketURL: string;
   private readonly ApiURL: string;
   private key: string;
   private secret: string;
-  private messageId: number = 2500;
+  private messageId: number = 500000;
   private ws: WebSocket | null = null;
   private logged: boolean = false;
   private keepAlive: NodeJS.Timeout | undefined;
   private pingTimeout: NodeJS.Timeout | undefined;
-  private callbackMap: CallbackMap;
-  private tickerCallbackId: number = 0;
-  private orderbookCallbackId: number = 0;
-  private tradesCallbackId: number = 0;
-  private candlesCallbackId: number = 0;
+  private symbolCallbacks: symbolCallbacks[] = [];
   private reportsCallbackId: number = 0;
+  private callbackMap: CallbackMap;
   private emitter: EventEmitter;
 
   constructor(key: string, secret: string) {
@@ -407,14 +413,17 @@ export class Xeggex {
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
+      let callbacks = this.symbolCallbacks.filter((scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join(""))[0];
       if (response.method === "ticker") {
-        this.callbackMap.call(this.tickerCallbackId, response);
+        this.callbackMap.call(callbacks.tickerCallbackId, response);
       } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
-        this.callbackMap.call(this.orderbookCallbackId, response);
+        this.callbackMap.call(callbacks.orderbookCallbackId, response);
       } else if (response.method === "snapshotTrades" || response.method === "updateTrades") {
-        this.callbackMap.call(this.tradesCallbackId, response);
+        this.callbackMap.call(callbacks.tradesCallbackId, response);
       } else if (response.method === "snapshotCandles" || response.method === "updateCandles") {
-        this.callbackMap.call(this.candlesCallbackId, response);
+        this.callbackMap.call(callbacks.candlesCallbackId, response);
+      } else {
+        this.callbackMap.call(this.reportsCallbackId, response);
       }
     }
   }
@@ -552,14 +561,12 @@ export class Xeggex {
 
   public subscribeReports = async (callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
-    let messageId = this.messageId++;
     this.send({
       method: "subscribeReports",
       params: {},
-      id: messageId
+      id: this.reportsCallbackId
     });
-    this.reportsCallbackId = messageId;
-    this.callbackMap.add(messageId, callback);
+    this.callbackMap.add(this.reportsCallbackId, callback);
     await unBlock();
   }
 
@@ -683,16 +690,26 @@ export class Xeggex {
 
   public subscribeTicker = async (symbol: string, callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
-    let messageId = this.messageId++;
+    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbols = this.symbolCallbacks.length;
+    if(!symbolCallback) {
+      symbolCallback = {
+        symbol: symbol,
+        tickerCallbackId: symbols*4+1,
+        orderbookCallbackId: symbols*4+2,
+        tradesCallbackId: symbols*4+3,
+        candlesCallbackId: symbols*4+4,
+      }
+      this.symbolCallbacks.push(symbolCallback);
+    }
     this.send({
       method: "subscribeTicker",
       params: {
         symbol: symbol
       },
-      id: messageId
+      id: symbolCallback.tickerCallbackId,
     });
-    this.tickerCallbackId = messageId;
-    this.callbackMap.add(messageId, callback);
+    this.callbackMap.add(symbolCallback.tickerCallbackId, callback);
     await unBlock();
   }
 
@@ -705,6 +722,7 @@ export class Xeggex {
       },
       id: messageId
     });
+    this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
         const result = (response.result as boolean);
@@ -719,16 +737,26 @@ export class Xeggex {
 
   public subscribeOrderbook = async (symbol: string, callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
-    let messageId = this.messageId++;
+    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbols = this.symbolCallbacks.length;
+    if(!symbolCallback) {
+      symbolCallback = {
+        symbol: symbol,
+        tickerCallbackId: symbols*4+1,
+        orderbookCallbackId: symbols*4+2,
+        tradesCallbackId: symbols*4+3,
+        candlesCallbackId: symbols*4+4,
+      }
+      this.symbolCallbacks.push(symbolCallback);
+    }
     this.send({
       method: "subscribeOrderbook",
       params: {
         symbol: symbol
       },
-      id: messageId
+      id: symbolCallback.orderbookCallbackId
     });
-    this.orderbookCallbackId = messageId;
-    this.callbackMap.add(messageId, callback);
+    this.callbackMap.add(symbolCallback.orderbookCallbackId, callback);
     await unBlock()
   }
 
@@ -741,6 +769,7 @@ export class Xeggex {
       },
       id: messageId
     });
+    this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
         const result = (response.result as boolean);
@@ -754,17 +783,27 @@ export class Xeggex {
   }
 
   public subscribeTrades = async (symbol: string, callback: (response: XeggexResponse) => void) => {
-    await waitToBlock();
-    let messageId = this.messageId++;
+    await waitToBlock(); 
+    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbols = this.symbolCallbacks.length;
+    if(!symbolCallback) {
+      symbolCallback = {
+        symbol: symbol,
+        tickerCallbackId: symbols*4+1,
+        orderbookCallbackId: symbols*4+2,
+        tradesCallbackId: symbols*4+3,
+        candlesCallbackId: symbols*4+4,
+      }
+      this.symbolCallbacks.push(symbolCallback);
+    }
     this.send({
       method: "tradesTrades",
       params: {
         symbol: symbol
       },
-      id: messageId
+      id: symbolCallback.tradesCallbackId
     });
-    this.tradesCallbackId = messageId;
-    this.callbackMap.add(messageId, callback);
+    this.callbackMap.add(symbolCallback.tradesCallbackId, callback);
     await unBlock();
   }
 
@@ -777,6 +816,7 @@ export class Xeggex {
       },
       id: messageId
     });
+    this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
         const result = (response.result as boolean);
@@ -796,7 +836,18 @@ export class Xeggex {
     limit: number = 100,
   ) => {
     await waitToBlock();
-    let messageId = this.messageId++;
+    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbols = this.symbolCallbacks.length;
+    if(!symbolCallback) {
+      symbolCallback = {
+        symbol: symbol,
+        tickerCallbackId: symbols*4+1,
+        orderbookCallbackId: symbols*4+2,
+        tradesCallbackId: symbols*4+3,
+        candlesCallbackId: symbols*4+4,
+      }
+      this.symbolCallbacks.push(symbolCallback);
+    }
     this.send({
       method: "subscribeCandles",
       params: {
@@ -804,10 +855,9 @@ export class Xeggex {
         period: period,
         limit: limit,
       },
-      id: messageId
+      id: symbolCallback.candlesCallbackId
     });
-    this.candlesCallbackId = messageId;
-    this.callbackMap.add(messageId, callback);
+    this.callbackMap.add(symbolCallback.candlesCallbackId, callback);
     await unBlock();
   }
 
@@ -821,6 +871,7 @@ export class Xeggex {
       },
       id: messageId
     });
+    this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
         const result = (response.result as boolean);
