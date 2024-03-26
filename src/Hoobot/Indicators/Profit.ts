@@ -197,7 +197,7 @@ export const checkProfitSignals = async (
         previous: lastPNL,
         unrealized: unrealizedPNL,
         currentMax: symbolOptions.takeProfit?.current,
-        stopLoss: signals.stopLoss,
+        stopLoss: (signals.stopLoss < 0) ? signals.stopLoss : 0,
         takeProfit: signals.takeProfit,
         direction: check,
       });
