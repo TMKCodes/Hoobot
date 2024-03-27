@@ -481,16 +481,12 @@ export const algorithmic = async (
       });
     }
     const [baseCurrency, quoteCurrency] = symbol.split("/");
-    console.log(baseCurrency);
-    console.log(quoteCurrency);
     const baseBalance = exchangeOptions.balances[baseCurrency] 
       ? exchangeOptions.balances[baseCurrency].crypto.toFixed(7) + " " + baseCurrency
       : "0 " + baseCurrency;
-    console.log(baseBalance);
     const quoteBalance = exchangeOptions.balances[quoteCurrency] 
       ? exchangeOptions.balances[quoteCurrency].crypto.toFixed(7) + " " + quoteCurrency
       : "0 " + quoteCurrency;
-    console.log(quoteBalance);
     consoleLogger.push("Balance", {
       base: baseBalance,
       quote: quoteBalance

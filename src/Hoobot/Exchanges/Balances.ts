@@ -64,6 +64,10 @@ export const getCurrentBalances = async (
         const { available, onOrder } = balances[assets[i]];
         const amount = parseFloat(available) + parseFloat(onOrder);
         if (amount === 0) {
+          currentBalances[assets[i]] = {
+            crypto: 0,
+            usdt: 0
+          }
           continue;
         }
         if (assets[i] === "USDT") {
@@ -119,6 +123,15 @@ export const getCurrentBalances = async (
         }
       } else {
         // Possibly build empty currentBalances.
+      }
+    }
+    const balanceAssets = Object.keys(currentBalances);
+    for(const balanceAsset of balanceAssets) {
+      if (currentBalances[balanceAsset].crypto === undefined) {
+        currentBalances[balanceAsset].crypto = 0;
+      }
+      if (currentBalances[balanceAsset].usdt === undefined) {
+        currentBalances[balanceAsset].usdt = 0;
       }
     }
     return Object.fromEntries(Object.entries(currentBalances).sort((a, b) => b[1].usdt - a[1].usdt));
