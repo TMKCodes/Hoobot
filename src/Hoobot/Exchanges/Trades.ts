@@ -372,13 +372,17 @@ export const sell = async (
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-    let price = orderBookBids[0];
+    let bidPrice = orderBookBids[0];
+    let bidQuantity = orderBook.bids[bidPrice.toString()];
     let maxQuantityInBase = baseBalance * 0.98; 
     maxQuantityInBase = maxSellAmount(maxQuantityInBase, symbolOptions);
-    const roundedPrice = roundStep(price, filter.tickSize);
+    if (!isNaN(bidQuantity) && maxQuantityInBase > bidQuantity) {
+      maxQuantityInBase = bidQuantity;
+    }
+    const roundedPrice = roundStep(bidPrice, filter.tickSize);
     const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    logToFile("./logs/debug.log", `${orderBookBids[0]} ${price} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
@@ -497,14 +501,18 @@ export const buy = async (
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-    let price = orderBookAsks[0];
+    let askPrice = orderBookAsks[0];
+    let askQuantity = orderBook.bids[askPrice.toString()];
     let maxQuantityInQuote = quoteBalance;
     maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
-    const quantityInBase = (maxQuantityInQuote / price)  * 0.98;
-    const roundedPrice = roundStep(price, filter.tickSize);
+    if (!isNaN(askQuantity) && maxQuantityInQuote > askQuantity) {
+      maxQuantityInQuote = askQuantity;
+    }
+    const quantityInBase = (maxQuantityInQuote / askPrice)  * 0.98;
+    const roundedPrice = roundStep(askPrice, filter.tickSize);
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    logToFile("./logs/debug.log", `${orderBookAsks[0]} ${price} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
