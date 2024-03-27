@@ -480,9 +480,20 @@ export const algorithmic = async (
         final: latestCandle.isFinal,
       });
     }
+    const [baseCurrency, quoteCurrency] = symbol.split("/");
+    console.log(baseCurrency);
+    console.log(quoteCurrency);
+    const baseBalance = exchangeOptions.balances[baseCurrency] 
+      ? exchangeOptions.balances[baseCurrency].crypto.toFixed(7) + " " + baseCurrency
+      : "0 " + baseCurrency;
+    console.log(baseBalance);
+    const quoteBalance = exchangeOptions.balances[quoteCurrency] 
+      ? exchangeOptions.balances[quoteCurrency].crypto.toFixed(7) + " " + quoteCurrency
+      : "0 " + quoteCurrency;
+    console.log(quoteBalance);
     consoleLogger.push("Balance", {
-      base:  exchangeOptions.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
-      quote: exchangeOptions.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1]
+      base: baseBalance,
+      quote: quoteBalance
     });
     const placedTrade = await placeTrade(discord, exchange, consoleLogger, symbol, candlesticks, filter, processOptions, exchangeOptions, symbolOptions);
     const stopTime = Date.now();
