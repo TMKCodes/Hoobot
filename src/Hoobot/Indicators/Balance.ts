@@ -75,6 +75,13 @@ export const checkBalanceSignals = (
     } else if (check === 'BUY' && (quoteBalance < parseFloat(filter.minNotional) || quoteBalance > parseFloat(filter.maxNotional))) {
       check = 'HOLD';
     }
+    if (symbolOptions.noPreviousTradeCheck === true) {
+      if(baseBalanceConverted > parseFloat(filter.minNotional)) {
+        check = 'SELL';
+      } else if(quoteBalance > parseFloat(filter.minNotional)) {
+        check = 'BUY';
+      }
+    }
     consoleLogger.push("Trades", {
       previous: tradeCheck,
       next: check,

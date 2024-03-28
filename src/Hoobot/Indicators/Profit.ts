@@ -78,7 +78,7 @@ export const calculateProfitSignals = async (
   const shouldTakeProfit = unrealizedPNL > symbolOptions.takeProfit?.minimum! && unrealizedPNL < currentMaxPNL && unrealizedPNL < takeProfit;
   const shouldStopLoss = unrealizedPNL <= stopLoss;
   if (symbolOptions.trend?.current === "LONG") {
-    if (next == "SELL") {
+    if (next === "SELL") {
       if (symbolOptions.takeProfit?.enabled === true && shouldTakeProfit === true) {
         check = 'TAKE_PROFIT';
       } else  if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
@@ -88,7 +88,7 @@ export const calculateProfitSignals = async (
       }  else {
         check = 'SELL';
       }
-    } else if (next == "BUY") {
+    } else if (next === "BUY") {
       if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
         check = 'TAKE_PROFIT';
       } else if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
@@ -96,9 +96,19 @@ export const calculateProfitSignals = async (
       } else {
         check = 'BUY';
       }
+    } else if (next === "BOTH") {
+      if (symbolOptions.takeProfit?.enabled === true && shouldTakeProfit === true) {
+        check = 'TAKE_PROFIT';
+      } else  if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
+        check = "STOP_LOSS";
+      } else if (unrealizedPNL < minProfitSell && symbolOptions.profit?.minimumSell !== 0) {
+        check = 'HOLD';
+      } else {
+        check = 'SELL';
+      }
     }
   } else if (symbolOptions.trend?.current === "SHORT") {
-    if (next == "SELL") {
+    if (next === "SELL") {
       if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
         check = 'TAKE_PROFIT';
       } else  if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {
@@ -106,7 +116,7 @@ export const calculateProfitSignals = async (
       } else {
         check = 'SELL';
       }
-    } else if (next == "BUY") {
+    } else if (next === "BUY") {
       if (symbolOptions.takeProfit?.enabled === true &&  shouldTakeProfit === true) {
         check = 'TAKE_PROFIT';
       } else if (symbolOptions.stopLoss?.enabled === true && shouldStopLoss === true) {

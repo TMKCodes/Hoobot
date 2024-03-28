@@ -42,6 +42,7 @@ import path from 'path';
 import { Xeggex } from './Hoobot/Exchanges/Xeggex/Xeggex';
 import { Exchange, getExchangeOption, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
 import { logToFile } from './Hoobot/Utilities/logToFile';
+import { NonKYC } from './Hoobot/Exchanges/NonKYC/NonKYC';
 
 export var symbolFilters: Filters = {};
 
@@ -110,6 +111,31 @@ const runExchange = async (
   }
 }
 
+const startBinance = async (exchangeOptions: ExchangeOptions) => {
+  const exchange = new Binance();
+  exchange.options({
+    APIKEY: exchangeOptions.key,
+    APISECRET: exchangeOptions.secret,
+    useServerTime: true, 
+    family: 4,
+  });
+  return exchange;
+}
+
+const startXeggex = async (exchangeOptions: ExchangeOptions) => {
+  const exchange = new Xeggex(exchangeOptions.key, exchangeOptions.secret);
+  await exchange.waitConnect();
+  return exchange
+}
+
+const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
+  const exchange = new NonKYC(exchangeOptions.key, exchangeOptions.secret);
+  await exchange.waitConnect();
+  return exchange
+}
+
+
+
 const main = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -121,18 +147,11 @@ const main = async () => {
     const exchanges: Exchange[] = [];
     for (var exchangeOptions of options.exchanges) {
       if (exchangeOptions.name === 'binance') {
-        const exchange = new Binance();
-        exchange.options({
-          APIKEY: exchangeOptions.key,
-          APISECRET: exchangeOptions.secret,
-          useServerTime: true, 
-          family: 4,
-        });
-        exchanges.push(exchange);
+        exchanges.push(await startBinance(exchangeOptions));
       } else if (exchangeOptions.name === 'xeggex') {
-        const exchange = new Xeggex(exchangeOptions.key, exchangeOptions.secret);
-        await exchange.waitConnect();
-        exchanges.push(exchange);
+        exchanges.push(await startXeggex(exchangeOptions));
+      } else if (exchangeOptions.name === 'nonkyc') {
+        exchanges.push(await startNonKYC(exchangeOptions));
       }
     }
     if(options.discord.enabled === true) {

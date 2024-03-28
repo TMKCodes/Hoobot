@@ -99,6 +99,7 @@ export interface ExchangeOptions {
 }
 
 export interface SymbolOptions {
+  noPreviousTradeCheck: boolean;
   minimumTimeSinceLastTrade: number;
   name: string;
   timeframes: CandlestickInterval[];

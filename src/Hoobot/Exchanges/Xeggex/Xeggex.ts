@@ -310,6 +310,9 @@ export class Xeggex {
   private reportsCallbackId: number = 0;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
+  private shouldReconnect: boolean = false;
+  private reconnectionDelay: number;
+  private maxReconnectionDelay: number;
 
   constructor(key: string, secret: string) {
     this.WebSocketURL = "wss://api.xeggex.com";
@@ -318,6 +321,9 @@ export class Xeggex {
     this.secret = secret;
     this.callbackMap = new CallbackMap();
     this.emitter = new EventEmitter();
+    this.shouldReconnect = true; // Flag to control the reconnection behavior
+    this.reconnectionDelay = 1000; // Initial reconnection delay in milliseconds
+    this.maxReconnectionDelay = 10000; // Maximum reconnection delay
     this.connect();
   }
 
@@ -358,9 +364,21 @@ export class Xeggex {
     });
   }
 
+  private reconnect = () => {
+    setTimeout(() => {
+      console.log(`Attempting to reconnect...`);
+      this.connect().catch(console.error);
+      // Implement exponential backoff with a maximum delay limit
+      this.reconnectionDelay = Math.min(this.reconnectionDelay * 2, this.maxReconnectionDelay);
+    }, this.reconnectionDelay);
+  }
+
   private connect = async (): Promise<void> => {
     this.ws = new WebSocket(this.WebSocketURL);
+
     this.ws.on("open", async () => {
+      // Reset reconnection delay on successful connection
+      this.reconnectionDelay = 1000;
       this.loopPing();
       if (this.key && this.secret) {
         const result = await this.login();
@@ -371,23 +389,25 @@ export class Xeggex {
         }
       }
     });
+
     this.emitter.on("login_failed", () => {
       this.ws?.close(500, "Login Failed");
     });
+
     this.ws.on("close", (code: number, reason: Buffer) => {
-      console.log(`${code}: ${reason}`);
-    })
+      console.log(`${code}: ${reason.toString('utf-8')}`);
+      if (code === 1006 && this.shouldReconnect) {
+        this.reconnect();
+      }
+    });
+
     this.ws.on("ping", (_buffer: Buffer) => {
       this.heartBeat();
     });
 
-    this.ws.on("message", (data: WebSocket.RawData) => {
-      data.toString('utf-8');
-    })
-
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
-    }
+    };
   }
 
   private send = (message: any): void => {

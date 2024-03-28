@@ -30,7 +30,7 @@ import { Xeggex } from "./Xeggex/Xeggex";
 import { ConfigOptions, ExchangeOptions } from "../Utilities/args";
 import { NonKYC } from "./NonKYC/NonKYC";
 
-export type Exchange = Binance | Xeggex;
+export type Exchange = Binance | Xeggex | NonKYC;
 
 export const isBinance = (exchange: any): exchange is Binance => {
   return exchange !== undefined && 'candlesticks' in exchange;
