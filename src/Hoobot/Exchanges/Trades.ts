@@ -356,6 +356,31 @@ const placeBuyOrder = async (
   return undefined
 }
 
+export const getPreviousTrades = (direction: string, ExchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions) => {
+  const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
+  let previousTrade = null;
+  let olderTrade = null
+  for (let i = trades.length - 1; i >= 0; i--) {
+    if (direction === "SELL" && trades[i].isBuyer) {
+      previousTrade = trades[i];
+      for (let x = i; x >= 0; x--) {
+        if(!trades[x].isBuyer) {
+          olderTrade = trades[x]
+        }
+      }
+      break;
+    } else if (direction === "BUY" && !trades[i].isBuyer) {
+      previousTrade = trades[i];
+      for (let x = i; x >= 0; x--) {
+        if(trades[x].isBuyer) {
+          olderTrade = trades[x]
+        }
+      }
+      break;
+    }
+  }
+  return { previousTrade, olderTrade }
+}
 
 export const sell = async (
   discord: Client,
@@ -373,6 +398,9 @@ export const sell = async (
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let bidPrice = orderBookBids[0];
+    if(!bidPrice) {
+      return false;
+    }
     let bidQuantity = orderBook.bids[bidPrice.toString()];
     let maxQuantityInBase = baseBalance * 0.98; 
     maxQuantityInBase = maxSellAmount(maxQuantityInBase, symbolOptions);
@@ -380,18 +408,28 @@ export const sell = async (
       maxQuantityInBase = bidQuantity;
     }
     const roundedPrice = roundStep(bidPrice, filter.tickSize);
+    if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumSell !== undefined && symbolOptions.price?.maximumSell > roundedPrice) {
+      consoleLogger.push("error", "Too low price to sell.");
+      return false;
+    }
+    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumSell !== undefined && symbolOptions.price?.minimumSell < roundedPrice) {
+      consoleLogger.push("error", "Too low price to sell.");
+      return false;
+    }
     const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
-        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) { 
-          if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
-            consoleLogger.push("error", "Not positive trade");
-            return false;
+        const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
+        if(previousTrade) {
+          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
+          if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) { 
+            if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+              consoleLogger.push("error", "Not positive trade");
+              return false;
+            }
           }
         }
       }
@@ -502,6 +540,9 @@ export const buy = async (
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let askPrice = orderBookAsks[0];
+    if(!askPrice) {
+      return false;
+    }
     let askQuantity = orderBook.bids[askPrice.toString()];
     let maxQuantityInQuote = quoteBalance;
     maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
@@ -510,21 +551,31 @@ export const buy = async (
     }
     const quantityInBase = (maxQuantityInQuote / askPrice)  * 0.98;
     const roundedPrice = roundStep(askPrice, filter.tickSize);
+    if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined && symbolOptions.price?.maximumBuy > roundedPrice) {
+      consoleLogger.push("error", "Too high price to buy.");
+      return false;
+    }
+    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumBuy !== undefined && symbolOptions.price?.minimumBuy < roundedPrice ) {
+      consoleLogger.push("error", "Too low price to buy.");
+      return false;
+    }
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
     logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
-        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(lastTrade.qty), parseFloat(lastTrade.price), roundedPrice);
-        if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
-          symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
-        }
-        if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
-          if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
-            consoleLogger.push("error", "Not positive trade")
-            return false;
+        const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
+        if(previousTrade) {
+          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
+          if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
+            symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
+          }
+          if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
+            if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+              consoleLogger.push("error", "Not positive trade")
+              return false;
+            }
           }
         }
       }

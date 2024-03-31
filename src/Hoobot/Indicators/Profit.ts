@@ -28,7 +28,7 @@
 import { Orderbook } from "../Exchanges/Orderbook";
 import { ExchangeOptions, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, readForceSkip } from "../Exchanges/Trades";
+import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getPreviousTrades, readForceSkip } from "../Exchanges/Trades";
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { reverseSign } from "../Modes/Algorithmic";
 
@@ -143,6 +143,7 @@ export const calculateProfitSignals = async (
   };
 }
 
+
 export const checkProfitSignals = async (
   consoleLogger: ConsoleLogger, 
   next: string,
@@ -155,20 +156,82 @@ export const checkProfitSignals = async (
   let check = 'HOLD';
   let lastPNL: number = 0;
   let unrealizedPNL: number = 0;
-  const skip = readForceSkip(symbolOptions.name.split("/").join(""))
-  if (skip === true) {
-    check = "SKIP";
-    consoleLogger.push("PNL%", {
-      previous: 0,
-      unrealized: 0,
-      currentMax: 0,
-      stopLoss: 0,
-      takeProfit: 0,
-      direction: check,
-    });
-  } else {
-    if(ExchangeOptions.tradeHistory !== undefined && ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")]?.length > 0) {
-      const lastTrade = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")][ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")].length - 1];
+  const skip = readForceSkip(symbolOptions.name.split("/").join(""));
+  if(ExchangeOptions.tradeHistory !== undefined && ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")]?.length > 0) {
+    if (skip === true) {
+      check = "SKIP";
+      consoleLogger.push("PNL%", {
+        previous: 0,
+        unrealized: 0,
+        currentMax: 0,
+        stopLoss: 0,
+        takeProfit: 0,
+        direction: check,
+      });
+    } else if (symbolOptions.consectutive || symbolOptions.noPreviousTradeCheck) {
+      const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
+      const { previousTrade, olderTrade } = getPreviousTrades(next, ExchangeOptions, symbolOptions);
+      if (olderTrade && previousTrade) {
+        if(olderTrade.isBuyer && !previousTrade.isBuyer) { 
+          lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(previousTrade.price));
+        } else if(!olderTrade.isBuyer && previousTrade.isBuyer) { 
+          lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(previousTrade.price));
+        }
+      } else {
+        lastPNL = 0;
+      }
+      if (previousTrade) {
+        if (previousTrade.isBuyer) {
+          const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
+        } else if (!previousTrade.isBuyer) {
+          const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookAsks[0]);
+        }
+        if (previousTrade.isBuyer && next === "BUY") {
+          unrealizedPNL = reverseSign(unrealizedPNL);
+        } else if(!previousTrade.isBuyer && next === "SELL") {
+          unrealizedPNL = reverseSign(unrealizedPNL);
+        }
+        if (symbolOptions.takeProfit !== undefined) {
+          if (symbolOptions.takeProfit?.current === undefined) {
+            if (unrealizedPNL > 0) {
+              symbolOptions.takeProfit.current = unrealizedPNL;
+            }
+            symbolOptions.takeProfit.current = 0;
+          }
+          if (unrealizedPNL > symbolOptions.takeProfit?.current) {
+            symbolOptions.takeProfit.current = unrealizedPNL;
+          }
+        }
+        const signals = await calculateProfitSignals(trend, next, previousTrade, lastPNL, unrealizedPNL, closeTime, symbolOptions);
+        check = signals.check;
+        if(unrealizedPNL === null) {
+          check = "HOLD";
+        }
+        consoleLogger.push("PNL%", {
+          trend: trend,
+          previous: lastPNL,
+          unrealized: unrealizedPNL,
+          currentMax: symbolOptions.takeProfit?.current,
+          stopLoss: (signals.stopLoss < 0) ? signals.stopLoss : 0,
+          takeProfit: signals.takeProfit,
+          direction: check,
+        });
+      } else {
+        check = "SKIP";
+        consoleLogger.push("PNL%", {
+          trend: trend,
+          previous: 0,
+          unrealized: 0,
+          currentMax: 0,
+          stopLoss: 0,
+          takeProfit: 0,
+          direction: check,
+        });
+      }
+    } else {
+      let lastTrade = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")][ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")].length - 1];
       if(ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")]?.length > 1) {
         const olderTrade = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")][ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")].length - 2];
         if(olderTrade.isBuyer) { 
@@ -211,18 +274,18 @@ export const checkProfitSignals = async (
         takeProfit: signals.takeProfit,
         direction: check,
       });
-    } else {
-      check = "SKIP";
-      consoleLogger.push("PNL%", {
-        trend: trend,
-        previous: 0,
-        unrealized: 0,
-        currentMax: 0,
-        stopLoss: 0,
-        takeProfit: 0,
-        direction: check,
-      });
     }
+  } else {
+    check = "SKIP";
+    consoleLogger.push("PNL%", {
+      trend: trend,
+      previous: 0,
+      unrealized: 0,
+      currentMax: 0,
+      stopLoss: 0,
+      takeProfit: 0,
+      direction: check,
+    });
   }
   return check;
 }

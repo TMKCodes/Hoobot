@@ -19,7 +19,6 @@
       "symbols": [
         {
           "name": "XPB/USDT",
-          "consectutive": "SELL",
           "timeframes": ["5m"],
           "agreement": 75,
           "source": "close",
@@ -37,8 +36,8 @@
             "minimumBuy": 0
           },
           "growingMax": {
-            "buy": 0,
-            "sell": 100
+            "buy": 100,
+            "sell": 
           },
           "closePercentage": 0.25,
           "maximumAgeOfOrder": 60,

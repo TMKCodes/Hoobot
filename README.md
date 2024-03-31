@@ -1,6 +1,7 @@
-# Hoobot
 
-Hoobot is reactive algorithmic cryptocurrency trading bot. It supports multiple different indicators such as EMA, MACD and RSI for algorithmic trading.
+# Hoobot: A Comprehensive Installation & Configuration Manual
+
+Welcome to the definitive guide for setting up and customizing Hoobot, your companion for navigating the dynamic world of cryptocurrency trading. This manual is designed to streamline the process, ensuring you're up and running with Hoobot swiftly and effectively. Let's embark on this journey together.
 
 **Crypto trading** involves buying and selling cryptocurrencies with the aim of making a profit. Traders analyze market trends, 
 price charts, and various technical indicators to make informed decisions about when to buy or sell a particular cryptocurrency. 
@@ -22,254 +23,250 @@ savings accounts, and more.
 
 Hoobot has been programmed with Typescript on top of Node. So the requirements are node version manager (nvm), node package manager (npm) and at least Node version 18.17.0. 
 
-### With Windows
+## Installation
 
-#### Configuration and dependencies
+### Step 1: Download Hoobot
+Begin by acquiring the latest version of Hoobot. Ensure the download is from a reputable source to avoid any security risks. Look for the file named `hoobot-latest.zip`.
 
-1. Open Command Prompt with administrator privileges by searching for "cmd" in the Start menu, right-clicking on "Command Prompt," and selecting "Run as administrator."
-2. Navigate to the Hoobot directory with `cd`.
-3. Run the script `windows.bat` to set up the required dependencies on Windows.
-4. Run `npm run start` to start Hoobot.
-5. Wait for profit!
+### Step 2: Extract Hoobot
+Once downloaded, locate the `hoobot-latest.zip` file and extract its contents. You can choose any preferred location on your device to store the Hoobot files. This location will be your working directory for Hoobot operations.
 
-#### Updating
+### Step 3: Install Dependencies
+Dependencies are essential components that Hoobot needs to function correctly. Follow these steps tailored to your operating system:
 
-1. Open Command Prompt with administrator privileges by searching for "cmd" in the Start menu, right-clicking on "Command Prompt," and selecting "Run as administrator."
-2. Navigate to the Hoobot directory with cd.
-3. Run the script update-windows.bat to check for updates and apply them if available.
-4. Restart Hoobot.
-5. Continue trading and monitoring for profit!
+1. **Windows Users:**
+   - Navigate to the Hoobot folder in your terminal.
+   - Execute the `windows.bat` file by typing `windows.bat` and pressing Enter.
 
-### With Linux
+2. **macOS Users:**
+   - Open the terminal and change your directory to the Hoobot folder.
+   - Run the command `sh osx.sh` to install the necessary dependencies.
 
-#### Configuration and dependencies
+3. **Linux Users:**
+   - In the terminal, navigate to the Hoobot folder.
+   - Type `sh linux.sh` and press Enter to begin the dependency installation process.
 
-1. Open terminal
-2. Navigate to the Hoobot directory with `cd`.
-3. Change file mode `sudo chmod +x linux.sh`.
-4. Run `sudo ./linux.sh` to set up the required dependencies on Linux.
-3. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
-6. Run `npm run start` to start Hoobot.
-7. Wait for profit!
+## Configuration
 
-#### Updating
+Configuring Hoobot is a critical step to tailor its functionality to your trading preferences and security requirements.
 
-1. Open terminal
-2. Navigate to the Hoobot directory with `cd`.
-3. RChange the file mode `sudo chmod +x update-linux.sh`.
-3. Run the script `sudo ./update-linux.sh` to check for updates and apply them if available.
-4. Restart Hoobot.
-5. Continue trading and monitoring for profit!
+### Step 1: Configuration File Setup
+Hoobot uses a JSON file named `hoobot-options.json` for its configuration settings. Initially, this file is named `hoobot-options.json.example` and needs to be renamed and edited. It has example configuration for running the bot.
 
-### With OS X 
+- Locate `settings/hoobot-options.json.example` in the Hoobot folder.
+- Rename this file to `hoobot-options.json`.
 
-#### Configuration and dependencies
+There is also `settigns/hoobot-options-simulation.json.example` which used for simulation. Simulation requires Binance api keys as it uses historical data from Binance.
 
-1. Open terminal
-2. Navigate to the Hoobot directory with `cd`.
-3. Change file ode `sudo chmod +x osx.sh`
-4. Run `sudo ./osx.sh` to set up the required dependencies on OS X.
-5. Check the generated startup options in `.env` file and change them if you want to. Confirm your Hoobot license and Binance API keys.
-6. Run `npm run start` to start Hoobot.
-7. Wait for profit!
+### Step 2: Customizing Configuration Settings
+Open `hoobot-options.json` with a text editor of your choice. Here, you'll specify your operational preferences, exchange details, and trading strategies.
 
-#### Updating
+Below is the documentation for the configuration settings provided in the JSON format. This documentation explains each parameter and its purpose, providing a clear understanding for configuring and optimizing the usage of the software or tool in question.
 
-1. Open terminal
-2. Navigate to the Hoobot directory with `cd`.
-3. RChange the file mode `sudo chmod +x update-osx.sh`.
-3. Run the script `sudo ./update-osx.sh` to check for updates and apply them if available.
-4. Restart Hoobot.
-5. Continue trading and monitoring for profit!
+#### Hoobot root Level Configuration
 
-### Manually
+- **`debug`**: A boolean value (`true` or `false`) indicating whether debug mode is enabled. When set to `true`, additional diagnostic information might be available for troubleshooting.
+- **`startTime`**: A Unix timestamp indicating the start time for balance calculations. It represents the number of seconds since January 1, 1970, UTC.
+- **`license`**: A string representing a license key for the software.
+- **`discord`**: An object containing settings for Discord integration.
 
-1. Install NVM (Node Version Manager) from sh script, brew, nvm_windows, etc.
-2. Download Hoobot and extract Hoobot source code from the .zip
-3. Open console of your choice.
-4. While in console, change directory `cd` to the extracted Hoobot folder.
-5. Install Node with command `nvm install 18.17.0`
-6. Use the node version with command `nvm use 18.17.0`
-7. Install Hoobot dependancies with command `npm install`
-8. Copy `.env_default` to `.env`, notice no `.txt` or such at the end of .env file. 
-9. Open `.env` with text editor 
-10. Add your Binance API keys and Hoobot License and if you want Discord API keys
-11. Change Hoobot settings how you want in the hoobot-options.json file.
-12. Save and close the file.
-13. Run command `npm run build` to build Hoobot.
-13. Run command `npm run start` to start Hoobot. 
+#### Discord Configuration
 
-## .env Configuration Values
+Within the `discord` object:
 
-Below is an explanation of the various configuration values present in the `hoobot-options.json` file for the Hoobot:
+- **`enabled`**: A boolean value indicating whether Discord integration is enabled (`true`) or not (`false`).
+- **`token`**: The bot token obtained from the Discord developer portal.
+- **`applicationId`**: The application ID for the Discord bot.
+- **`serverId`**: The ID of the Discord server where the bot will operate.
+- **`channelId`**: The ID of the Discord channel where the bot will send messages or listen for commands.
 
-```
-{
-  "debug": true,
-  "startTime": "1698789600",
-  "license": "",
-  "discord": {
-    "enabled": true,
-    "token": "",
-    "applicationId": "",
-    "serverId": "",
-    "channelId": ""
-  },
-  "exchanges": [
-    {
-      "name": "binance",
-      "key": "",
-      "secret": "",
-      "mode": "algorithmic",
-      "console": "trade",
-      "symbols": [
-        {
-          "name": "BTC/USDT",
-          "timeframes": ["3m"],
-          "agreement": 75,
-          "source": "close",
-          "trend": {
-            "enabled": true,
-            "timeframe": "1d",
-            "ema": {
-              "short": 8,
-              "long": 26
-            }
-          },
-          "profit": {
-            "enabled": true,
-            "minimumSell": 0.15,
-            "minimumBuy": 0
-          },
-          "growingMax": {
-            "buy": 20,
-            "sell": 0
-          },
-          "closePercentage": 0.25,
-          "maximumAgeOfOrder": 60,
-          "tradeFeePercentage": 0.1,
-          "stopLoss": {
-            "enabled": true,
-            "stopTrading": false,
-            "pnl": -25,
-            "agingPerHour": 0.1
-          },
-          "takeProfit": {
-            "enabled": true,
-            "limit": 0.125,
-            "minimum": 1.5,
-            "drop": 0.05
-          },
-          "indicators": {
-            "sma": {
-              "enabled": false,
-              "length": 7,
-              "weight": 1
-            },
-            "renko": {
-              "enabled": false,
-              "weight": 1,
-              "multiplier": 1
-            },
-            "ema": {
-              "enabled": false,
-              "short": 100,
-              "long": 200,
-              "weight": 1
-            },
-            "macd": {
-              "enabled": true,
-              "fast": 5,
-              "slow": 15,
-              "signal": 6,
-              "weight": 1
-            },
-            "rsi": {
-              "enabled": false,
-              "length": 5,
-              "smoothing": {
-                "type": "EMA",
-                "length": 12
-              },
-              "history": 5,
-              "tresholds": {
-                "overbought": 70,
-                "oversold": 30
-              },
-              "weight": 1
-            },
-            "atr": {
-              "enabled": false,
-              "length": 14
-            },
-            "obv": {
-              "enabled": false,
-              "length": 14,
-              "weight": 1
-            },
-            "cmf": {
-              "enabled": false,
-              "length": 20,
-              "history": 3,
-              "tresholds": {
-                "overbought": 0.1,
-                "oversold": 0.1
-              },
-              "weight": 1
-            },
-            "bb": {
-              "enabled": false,
-              "length": 20,
-              "multiplier": 2,
-              "average": "SMA",
-              "history": 5,
-              "weight": 1
-            },
-            "so": {
-              "enabled": false,
-              "kPeriod": 14,
-              "dPeriod": 1,
-              "smoothing": 3,
-              "tresholds": {
-                "overbought": 80,
-                "oversold": 20
-              },
-              "weight": 1
-            },
-            "srsi": {
-              "enabled": false,
-              "rsiLength": 14,
-              "stochLength": 14,
-              "kPeriod": 14,
-              "dPeriod": 1,
-              "smoothK": 3,
-              "smoothD": 3,
-              "history": 5,
-              "tresholds": {
-                "overbought": 80,
-                "oversold": 20
-              },
-              "weight": 1
-            },
-            "OpenAI": {
-              "enabled": false,
-              "key": "",
-              "model": "",
-              "history": "",
-              "overwrite": false
-            }
-          }
-        }
-      ]
-    }
-  ]
-} 
-```
+#### Exchanges Configuration
 
-## Usage
-1. Copy the provided `hoobot-options.json` file and fill in the necessary values for the parameters.
-2. Save the file in your project directory.
-3. Use the configuration in your bot code.
+The `exchanges` array contains objects, each representing the configuration for a specific exchange. Each object within this array includes:
+
+- **`name`**: The name of the exchange (e.g., "binance").
+- **`key`**: The API key obtained from the exchange.
+- **`secret`**: The API secret obtained from the exchange.
+- **`mode`**: The operating mode for the bot on the exchange. Currently, only "algorithmic" is available.
+- **`console`**: Specifies how frequently the bot updates the terminal. Options include "update", "trade", "trade/final", "final", listed in order of increasing speed frequency.
+- **`symbols`**: An array of objects, each representing a trading pair and its configuration.
+
+#### Symbol Configuration
+
+Each object within the `symbols` array includes:
+
+###### `name`
+- **Description**: The trading pair for which the configuration applies.
+- **Example Value**: "HTN/USDT"
+
+###### `timeframes`
+- **Description**: An array of strings representing the trading timeframes. Each timeframe indicates how often trades should be evaluated.
+- **Example Value**: ["5m"]
+
+###### `agreement`
+- **Description**: The percentage of indicator agreement required to trigger a trade. This determines how many of the enabled indicators need to agree on the trade direction.
+- **Example Value**: 75
+
+###### `source`
+- **Description**: Specifies which price point should be used for indicator calculations. Options include "close", "high", "low", "open".
+- **Example Value**: "close"
+
+###### `trend`
+- **Description**: Configuration for trend determination using Exponential Moving Average (EMA). It switches minimum buy and sell values based on the trend.
+- **Sub Parameters**:
+    - `enabled`: Whether the trend determination is enabled.
+    - `timeframe`: The timeframe used for EMA signaling.
+    - `ema`: EMA settings including short and long period lengths.
+
+###### `profit`
+- **Description**: Configuration for minimum profit percentage requirements for making trades.
+- **Sub Parameters**:
+    - `enabled`: Whether profit requirements are enabled.
+    - `minimumSell`: The minimum profit percentage for sell trades.
+    - `minimumBuy`: The minimum profit percentage for buy trades.
+
+###### `growingMax`
+- **Description**: Maximum amount to trade in a single transaction. It can have different values for buy and sell actions.
+- **Sub Parameters**:
+    - `buy`: Maximum amount for buy transactions.
+    - `sell`: Maximum amount for sell transactions.
+
+###### `closePercentage`
+- **Description**: The percentage change in price required to close an unfilled order.
+- **Example Value**: 0.25
+
+###### `maximumAgeOfOrder`
+- **Description**: The maximum age of an order in minutes before it is cancelled, if unfilled.
+- **Example Value**: 60
+
+###### `tradeFeePercentage`
+- **Description**: The trade fee percentage of the exchange, which is used for calculation purposes.
+- **Example Value**: 0.1
+
+###### `stopLoss`
+- **Description**: Configuration for an aging stop loss mechanism, which skips profit calculations based on the settings.
+- **Sub Parameters**:
+    - `enabled`: Whether stop loss is enabled.
+    - `stopTrading`: Whether trading should be stopped when stop loss is triggered.
+    - `pnl`: The starting point of stop loss percentage.
+    - `agingPerHour`: The rate at which the stop loss percentage increases per hour.
+
+###### `takeProfit`
+- **Description**: Configuration for a growing take profit indicator.
+- **Sub Parameters**:
+    - `enabled`: Whether take profit is enabled.
+    - `limit`: The limit at which take profit calculations begin.
+    - `minimum`: The growing minimum for maximum take profit.
+    - `drop`: The allowable drop in unrealized PNL below the minimum before skipping profit calculations.
+
+#### Indicators Configuration Documentation
+
+Each indicator has a set of parameters that define its behavior and role in the trading strategy. Indicators can be enabled or disabled, and they may carry different weights which could influence their impact on the decision-making process.
+
+###### `sma` - Simple Moving Average
+- **Enabled**: Whether the SMA indicator is used.
+- **Length**: The number of periods over which the average is calculated.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `renko`
+- **Enabled**: Whether the Renko indicator is used.
+- **Weight**: The importance of this indicator in the overall strategy.
+- **Multiplier**: A factor used to determine the size of each Renko block.
+
+###### `ema` - Exponential Moving Average
+- **Enabled**: Whether the EMA indicator is used.
+- **Short**: The period for the short EMA.
+- **Long**: The period for the long EMA.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `macd` - Moving Average Convergence Divergence
+- **Enabled**: Whether the MACD indicator is used.
+- **Fast**: The period for the fast moving average.
+- **Slow**: The period for the slow moving average.
+- **Signal**: The period for the signal line.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `rsi` - Relative Strength Index
+- **Enabled**: Whether the RSI indicator is used.
+- **Length**: The period over which the RSI is calculated.
+- **Smoothing**: The method and length for smoothing the RSI.
+- **History**: The number of periods to consider for historical analysis.
+- **Tresholds**: The overbought and oversold levels.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `atr` - Average True Range
+- **Enabled**: Whether the ATR indicator is used.
+- **Length**: The period over which the ATR is calculated.
+
+###### `obv` - On-Balance Volume
+- **Enabled**: Whether the OBV indicator is used.
+- **Length**: The period over which the OBV is calculated.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `cmf` - Chaikin Money Flow
+- **Enabled**: Whether the CMF indicator is used.
+- **Length**: The period over which the CMF is calculated.
+- **History**: The number of periods to consider for historical analysis.
+- **Tresholds**: The overbought and oversold levels.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `bb` - Bollinger Bands
+- **Enabled**: Whether the Bollinger Bands indicator is used.
+- **Length**: The period over which the bands are calculated.
+- **Multiplier**: The number of standard deviations from the average.
+- **Average**: The type of moving average used (e.g., SMA).
+- **History**: The number of periods to consider for historical analysis.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `so` - Stochastic Oscillator
+- **Enabled**: Whether the Stochastic Oscillator is used.
+- **kPeriod**: The %K line period.
+- **dPeriod**: The %D line period (signal line).
+- **Smoothing**: The smoothing factor for %K.
+- **Tresholds**: The overbought and oversold levels.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `srsi` - Stochastic Relative Strength Index
+- **Enabled**: Whether the Stochastic RSI is used.
+- **RSILength**: The period for calculating the RSI.
+- **StochLength**: The period for the stochastic calculation.
+- **kPeriod**: The %K line period.
+- **dPeriod**: The %D line period (signal line).
+- **SmoothK**: The smoothing factor for %K.
+- **SmoothD**: The smoothing factor for %D.
+- **History**: The number of periods to consider for historical analysis.
+- **Tresholds**: The overbought and oversold levels.
+- **Weight**: The importance of this indicator in the overall strategy.
+
+###### `OpenAI`
+- **Enabled**: Whether the OpenAI indicator is used.
+- **Key**: The API key for OpenAI.
+- **Model**: The model used for predictions.
+- **History**: The data period considered for generating predictions.
+- **Overwrite**: Whether to overwrite existing configurations with OpenAI predictions.
+
+Each indicator is designed to provide specific insights into the market's behavior, and when combined, they offer a comprehensive view to inform trading decisions.
+
+
+### Step 3: Starting Hoobot
+With your configurations set, it's time to launch Hoobot:
+
+- Open a terminal and navigate to the Hoobot directory.
+- Execute the command `npm run start` to initialize Hoobot.
+
+To run the simulation:
+
+- Open a terminal and navigate to the Hoobot directory.
+- Execute the command `npm run simulate` to initialize Hoobot simulation.
+
+### Step 4: Updating Hoobot
+
+You can update Hoobot by running `windows.bat`, `linux.sh`, `osx.sh` again in the hoobot folder. It will check that dependancies exist and downloads always latest Hoobot for you. 
+
+**Note:** Ensure that any symbols you intend to trade with have been actively traded (at least two trades) before employing Hoobot. Be cautious that certain exchanges like Xeggex and NonKYC may experience instability.
+
+Through this guide, you're now equipped to install and configure Hoobot with precision. Enjoy your trading journey, knowing that Hoobot is configured to your exact specifications.
+
 
 ### force.json
 
@@ -287,7 +284,7 @@ Force.json is a file where you can force allow negative trade for one trade as i
 ```
 
 
-## Simulation
+### Simulation
 
 You can run simulations with command `npm run simulate`, simulations currently support symbols available from Binance and you can adjust simulation configuration from file `hoobot-options-simulate.json`. The simulate file has same format as `hoobot-options.json` but exists only to seperate simulation options from Hoobot live options. 
 

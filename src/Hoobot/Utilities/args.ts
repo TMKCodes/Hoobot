@@ -120,6 +120,13 @@ export interface SymbolOptions {
     minimumSell: number;
     minimumBuy: number;
   };
+  price?: {
+    enabled: boolean;
+    maximumSell: number;
+    minimumSell: number;
+    maximumBuy: number;
+    minimumBuy: number;
+  }
   growingMax?: {
     buy: number;
     sell: number;

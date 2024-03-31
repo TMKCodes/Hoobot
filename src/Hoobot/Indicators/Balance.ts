@@ -70,17 +70,17 @@ export const checkBalanceSignals = (
         }
       }
     }
+    if (symbolOptions.noPreviousTradeCheck && symbolOptions.noPreviousTradeCheck === true) {
+      if(baseBalanceConverted > quoteBalance) {
+        check = 'SELL';
+      } else if(quoteBalance > baseBalanceConverted) {
+        check = 'BUY';
+      }
+    }
     if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
       check = 'HOLD';
     } else if (check === 'BUY' && (quoteBalance < parseFloat(filter.minNotional) || quoteBalance > parseFloat(filter.maxNotional))) {
       check = 'HOLD';
-    }
-    if (symbolOptions.noPreviousTradeCheck && symbolOptions.noPreviousTradeCheck === true) {
-      if(baseBalanceConverted > parseFloat(filter.minNotional)) {
-        check = 'SELL';
-      } else if(quoteBalance > parseFloat(filter.minNotional)) {
-        check = 'BUY';
-      }
     }
     consoleLogger.push("Trades", {
       previous: tradeCheck,
