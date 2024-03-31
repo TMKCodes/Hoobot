@@ -125,6 +125,15 @@ Each object within the `symbols` array includes:
     - `minimumSell`: The minimum profit percentage for sell trades.
     - `minimumBuy`: The minimum profit percentage for buy trades.
 
+###### `price`
+- **Description**: Configuration for minimum and maximum price requirements for making trades.
+- **Sub Parameters**:
+    - `enabled`: Whether price requirements are enabled.
+    - `minimumSell`: The minimum price for sell trades.
+    - `maximumSell`: The maximum price for sell trades.
+    - `minimumBuy`: The minimum price for buy trades.
+    - `maximumBuy`: The maximum price for buy trades.
+
 ###### `growingMax`
 - **Description**: Maximum amount to trade in a single transaction. It can have different values for buy and sell actions.
 - **Sub Parameters**:
