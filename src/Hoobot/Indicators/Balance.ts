@@ -44,11 +44,6 @@ export const checkBalanceSignals = (
     const quoteBalance = exchangeOptions.balances[symbol.split("/")[1]].crypto;
     const baseBalanceConverted = (baseBalance * closePrice);
     let tradeCheck = checkPreviousTrade(symbol, exchangeOptions);
-    if(symbolOptions.consectutive === "SELL" && baseBalanceConverted >= parseFloat(filter.minNotional)) {
-      tradeCheck = "SELL";
-    } else if (symbolOptions.consectutive === "BUY" && quoteBalance >= parseFloat(filter.minNotional)) {
-      tradeCheck = "BUY";
-    }
     if (tradeCheck === 'SELL') {
       if (quoteBalance > parseFloat(filter.minNotional)) {
         check = 'BUY';
@@ -71,10 +66,18 @@ export const checkBalanceSignals = (
       }
     }
     if (symbolOptions.noPreviousTradeCheck && symbolOptions.noPreviousTradeCheck === true) {
-      if(baseBalanceConverted > quoteBalance) {
-        check = 'SELL';
-      } else if(quoteBalance > baseBalanceConverted) {
+      if(quoteBalance > (parseFloat(filter.minQty) * 2)) {
         check = 'BUY';
+      } else if(baseBalanceConverted > (parseFloat(filter.minQty) * 2)) {
+        check = 'SELL';
+      }
+    }
+    if(symbolOptions.consectutive) {
+      console.log(symbolOptions.consectutive)
+      if(symbolOptions.consectutive === "SELL" && baseBalanceConverted >= parseFloat(filter.minQty)) {
+        check = "SELL";
+      } else if (symbolOptions.consectutive === "BUY" && quoteBalance >= parseFloat(filter.minQty)) {
+        check = "BUY";
       }
     }
     if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {

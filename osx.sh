@@ -17,7 +17,7 @@ update_osx() {
   unzip $ZIP_FILE -d $TMP_DIR
 
   # Step 4: Find the extracted directory
-  EXTRACTED_DIR=$(find $TMP_DIR -type d -name 'Hoobot-*.*.*' -print -quit)
+  EXTRACTED_DIR=$(find $TMP_DIR -type d -name 'hoobot-*' -print -quit)
 
   # Check if the directory was found
   if [ -z "$EXTRACTED_DIR" ]; then

@@ -438,7 +438,6 @@ export const sell = async (
       }
       createBlock(symbol);
       let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
-      removeBlock(symbol);
       if (order !== undefined) {
         play(soundFile);
         let msg = '```';
@@ -465,8 +464,10 @@ export const sell = async (
         }
         exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
         await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
+        removeBlock(symbol);
         return order;
       } else {
+        removeBlock(symbol);
         return false;
       }
     } else {
@@ -584,7 +585,6 @@ export const buy = async (
       }
       createBlock(symbol);
       let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
-      removeBlock(symbol);
       if(order !== undefined) {
         play(soundFile);
         let msg = '```';
@@ -611,8 +611,10 @@ export const buy = async (
         }
         exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
         await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
+        removeBlock(symbol);
         return order;
       } else {
+        removeBlock(symbol);
         return false;
       }
     } else {

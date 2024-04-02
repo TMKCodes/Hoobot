@@ -337,6 +337,7 @@ export class Xeggex {
         this.ws = null;
         this.connect();
       }
+      console.log("Heartbeat");
     }, 70000);
   }
 
@@ -378,11 +379,11 @@ export class Xeggex {
       this.ws?.close(500, "Login Failed");
     });
 
-    this.ws.on("close", (code: number, reason: Buffer) => {
+    this.ws.on("close", async (code: number, reason: Buffer) => {
       console.log(`${code}: ${reason.toString('utf-8')}`);
       if (code === 1006) {
-        console.log("Error (Abnormal websocket close), don't know what went wrong  You need to restart me. Trying to reconnect.");
-        this.connect();
+        console.log("Error (Abnormal websocket close), don't know what went wrong You need to restart me. Trying to reconnect.");
+        this.heartBeat();
       }
     });
 

@@ -34,13 +34,13 @@ if exist "%destinationPath%" (
 
 :check_node
 REM Check if Node.js v18.17.0 is installed
-nvm list | find "18.17.0" >nul
+nvm list | find "21.6.2" >nul
 if %ERRORLEVEL% EQU 0 (
-    echo Node.js v18.17.0 is already installed.
+    echo Node.js v21.6.2 is already installed.
 ) else (
-    REM Install Node.js v18.17.0 using nvm
-    nvm install 18.17.0
-    nvm use 18.17.0
+    REM Install Node.js v21.6.2 using nvm
+    nvm install 21.6.2
+    nvm use 21.6.2
 )
 
 REM Create a backup of .env file
