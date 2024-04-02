@@ -3,7 +3,7 @@
 REM Check if NVM_HOME environment variable is set (indicating nvm is installed)
 if not "%NVM_HOME%"=="" (
     echo nvm is already installed.
-    goto :check_node
+    goto :run_part_two
 )
 
 REM Define the source URL
@@ -12,11 +12,17 @@ set "sourceUrl=https://github.com/coreybutler/nvm-windows/releases/download/1.1.
 REM Define the destination path to save the file using the USERPROFILE environment variable
 set "destinationPath=%USERPROFILE%\Downloads\nvm-setup.exe"
 
-REM Create the destination directory if it doesn't exist
-mkdir "%USERPROFILE%\Downloads" 2>nul
-
 REM Download the file
 powershell -Command "& { Invoke-WebRequest -Uri '%sourceUrl%' -OutFile '%destinationPath%' }"
+
+REM Execute the installer
+echo Installing nvm...
+start /wait "" "%destinationPath%" /silent
+
+REM Add nvm to PATH manually (Assuming default installation path)
+set "NVM_HOME=%LOCALAPPDATA%\nvm"
+set "NVM_SYMLINK=%LOCALAPPDATA%\nvm\v21.6.2"
+set PATH=%NVM_HOME%;%NVM_SYMLINK%;%PATH%
 
 REM Check if the download was successful
 if exist "%destinationPath%" (
@@ -33,7 +39,7 @@ if exist "%destinationPath%" (
 )
 
 :check_node
-REM Check if Node.js v18.17.0 is installed
+REM Check if Node.js v21.6.2 is installed
 nvm list | find "21.6.2" >nul
 if %ERRORLEVEL% EQU 0 (
     echo Node.js v21.6.2 is already installed.
