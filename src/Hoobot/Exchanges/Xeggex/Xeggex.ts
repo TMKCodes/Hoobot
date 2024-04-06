@@ -418,11 +418,12 @@ export class Xeggex {
 
   private onMessage = (event: WebSocket.MessageEvent): void => {
     if(!this.ws) {
+      console.error('WebSocket connection not established');
       throw new Error('WebSocket connection not established');
     }
     const response: XeggexResponse = JSON.parse(event.data.toString('utf-8'));
     if (response.error) {
-      throw new Error(`Message error: ${JSON.stringify(response.error, null, 4)}`);
+      console.error(`Message error: ${JSON.stringify(response.error, null, 4)}`);
     }
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);

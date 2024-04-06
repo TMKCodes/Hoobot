@@ -171,6 +171,7 @@ export const checkProfitSignals = async (
         currentMax: 0,
         stopLoss: 0,
         takeProfit: 0,
+        next: next,
         direction: check,
       });
     } else if (symbolOptions.consectutive || symbolOptions.noPreviousTradeCheck) {
@@ -191,23 +192,24 @@ export const checkProfitSignals = async (
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
         unrealizedSellPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
         unrealizedBuyPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookAsks[0]);
-        if (unrealizedBuyPNL >= unrealizedSellPNL) {
-          if(quoteBalance > (parseFloat(filter.minQty) * 2)) {
+        if(isNaN(unrealizedBuyPNL)) {
+          unrealizedBuyPNL = 0;
+        }
+        if(isNaN(unrealizedSellPNL)) {
+          unrealizedSellPNL = 0;
+        }
+        if(baseBalanceConverted > (parseFloat(filter.minQty) * 2) && baseBalanceConverted > symbolOptions.growingMax?.buy!) {
+          if (unrealizedBuyPNL >= unrealizedSellPNL) {
             unrealizedPNL = unrealizedBuyPNL;
             next = "BUY";
           }
-          
-        } else if(unrealizedBuyPNL < unrealizedSellPNL) {
-          if(baseBalanceConverted > (parseFloat(filter.minQty) * 2)) {
+        } else if(quoteBalance > (parseFloat(filter.minQty) * 2) && quoteBalance > symbolOptions.growingMax?.sell!) {
+          if(unrealizedBuyPNL < unrealizedSellPNL) {
             unrealizedPNL = unrealizedSellPNL;
             next = "SELL";
           }
+        } else {
           next = "HOLD";
-        }
-        if (previousTrade.isBuyer && next === "BUY") {
-          unrealizedPNL = reverseSign(unrealizedPNL);
-        } else if(!previousTrade.isBuyer && next === "SELL") {
-          unrealizedPNL = reverseSign(unrealizedPNL);
         }
         if (symbolOptions.takeProfit !== undefined) {
           if (symbolOptions.takeProfit?.current === undefined) {
@@ -232,6 +234,7 @@ export const checkProfitSignals = async (
           currentMax: symbolOptions.takeProfit?.current,
           stopLoss: (signals.stopLoss < 0) ? signals.stopLoss : 0,
           takeProfit: signals.takeProfit,
+          next: next,
           direction: check,
         });
       } else {
@@ -243,6 +246,7 @@ export const checkProfitSignals = async (
           currentMax: 0,
           stopLoss: 0,
           takeProfit: 0,
+          next: next,
           direction: check,
         });
       }
@@ -288,6 +292,7 @@ export const checkProfitSignals = async (
         currentMax: symbolOptions.takeProfit?.current,
         stopLoss: (signals.stopLoss < 0) ? signals.stopLoss : 0,
         takeProfit: signals.takeProfit,
+        next: next,
         direction: check,
       });
     }
@@ -300,6 +305,7 @@ export const checkProfitSignals = async (
       currentMax: 0,
       stopLoss: 0,
       takeProfit: 0,
+      next: next,
       direction: check,
     });
   }

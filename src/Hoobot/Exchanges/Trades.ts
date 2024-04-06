@@ -275,10 +275,10 @@ const placeSellOrder = async (
   quantity: number, 
   price: number
 ): Promise<Order | undefined> => {
-  if (Number.isNaN(price)) {
+  if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
-  if (Number.isNaN(quantity)) {
+  if (quantity === undefined || Number.isNaN(quantity)) {
     return undefined;
   }
   try {
@@ -320,10 +320,10 @@ const placeBuyOrder = async (
   quantity: number, 
   price: number
 ): Promise<Order | undefined>  => {
-  if (Number.isNaN(price)) {
+  if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
-  if (Number.isNaN(quantity)) {
+  if (quantity === undefined || Number.isNaN(quantity)) {
     return undefined;
   }
   try {
@@ -396,7 +396,7 @@ export const sell = async (
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
-    if(orderBook.bids === undefined) {
+    if(orderBook !== undefined && orderBook.bids === undefined) {
       return false;
     }
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
@@ -541,7 +541,7 @@ export const buy = async (
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
-    if(orderBook.asks === undefined) {
+    if(orderBook !== undefined && orderBook.asks === undefined) {
       return false;
     }
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);

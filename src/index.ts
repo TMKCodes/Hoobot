@@ -43,6 +43,7 @@ import { Xeggex } from './Hoobot/Exchanges/Xeggex/Xeggex';
 import { Exchange, getExchangeOption, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
 import { logToFile } from './Hoobot/Utilities/logToFile';
 import { NonKYC } from './Hoobot/Exchanges/NonKYC/NonKYC';
+import { getTradeHistory } from './Hoobot/Exchanges/Trades';
 
 export var symbolFilters: Filters = {};
 

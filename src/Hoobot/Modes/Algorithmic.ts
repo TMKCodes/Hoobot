@@ -130,7 +130,7 @@ export const tradeDirection =  async (
   let profit = "SKIP";
   const closePrice = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].close;
   const closeTime = candlesticks[symbol.split("/").join("")][timeframes[0]][candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1].time;
-  const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, symbolOptions, filter);
+  const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
   if (orderBook !== undefined) {
     profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions, symbolOptions, closePrice, filter);
@@ -456,6 +456,10 @@ export const algorithmic = async (
     }
     if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    }
+    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+      console.error(`${symbol}: could not retrieve trade history`);
+      return false;
     }
     if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
       consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);

@@ -35,7 +35,6 @@ export const checkBalanceSignals = (
   symbol: string,
   closePrice: number,  
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
   filter: Filter,
 ) => {
   let check = 'HOLD';
@@ -63,20 +62,6 @@ export const checkBalanceSignals = (
         } else {
           check = 'HOLD';
         }
-      }
-    }
-    if (symbolOptions.noPreviousTradeCheck && symbolOptions.noPreviousTradeCheck === true) {
-      if(quoteBalance > (parseFloat(filter.minQty) * 2)) {
-        check = 'BUY';
-      } else if(baseBalanceConverted > (parseFloat(filter.minQty) * 2)) {
-        check = 'SELL';
-      }
-    }
-    if(symbolOptions.consectutive) {
-      if(symbolOptions.consectutive === "SELL" && baseBalanceConverted >= parseFloat(filter.minQty)) {
-        check = "SELL";
-      } else if (symbolOptions.consectutive === "BUY" && quoteBalance >= parseFloat(filter.minQty)) {
-        check = "BUY";
       }
     }
     if (check === 'SELL' && (baseBalanceConverted < parseFloat(filter.minNotional) || baseBalanceConverted > parseFloat(filter.maxNotional))) {
