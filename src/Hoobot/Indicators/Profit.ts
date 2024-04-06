@@ -185,29 +185,34 @@ export const checkProfitSignals = async (
       } else {
         lastPNL = 0;
       }
-      if(previousTrade) {
+      if(olderTrade && previousTrade) {
         const quoteBalance = ExchangeOptions.balances[symbolOptions.name.split("/")[1]].crypto;
         const baseBalanceConverted = (ExchangeOptions.balances[symbolOptions.name.split("/")[0]].crypto * closePrice);
         const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
         const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-        unrealizedSellPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
-        unrealizedBuyPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookAsks[0]);
+        if(previousTrade.isBuyer) {
+          unrealizedSellPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
+          if (!olderTrade.isBuyer) {
+            unrealizedBuyPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), orderBookAsks[0]);
+          }
+        } else if(!previousTrade.isBuyer) {
+          unrealizedBuyPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
+          if (olderTrade.isBuyer) {
+            unrealizedSellPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), orderBookAsks[0]);
+          }
+        }
         if(isNaN(unrealizedBuyPNL)) {
           unrealizedBuyPNL = 0;
         }
         if(isNaN(unrealizedSellPNL)) {
           unrealizedSellPNL = 0;
         }
-        if(baseBalanceConverted > (parseFloat(filter.minQty) * 2) && baseBalanceConverted > symbolOptions.growingMax?.buy!) {
-          if (unrealizedBuyPNL >= unrealizedSellPNL) {
-            unrealizedPNL = unrealizedBuyPNL;
-            next = "BUY";
-          }
-        } else if(quoteBalance > (parseFloat(filter.minQty) * 2) && quoteBalance > symbolOptions.growingMax?.sell!) {
-          if(unrealizedBuyPNL < unrealizedSellPNL) {
-            unrealizedPNL = unrealizedSellPNL;
-            next = "SELL";
-          }
+        if(quoteBalance > (parseFloat(filter.minQty) * 2) && quoteBalance > baseBalanceConverted) {
+          unrealizedPNL = unrealizedBuyPNL;
+          next = "BUY";
+        } else if(baseBalanceConverted > (parseFloat(filter.minQty) * 2) && baseBalanceConverted > quoteBalance) {
+          unrealizedPNL = unrealizedSellPNL;
+          next = "SELL";
         } else {
           next = "HOLD";
         }
