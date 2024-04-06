@@ -453,11 +453,8 @@ export const sell = async (
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
         msg += '```';
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-        if(symbolOptions.consectutive === "SELL" || symbolOptions.consectutive === "BOTH") {
-          removeBlock(symbol);
-        }
         if (order.orderId !== 0) {
-          await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+          handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
         updateBuyAmount(roundedQuantityInQuote, symbolOptions);
         if (symbolOptions.takeProfit !== undefined) {
@@ -469,7 +466,6 @@ export const sell = async (
           exchangeOptions.tradeHistory = {}
         }
         exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-        await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
         removeBlock(symbol);
         return order;
       } else {
@@ -606,11 +602,8 @@ export const buy = async (
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
         msg += '```';
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-        if(symbolOptions.consectutive === "BUY" || symbolOptions.consectutive === "BOTH") {
-          removeBlock(symbol);
-        }
         if (order.orderId !== 0) {
-          await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
+          handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
         updateSellAmount(roundedQuantityInBase, symbolOptions);
         if (symbolOptions.takeProfit !== undefined) {
@@ -622,7 +615,6 @@ export const buy = async (
           exchangeOptions.tradeHistory = {};
         }
         exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-        await delay(getSecondsFromInterval(symbolOptions.timeframes[0]));
         removeBlock(symbol);
         return order;
       } else {
