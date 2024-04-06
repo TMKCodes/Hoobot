@@ -133,7 +133,7 @@ export const tradeDirection =  async (
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, symbolOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
   if (orderBook !== undefined) {
-    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions,symbolOptions);
+    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions, symbolOptions, closePrice, filter);
   } else {
     profit = await checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, exchangeOptions, symbolOptions);
   }

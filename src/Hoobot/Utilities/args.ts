@@ -105,7 +105,7 @@ export interface SymbolOptions {
   timeframes: CandlestickInterval[];
   agreement: number;
   source: "close" | "high" | "low";
-  consectutive: "SELL" | "BUY" | undefined;
+  consectutive: "SELL" | "BUY" | "BOTH" | undefined;
   trend?: {
     current: string;
     enabled: boolean;

@@ -73,7 +73,6 @@ export const checkBalanceSignals = (
       }
     }
     if(symbolOptions.consectutive) {
-      console.log(symbolOptions.consectutive)
       if(symbolOptions.consectutive === "SELL" && baseBalanceConverted >= parseFloat(filter.minQty)) {
         check = "SELL";
       } else if (symbolOptions.consectutive === "BUY" && quoteBalance >= parseFloat(filter.minQty)) {

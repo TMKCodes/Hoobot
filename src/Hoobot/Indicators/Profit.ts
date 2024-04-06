@@ -31,6 +31,7 @@ import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getPreviousTrades, readForceSkip } from "../Exchanges/Trades";
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { reverseSign } from "../Modes/Algorithmic";
+import { Filter } from "../Exchanges/Filters";
 
 const sleep = async (ms: number) => await new Promise(r => setTimeout(r, ms));
 
@@ -151,11 +152,15 @@ export const checkProfitSignals = async (
   orderBook: Orderbook,
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
+  closePrice: number,
+  filter: Filter,
 ) => {
   let check = 'HOLD';
   let lastPNL: number = 0;
   let unrealizedPNL: number = 0;
+  let unrealizedSellPNL: number = 0;
+  let unrealizedBuyPNL: number = 0;
   const skip = readForceSkip(symbolOptions.name.split("/").join(""));
   if(ExchangeOptions.tradeHistory !== undefined && ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")]?.length > 0) {
     if (skip === true) {
@@ -169,7 +174,6 @@ export const checkProfitSignals = async (
         direction: check,
       });
     } else if (symbolOptions.consectutive || symbolOptions.noPreviousTradeCheck) {
-      const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
       const { previousTrade, olderTrade } = getPreviousTrades(next, ExchangeOptions, symbolOptions);
       if (olderTrade && previousTrade) {
         if(olderTrade.isBuyer && !previousTrade.isBuyer) { 
@@ -180,13 +184,25 @@ export const checkProfitSignals = async (
       } else {
         lastPNL = 0;
       }
-      if (previousTrade) {
-        if (previousTrade.isBuyer) {
-          const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
-        } else if (!previousTrade.isBuyer) {
-          const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookAsks[0]);
+      if(previousTrade) {
+        const quoteBalance = ExchangeOptions.balances[symbolOptions.name.split("/")[1]].crypto;
+        const baseBalanceConverted = (ExchangeOptions.balances[symbolOptions.name.split("/")[0]].crypto * closePrice);
+        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+        unrealizedSellPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
+        unrealizedBuyPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookAsks[0]);
+        if (unrealizedBuyPNL >= unrealizedSellPNL) {
+          if(quoteBalance > (parseFloat(filter.minQty) * 2)) {
+            unrealizedPNL = unrealizedBuyPNL;
+            next = "BUY";
+          }
+          
+        } else if(unrealizedBuyPNL < unrealizedSellPNL) {
+          if(baseBalanceConverted > (parseFloat(filter.minQty) * 2)) {
+            unrealizedPNL = unrealizedSellPNL;
+            next = "SELL";
+          }
+          next = "HOLD";
         }
         if (previousTrade.isBuyer && next === "BUY") {
           unrealizedPNL = reverseSign(unrealizedPNL);

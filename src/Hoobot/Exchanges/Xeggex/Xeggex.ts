@@ -337,7 +337,6 @@ export class Xeggex {
         this.ws = null;
         this.connect();
       }
-      console.log("Heartbeat");
     }, 70000);
   }
 

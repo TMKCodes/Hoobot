@@ -396,6 +396,9 @@ export const sell = async (
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
+    if(orderBook.bids === undefined) {
+      return false;
+    }
     const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
     let bidPrice = orderBookBids[0];
     if(!bidPrice) {
@@ -450,6 +453,9 @@ export const sell = async (
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
         msg += '```';
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+        if(symbolOptions.consectutive === "SELL" || symbolOptions.consectutive === "BOTH") {
+          removeBlock(symbol);
+        }
         if (order.orderId !== 0) {
           await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
@@ -539,6 +545,9 @@ export const buy = async (
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
+    if(orderBook.asks === undefined) {
+      return false;
+    }
     const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
     let askPrice = orderBookAsks[0];
     if(!askPrice) {
@@ -597,6 +606,9 @@ export const buy = async (
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
         msg += '```';
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+        if(symbolOptions.consectutive === "BUY" || symbolOptions.consectutive === "BOTH") {
+          removeBlock(symbol);
+        }
         if (order.orderId !== 0) {
           await handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
