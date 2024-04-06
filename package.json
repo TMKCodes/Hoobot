@@ -24,6 +24,7 @@
   "license": "ISC",
   "dependencies": {
     "adm-zip": "^0.5.12",
+    "bufferutil": "^4.0.8",
     "cross-env": "^7.0.3",
     "discord.js": "^14.11.0",
     "dotenv": "^16.4.4",
@@ -33,6 +34,7 @@
     "original-fs": "^1.2.0",
     "patch-package": "^8.0.0",
     "play-sound": "^1.1.5",
+    "utf-8-validate": "^5.0.10",
     "zlib-sync": "^0.1.9"
   },
   "devDependencies": {

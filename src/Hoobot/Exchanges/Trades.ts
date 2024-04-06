@@ -439,7 +439,7 @@ export const sell = async (
       createBlock(symbol);
       let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
-        play(soundFile);
+        // play(soundFile);
         let msg = '```';
         msg += `SELL ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;
@@ -544,7 +544,7 @@ export const buy = async (
     if(!askPrice) {
       return false;
     }
-    let askQuantity = orderBook.bids[askPrice.toString()];
+    let askQuantity = orderBook.asks[askPrice.toString()];
     let maxQuantityInQuote = quoteBalance;
     maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
     if (!isNaN(askQuantity) && maxQuantityInQuote > askQuantity) {
@@ -585,8 +585,8 @@ export const buy = async (
       }
       createBlock(symbol);
       let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
-      if(order !== undefined) {
-        play(soundFile);
+      if (order !== undefined) {
+        // play(soundFile);
         let msg = '```';
         msg += `BUY ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;

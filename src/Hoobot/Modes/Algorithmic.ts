@@ -475,6 +475,10 @@ export const algorithmic = async (
     if (latestCandle !== undefined) {
       consoleLogger.push('Candlestick', {
         time: candleTime,
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
         color: (latestCandle.close > latestCandle.open) ? "Green" : "Red",
         direction: (latestCandle.close > prevCandle?.close) ? "Rising" : (latestCandle.close < prevCandle?.close) ? "Dropping" : "Stagnant",
         final: latestCandle.isFinal,

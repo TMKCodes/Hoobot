@@ -382,8 +382,17 @@ export class Xeggex {
     this.ws.on("close", async (code: number, reason: Buffer) => {
       console.log(`${code}: ${reason.toString('utf-8')}`);
       if (code === 1006) {
-        console.log("Error (Abnormal websocket close), don't know what went wrong You need to restart me. Trying to reconnect.");
-        this.heartBeat();
+        console.log("Error (Abnormal websocket close), don't know what went wrong You may need to restart me.");
+        if(this.ws !== null) {
+          console.log("Terminated websocket.");
+          this.ws.terminate();
+          this.ws = null;
+        }
+        do {
+          await delay(150000);
+          console.log("Trying to reconnect.");
+          await this.connect();
+        } while(this.ws !== null);
       }
     });
 
