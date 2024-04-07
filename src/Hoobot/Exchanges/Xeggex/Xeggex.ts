@@ -310,6 +310,7 @@ export class Xeggex {
   private reportsCallbackId: number = 0;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
+  private forceCrash: boolean;
 
   constructor(key: string, secret: string) {
     this.WebSocketURL = "wss://api.xeggex.com";
@@ -318,6 +319,7 @@ export class Xeggex {
     this.secret = secret;
     this.callbackMap = new CallbackMap();
     this.emitter = new EventEmitter();
+    this.forceCrash = true;
     this.connect();
   }
 
@@ -381,6 +383,9 @@ export class Xeggex {
     this.ws.on("close", async (code: number, reason: Buffer) => {
       console.log(`${code}: ${reason.toString('utf-8')}`);
       if (code === 1006) {
+        if (this.forceCrash === true) {
+          throw new Error("Error 1006: (Abnormal websocket close). Crashing the program as reconnecting does not work.")
+        }
         console.log("Error (Abnormal websocket close), don't know what went wrong You may need to restart me.");
         if(this.ws !== null) {
           console.log("Terminated websocket.");
@@ -388,10 +393,10 @@ export class Xeggex {
           this.ws = null;
         }
         do {
-          await delay(150000);
+          await delay(300000);
           console.log("Trying to reconnect.");
           await this.connect();
-        } while(this.ws !== null);
+        } while(this.ws!.readyState !== WebSocket.OPEN);
       }
     });
 
@@ -406,11 +411,10 @@ export class Xeggex {
 
   private send = (message: any): void => {
     if(this.ws) {
-      if(this.ws!.readyState !== WebSocket.OPEN) {
-        throw new Error(`WebSocket connection not established or not open.\r\nMessage: ${JSON.stringify(message, null, 4)}`);
+      if(this.ws!.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(message));
+        this.logged = true;
       }
-      this.ws.send(JSON.stringify(message));
-      this.logged = true;
     } else {
       throw new Error('WebSocket connection not established');
     }
