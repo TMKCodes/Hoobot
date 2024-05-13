@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import Binance from 'node-binance-api';
-import { loginDiscord } from './Discord/discord';
+import { loginDiscord, sendMessageToChannel } from './Discord/discord';
 import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from './Hoobot/Exchanges/Candlesticks';
 import { ExchangeOptions, parseArgs } from './Hoobot/Utilities/args';
 import { getCurrentBalances, storeBalances } from './Hoobot/Exchanges/Balances';
@@ -43,7 +43,7 @@ import { Xeggex } from './Hoobot/Exchanges/Xeggex/Xeggex';
 import { Exchange, getExchangeOption, isBinance, isXeggex } from './Hoobot/Exchanges/Exchange';
 import { logToFile } from './Hoobot/Utilities/logToFile';
 import { NonKYC } from './Hoobot/Exchanges/NonKYC/NonKYC';
-import { getTradeHistory } from './Hoobot/Exchanges/Trades';
+import { Trade, getTradeHistory, listenForTrades } from './Hoobot/Exchanges/Trades';
 
 export var symbolFilters: Filters = {};
 
@@ -71,6 +71,26 @@ const runExchange = async (
       }
       for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
+        if (process.env.HOOSAT_NETWORKS_DEVELOPER === "true") {
+          if(isXeggex(exchange)) {
+            console.log("Starting to listen for trades with Hoosat Network enabled");
+            listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
+              if(trade.isBuyer) {
+                const buyAmount = (parseFloat(trade.qty) * parseFloat(trade.price)).toFixed(6);
+                if(parseFloat(buyAmount) > 1) {
+                  let msg = '```';
+                  msg += `Someone made buy order for symbol ${trade.symbol} in Xeggex!\r\n`;
+                  msg += `For the quantity of: ${trade.qty} ${trade.symbol.split("/")[0]}\r\n`;
+                  msg += `With the price of: ${trade.price}\r\n`;
+                  msg += `Which equals: ${buyAmount} ${trade.symbol.split("/")[1]}`
+                  msg += '```';
+                  console.log(msg);
+                  sendMessageToChannel(discord, "1220067649476628650", msg);
+                }
+              }
+            });
+          }
+        }
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if(exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {}

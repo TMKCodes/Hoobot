@@ -89,7 +89,7 @@ export const listenForOrderbooks = async (
         };
         returnCallback(symbol, book);
       });
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isXeggex(exchange)) {
       const book: Orderbook = {
         asks: {},
         bids: {},

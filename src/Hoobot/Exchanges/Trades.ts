@@ -38,6 +38,7 @@ import { Balances, getCurrentBalances } from "./Balances";
 import { logToFile } from "../Utilities/logToFile";
 import path from "path";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
+import { XeggexResponse, XeggexTrades } from "./Xeggex/Xeggex";
 
 const soundFile = './alarm.mp3'
 
@@ -60,6 +61,43 @@ export interface Trade {
 
 export interface TradeHistory {
   [symbol: string]: Trade[];
+}
+
+
+export const listenForTrades = async (
+  exchange: Exchange, 
+  symbol: string, 
+  callback: (trades: Trade) => Promise<void>
+): Promise<void> => {
+  try {
+    if(isXeggex(exchange)) {
+      exchange.subscribeTrades(symbol, async (response: XeggexResponse) => {
+        if(response.params) {
+          const trades = (response.params as XeggexTrades).data;
+          await callback({
+            symbol: response.params.symbol,
+            id: 0,
+            orderId: 0,
+            orderListID: 0,
+            price: trades[0].price,
+            qty: trades[0].quantity,
+            quoteQty: "",
+            commission: "",
+            commissionAsset: "",
+            time: new Date(trades[0].timestamp).getTime(),
+            isBuyer: (trades[0].side === "buy") ? true : false,
+            isMaker: false,
+            isBestMatch: true,
+            profit: "",
+          })
+        }
+        
+      });
+    }
+  } catch (error) {
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(error);
+  }
 }
 
 export const calculateROI = (
@@ -421,7 +459,9 @@ export const sell = async (
     }
     const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    if(process.env.DEBUG == "true") {
+      logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
@@ -567,7 +607,9 @@ export const buy = async (
     }
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    if(process.env.DEBUG == "true") {
+      logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+    }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {

@@ -57,7 +57,6 @@ import pnl from './Commands/PNL';
 deployable.push(pnl.builder.toJSON());
 commands.push({name: pnl.builder.name, execute: pnl.execute});
 
-
 import roi from './Commands/ROI';
 deployable.push(roi.builder.toJSON());
 commands.push({name: roi.builder.name, execute: roi.execute});
@@ -74,8 +73,11 @@ import server from './Commands/server';
 deployable.push(server.builder.toJSON());
 commands.push({name: server.builder.name, execute: server.execute});
 
-import fkick from './Commands/fkick';
+import roll from './Commands/Roll';
+deployable.push(roll.builder.toJSON());
+commands.push({name: roll.builder.name, execute: roll.execute});
 
+import fkick from './Commands/fkick';
 deployable.push(fkick.builder.toJSON());
 commands.push({name: fkick.builder.name, execute: fkick.execute});
 

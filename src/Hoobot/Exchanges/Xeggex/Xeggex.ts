@@ -24,11 +24,30 @@ export interface XeggexError {
 export interface XeggexResponse {
   jsonrpc: string;
   method?: string;
-  params?: XeggexTicker | XeggexOrderbook | XeggexCandles;
+  params?: XeggexTickers | XeggexOrderbook | XeggexCandles | XeggexTrades;
   result?: XeggexAsset | XeggexAsset[] | XeggexMarket | XeggexMarket[] | XeggexBalance[] | XeggexOrder | XeggexOrder[] | boolean;
   error?: XeggexError;
   id: number;
   name?: string;
+}
+export interface XeggexTickers {
+  data: XeggexTicker[],
+  symbol: string,
+  period: number
+}
+
+export interface XeggexTrades {
+  data: XeggexTrade[],
+  symbol: string,
+  period: number
+}
+
+export interface XeggexTrade {
+  id: string,
+  price: string,
+  quantity: string,
+  side: string,
+  timestamp: string
 }
 
 export interface XeggexBalance {
@@ -816,7 +835,7 @@ export class Xeggex {
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
-      method: "tradesTrades",
+      method: "subscribeTrades",
       params: {
         symbol: symbol
       },

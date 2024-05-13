@@ -24,3 +24,5 @@ package-lock.json
 # Configuration
 /settings/hoobot-options-simulate.json
 /settings/hoobot-options.json
+/settings/binance.json
+/settings/xeggex.json
