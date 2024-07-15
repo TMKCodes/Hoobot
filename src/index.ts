@@ -77,7 +77,7 @@ const runExchange = async (
             listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
               if(trade.isBuyer) {
                 const buyAmount = (parseFloat(trade.qty) * parseFloat(trade.price)).toFixed(6);
-                if(parseFloat(buyAmount) > 1) {
+                if(parseFloat(buyAmount) > 10) {
                   let msg = '```';
                   msg += `Someone made buy order for symbol ${trade.symbol} in Xeggex!\r\n`;
                   msg += `For the quantity of: ${trade.qty} ${trade.symbol.split("/")[0]}\r\n`;
@@ -85,7 +85,7 @@ const runExchange = async (
                   msg += `Which equals: ${buyAmount} ${trade.symbol.split("/")[1]}`
                   msg += '```';
                   console.log(msg);
-                  sendMessageToChannel(discord, "1220067649476628650", msg);
+                  sendMessageToChannel(discord, "1244212931286269972", msg);
                 }
               }
             });
