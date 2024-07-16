@@ -181,7 +181,6 @@ const manageGridOrders = async (
       if (!orderExists) {
         await delay(150);
         const order = await getOrder(exchange, symbol, grid[i].orderId);
-        console.log(order);
         if (order.orderStatus === "Cancelled") {
           grid[i].executed = true;
         } else if (order.orderStatus === "Filled") {
