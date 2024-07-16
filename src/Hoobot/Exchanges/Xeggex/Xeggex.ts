@@ -1,19 +1,17 @@
-
-import crypto from 'crypto';
-import EventEmitter from 'events';
-import { logToFile } from '../../../Hoobot/Utilities/logToFile';
-import { URL } from 'url';
-import WebSocket from 'ws';
-
+import crypto from "crypto";
+import EventEmitter from "events";
+import { logToFile } from "../../../Hoobot/Utilities/logToFile";
+import { URL } from "url";
+import WebSocket from "ws";
 
 interface urlParams {
-  [key: string]: string | string[];   
+  [key: string]: string | string[];
 }
 
 export interface XeggexOptions {
-  wssHost: string,
-  key: string,
-  secret: string,
+  wssHost: string;
+  key: string;
+  secret: string;
 }
 
 export interface XeggexError {
@@ -31,66 +29,66 @@ export interface XeggexResponse {
   name?: string;
 }
 export interface XeggexTickers {
-  data: XeggexTicker[],
-  symbol: string,
-  period: number
+  data: XeggexTicker[];
+  symbol: string;
+  period: number;
 }
 
 export interface XeggexTrades {
-  data: XeggexTrade[],
-  symbol: string,
-  period: number
+  data: XeggexTrade[];
+  symbol: string;
+  period: number;
 }
 
 export interface XeggexTrade {
-  id: string,
-  price: string,
-  quantity: string,
-  side: string,
-  timestamp: string
+  id: string;
+  price: string;
+  quantity: string;
+  side: string;
+  timestamp: string;
 }
 
 export interface XeggexBalance {
-  asset: string,
-  available: string,
-  held: string,
+  asset: string;
+  available: string;
+  held: string;
 }
 
 export interface XeggexOrder {
-  id: string,
-  userProvidedId: string,
-  symbol: string,
-  side: string,
-  type: string,
-  price: string,
-  numberprice: number,
-  quantity: string,
-  executedQuantity: string,
-  remainQuantity: string,
-  remainTotal: string,
-  remainTotalWithFee: string,
-  lastTradeAt: number,
-  status: string,
-  isActive: boolean,
-  isNew: boolean,
-  createdAt: number,
-  updatedAt: number,
-  reportType: string
+  id: string;
+  userProvidedId: string;
+  symbol: string;
+  side: string;
+  type: string;
+  price: string;
+  numberprice: number;
+  quantity: string;
+  executedQuantity: string;
+  remainQuantity: string;
+  remainTotal: string;
+  remainTotalWithFee: string;
+  lastTradeAt: number;
+  status: string;
+  isActive: boolean;
+  isNew: boolean;
+  createdAt: number;
+  updatedAt: number;
+  reportType: string;
 }
 
 export interface XeggexCandles {
-  data: XeggexCandle[],
-  symbol: string,
-  period: number
+  data: XeggexCandle[];
+  symbol: string;
+  period: number;
 }
 
 export interface XeggexCandle {
-  timestamp: string,
-  open: string,
-  close: string,
-  min: string,
-  max: string,
-  volume: string,
+  timestamp: string;
+  open: string;
+  close: string;
+  min: string;
+  max: string;
+  volume: string;
 }
 
 export interface XeggexOrderbook {
@@ -112,29 +110,29 @@ export interface XeggexBids {
 }
 
 export interface XeggexTicker {
-  symbol: string
-  lastPrice: string, 
-  lastPriceUpDown: string,
-  yesterdayPrice: string, 
-  changePercent: string, 
-  highPrice: string, 
-  lowPrice: string, 
-  volume: string, 
-  bestBid: string, 
-  bestAsk: string, 
-  spreadPercent: string,
-  lastPriceNumber: number, 
-  yesterdayPriceNumber: number, 
-  changePercentNumber: number, 
-  highPriceNumber: number, 
-  lowPriceNumber: number, 
-  volumeNumber: number, 
-  volumeUsdNumber: number, 
-  bestBidNumber: number, 
-  bestAskNumber: number, 
-  lastTradeAt: number, 
-  updatedAt: number,
-  sequence: number
+  symbol: string;
+  lastPrice: string;
+  lastPriceUpDown: string;
+  yesterdayPrice: string;
+  changePercent: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  bestBid: string;
+  bestAsk: string;
+  spreadPercent: string;
+  lastPriceNumber: number;
+  yesterdayPriceNumber: number;
+  changePercentNumber: number;
+  highPriceNumber: number;
+  lowPriceNumber: number;
+  volumeNumber: number;
+  volumeUsdNumber: number;
+  bestBidNumber: number;
+  bestAskNumber: number;
+  lastTradeAt: number;
+  updatedAt: number;
+  sequence: number;
 }
 
 export interface XeggexSocialLinks {
@@ -200,53 +198,50 @@ export interface XeggexAsset {
 }
 
 export interface XeggexMarket {
-  _id : string,
-  createdAt : number,
-  updatedAt : number,
-  symbol : string,
-  primaryName : string,
-  primaryTicker : string,
-  lastPrice : string,
-  yesterdayPrice : string,
-  highPrice : string,
-  lowPrice : string,
-  volume : string,
-  lastTradeAt : number,
-  priceDecimals : number,
-  quantityDecimals : number,
-  isActive : boolean,
-  primaryAsset : string,
-  secondaryAsset : string,
-  bestAsk : string,
-  bestAskNumber : number,
-  bestBid : string,
-  bestBidNumber : number,
-  changePercent : string,
-  changePercentNumber : number,
-  highPriceNumber : number,
-  lastPriceNumber : number,
-  lowPriceNumber : number,
-  volumeNumber : number,
-  yesterdayPriceNumber : number,
-  volumeUsdNumber : number,
-  primaryCirculation : string,
-  primaryUsdValue : string,
-  secondaryCirculation : string,
-  secondaryUsdValue : string,
-  marketcapNumber : number,
-  spreadPercent : string,
-  lastPriceUpDown : string,
-  engineId : number,
-  isPaused : boolean,
-  imageUUID : string
+  _id: string;
+  createdAt: number;
+  updatedAt: number;
+  symbol: string;
+  primaryName: string;
+  primaryTicker: string;
+  lastPrice: string;
+  yesterdayPrice: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  lastTradeAt: number;
+  priceDecimals: number;
+  quantityDecimals: number;
+  isActive: boolean;
+  primaryAsset: string;
+  secondaryAsset: string;
+  bestAsk: string;
+  bestAskNumber: number;
+  bestBid: string;
+  bestBidNumber: number;
+  changePercent: string;
+  changePercentNumber: number;
+  highPriceNumber: number;
+  lastPriceNumber: number;
+  lowPriceNumber: number;
+  volumeNumber: number;
+  yesterdayPriceNumber: number;
+  volumeUsdNumber: number;
+  primaryCirculation: string;
+  primaryUsdValue: string;
+  secondaryCirculation: string;
+  secondaryUsdValue: string;
+  marketcapNumber: number;
+  spreadPercent: string;
+  lastPriceUpDown: string;
+  engineId: number;
+  isPaused: boolean;
+  imageUUID: string;
 }
 
-
-const delay = (
-  ms: number
-) => {
-  return new Promise( resolve => setTimeout(resolve, ms) );
-}
+const delay = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
 var xeggexBlocked: boolean = false;
 
@@ -255,14 +250,14 @@ const waitToBlock = async () => {
     await delay(5);
   }
   xeggexBlocked = true;
-}
+};
 
 const unBlock = async () => {
   xeggexBlocked = false;
-} 
+};
 
 /*
- * Utility class to map numbers to callbacks. 
+ * Utility class to map numbers to callbacks.
  */
 
 class CallbackMap {
@@ -274,7 +269,7 @@ class CallbackMap {
 
   public add(id: number, callback: Function): void {
     if (this.callbacks.has(id)) {
-      throw new Error(`Callback with ID ${id} already exists.`);
+      console.warn(`Callback with ID ${id} already exists.`);
     }
     this.callbacks.set(id, callback);
   }
@@ -284,6 +279,7 @@ class CallbackMap {
   }
 
   public get(id: number): Function | undefined {
+    100;
     return this.callbacks.get(id);
   }
 
@@ -300,7 +296,7 @@ class CallbackMap {
   }
 }
 
-/* 
+/*
  * Xeggex WebSocket API
  * const xeggex = new Xeggex("key", "secret");
  * await xeggex.waitConnect();
@@ -310,7 +306,7 @@ class CallbackMap {
 interface symbolCallbacks {
   symbol: string;
   tickerCallbackId: number;
-  orderbookCallbackId: number; 
+  orderbookCallbackId: number;
   tradesCallbackId: number;
   candlesCallbackId: number;
 }
@@ -342,24 +338,23 @@ export class Xeggex {
     this.connect();
   }
 
-
   public Xeggex = () => {
-    return "Xeggex"
-  }
+    return "Xeggex";
+  };
   // WebSocket handling
 
   private heartBeat = () => {
-    if ( this.pingTimeout ) {
-      clearTimeout( this.pingTimeout );
+    if (this.pingTimeout) {
+      clearTimeout(this.pingTimeout);
     }
     this.pingTimeout = setTimeout(() => {
-      if(this.ws) {
+      if (this.ws) {
         this.ws.terminate();
         this.ws = null;
         this.connect();
       }
     }, 70000);
-  }
+  };
 
   private loopPing = () => {
     if (this.keepAlive) {
@@ -369,7 +364,7 @@ export class Xeggex {
       this.ws?.ping(new Date().getTime());
       this.loopPing();
     }, 20000);
-  }
+  };
 
   public waitConnect = () => {
     return new Promise((resolve, _reject) => {
@@ -377,7 +372,7 @@ export class Xeggex {
         resolve(true);
       });
     });
-  }
+  };
 
   private connect = async (): Promise<void> => {
     this.ws = new WebSocket(this.WebSocketURL);
@@ -400,13 +395,13 @@ export class Xeggex {
     });
 
     this.ws.on("close", async (code: number, reason: Buffer) => {
-      console.log(`${code}: ${reason.toString('utf-8')}`);
+      console.log(`${code}: ${reason.toString("utf-8")}`);
       if (code === 1006) {
         if (this.forceCrash === true) {
-          throw new Error("Error 1006: (Abnormal websocket close). Crashing the program as reconnecting does not work.")
+          throw new Error("Error 1006: (Abnormal websocket close). Crashing the program as reconnecting does not work.");
         }
         console.log("Error (Abnormal websocket close), don't know what went wrong You may need to restart me.");
-        if(this.ws !== null) {
+        if (this.ws !== null) {
           console.log("Terminated websocket.");
           this.ws.terminate();
           this.ws = null;
@@ -415,7 +410,7 @@ export class Xeggex {
           await delay(300000);
           console.log("Trying to reconnect.");
           await this.connect();
-        } while(this.ws!.readyState !== WebSocket.OPEN);
+        } while (this.ws!.readyState !== WebSocket.OPEN);
       }
     });
 
@@ -426,27 +421,27 @@ export class Xeggex {
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
     };
-  }
+  };
 
   private send = (message: any): void => {
-    if(this.ws) {
-      if(this.ws!.readyState === WebSocket.OPEN) {
+    if (this.ws) {
+      if (this.ws!.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message));
         this.logged = true;
       }
     } else {
-      throw new Error('WebSocket connection not established');
+      throw new Error("WebSocket connection not established");
     }
-  }
+  };
 
   private onMessage = (event: WebSocket.MessageEvent): void => {
-    if(!this.ws) {
-      console.error('WebSocket connection not established');
-      throw new Error('WebSocket connection not established');
+    if (!this.ws) {
+      console.error("WebSocket connection not established");
+      throw new Error("WebSocket connection not established");
     }
-    const response: XeggexResponse = JSON.parse(event.data.toString('utf-8'));
+    const response: XeggexResponse = JSON.parse(event.data.toString("utf-8"));
     if (response.error) {
-      console.error(`Message error: ${JSON.stringify(response.error, null, 4)}`);
+      console.error(`Message error: ${JSON.stringify(response, null, 4)}`);
     }
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);
@@ -464,29 +459,29 @@ export class Xeggex {
         this.callbackMap.call(this.reportsCallbackId, response);
       }
     }
-  }
+  };
 
   // Private Xeggex Websocket API calls
 
   private login = async (): Promise<boolean> => {
     let nonce = crypto.randomBytes(10).toString("hex");
-    let hmac = crypto.createHmac('sha256', this.secret);
-		hmac.update(nonce);
-	  let signature = hmac.digest('hex');
-		let messageId = this.messageId++;
+    let hmac = crypto.createHmac("sha256", this.secret);
+    hmac.update(nonce);
+    let signature = hmac.digest("hex");
+    let messageId = this.messageId++;
     this.send({
       method: "login",
       params: {
         algo: "HS256",
         pKey: this.key,
         nonce: nonce,
-        signature: signature
+        signature: signature,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result == true) {
           resolve(result);
         } else {
@@ -494,17 +489,9 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
-  public newOrder = async (
-    symbol: string,
-    side: "buy" | "sell",
-    type: "limit" | "market",
-    quantity: number,
-    price: number = 0,
-    useProvidedId: string | null = null,
-    strictValidate: boolean = false,
-  ): Promise<XeggexOrder> => {
+  public newOrder = async (symbol: string, side: "buy" | "sell", type: "limit" | "market", quantity: number, price: number = 0, useProvidedId: string | null = null, strictValidate: boolean = false): Promise<XeggexOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "newOrder",
@@ -517,11 +504,11 @@ export class Xeggex {
         price: price.toString(),
         strictValidate: strictValidate,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder);
+        const result = response.result as XeggexOrder;
         if (result) {
           resolve(result);
         } else {
@@ -529,11 +516,9 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
-  public cancelOrder = async (
-    orderId: string,
-  ): Promise<XeggexOrder> => {
+  public cancelOrder = async (orderId: string): Promise<XeggexOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "cancelOrder",
@@ -541,11 +526,11 @@ export class Xeggex {
         orderId: orderId,
         useProvidedId: orderId,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder);
+        const result = response.result as XeggexOrder;
         if (result) {
           resolve(result);
         } else {
@@ -553,22 +538,20 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
-  public getOrders = async (
-    symbol: string,
-  ): Promise<XeggexOrder[]> => {
+  public getOrders = async (symbol: string): Promise<XeggexOrder[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getOrders",
       params: {
         symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexOrder[]);
+        const result = response.result as XeggexOrder[];
         if (result) {
           resolve(result);
         } else {
@@ -576,18 +559,18 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public getTradingBalance = async (): Promise<XeggexBalance[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getTradingBalance",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexBalance[]);
+        const result = response.result as XeggexBalance[];
         if (result) {
           resolve(result);
         } else {
@@ -595,29 +578,28 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public subscribeReports = async (callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
     this.send({
       method: "subscribeReports",
       params: {},
-      id: this.reportsCallbackId
+      id: this.reportsCallbackId,
     });
     this.callbackMap.add(this.reportsCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeReports = () => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeReports",
       params: {},
-      id: messageId
+      id: messageId,
     });
     this.callbackMap.remove(this.reportsCallbackId);
-  }
-
+  };
 
   // Public Xeggex Websocket API calls
 
@@ -626,13 +608,13 @@ export class Xeggex {
     this.send({
       method: "getAsset",
       params: {
-        ticker: ticker
+        ticker: ticker,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexAsset);
+        const result = response.result as XeggexAsset;
         if (result) {
           resolve(result);
         } else {
@@ -640,18 +622,18 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public getAssets = async (): Promise<XeggexAsset[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getAssets",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexAsset[]);
+        const result = response.result as XeggexAsset[];
         if (result) {
           resolve(result);
         } else {
@@ -659,20 +641,20 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public getMarket = async (symbol: string): Promise<XeggexMarket> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarket",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexMarket);
+        const result = response.result as XeggexMarket;
         if (result) {
           resolve(result);
         } else {
@@ -680,18 +662,18 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public getMarkets = async (): Promise<XeggexMarket[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarkets",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as XeggexMarket[]);
+        const result = response.result as XeggexMarket[];
         if (result) {
           resolve(result);
         } else {
@@ -699,71 +681,63 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
-  public getTrades = (
-    symbol: string, 
-    callback: (response: XeggexResponse) => void, 
-    limit: number = 100, 
-    offset: number = 0, 
-    sort: string | null = null,
-    from: string | null = null,
-    till: string | null = null
-  ) => {
+  public getTrades = (symbol: string, callback: (response: XeggexResponse) => void, limit: number = 100, offset: number = 0, sort: string | null = null, from: string | null = null, till: string | null = null) => {
     let messageId = this.messageId++;
     this.send({
       method: "getTrades",
       params: {
-        "symbol": symbol,
-        "limit": limit,
-        "offset": offset,
-        "sort": sort,
-        "from": from,
-        "till": till
+        symbol: symbol,
+        limit: limit,
+        offset: offset,
+        sort: sort,
+        from: from,
+        till: till,
       },
-      id: messageId
+      id: messageId,
     });
     this.callbackMap.add(messageId, callback);
-  }
+  };
 
   public subscribeTicker = async (symbol: string, callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
       method: "subscribeTicker",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
       id: symbolCallback.tickerCallbackId,
     });
     this.callbackMap.add(symbolCallback.tickerCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeTicker = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTicker",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
@@ -771,46 +745,46 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public subscribeOrderbook = async (symbol: string, callback: (response: XeggexResponse) => void) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
       method: "subscribeOrderbook",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: symbolCallback.orderbookCallbackId
+      id: symbolCallback.orderbookCallbackId,
     });
     this.callbackMap.add(symbolCallback.orderbookCallbackId, callback);
-    await unBlock()
-  }
+    await unBlock();
+  };
 
   public unsubscribeOrderbook = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeOrderbook",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
@@ -818,46 +792,46 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   public subscribeTrades = async (symbol: string, callback: (response: XeggexResponse) => void) => {
-    await waitToBlock(); 
+    await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
       method: "subscribeTrades",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: symbolCallback.tradesCallbackId
+      id: symbolCallback.tradesCallbackId,
     });
     this.callbackMap.add(symbolCallback.tradesCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeTrades = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTrades",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
@@ -865,25 +839,20 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
-  public subscribeCandles = async (
-    symbol: string, 
-    period: number,
-    callback: (response: XeggexResponse) => void,
-    limit: number = 100,
-  ) => {
+  public subscribeCandles = async (symbol: string, period: number, callback: (response: XeggexResponse) => void, limit: number = 100) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
@@ -893,11 +862,11 @@ export class Xeggex {
         period: period,
         limit: limit,
       },
-      id: symbolCallback.candlesCallbackId
+      id: symbolCallback.candlesCallbackId,
     });
     this.callbackMap.add(symbolCallback.candlesCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeCandles = async (symbol: string, period: number): Promise<boolean> => {
     let messageId = this.messageId++;
@@ -905,14 +874,14 @@ export class Xeggex {
       method: "unsubscribeCandles",
       params: {
         symbol: symbol,
-        period: period
+        period: period,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: XeggexResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
@@ -920,7 +889,7 @@ export class Xeggex {
         }
       });
     });
-  }
+  };
 
   // Xeggex REST API calls
 
@@ -931,7 +900,7 @@ export class Xeggex {
         const queryString = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
           if (Array.isArray(value)) {
-            value.forEach(v => queryString.append(key, v));
+            value.forEach((v) => queryString.append(key, v));
           } else {
             queryString.append(key, value);
           }
@@ -941,28 +910,28 @@ export class Xeggex {
         const response = await fetch(url, {
           method: method,
           headers: {
-            "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+            Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
             "Content-Type": "application/json",
-          }
+          },
         });
         // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if(!response.ok) {
+        if (!response.ok) {
           logToFile("./logs/error.log", JSON.stringify(response.status));
           throw new Error(`API call failed with status ${response.status}`);
         }
         return await response.json();
-      } else  {
+      } else {
         const url = new URL(uri);
         const response = await fetch(url, {
           method: method,
           headers: {
-            "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+            Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
         // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if(!response.ok) {
+        if (!response.ok) {
           logToFile("./logs/error.log", JSON.stringify(response.status));
           throw new Error(`API call failed with status ${response.status}`);
         }
@@ -972,267 +941,341 @@ export class Xeggex {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(`Error fetching ${uri} :`, error);
     }
-  }
+  };
 
   // Public API calls
 
   public getAssetList = async () => {
     return this.apiCall("/asset/getlist", "GET", {}, {});
-  }
+  };
 
   public getAssetByID = async (id: string) => {
     return this.apiCall(`/asset/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getAssetByTicker = async (ticker: string) => {
     return this.apiCall(`/asset/getbyticker/${ticker}`, "GET", {}, {});
-  }
+  };
 
   public getMarketList = async () => {
     return this.apiCall("/market/getlist", "GET", {}, {});
-  }
+  };
 
   public getMarketByID = async (id: string) => {
     return this.apiCall(`/market/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getMarketBySymbol = async (symbol: string) => {
     return this.apiCall(`/market/getbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getPoolList = async () => {
     return this.apiCall("/pool/getlist", "GET", {}, {});
-  }
+  };
 
   public getPoolByID = async (id: string) => {
     return this.apiCall(`/pool/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getPoolBySymbol = async (symbol: string) => {
     return this.apiCall(`/pool/getbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getOrderbookBySymbol = async (symbol: string) => {
     return this.apiCall(`/market/getorderbookbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getOrderbookByMarketID = async (id: string) => {
     return this.apiCall(`/market/getorderbookbymarketid/${id}`, "GET", {}, {});
-  }
+  };
 
   public getCandles = async (symbol: string, from: number | null, to: number | null, resolution: number, countBack: number, firstDataRequest: number) => {
     if (from === null && to === null) {
-      return this.apiCall(`/market/candles`, "GET", {}, {
-        symbol: symbol,
-        resolution: resolution?.toString()!, 
-        countBack: countBack?.toString()!, 
-        firstDataRequest: firstDataRequest?.toString()!
-      });
+      return this.apiCall(
+        `/market/candles`,
+        "GET",
+        {},
+        {
+          symbol: symbol,
+          resolution: resolution?.toString()!,
+          countBack: countBack?.toString()!,
+          firstDataRequest: firstDataRequest?.toString()!,
+        }
+      );
     } else {
-      return this.apiCall(`/market/candles`, "GET", {}, {
-        symbol: symbol,
-        from: from?.toString()!, 
-        to: to?.toString()!, 
-        resolution: resolution?.toString()!, 
-        countBack: countBack?.toString()!, 
-        firstDataRequest: firstDataRequest?.toString()!
-      });
+      return this.apiCall(
+        `/market/candles`,
+        "GET",
+        {},
+        {
+          symbol: symbol,
+          from: from?.toString()!,
+          to: to?.toString()!,
+          resolution: resolution?.toString()!,
+          countBack: countBack?.toString()!,
+          firstDataRequest: firstDataRequest?.toString()!,
+        }
+      );
     }
-  }
+  };
 
   // Aggregator API calls
 
   public getInfo = async () => {
     return this.apiCall("/info", "GET", {}, {});
-  }
+  };
 
   public getSummary = async () => {
     return this.apiCall("/summary", "GET", {}, {});
-  }
+  };
 
   public getAllCmcAssets = async () => {
     return this.apiCall("/cmcassets", "GET", {}, {});
-  }
+  };
 
   public getAllCmcTickers = async () => {
     return this.apiCall("/cmctickers", "GET", {}, {});
-  }
+  };
 
   public getCmcOrderookSymbol = async (symbol: string) => {
     return this.apiCall(`/cmcorderbook/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getCmcTradesBySymbol = async (symbol: string) => {
     return this.apiCall(`/cmctrades/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getAllMarkets = async (type: string) => {
-    return this.apiCall(`/markets`, "GET", {}, {
-      type: type
-    });
-  }
+    return this.apiCall(
+      `/markets`,
+      "GET",
+      {},
+      {
+        type: type,
+      }
+    );
+  };
 
   // public getAllTrades = async (market: string, since: string) => {
   //   return this.apiCall(`/trades/${market}/${since}`, "GET", {}, {});
   // }
 
   public getAllOrderSnapshots = async (market: string) => {
-    return this.apiCall(`/order/snapshots`, "GET", {}, {
-      market: market
-    });
-  }
+    return this.apiCall(
+      `/order/snapshots`,
+      "GET",
+      {},
+      {
+        market: market,
+      }
+    );
+  };
 
   public getAllPairs = async () => {
     return this.apiCall("/pairs", "GET", {}, {});
-  }
+  };
 
   public getTickerBySymbol = async (symbol: string) => {
     return this.apiCall(`/ticker/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getAllTickers = async () => {
     return this.apiCall("/tickers", "GET", {}, {});
-  }
+  };
 
   public getOrderbook = async (ticker: string, depth: string) => {
-    return this.apiCall(`/orderbook`, "GET", {}, {
-      ticker_id: ticker,
-      depth: depth
-    });
-  }
+    return this.apiCall(
+      `/orderbook`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        depth: depth,
+      }
+    );
+  };
 
   public getAllHistoricalTrades = async (ticker: string, limit: string) => {
-    return this.apiCall(`/historical_trades`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-    });
-  }
+    return this.apiCall(
+      `/historical_trades`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+      }
+    );
+  };
 
   public getAllHistoricalPoolTrades = async (ticker: string, limit: string) => {
-    return this.apiCall(`/historical_pooltrades`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-    });
-  }
+    return this.apiCall(
+      `/historical_pooltrades`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+      }
+    );
+  };
 
   // Account API calls
 
   public getBalances = async () => {
     return this.apiCall("/balances", "GET", {}, {});
-  }
+  };
 
   public getDepositoAddress = async (ticker: string) => {
     return this.apiCall(`/getdepositaddress/${ticker}`, "GET", {}, {});
-  }
+  };
 
-  public createOrder = async (
-    symbol: string,
-    side: string,
-    type: string,
-    quantity: string,
-    price: string,
-  ) => {
-    return this.apiCall(`/createorder/`, "POST", {
-      symbol: symbol,
-      side: side,
-      type: type,
-      quantity: quantity,
-      price: price,
-    }, {});
-  }
+  public createOrder = async (symbol: string, side: string, type: string, quantity: string, price: string) => {
+    return this.apiCall(
+      `/createorder/`,
+      "POST",
+      {
+        symbol: symbol,
+        side: side,
+        type: type,
+        quantity: quantity,
+        price: price,
+      },
+      {}
+    );
+  };
 
-  public cancelOrderByID = async (
-    id: string,
-  ) => {
-    return this.apiCall(`/cancelorder/`, "POST", {
-      id: id
-    }, {});
-  }
+  public cancelOrderByID = async (id: string) => {
+    return this.apiCall(
+      `/cancelorder/`,
+      "POST",
+      {
+        id: id,
+      },
+      {}
+    );
+  };
 
-  public cancelAllOrders = async (
-    symbol: string,
-    side: string
-  ) => {
-    return this.apiCall(`/cancelallorders/`, "POST", {
-      symbol: symbol,
-      side: side
-    }, {});
-  }
+  public cancelAllOrders = async (symbol: string, side: string) => {
+    return this.apiCall(
+      `/cancelallorders/`,
+      "POST",
+      {
+        symbol: symbol,
+        side: side,
+      },
+      {}
+    );
+  };
 
-  public createWithdrawal = async (
-    ticker: string,
-    quantity: string,
-    address: string,
-    paymentid: string
-  ) => {
-    return this.apiCall(`/cancelallorders/`, "POST", {
-      ticker: ticker,
-      quantity: quantity,
-      address: address,
-      paymentid: paymentid
-    }, {});
-  }
+  public createWithdrawal = async (ticker: string, quantity: string, address: string, paymentid: string) => {
+    return this.apiCall(
+      `/cancelallorders/`,
+      "POST",
+      {
+        ticker: ticker,
+        quantity: quantity,
+        address: address,
+        paymentid: paymentid,
+      },
+      {}
+    );
+  };
 
   public getAllDeposits = async (ticker: string, limit: string, skip: string) => {
-    return this.apiCall(`/getdeposits`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-      skip: skip,
-    });
-  }
+    return this.apiCall(
+      `/getdeposits`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+        skip: skip,
+      }
+    );
+  };
 
   public getAllWithdrawals = async (ticker: string, limit: string, skip: string) => {
-    return this.apiCall(`/getwitrdawals`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-      skip: skip,
-    });
-  }
+    return this.apiCall(
+      `/getwitrdawals`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+        skip: skip,
+      }
+    );
+  };
 
   public getOrderByID = async (id: string) => {
     return this.apiCall(`/getorder/${id}`, "GET", {}, {});
-  }
+  };
 
   public getAllOrders = async (symbol: string, status: string, limit: number, skip: number) => {
-    return this.apiCall(`/getorders`, "GET", {}, {
-      symbol: symbol,
-      status: status,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getorders`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        status: status,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllTrades = async (symbol: string, limit: number, skip: number) => {
-    return this.apiCall(`/gettrades`, "GET", {}, {
-      symbol: symbol,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/gettrades`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllTradesSince = async (symbol: string, since: string, limit: number, skip: number) => {
-    return this.apiCall(`/gettradessince`, "GET", {}, {
-      symbol: symbol,
-      since: since,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/gettradessince`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        since: since,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllPoolTrades = async (symbol: string, limit: number, skip: number) => {
-    return this.apiCall(`/getpooltrades`, "GET", {}, {
-      symbol: symbol,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getpooltrades`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getPoolTradesSince = async (symbol: string, since: string, limit: number, skip: number) => {
-    return this.apiCall(`/getpooltradessince`, "GET", {}, {
-      symbol: symbol,
-      since: since,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getpooltradessince`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        since: since,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 }

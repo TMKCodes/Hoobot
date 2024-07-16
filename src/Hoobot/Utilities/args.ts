@@ -1,43 +1,45 @@
 /* =====================================================================
-* Hoobot - Proprietary License
-* Copyright (c) 2023 Hoosat Oy. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are not permitted without prior written permission
-* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
-* software, in whole or in part, is strictly prohibited. All 
-* modifications in source or binary must be submitted to Hoosat Oy in source format.
-*
-* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-* The user of this software uses it at their own risk. Hoosat Oy shall
-* not be liable for any losses, damages, or liabilities arising from
-* the use of this software.
-* ===================================================================== */
-import fs from 'fs';
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+import fs from "fs";
 import { Balances } from "../Exchanges/Balances";
 import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
 import { Order } from "../Exchanges/Orders";
-import { logToFile } from './logToFile';
+import { logToFile } from "./logToFile";
+import { Exchange } from "../Exchanges/Exchange";
+import { Filter } from "../Exchanges/Filters";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
 }
 
-export type CandlestickInterval =  "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
+export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
 
-export type BotMode = "algorithmic" | "hilow" | "arbitrage"
+export type BotMode = "algorithmic" | "hilow" | "arbitrage";
 
 export const getSecondsFromInterval = (interval: CandlestickInterval): number => {
   const intervalToSeconds: Record<CandlestickInterval, number> = {
@@ -56,9 +58,9 @@ export const getSecondsFromInterval = (interval: CandlestickInterval): number =>
     "3d": 60 * 60 * 24 * 3,
     "1w": 60 * 60 * 24 * 7,
     "1M": 60 * 60 * 24 * 30, // Assuming 30 days in a month
-  }
+  };
   return intervalToSeconds[interval];
-}
+};
 
 export const getMinutesFromInterval = (interval: CandlestickInterval): number => {
   const intervalToSeconds: Record<CandlestickInterval, number> = {
@@ -77,9 +79,9 @@ export const getMinutesFromInterval = (interval: CandlestickInterval): number =>
     "3d": 60 * 24 * 3,
     "1w": 60 * 24 * 7,
     "1M": 60 * 24 * 30, // Assuming 30 days in a month
-  }
+  };
   return intervalToSeconds[interval];
-}
+};
 
 export interface OpenOrders {
   [symbol: string]: Order[];
@@ -89,13 +91,21 @@ export interface ExchangeOptions {
   name: string;
   key: string;
   secret: string;
-  mode: "algorithmic" | "hilow" | "arbitrage";
+  mode: "algorithmic" | "hilow" | "arbitrage" | "grid";
   console: string;
   openOrders: OpenOrders;
   balances: Balances;
   tradeHistory: TradeHistory;
   orderbooks: Orderbooks;
   symbols: SymbolOptions[];
+}
+
+export interface GridLevel {
+  orderId: string;
+  price: number;
+  size: string;
+  type: "buy" | "sell";
+  executed: boolean;
 }
 
 export interface SymbolOptions {
@@ -113,7 +123,7 @@ export interface SymbolOptions {
     ema: {
       short: number;
       long: number;
-    }
+    };
   };
   profit?: {
     enabled: boolean;
@@ -126,7 +136,7 @@ export interface SymbolOptions {
     minimumSell: number;
     maximumBuy: number;
     minimumBuy: number;
-  }
+  };
   growingMax?: {
     buy: number;
     sell: number;
@@ -147,6 +157,14 @@ export interface SymbolOptions {
     minimum: number;
     drop: number;
     current: number;
+  };
+  gridOrderSize: any;
+  grid: GridLevel[];
+  gridLevels: number;
+  gridSpacing: number;
+  gridRange: {
+    upper: number;
+    lower: number;
   };
   indicators?: {
     sma?: {
@@ -250,7 +268,6 @@ export interface SymbolOptions {
   };
 }
 
-
 export interface DiscordOptions {
   enabled?: boolean;
   token?: string;
@@ -272,33 +289,33 @@ export interface ConfigOptions {
 export const parseArgs = (): ConfigOptions => {
   var options: ConfigOptions = {
     debug: false,
-    startTime: '',
+    startTime: "",
     exchanges: [],
-    license: '',
+    license: "",
     simulate: process.env.SIMULATE === "true" ? true : false,
-    discord: {}
+    discord: {},
   };
   try {
     for (let i = 0; i < options.exchanges.length; i++) {
       options.exchanges[i].tradeHistory = {};
     }
-    if(process.env.SIMULATE === "true") {
+    if (process.env.SIMULATE === "true") {
       const optionsFilename = "./settings/hoobot-options-simulate.json";
       if (fs.existsSync(optionsFilename)) {
         const optionsFile = fs.readFileSync(optionsFilename);
-        options = JSON.parse(optionsFile.toString('utf-8'));
+        options = JSON.parse(optionsFile.toString("utf-8"));
       }
     } else {
       const optionsFilename = "./settings/hoobot-options.json";
       if (fs.existsSync(optionsFilename)) {
         const optionsFile = fs.readFileSync(optionsFilename);
-        options = JSON.parse(optionsFile.toString('utf-8'));
+        options = JSON.parse(optionsFile.toString("utf-8"));
       }
     }
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(JSON.stringify(error, null, 4));
   }
-  
+
   return options;
-}
+};

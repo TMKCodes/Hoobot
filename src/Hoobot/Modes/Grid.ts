@@ -1,0 +1,367 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
+import { Client } from "discord.js";
+import { Filter } from "../Exchanges/Filters";
+import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { Candlesticks } from "../Exchanges/Candlesticks";
+import { getTradeHistory, createBlock, placeBuyOrder, removeBlock, placeSellOrder } from "../Exchanges/Trades";
+import { Exchange } from "../Exchanges/Exchange";
+import { logToFile } from "../Utilities/logToFile";
+import { cancelOrder, getOpenOrders, Order } from "../Exchanges/Orders";
+import { getCurrentBalances } from "../Exchanges/Balances";
+import { symbolFilters } from "../..";
+import { sendMessageToChannel } from "../../Discord/discord";
+
+interface GridTradingOptions extends SymbolOptions {}
+
+const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] => {
+  const grid: GridLevel[] = [];
+  const upper = currentPrice * (1 + options.gridRange.upper / 100);
+  const lower = currentPrice * (1 - options.gridRange.lower / 100);
+  const step = (upper - lower) / options.gridLevels;
+  for (let i = 0; i < options.gridLevels; i++) {
+    const price = lower + i * step;
+    const type = price < currentPrice ? "buy" : "sell";
+    grid.push({ orderId: "", price: price, type: type, executed: false, size: "" });
+  }
+  return grid;
+};
+
+const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
+  const grid: GridLevel[] = [];
+  for (const order of openOrders) {
+    grid.push({
+      orderId: order.orderId,
+      price: parseFloat(order.price),
+      type: order.isBuyer === true ? "buy" : "sell",
+      executed: false,
+      size: order.qty,
+    });
+  }
+  // Sort the grid by price
+  grid.sort((a, b) => a.price - b.price);
+  return grid;
+};
+
+export const placeOrder = async (exchange: Exchange, symbol: string, direction: string, price: number, quantityInQuote: number, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions): Promise<Order> => {
+  const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
+  createBlock(symbol);
+  if (direction === "sell") {
+    let order = await placeSellOrder(exchange, symbol, quantityInQuote, price);
+    if (order !== undefined) {
+      exchangeOptions.balances = await getCurrentBalances(exchange);
+      if (exchangeOptions.tradeHistory === undefined) {
+        exchangeOptions.tradeHistory = {};
+      }
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      removeBlock(symbol);
+      return order;
+    } else {
+      removeBlock(symbol);
+      return {} as Order;
+    }
+  } else if (direction === "buy") {
+    let order = await placeBuyOrder(exchange, symbol, quantityInQuote, price);
+    if (order !== undefined) {
+      exchangeOptions.balances = await getCurrentBalances(exchange);
+      if (exchangeOptions.tradeHistory === undefined) {
+        exchangeOptions.tradeHistory = {};
+      }
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      removeBlock(symbol);
+      return order;
+    } else {
+      removeBlock(symbol);
+      return {} as Order;
+    }
+  }
+  removeBlock(symbol);
+  return {} as Order;
+};
+
+const placeGridOrders = async (exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, grid: GridLevel[], _filter: Filter, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions): Promise<void> => {
+  const placedOrders = [];
+  for (var i = 0; i < grid.length; i++) {
+    if (!grid[i].executed) {
+      try {
+        const order = await placeOrder(exchange, symbol, grid[i].type, grid[i].price, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
+        grid[i].orderId = order.orderId;
+        grid[i].size = order.qty;
+        placedOrders.push({
+          id: grid[i].orderId,
+          direction: grid[i].type,
+          price: grid[i].price,
+          size: symbolOptions.gridOrderSize,
+        });
+      } catch (error) {
+        consoleLogger.push(`Failed to place order`, `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`);
+      }
+    }
+  }
+  consoleLogger.push("Placed orders", placedOrders);
+};
+
+const isOutsideGridRange = (currentPrice: number, grid: GridLevel[]): boolean => {
+  const lowestPrice = Math.min(...grid.map((level) => level.price));
+  const highestPrice = Math.max(...grid.map((level) => level.price));
+  return currentPrice < lowestPrice || currentPrice > highestPrice;
+};
+
+const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, currentPrice: number, filter: Filter, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions): Promise<void> => {
+  const openOrders = await getOpenOrders(exchange, symbol);
+
+  // Check if rebalancing is really necessary
+  if (openOrders.length == symbolOptions.gridOrderSize) {
+    const existingGrid = buildGridFromExistingOrders(openOrders);
+    if (!isOutsideGridRange(currentPrice, existingGrid)) {
+      consoleLogger.push("Rebalancing skipped", "Current price is within existing grid range");
+      symbolOptions.grid = existingGrid;
+      return;
+    }
+  }
+
+  // If we reach here, rebalancing is necessary
+  for (const order of openOrders) {
+    await cancelOrder(exchange, symbol, order.orderId);
+  }
+  symbolOptions.grid = createGrid(currentPrice, symbolOptions);
+  await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+  consoleLogger.push("Grid rebalanced", `New center price: ${currentPrice}`);
+};
+
+const manageGridOrders = async (
+  discord: Client,
+  exchange: Exchange,
+  consoleLogger: ConsoleLogger,
+  symbol: string,
+  openOrders: Order[],
+  currentPrice: number,
+  grid: GridLevel[],
+  _filter: Filter,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
+): Promise<boolean> => {
+  let orderExecuted = false;
+  for (var i = 0; i < grid.length; i++) {
+    if (grid[i].orderId.length > 0 && grid[i].executed == false) {
+      const orderStillOpen = openOrders.some((order) => order.orderId === grid[i].orderId);
+      if (!orderStillOpen) {
+        // Order was filled
+        grid[i].executed = true;
+        orderExecuted = true;
+
+        let msg = "```";
+        msg += `Order executed: ${symbol}\r\n`;
+        msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
+        msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
+        msg += `Qty: ${grid[i].size}\r\n`;
+        msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+        msg += "```";
+        sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+
+        consoleLogger.push(`Order executed`, `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`);
+
+        // Calculate new order details
+        const newDirection = grid[i].type === "buy" ? "sell" : "buy";
+        const upper = currentPrice * (1 + symbolOptions.gridRange.upper / 100);
+        const lower = currentPrice * (1 - symbolOptions.gridRange.lower / 100);
+        const step = (upper - lower) / symbolOptions.gridLevels;
+        const newOrderPrice = grid[i].type === "buy" ? grid[i].price + step : grid[i].price - step;
+        try {
+          const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
+
+          // Update the grid level with new order details
+          grid[i].type = newDirection;
+          grid[i].price = newOrderPrice;
+          grid[i].orderId = newOrder.orderId;
+          grid[i].executed = false;
+          grid[i].size = newOrder.qty;
+
+          // let msg = "```";
+          // msg += `Placed new order: ${symbol}\r\n`;
+          // msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
+          // msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
+          // msg += `Qty: ${grid[i].size}\r\n`;
+          // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+          // msg += "```";
+          // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+
+          consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
+        } catch (error) {
+          consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+        }
+      }
+    }
+  }
+
+  return orderExecuted;
+};
+
+function summarizeGrid(_openOrders: Order[], grid: GridLevel[]): object {
+  const executedBuy = grid.filter((level) => level.type === "buy" && level.executed).length;
+  const executedSell = grid.filter((level) => level.type === "sell" && level.executed).length;
+  const pendingBuy = grid.filter((level) => level.type === "buy" && !level.executed).length;
+  const pendingSell = grid.filter((level) => level.type === "sell" && !level.executed).length;
+  return {
+    executed: {
+      buy: executedBuy,
+      sell: executedSell,
+    },
+    open: {
+      buy: pendingBuy,
+      sell: pendingSell,
+    },
+  };
+}
+
+export const gridTrading = async (discord: Client, exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, candlesticks: Candlesticks, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions) => {
+  try {
+    const startTime = Date.now();
+    consoleLogger.push("Time", startTime);
+    const filter = symbolFilters[symbol.split("/").join("")];
+
+    if (candlesticks[symbol.split("/").join("")] === undefined) {
+      console.error(`${symbol}: candlesticks undefined`);
+      return false;
+    }
+
+    const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+      console.error(`${symbol}: timeframes[0] length == undefined`);
+      return false;
+    }
+
+    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+      console.error(`${symbol}: timeframes[0] length < 2`);
+      return false;
+    }
+
+    if (exchangeOptions.tradeHistory === undefined) {
+      exchangeOptions.tradeHistory = {};
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    }
+
+    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    }
+
+    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+      console.error(`${symbol}: could not retrieve trade history`);
+      return false;
+    }
+
+    const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1];
+    const currentPrice = latestCandle.close;
+
+    consoleLogger.push("Symbol", symbol.split("/").join(""));
+    consoleLogger.push("Current Price", currentPrice.toFixed(8));
+    consoleLogger.push("Candle Time", new Date(latestCandle.time).toLocaleString());
+
+    const openOrders = await getOpenOrders(exchange, symbol);
+    if (openOrders.length > 0) {
+      symbolOptions.grid = buildGridFromExistingOrders(openOrders);
+    }
+    if (!symbolOptions.grid) {
+      symbolOptions.grid = createGrid(currentPrice, symbolOptions);
+      await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+    }
+    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length > symbolOptions.gridLevels + 4 || openOrders.length < symbolOptions.gridLevels) {
+      consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
+      await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
+    }
+    const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, symbol, openOrders, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+
+    consoleLogger.push(
+      "Open Orders:",
+      openOrders.map((order) => {
+        return {
+          orderId: order.orderId,
+          price: order.price,
+          qty: order.qty,
+        };
+      })
+    );
+    consoleLogger.push("Grid Status", summarizeGrid(openOrders, symbolOptions.grid));
+
+    const stopTime = Date.now();
+    consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
+
+    if (latestCandle.isFinal === true) {
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    }
+    if (exchangeOptions.name === "binance") {
+      if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && orderExecuted === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else {
+        consoleLogger.print("blue");
+        consoleLogger.flush();
+      }
+    } else if (exchangeOptions.name === "xeggex") {
+      if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "trade" && orderExecuted === false) {
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+        consoleLogger.flush();
+      } else {
+        consoleLogger.print("green");
+        consoleLogger.flush();
+      }
+    }
+    return true;
+  } catch (error) {
+    consoleLogger.flush();
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
+  }
+  return false;
+};

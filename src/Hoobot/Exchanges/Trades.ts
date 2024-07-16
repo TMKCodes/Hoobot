@@ -1,29 +1,29 @@
 /* =====================================================================
-* Hoobot - Proprietary License
-* Copyright (c) 2023 Hoosat Oy. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are not permitted without prior written permission
-* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
-* software, in whole or in part, is strictly prohibited. All
-* modifications in source or binary must be submitted to Hoosat Oy in source format.
-*
-* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-* The user of this software uses it at their own risk. Hoosat Oy shall
-* not be liable for any losses, damages, or liabilities arising from
-* the use of this software.
-* ===================================================================== */
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
 
 import { Client } from "discord.js";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
@@ -40,7 +40,7 @@ import path from "path";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 import { XeggexResponse, XeggexTrades } from "./Xeggex/Xeggex";
 
-const soundFile = './alarm.mp3'
+const soundFile = "./alarm.mp3";
 
 export interface Trade {
   symbol: string;
@@ -63,16 +63,11 @@ export interface TradeHistory {
   [symbol: string]: Trade[];
 }
 
-
-export const listenForTrades = async (
-  exchange: Exchange, 
-  symbol: string, 
-  callback: (trades: Trade) => Promise<void>
-): Promise<void> => {
+export const listenForTrades = async (exchange: Exchange, symbol: string, callback: (trades: Trade) => Promise<void>): Promise<void> => {
   try {
-    if(isXeggex(exchange)) {
+    if (isXeggex(exchange)) {
       exchange.subscribeTrades(symbol, async (response: XeggexResponse) => {
-        if(response.params) {
+        if (response.params) {
           const trades = (response.params as XeggexTrades).data;
           await callback({
             symbol: response.params.symbol,
@@ -85,24 +80,21 @@ export const listenForTrades = async (
             commission: "",
             commissionAsset: "",
             time: new Date(trades[0].timestamp).getTime(),
-            isBuyer: (trades[0].side === "buy") ? true : false,
+            isBuyer: trades[0].side === "buy" ? true : false,
             isMaker: false,
             isBestMatch: true,
             profit: "",
-          })
+          });
         }
-        
       });
     }
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
-}
+};
 
-export const calculateROI = (
-  tradeHistory: Trade[]
-) => {
+export const calculateROI = (tradeHistory: Trade[]) => {
   if (tradeHistory.length >= 2) {
     let totalBase = 0;
     let totalQuote = 0;
@@ -122,47 +114,42 @@ export const calculateROI = (
         }
       }
     }
-    return [ totalBase, totalQuote ];
+    return [totalBase, totalQuote];
   } else {
     return [0, 0];
   }
-}
+};
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
   const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
-}
+};
 
 export const calculatePNLPercentageForLong = (entryPrice: number, exitPrice: number): number => {
-  return ((exitPrice) - (entryPrice)) / (entryPrice) * 100;
-}
+  return ((exitPrice - entryPrice) / entryPrice) * 100;
+};
 
 export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: number): number => {
-  return ((entryPrice) - (exitPrice)) / (entryPrice) * 100;
-}
+  return ((entryPrice - exitPrice) / entryPrice) * 100;
+};
 
 export const calculateUnrealizedPNLPercentageForLong = (entryQty: number, entryPrice: number, highestBidPrice: number): number => {
-  return ((highestBidPrice - entryPrice) * entryQty / (entryPrice * entryQty)) * 100;
-}
+  return (((highestBidPrice - entryPrice) * entryQty) / (entryPrice * entryQty)) * 100;
+};
 
 export const calculateUnrealizedPNLPercentageForShort = (entryQty: number, entryPrice: number, lowestAskPrice: number): number => {
-  return ((entryPrice - lowestAskPrice) * entryQty / (entryPrice * entryQty)) * 100;
-}
+  return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
+};
 
-
-export const getTradeHistory = async (
-  exchange: Exchange,
-  symbol: string,
-  processOptions: ConfigOptions
-) => {
+export const getTradeHistory = async (exchange: Exchange, symbol: string, processOptions: ConfigOptions) => {
   let tradeHistory: Trade[] = [];
   if (isBinance(exchange)) {
-    tradeHistory = (await exchange.trades(symbol.split("/").join("")));
-  } else if(isXeggex(exchange) || isNonKYC(exchange)) {
+    tradeHistory = await exchange.trades(symbol.split("/").join(""));
+  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
     const history = await exchange.getAllTrades(symbol, 500, 0);
-    history.sort((a: { createdAt: number; }, b: { createdAt: number; }) => a.createdAt - b.createdAt);
-    tradeHistory = history.map((trade: { id: string; orderid: string; price: string; quantity: string; fee: any; alternateFeeAsset: any; createdAt: any; side: string; }) => ({
+    history.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
+    tradeHistory = history.map((trade: { id: string; orderid: string; price: string; quantity: string; fee: any; alternateFeeAsset: any; createdAt: any; side: string }) => ({
       symbol: symbol.split("/").join(""),
       id: parseFloat(trade.id),
       orderId: parseFloat(trade.orderid),
@@ -173,7 +160,7 @@ export const getTradeHistory = async (
       commission: trade.fee,
       commissionAsset: trade.alternateFeeAsset,
       time: trade.createdAt,
-      isBuyer: (trade.side === "buy" ? true : false),
+      isBuyer: trade.side === "buy" ? true : false,
       isMaker: true,
       isBestMatch: true,
     }));
@@ -189,7 +176,7 @@ export const getTradeHistory = async (
     } else if (currentTrade.isBuyer === trade.isBuyer) {
       currentTrade.qty = (parseFloat(currentTrade.qty) + parseFloat(trade.qty)).toString();
       currentTrade.price = trade.price;
-      if(currentTrade.commissionAsset === trade.commissionAsset) {
+      if (currentTrade.commissionAsset === trade.commissionAsset) {
         currentTrade.commission = (parseFloat(currentTrade.commission) + parseFloat(trade.commission)).toString();
       }
     } else {
@@ -204,48 +191,42 @@ export const getTradeHistory = async (
     const currentTrade = compactedTradeHistory[i];
     const nextTrade = compactedTradeHistory[i + 1];
     if (currentTrade.isBuyer === nextTrade.isBuyer) {
-      console.log('Trade history is not in the expected order of 1 buy followed by 1 sell.');
+      console.log("Trade history is not in the expected order of 1 buy followed by 1 sell.");
     }
   }
   return compactedTradeHistory;
-}
+};
 
-export const delay = (
-  ms: number
-) => {
-  return new Promise( resolve => setTimeout(resolve, ms) );
-}
+export const delay = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
-export const updateForce = (
-  symbol: string
-) => {
+export const updateForce = (symbol: string) => {
   const forcePath = "./settings/force.json";
-  if(!existsSync(forcePath)) {
+  if (!existsSync(forcePath)) {
     return false;
   }
   const file = readFileSync(forcePath, "utf-8");
   const force = JSON.parse(file !== "" ? file : "{}");
-  if(force[symbol.split("/").join("")] === undefined) {
+  if (force[symbol.split("/").join("")] === undefined) {
     force[symbol.split("/").join("")] = {
       skip: false,
-    }
+    };
   } else {
     force[symbol.split("/").join("")].skip = false;
   }
   writeFileSync(forcePath, JSON.stringify(force));
   return true;
-}
+};
 
-export const readForceSkip = (
-  symbol: string
-):boolean => {
+export const readForceSkip = (symbol: string): boolean => {
   const forcePath = "./settings/force.json";
-  if(!existsSync(forcePath)) {
+  if (!existsSync(forcePath)) {
     return false;
   }
   const file = readFileSync(forcePath, "utf-8");
   const force = JSON.parse(file !== "" ? file : "{}");
-  if(force[symbol.split("/").join("")] === undefined) {
+  if (force[symbol.split("/").join("")] === undefined) {
     return false;
   }
   const skip = force[symbol.split("/").join("")].skip;
@@ -253,15 +234,15 @@ export const readForceSkip = (
     return false;
   }
   return skip;
-}
+};
 
 var blocks: string[] = [];
 
 export const isBlocking = async (symbol: string): Promise<boolean> => {
   try {
     symbol = symbol.replace("/", "");
-    if(blocks.length > 0) {
-      for(const block of blocks) {
+    if (blocks.length > 0) {
+      for (const block of blocks) {
         if (block === symbol) {
           logToFile("./logs/blocks.log", "Was blocked.");
           return true;
@@ -274,7 +255,7 @@ export const isBlocking = async (symbol: string): Promise<boolean> => {
   }
   logToFile("./logs/blocks.log", "Was not blocked.");
   return false;
-}
+};
 
 export const createBlock = async (symbol: string) => {
   try {
@@ -284,35 +265,30 @@ export const createBlock = async (symbol: string) => {
     logToFile("./logs/error.log", `createBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
   }
-}
+};
 
 export const removeBlock = async (symbol: string) => {
   try {
     symbol = symbol.replace("/", "");
     blocks = blocks.filter((block) => block !== symbol);
-    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4)); 
+    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4));
   } catch (error) {
     logToFile("./logs/error.log", `removeBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
   }
-}
+};
 
 const roundStep = (price: number, size: number): number => {
-   const tickSizePrecision = Math.floor(Math.log10(Math.abs(size))) * -1;
-   const roundedPrice = Math.round(price / size) * size;
-   if (tickSizePrecision > 0 && tickSizePrecision < 100) {
+  const tickSizePrecision = Math.floor(Math.log10(Math.abs(size))) * -1;
+  const roundedPrice = Math.round(price / size) * size;
+  if (tickSizePrecision > 0 && tickSizePrecision < 100) {
     return Number(roundedPrice.toFixed(tickSizePrecision));
-   } else {
+  } else {
     return Number(roundedPrice);
-   }
-}
+  }
+};
 
-const placeSellOrder = async (
-  exchange: Exchange,
-  symbol: string, 
-  quantity: number, 
-  price: number
-): Promise<Order | undefined> => {
+export const placeSellOrder = async (exchange: Exchange, symbol: string, quantity: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
@@ -320,28 +296,28 @@ const placeSellOrder = async (
     return undefined;
   }
   try {
-    if(isBinance(exchange)) {
+    if (isBinance(exchange)) {
       logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantity} qty`);
       return await exchange.sell(symbol.split("/").join(""), quantity, price);
-    } else if(isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantity} qty`);
       const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantity, price);
       if (xeggexOrder) {
         const order: Order = {
           symbol: symbol.split("/").join(""),
-          orderId: parseFloat(xeggexOrder.id),
+          orderId: xeggexOrder.id,
           price: xeggexOrder.price,
           qty: xeggexOrder.quantity,
           quoteQty: (parseFloat(xeggexOrder.quantity) * parseFloat(xeggexOrder.price)).toString(),
           commission: "",
           commissionAsset: "",
           time: xeggexOrder.createdAt,
-          isBuyer: (xeggexOrder.side === "buy" ? true : false),
+          isBuyer: xeggexOrder.side === "buy" ? true : false,
           isMaker: true,
           isBestMatch: true,
-          orderStatus: 'NEW',
+          orderStatus: "NEW",
           tradeId: parseFloat(xeggexOrder.id),
-        }
+        };
         return order;
       }
     }
@@ -349,15 +325,10 @@ const placeSellOrder = async (
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
-  return undefined
-}
+  return undefined;
+};
 
-const placeBuyOrder = async (
-  exchange: Exchange,
-  symbol: string, 
-  quantity: number, 
-  price: number
-): Promise<Order | undefined>  => {
+export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantity: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
@@ -365,60 +336,60 @@ const placeBuyOrder = async (
     return undefined;
   }
   try {
-    if(isBinance(exchange)) {
+    if (isBinance(exchange)) {
       logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantity} qty`);
       return await exchange.buy(symbol.split("/").join(""), quantity, price);
-    } else if(isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantity} qty`);
       const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantity, price);
       const order = {
         symbol: symbol.split("/").join(""),
-        orderId: parseFloat(xeggexOrder.id),
+        orderId: xeggexOrder.id,
         price: xeggexOrder.price,
         qty: xeggexOrder.quantity,
         quoteQty: (parseFloat(xeggexOrder.quantity) * parseFloat(xeggexOrder.price)).toString(),
         commission: "",
         commissionAsset: "",
         time: xeggexOrder.createdAt,
-        isBuyer: (xeggexOrder.side === "buy" ? true : false),
+        isBuyer: xeggexOrder.side === "buy" ? true : false,
         isMaker: true,
         isBestMatch: true,
-        orderStatus: 'NEW',
+        orderStatus: "NEW",
         tradeId: parseFloat(xeggexOrder.id),
-      }
+      };
       return order;
     }
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
   }
-  return undefined
-}
+  return undefined;
+};
 
 export const getPreviousTrades = (direction: string, ExchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions) => {
   const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
   let previousTrade = null;
-  let olderTrade = null
+  let olderTrade = null;
   for (let i = trades.length - 1; i >= 0; i--) {
     if (direction === "SELL" && trades[i].isBuyer) {
       previousTrade = trades[i];
       for (let x = i; x >= 0; x--) {
-        if(!trades[x].isBuyer) {
-          olderTrade = trades[x]
+        if (!trades[x].isBuyer) {
+          olderTrade = trades[x];
         }
       }
       break;
     } else if (direction === "BUY" && !trades[i].isBuyer) {
       previousTrade = trades[i];
       for (let x = i; x >= 0; x--) {
-        if(trades[x].isBuyer) {
-          olderTrade = trades[x]
+        if (trades[x].isBuyer) {
+          olderTrade = trades[x];
         }
       }
       break;
     }
   }
-  return { previousTrade, olderTrade }
-}
+  return { previousTrade, olderTrade };
+};
 
 export const sell = async (
   discord: Client,
@@ -429,21 +400,23 @@ export const sell = async (
   orderBook: Orderbook,
   filter: Filter,
   processOptions: ConfigOptions,
-  exchangeOptions: ExchangeOptions, 
+  exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
-    if(orderBook !== undefined && orderBook.bids === undefined) {
+    if (orderBook !== undefined && orderBook.bids === undefined) {
       return false;
     }
-    const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
+    const orderBookBids = Object.keys(orderBook.bids)
+      .map((price) => parseFloat(price))
+      .sort((a, b) => b - a);
     let bidPrice = orderBookBids[0];
-    if(!bidPrice) {
+    if (!bidPrice) {
       return false;
     }
     let bidQuantity = orderBook.bids[bidPrice.toString()];
-    let maxQuantityInBase = baseBalance * 0.98; 
+    let maxQuantityInBase = baseBalance * 0.98;
     maxQuantityInBase = maxSellAmount(maxQuantityInBase, symbolOptions);
     if (!isNaN(bidQuantity) && maxQuantityInBase > bidQuantity) {
       maxQuantityInBase = bidQuantity;
@@ -459,31 +432,33 @@ export const sell = async (
     }
     const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    if(process.env.DEBUG == "true") {
+    if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
-        if(previousTrade) {
-          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
-          if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) { 
-            if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
-              consoleLogger.push("error", "Not positive trade");
-              return false;
+      if (profit !== "GRID") {
+        if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+          const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
+          if (previousTrade) {
+            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
+            if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) {
+              if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+                consoleLogger.push("error", "Not positive trade");
+                return false;
+              }
             }
           }
         }
       }
-      if(await isBlocking(symbol) === true){
+      if ((await isBlocking(symbol)) === true) {
         return false;
       }
       createBlock(symbol);
       let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
         // play(soundFile);
-        let msg = '```';
+        let msg = "```";
         msg += `SELL ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;
         msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
@@ -491,9 +466,9 @@ export const sell = async (
         msg += `Price: ${roundedPrice}\r\n`;
         msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-        msg += '```';
+        msg += "```";
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-        if (order.orderId !== 0) {
+        if (order.orderId !== undefined) {
           handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
         updateBuyAmount(roundedQuantityInQuote, symbolOptions);
@@ -503,7 +478,7 @@ export const sell = async (
         updateForce(symbol);
         exchangeOptions.balances = await getCurrentBalances(exchange);
         if (exchangeOptions.tradeHistory === undefined) {
-          exchangeOptions.tradeHistory = {}
+          exchangeOptions.tradeHistory = {};
         }
         exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
         removeBlock(symbol);
@@ -516,56 +491,56 @@ export const sell = async (
       consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
       return false;
     }
-  } catch (error) { 
+  } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
   return false;
-}
+};
 
 const maxBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
-  if(symbolOptions.growingMax) {
+  if (symbolOptions.growingMax) {
     if (symbolOptions.growingMax.buy === undefined) {
       return quoteQuantity;
     } else if (symbolOptions.growingMax.buy > 0) {
-      return quoteQuantity = Math.min(quoteQuantity, symbolOptions.growingMax.buy);
+      return (quoteQuantity = Math.min(quoteQuantity, symbolOptions.growingMax.buy));
     } else {
       return quoteQuantity;
     }
   } else {
     return quoteQuantity;
   }
-}
+};
 
 const updateBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
-  if(symbolOptions.growingMax) {
+  if (symbolOptions.growingMax) {
     if (symbolOptions.growingMax.buy > 0) {
       symbolOptions.growingMax.buy = Math.max(quoteQuantity, symbolOptions.growingMax.buy);
     }
   }
-}
+};
 
 const maxSellAmount = (baseQuantity: number, symbolOptions: SymbolOptions) => {
-  if(symbolOptions.growingMax) {
+  if (symbolOptions.growingMax) {
     if (symbolOptions.growingMax.sell === undefined) {
       return baseQuantity;
     } else if (symbolOptions.growingMax.sell > 0) {
-      return baseQuantity = Math.min(baseQuantity, symbolOptions.growingMax.sell);
+      return (baseQuantity = Math.min(baseQuantity, symbolOptions.growingMax.sell));
     } else {
       return baseQuantity;
     }
   } else {
     return baseQuantity;
   }
-}
+};
 
 const updateSellAmount = (baseQuantity: number, symbolOptions: SymbolOptions) => {
-  if(symbolOptions.growingMax) {
+  if (symbolOptions.growingMax) {
     if (symbolOptions.growingMax.sell > 0) {
       symbolOptions.growingMax.sell = Math.max(baseQuantity, symbolOptions.growingMax.sell);
     }
   }
-}
+};
 
 export const buy = async (
   discord: Client,
@@ -576,17 +551,19 @@ export const buy = async (
   orderBook: any,
   filter: Filter,
   processOptions: ConfigOptions,
-  exchangeOptions: ExchangeOptions, 
+  exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
-    if(orderBook !== undefined && orderBook.asks === undefined) {
+    if (orderBook !== undefined && orderBook.asks === undefined) {
       return false;
     }
-    const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
+    const orderBookAsks = Object.keys(orderBook.asks)
+      .map((price) => parseFloat(price))
+      .sort((a, b) => a - b);
     let askPrice = orderBookAsks[0];
-    if(!askPrice) {
+    if (!askPrice) {
       return false;
     }
     let askQuantity = orderBook.asks[askPrice.toString()];
@@ -595,46 +572,48 @@ export const buy = async (
     if (!isNaN(askQuantity) && maxQuantityInQuote > askQuantity) {
       maxQuantityInQuote = askQuantity;
     }
-    const quantityInBase = (maxQuantityInQuote / askPrice)  * 0.98;
+    const quantityInBase = (maxQuantityInQuote / askPrice) * 0.98;
     const roundedPrice = roundStep(askPrice, filter.tickSize);
     if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined && symbolOptions.price?.maximumBuy > roundedPrice) {
       consoleLogger.push("error", "Too high price to buy.");
       return false;
     }
-    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumBuy !== undefined && symbolOptions.price?.minimumBuy < roundedPrice ) {
+    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumBuy !== undefined && symbolOptions.price?.minimumBuy < roundedPrice) {
       consoleLogger.push("error", "Too low price to buy.");
       return false;
     }
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
     const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
-    if(process.env.DEBUG == "true") {
+    if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-        const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
-        if(previousTrade) {
-          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
-          if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
-            symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
-          }
-          if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
-            if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
-              consoleLogger.push("error", "Not positive trade")
-              return false;
+      if (profit !== "GRID") {
+        if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+          const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
+          if (previousTrade) {
+            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
+            if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
+              symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
+            }
+            if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
+              if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+                consoleLogger.push("error", "Not positive trade");
+                return false;
+              }
             }
           }
         }
       }
-      if(await isBlocking(symbol) === true){
+      if ((await isBlocking(symbol)) === true) {
         return false;
       }
       createBlock(symbol);
       let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
         // play(soundFile);
-        let msg = '```';
+        let msg = "```";
         msg += `BUY ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;
         msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
@@ -642,9 +621,9 @@ export const buy = async (
         msg += `Price: ${roundedPrice}\r\n`;
         msg += `Profit if trade fullfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
         msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-        msg += '```';
+        msg += "```";
         sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-        if (order.orderId !== 0) {
+        if (order.orderId !== undefined) {
           handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
         }
         updateSellAmount(roundedQuantityInBase, symbolOptions);
@@ -671,24 +650,21 @@ export const buy = async (
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
   }
-  return false
-}
+  return false;
+};
 
-export const checkPreviousTrade = (
-  symbol: string,
-  exchangeOptions: ExchangeOptions
-) => {
-  let check = 'SELL';
+export const checkPreviousTrade = (symbol: string, exchangeOptions: ExchangeOptions) => {
+  let check = "SELL";
   if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
     const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
     if (lastTrade.isBuyer) {
-      check = 'BUY';
+      check = "BUY";
     } else {
-      check = 'SELL';
+      check = "SELL";
     }
   }
   return check;
-}
+};
 
 export const simulateSell = async (
   symbol: string,
@@ -704,14 +680,14 @@ export const simulateSell = async (
   logger: ConsoleLogger
 ) => {
   // console.log(time);
-  if(price === null || quantity === 0) {
+  if (price === null || quantity === 0) {
     return false;
   }
   let baseQuantity = quantity;
   let quoteQuantity = quantity * price;
-  if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) { 
-    let fee = quoteQuantity * (0.075 / 100); 
-    let quoteQuontityWithoutFee = quoteQuantity - fee; 
+  if (checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
+    let fee = quoteQuantity * (0.075 / 100);
+    let quoteQuontityWithoutFee = quoteQuantity - fee;
     let lastTrade: Trade = {
       symbol: "",
       id: 0,
@@ -726,14 +702,14 @@ export const simulateSell = async (
       isBuyer: true,
       isMaker: true,
       isBestMatch: true,
-    }
+    };
     let pnl = 0;
     if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
       lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), price);
     }
-    if(exchangeOptions.tradeHistory === undefined) {
-      exchangeOptions.tradeHistory = {}
+    if (exchangeOptions.tradeHistory === undefined) {
+      exchangeOptions.tradeHistory = {};
     }
     if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) {
       if (symbolOptions.profit.enabled === true && pnl < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
@@ -746,7 +722,7 @@ export const simulateSell = async (
       orderId: 0,
       orderListID: pnl,
       price: price.toString(),
-      qty: (baseQuantity).toString(),
+      qty: baseQuantity.toString(),
       quoteQty: quoteQuontityWithoutFee.toString(),
       commission: fee.toString(),
       commissionAsset: symbol.split("/")[1],
@@ -754,13 +730,13 @@ export const simulateSell = async (
       isBuyer: false,
       isMaker: true,
       isBestMatch: true,
-      profit: profit
+      profit: profit,
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
     balances[baseCoin].crypto = balances[baseCoin].crypto - baseQuantity;
     balances[quoteCoin].crypto = balances[quoteCoin].crypto + quoteQuontityWithoutFee;
-    const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+    const sanitizedStartTime = options.startTime.replace(/:/g, "-");
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
     if (!existsSync(directory)) {
@@ -769,15 +745,22 @@ export const simulateSell = async (
     if (symbolOptions.takeProfit !== undefined) {
       symbolOptions.takeProfit.current = 0;
     }
-    updateBuyAmount(quoteQuantity, symbolOptions)
-    writeFileSync(filePath, JSON.stringify({
-      symbol: symbol,
-      direction: 'SELL',
-      quantity: baseQuantity,
-      price: price,
-      balances: balances,
-      tradeHistory: exchangeOptions.tradeHistory,
-    }, null, 2));
+    updateBuyAmount(quoteQuantity, symbolOptions);
+    writeFileSync(
+      filePath,
+      JSON.stringify(
+        {
+          symbol: symbol,
+          direction: "SELL",
+          quantity: baseQuantity,
+          price: price,
+          balances: balances,
+          tradeHistory: exchangeOptions.tradeHistory,
+        },
+        null,
+        2
+      )
+    );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());
     logger.push("trade", "sell");
@@ -787,7 +770,7 @@ export const simulateSell = async (
     // logger.flush();
   }
   return true;
-}
+};
 
 export const simulateBuy = async (
   symbol: string,
@@ -803,15 +786,15 @@ export const simulateBuy = async (
   logger: ConsoleLogger
 ): Promise<Boolean> => {
   // console.log(time);
-  if(price === null || quantity === 0) {
+  if (price === null || quantity === 0) {
     return false;
   }
   let quoteQuantity = quantity;
   quoteQuantity = maxBuyAmount(quoteQuantity, symbolOptions);
   let baseQuantity = quoteQuantity / price;
-  if(checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
-    let fee = baseQuantity * (0.075 / 100); 
-    let baseQuantityWithoutFee = baseQuantity - fee; 
+  if (checkBeforePlacingOrder(baseQuantity, price, filter) === true) {
+    let fee = baseQuantity * (0.075 / 100);
+    let baseQuantityWithoutFee = baseQuantity - fee;
     let lastTrade: Trade = {
       symbol: "",
       id: 0,
@@ -826,14 +809,14 @@ export const simulateBuy = async (
       isBuyer: true,
       isMaker: true,
       isBestMatch: true,
-    }
+    };
     let pnl = 0;
     if (options.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length >= 2) {
       lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
       pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), price);
     }
-    if(options.tradeHistory === undefined) {
-      options.tradeHistory = {}
+    if (options.tradeHistory === undefined) {
+      options.tradeHistory = {};
     }
     if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
       if (symbolOptions.profit.enabled === true && pnl < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
@@ -847,20 +830,20 @@ export const simulateBuy = async (
       orderListID: pnl,
       price: price.toString(),
       qty: baseQuantityWithoutFee.toString(),
-      quoteQty:  quoteQuantity.toString(),
+      quoteQty: quoteQuantity.toString(),
       commission: fee.toString(),
       commissionAsset: symbol.split("/")[0],
       time: time,
       isBuyer: true,
       isMaker: true,
       isBestMatch: true,
-      profit: profit
+      profit: profit,
     });
     const baseCoin = symbol.split("/")[0];
     const quoteCoin = symbol.split("/")[1];
     balances[baseCoin].crypto = balances[baseCoin].crypto + baseQuantity;
     balances[quoteCoin].crypto = balances[quoteCoin].crypto - quoteQuantity;
-    const sanitizedStartTime = options.startTime.replace(/:/g, '-');
+    const sanitizedStartTime = options.startTime.replace(/:/g, "-");
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
     if (!existsSync(directory)) {
@@ -869,14 +852,21 @@ export const simulateBuy = async (
     if (symbolOptions.takeProfit !== undefined) {
       symbolOptions.takeProfit.current = 0;
     }
-    writeFileSync(filePath, JSON.stringify({
-      symbol: symbol,
-      direction: 'SELL',
-      quantity: baseQuantity,
-      price: price,
-      balances: balances,
-      tradeHistory: options.tradeHistory
-    }, null, 2));
+    writeFileSync(
+      filePath,
+      JSON.stringify(
+        {
+          symbol: symbol,
+          direction: "SELL",
+          quantity: baseQuantity,
+          price: price,
+          balances: balances,
+          tradeHistory: options.tradeHistory,
+        },
+        null,
+        2
+      )
+    );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());
     logger.push("Trade", "buy");
@@ -886,4 +876,4 @@ export const simulateBuy = async (
     // logger.flush();
   }
   return true;
-}
+};
