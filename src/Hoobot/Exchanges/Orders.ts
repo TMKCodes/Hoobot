@@ -80,7 +80,7 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
   } else if (isXeggex(exchange) || isNonKYC(exchange)) {
     const orders = await exchange.getAllOrders(symbol, "active", 500, 0);
     return orders.map(
-      (order: { id: any; price: string; quantity: string; createdAt: any; side: string }) =>
+      (order: any) =>
         ({
           symbol: symbol.split("/").join(""),
           orderId: order.id,
@@ -93,12 +93,73 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
           isBuyer: order.side === "buy" ? true : false,
           isMaker: true,
           isBestMatch: true,
-          orderStatus: "active",
+          orderStatus: order.status,
           tradeId: parseFloat(order.id),
         } as Order)
     );
   }
   return [] as Order[];
+};
+
+export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
+  if (isBinance(exchange)) {
+    return await exchange.allOrders(symbol.split("/").join(""));
+  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    const activeOrders = await exchange.getAllOrders(symbol, "active", 500, 0);
+    const filledOrders = await exchange.getAllOrders(symbol, "filled", 500, 0);
+    const canceledOrders = await exchange.getAllOrders(symbol, "cancelled", 500, 0);
+    const orders = [...activeOrders, ...filledOrders, ...canceledOrders];
+    return orders.map(
+      (order: any) =>
+        ({
+          symbol: symbol.split("/").join(""),
+          orderId: order.id,
+          price: order.price,
+          qty: order.quantity,
+          quoteQty: (parseFloat(order.quantity) * parseFloat(order.price)).toString(),
+          commission: "",
+          commissionAsset: "",
+          time: order.createdAt,
+          isBuyer: order.side === "buy" ? true : false,
+          isMaker: true,
+          isBestMatch: true,
+          orderStatus: order.status,
+          tradeId: parseFloat(order.id),
+        } as Order)
+    );
+  }
+  return [] as Order[];
+};
+
+export const getOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
+  try {
+    if (isBinance(exchange)) {
+      const response = await exchange.orderStatus(symbol, orderId);
+      return response;
+    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+      const order = await exchange.getOrderByID(orderId);
+      return {
+        symbol: symbol.split("/").join(""),
+        orderId: order.id,
+        price: order.price,
+        qty: order.quantity,
+        quoteQty: (parseFloat(order.quantity) * parseFloat(order.price)).toString(),
+        commission: "",
+        commissionAsset: "",
+        time: order.createdAt,
+        isBuyer: order.side === "buy" ? true : false,
+        isMaker: true,
+        isBestMatch: true,
+        orderStatus: order.status,
+        tradeId: parseFloat(order.id),
+      } as Order;
+    }
+  } catch (error) {
+    if (error?.message !== "Order not found.") {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(`An error occurred while cancelling the order: ${error}`);
+    }
+  }
 };
 
 export const cancelOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
@@ -111,8 +172,10 @@ export const cancelOrder = async (exchange: Exchange, symbol: string, orderId: s
       return response;
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(`An error occurred while cancelling the order: ${error}`);
+    if (error?.message !== "Order not found.") {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(`An error occurred while cancelling the order: ${error}`);
+    }
   }
 };
 

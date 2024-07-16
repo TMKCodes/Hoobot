@@ -485,7 +485,7 @@ export class Xeggex {
         if (result == true) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -512,7 +512,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -534,7 +534,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -555,7 +555,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -574,7 +574,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -618,7 +618,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -637,7 +637,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -658,7 +658,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -677,7 +677,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -741,7 +741,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -788,7 +788,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -835,7 +835,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -885,7 +885,7 @@ export class Xeggex {
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
@@ -922,20 +922,36 @@ export class Xeggex {
         return await response.json();
       } else {
         const url = new URL(uri);
-        const response = await fetch(url, {
-          method: method,
-          headers: {
-            Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-        // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if (!response.ok) {
-          logToFile("./logs/error.log", JSON.stringify(response.status));
-          throw new Error(`API call failed with status ${response.status}`);
+        if (method === "GET" || method === "HEAD") {
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+              "Content-Type": "application/json",
+            },
+          });
+          // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+          if (!response.ok) {
+            logToFile("./logs/error.log", JSON.stringify(response.status));
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          return await response.json();
+        } else {
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+          // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+          if (!response.ok) {
+            logToFile("./logs/error.log", JSON.stringify(response.status));
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          return await response.json();
         }
-        return await response.json();
       }
     } catch (error) {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));

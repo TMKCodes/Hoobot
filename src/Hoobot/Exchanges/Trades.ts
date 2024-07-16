@@ -44,8 +44,8 @@ const soundFile = "./alarm.mp3";
 
 export interface Trade {
   symbol: string;
-  id: number;
-  orderId: number;
+  id: string;
+  orderId: string;
   orderListID: number;
   price: string;
   qty: string;
@@ -71,8 +71,8 @@ export const listenForTrades = async (exchange: Exchange, symbol: string, callba
           const trades = (response.params as XeggexTrades).data;
           await callback({
             symbol: response.params.symbol,
-            id: 0,
-            orderId: 0,
+            id: trades[0].id,
+            orderId: trades[0].id,
             orderListID: 0,
             price: trades[0].price,
             qty: trades[0].quantity,
@@ -86,6 +86,11 @@ export const listenForTrades = async (exchange: Exchange, symbol: string, callba
             profit: "",
           });
         }
+      });
+    } else if (isBinance(exchange)) {
+      exchange.websockets.trades([symbol.split("/").join()], async (trades) => {
+        console.log(trades);
+        await callback(trades);
       });
     }
   } catch (error) {
@@ -322,8 +327,12 @@ export const placeSellOrder = async (exchange: Exchange, symbol: string, quantit
       }
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(error);
+    if (error.code === 20001) {
+      console.error(`Insufficient funds for SELL order creation in ${symbol}`);
+    } else {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(error);
+    }
   }
   return undefined;
 };
@@ -360,7 +369,12 @@ export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantity
       return order;
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    if (error.code === 20001) {
+      console.error(`Insufficient funds for BUY order creation in ${symbol}`);
+    } else {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(error);
+    }
   }
   return undefined;
 };
@@ -690,8 +704,8 @@ export const simulateSell = async (
     let quoteQuontityWithoutFee = quoteQuantity - fee;
     let lastTrade: Trade = {
       symbol: "",
-      id: 0,
-      orderId: 0,
+      id: "",
+      orderId: "",
       orderListID: 0,
       price: "",
       qty: "",
@@ -718,8 +732,8 @@ export const simulateSell = async (
     }
     exchangeOptions.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
-      id: 0,
-      orderId: 0,
+      id: "",
+      orderId: "",
       orderListID: pnl,
       price: price.toString(),
       qty: baseQuantity.toString(),
@@ -797,8 +811,8 @@ export const simulateBuy = async (
     let baseQuantityWithoutFee = baseQuantity - fee;
     let lastTrade: Trade = {
       symbol: "",
-      id: 0,
-      orderId: 0,
+      id: "",
+      orderId: "",
       orderListID: 0,
       price: "",
       qty: "",
@@ -825,8 +839,8 @@ export const simulateBuy = async (
     }
     exchangeOptions.tradeHistory[symbol.split("/").join("")].push({
       symbol: symbol.split("/").join(""),
-      id: 0,
-      orderId: 0,
+      id: "",
+      orderId: "",
       orderListID: pnl,
       price: price.toString(),
       qty: baseQuantityWithoutFee.toString(),

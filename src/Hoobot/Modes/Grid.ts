@@ -30,10 +30,10 @@ import { Filter } from "../Exchanges/Filters";
 import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/args";
 import { ConsoleLogger } from "../Utilities/consoleLogger";
 import { Candlesticks } from "../Exchanges/Candlesticks";
-import { getTradeHistory, createBlock, placeBuyOrder, removeBlock, placeSellOrder } from "../Exchanges/Trades";
+import { getTradeHistory, createBlock, placeBuyOrder, removeBlock, placeSellOrder, delay } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/logToFile";
-import { cancelOrder, getOpenOrders, Order } from "../Exchanges/Orders";
+import { cancelOrder, getAllOrders, getOpenOrders, getOrder, Order } from "../Exchanges/Orders";
 import { getCurrentBalances } from "../Exchanges/Balances";
 import { symbolFilters } from "../..";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -137,7 +137,8 @@ const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, s
   const openOrders = await getOpenOrders(exchange, symbol);
 
   // Check if rebalancing is really necessary
-  if (openOrders.length == symbolOptions.gridOrderSize) {
+  const halfGridSize = symbolOptions.gridOrderSize / 2;
+  if (openOrders.length > halfGridSize && openOrders.length < symbolOptions.gridOrderSize + halfGridSize) {
     const existingGrid = buildGridFromExistingOrders(openOrders);
     if (!isOutsideGridRange(currentPrice, existingGrid)) {
       consoleLogger.push("Rebalancing skipped", "Current price is within existing grid range");
@@ -164,8 +165,8 @@ const manageGridOrders = async (
   discord: Client,
   exchange: Exchange,
   consoleLogger: ConsoleLogger,
-  symbol: string,
   openOrders: Order[],
+  symbol: string,
   currentPrice: number,
   grid: GridLevel[],
   _filter: Filter,
@@ -176,65 +177,72 @@ const manageGridOrders = async (
   let orderExecuted = false;
   for (var i = 0; i < grid.length; i++) {
     if (grid[i].orderId.length > 0 && grid[i].executed == false) {
-      const orderStillOpen = openOrders.some((order) => order.orderId === grid[i].orderId);
-      if (!orderStillOpen) {
-        // Order was filled
-        grid[i].executed = true;
-        orderExecuted = true;
+      const orderExists = openOrders.some((order) => order.orderId === grid[i].orderId);
+      if (!orderExists) {
+        await delay(150);
+        const order = await getOrder(exchange, symbol, grid[i].orderId);
+        console.log(order);
+        if (order.orderStatus === "Cancelled") {
+          grid[i].executed = true;
+        } else if (order.orderStatus === "Filled") {
+          // Order was filled
+          grid[i].executed = true;
+          orderExecuted = true;
 
-        let msg = "```";
-        msg += `Order executed: ${symbol}\r\n`;
-        msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
-        msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
-        msg += `Qty: ${grid[i].size}\r\n`;
-        msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-        msg += "```";
-        sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+          let msg = "```";
+          msg += `Order executed: ${symbol}\r\n`;
+          msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
+          msg += `Price: ${grid[i].price}\r\n`;
+          msg += `Qty: ${grid[i].size}\r\n`;
+          msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+          msg += "```";
 
-        consoleLogger.push(`Order executed`, `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`);
+          sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+          consoleLogger.push(`Order executed`, `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`);
 
-        // Calculate new order details
-        const newDirection = grid[i].type === "buy" ? "sell" : "buy";
-        const upper = currentPrice * (1 + symbolOptions.gridRange.upper / 100);
-        const lower = currentPrice * (1 - symbolOptions.gridRange.lower / 100);
-        const step = (upper - lower) / symbolOptions.gridLevels;
-        const newOrderPrice = grid[i].type === "buy" ? grid[i].price + step : grid[i].price - step;
+          // Calculate new order details
+          const newDirection = grid[i].type === "buy" ? "sell" : "buy";
+          const upper = currentPrice * (1 + symbolOptions.gridRange.upper / 100);
+          const lower = currentPrice * (1 - symbolOptions.gridRange.lower / 100);
+          const step = (upper - lower) / symbolOptions.gridLevels;
+          const newOrderPrice = grid[i].type === "buy" ? grid[i].price + step : grid[i].price - step;
 
-        const fees = 0.1; // Assume 0.1% fee, adjust as needed
-        const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
-        var minimumProfit = newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
+          const fees = 0.2; // Assume 0.2% fee, adjust as needed
+          const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
+          var minimumProfit = newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
 
-        if (potentialProfit >= minimumProfit / 100) {
-          try {
-            const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
+          if (potentialProfit >= minimumProfit / 100) {
+            try {
+              const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
 
-            // Update the grid level with new order details
-            grid[i].type = newDirection;
-            grid[i].price = newOrderPrice;
-            grid[i].orderId = newOrder.orderId;
-            grid[i].executed = false;
-            grid[i].size = newOrder.qty;
+              // Update the grid level with new order details
+              grid[i].type = newDirection;
+              grid[i].price = newOrderPrice;
+              grid[i].orderId = newOrder.orderId;
+              grid[i].executed = false;
+              grid[i].size = newOrder.qty;
 
-            // let msg = "```";
-            // msg += `Placed new order: ${symbol}\r\n`;
-            // msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
-            // msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
-            // msg += `Qty: ${grid[i].size}\r\n`;
-            // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-            // msg += "```";
-            // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+              // let msg = "```";
+              // msg += `Placed new order: ${symbol}\r\n`;
+              // msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
+              // msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
+              // msg += `Qty: ${grid[i].size}\r\n`;
+              // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+              // msg += "```";
+              // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
 
-            consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
-          } catch (error) {
-            consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+              consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
+            } catch (error) {
+              consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+            }
+          } else {
+            consoleLogger.push(`Skipped unprofitable ${newDirection} order`, `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`);
           }
-        } else {
-          consoleLogger.push(`Skipped unprofitable ${newDirection} order`, `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`);
         }
       }
     }
   }
-
+  grid = grid.filter((item) => !item.executed);
   return orderExecuted;
 };
 
@@ -299,6 +307,7 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
     consoleLogger.push("Candle Time", new Date(latestCandle.time).toLocaleString());
 
     const openOrders = await getOpenOrders(exchange, symbol);
+    // const filledOrders = orders.filter((order) => order.orderStatus.toLowerCase() === "filled");
     if (openOrders.length > 0) {
       symbolOptions.grid = buildGridFromExistingOrders(openOrders);
     }
@@ -306,11 +315,13 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
       symbolOptions.grid = createGrid(currentPrice, symbolOptions);
       await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
     }
-    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length > symbolOptions.gridLevels + 4 || openOrders.length < symbolOptions.gridLevels) {
+
+    const halfGridSize = symbolOptions.gridOrderSize / 2;
+    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
       consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
       await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
     }
-    const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, symbol, openOrders, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+    const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, openOrders, symbol, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
 
     consoleLogger.push(
       "Open Orders:",
@@ -318,6 +329,7 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
         return {
           orderId: order.orderId,
           price: order.price,
+          side: order.isBuyer ? "buy" : "sell",
           qty: order.qty,
         };
       })

@@ -143,6 +143,16 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           }
           exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
         });
+        // listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
+        //   let msg = "```";
+        //   msg += `Order executed: ${trade.symbol}\r\n`;
+        //   msg += `${trade.isBuyer === true ? "Buy" : "Sell"} ID: ${trade.orderId}\r\n`;
+        //   msg += `Price: ${trade.price}\r\n`;
+        //   msg += `Qty: ${trade.qty}\r\n`;
+        //   msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+        //   msg += "```";
+        //   sendMessageToChannel(discord, options.discord.channelId!, msg);
+        // });
         listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
           const logger = consoleLogger();
           await gridTrading(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
