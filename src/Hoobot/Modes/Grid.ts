@@ -155,6 +155,11 @@ const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, s
   consoleLogger.push("Grid rebalanced", `New center price: ${currentPrice}`);
 };
 
+const calculatePotentialProfit = (buyPrice: number, sellPrice: number, fees: number): number => {
+  const grossProfit = (sellPrice - buyPrice) / buyPrice;
+  return grossProfit - fees * 2; // Subtract fees for both buy and sell
+};
+
 const manageGridOrders = async (
   discord: Client,
   exchange: Exchange,
@@ -194,28 +199,37 @@ const manageGridOrders = async (
         const lower = currentPrice * (1 - symbolOptions.gridRange.lower / 100);
         const step = (upper - lower) / symbolOptions.gridLevels;
         const newOrderPrice = grid[i].type === "buy" ? grid[i].price + step : grid[i].price - step;
-        try {
-          const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
 
-          // Update the grid level with new order details
-          grid[i].type = newDirection;
-          grid[i].price = newOrderPrice;
-          grid[i].orderId = newOrder.orderId;
-          grid[i].executed = false;
-          grid[i].size = newOrder.qty;
+        const fees = 0.1; // Assume 0.1% fee, adjust as needed
+        const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
+        var minimumProfit = newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
 
-          // let msg = "```";
-          // msg += `Placed new order: ${symbol}\r\n`;
-          // msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
-          // msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
-          // msg += `Qty: ${grid[i].size}\r\n`;
-          // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
-          // msg += "```";
-          // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+        if (potentialProfit >= minimumProfit / 100) {
+          try {
+            const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
 
-          consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
-        } catch (error) {
-          consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+            // Update the grid level with new order details
+            grid[i].type = newDirection;
+            grid[i].price = newOrderPrice;
+            grid[i].orderId = newOrder.orderId;
+            grid[i].executed = false;
+            grid[i].size = newOrder.qty;
+
+            // let msg = "```";
+            // msg += `Placed new order: ${symbol}\r\n`;
+            // msg += `${grid[i].type.toUpperCase()} ID: ${grid[i].orderId}\r\n`;
+            // msg += `Price: ${grid[i].price.toPrecision(8)}\r\n`;
+            // msg += `Qty: ${grid[i].size}\r\n`;
+            // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
+            // msg += "```";
+            // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+
+            consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
+          } catch (error) {
+            consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+          }
+        } else {
+          consoleLogger.push(`Skipped unprofitable ${newDirection} order`, `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`);
         }
       }
     }
