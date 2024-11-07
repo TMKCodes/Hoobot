@@ -70,8 +70,6 @@ const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
 };
 
 export const placeOrder = async (exchange: Exchange, symbol: string, direction: string, price: number, quantityInQuote: number, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions): Promise<Order> => {
-  const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
-  createBlock(symbol);
   if (direction === "sell") {
     let order = await placeSellOrder(exchange, symbol, quantityInQuote, price);
     if (order !== undefined) {
@@ -80,10 +78,8 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
         exchangeOptions.tradeHistory = {};
       }
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-      removeBlock(symbol);
       return order;
     } else {
-      removeBlock(symbol);
       return {} as Order;
     }
   } else if (direction === "buy") {
@@ -94,14 +90,11 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
         exchangeOptions.tradeHistory = {};
       }
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-      removeBlock(symbol);
       return order;
     } else {
-      removeBlock(symbol);
       return {} as Order;
     }
   }
-  removeBlock(symbol);
   return {} as Order;
 };
 
@@ -314,14 +307,15 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
       symbolOptions.grid = createGrid(currentPrice, symbolOptions);
       await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
     }
+    console.log(`Grids created!\n${JSON.stringify(symbolOptions.grid)}`);
 
     const halfGridSize = symbolOptions.gridOrderSize / 2;
-    // if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
-    //   consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
-    //   await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
-    // }
+    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
+      consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
+      await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
+    }
     const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, openOrders, symbol, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
-
+    
     consoleLogger.push(
       "Open Orders:",
       openOrders.map((order) => {

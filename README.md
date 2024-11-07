@@ -129,11 +129,11 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
   - **minimum**: (number) Minimum profit target to initiate take profit.
   - **drop**: (number) Profit drop threshold to trigger take profit.
   - **current**: (number) Current profit level.
-- **gridOrderSize**: (number) Grid order size. [Grid Mode]
+- **gridOrderSize**: (number) Grid order size in quote. [Grid Mode]
 - **gridLevels**: (number) Number of grid levels. [Grid Mode]
 - **gridRange**: (object) Grid range (upper, lower). [Grid Mode]
-  - **upper**: (number) Upper limit of the grid range.
-  - **lower**: (number) Lower limit of the grid range.
+  - **upper**: (number) Upper percentage limit of the grid range above current price.
+  - **lower**: (number) Lower percentage limit of the grid range below current price.
 - **indicators**: (object) Various indicators and their settings. [Algorithmic Mode]
   - **sma**: (object) Simple Moving Average settings.
     - **enabled**: (boolean) Enables or disables SMA.

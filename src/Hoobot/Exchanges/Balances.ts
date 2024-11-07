@@ -26,6 +26,7 @@
 * ===================================================================== */
 
 import fs from 'fs';
+import path from 'path';
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
 import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
@@ -165,6 +166,10 @@ export const storeBalances = async (
   let ex = "binance";
   if(isXeggex(exchange) || isNonKYC(exchange)) {
     ex = "xeggex"
+  }
+  const logsDir = path.join(__dirname, 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir);
   }
   const filePath = `./logs/balances-${ex}.json`;
   let existingBalances: DatedBalances[] = [];
