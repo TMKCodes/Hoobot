@@ -80,6 +80,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 - **key**: (string) API key for the exchange.
 - **secret**: (string) API secret for the exchange.
 - **mode**: (BotMode) The trading mode (algorithmic, hilow, grid).
+- **forceStopOnDisconnect**: (boolean) some exchanges have hard time with reconnecting, this allows you to stop the process on disconnect.
 - **console**: (string) Console logging options.
 - **openOrders**: (OpenOrders) Open orders on the exchange.
 - **balances**: (Balances) Account balances.

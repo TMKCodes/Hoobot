@@ -420,13 +420,7 @@ export class Xeggex {
   private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
     let retries = 0;
     if(this.forceStopOnDisconnect) {
-      if (this.ws) {
-        if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
-          this.ws.terminate();
-        }
-        this.ws = null;
-      }
-      return;
+      process.exit(1);
     }
     while (retries < maxRetries) {
       if (this.ws) {
