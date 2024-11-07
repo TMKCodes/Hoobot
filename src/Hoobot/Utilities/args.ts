@@ -158,10 +158,9 @@ export interface SymbolOptions {
     drop: number;
     current: number;
   };
-  gridOrderSize: any;
+  gridOrderSize: number;
   grid: GridLevel[];
   gridLevels: number;
-  gridSpacing: number;
   gridRange: {
     upper: number;
     lower: number;

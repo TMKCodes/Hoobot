@@ -37,7 +37,7 @@
           },
           "growingMax": {
             "buy": 100,
-            "sell": 
+            "sell": 0
           },
           "closePercentage": 0.25,
           "maximumAgeOfOrder": 60,
@@ -174,7 +174,7 @@
           },
           "growingMax": {
             "buy": 100,
-            "sell": 
+            "sell": 0
           },
           "closePercentage": 0.25,
           "maximumAgeOfOrder": 60,

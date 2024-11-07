@@ -316,10 +316,10 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
     }
 
     const halfGridSize = symbolOptions.gridOrderSize / 2;
-    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
-      consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
-      await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
-    }
+    // if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
+    //   consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
+    //   await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
+    // }
     const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, openOrders, symbol, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
 
     consoleLogger.push(
