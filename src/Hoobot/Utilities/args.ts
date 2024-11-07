@@ -91,7 +91,7 @@ export interface ExchangeOptions {
   name: string;
   key: string;
   secret: string;
-  mode: "algorithmic" | "hilow" | "arbitrage" | "grid";
+  mode: "algorithmic" | "hilow" | "grid" | "consecutive";
   console: string;
   openOrders: OpenOrders;
   balances: Balances;
@@ -115,7 +115,11 @@ export interface SymbolOptions {
   timeframes: CandlestickInterval[];
   agreement: number;
   source: "close" | "high" | "low";
-  consectutive: "SELL" | "BUY" | "BOTH" | undefined;
+  consecutiveQuantity: number;
+  consecutiveDirection: "SELL" | "BUY" | undefined;
+  consecutivePreviousDirection: string | undefined;
+  consecutiveNextTrade: string | undefined;
+  consecutiveTradeAllowed: boolean | undefined;
   trend?: {
     current: string;
     enabled: boolean;
@@ -158,13 +162,14 @@ export interface SymbolOptions {
     drop: number;
     current: number;
   };
-  gridOrderSize: number;
   grid: GridLevel[];
+  gridOrderSize: number;
   gridLevels: number;
   gridRange: {
     upper: number;
     lower: number;
   };
+  gridDensity: "uniform" | "concentrated" | undefined;
   indicators?: {
     sma?: {
       enabled: boolean;

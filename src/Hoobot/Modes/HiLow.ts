@@ -82,12 +82,12 @@ export const hilow = async (
         if (unrealizedPNL < (maxProfit - symbolOptions.takeProfit?.drop!)) {
           if (lastTrade.isBuyer) {
             if (unrealizedPNL > symbolOptions.profit?.minimumSell! + symbolOptions.tradeFeePercentage!) {
-              sell(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+              sell(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions, undefined);
               symbolOptions.takeProfit.current = 0;
             }
           } else {
             if (unrealizedPNL > symbolOptions.profit?.minimumBuy! + symbolOptions.tradeFeePercentage!) {
-              buy(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+              buy(discord, exchange, consoleLogger, symbol, "", orderBook, filter, processOptions, exchangeOptions, symbolOptions, undefined);
               symbolOptions.takeProfit.current = 0;
             }
           }

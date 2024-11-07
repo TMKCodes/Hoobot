@@ -45,10 +45,16 @@ const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] =
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
   const step = (upper - lower) / options.gridLevels;
+  
   for (let i = 0; i < options.gridLevels; i++) {
     const price = lower + i * step;
     const type = price < currentPrice ? "buy" : "sell";
-    grid.push({ orderId: "", price: price, type: type, executed: false, size: "" });
+    grid.push({ 
+      orderId: "", 
+      price: price, 
+      type: type, 
+      executed: false, 
+      size: options.gridOrderSize.toFixed(8) });
   }
   return grid;
 };
@@ -103,7 +109,7 @@ const placeGridOrders = async (exchange: Exchange, consoleLogger: ConsoleLogger,
   for (var i = 0; i < grid.length; i++) {
     if (!grid[i].executed) {
       try {
-        const order = await placeOrder(exchange, symbol, grid[i].type, grid[i].price, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
+        const order = await placeOrder(exchange, symbol, grid[i].type, grid[i].price, parseFloat(grid[i].size), processOptions, exchangeOptions);
         grid[i].orderId = order.orderId;
         grid[i].size = order.qty;
         placedOrders.push({
@@ -129,15 +135,14 @@ const isOutsideGridRange = (currentPrice: number, grid: GridLevel[]): boolean =>
 const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, currentPrice: number, filter: Filter, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
-  // Check if rebalancing is really necessary
-  const halfGridSize = symbolOptions.gridOrderSize / 2;
-  if (openOrders.length > halfGridSize && openOrders.length < symbolOptions.gridOrderSize + halfGridSize) {
-    const existingGrid = buildGridFromExistingOrders(openOrders);
-    if (!isOutsideGridRange(currentPrice, existingGrid)) {
-      consoleLogger.push("Rebalancing skipped", "Current price is within existing grid range");
-      symbolOptions.grid = existingGrid;
-      return;
-    }
+  if (openOrders.length < symbolOptions.gridOrderSize * 2) {
+    return;
+  }
+  const existingGrid = buildGridFromExistingOrders(openOrders);
+  if (!isOutsideGridRange(currentPrice, existingGrid)) {
+    consoleLogger.push("Rebalancing skipped", "Current price is within existing grid range");
+    symbolOptions.grid = existingGrid;
+    return;
   }
 
   // If we reach here, rebalancing is necessary
@@ -303,14 +308,12 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
     if (openOrders.length > 0) {
       symbolOptions.grid = buildGridFromExistingOrders(openOrders);
     }
-    if (!symbolOptions.grid) {
+    if (!symbolOptions.grid || openOrders.length === 0) {
       symbolOptions.grid = createGrid(currentPrice, symbolOptions);
       await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
     }
-    console.log(`Grids created!\n${JSON.stringify(symbolOptions.grid)}`);
 
-    const halfGridSize = symbolOptions.gridOrderSize / 2;
-    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length < halfGridSize || openOrders.length > symbolOptions.gridLevels + halfGridSize) {
+    if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length > symbolOptions.gridLevels * 2 - 1) {
       consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
       await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
     }

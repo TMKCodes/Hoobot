@@ -325,7 +325,6 @@ export class Xeggex {
   private reportsCallbackId: number = 0;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
-  private forceCrash: boolean;
 
   constructor(key: string, secret: string) {
     this.WebSocketURL = "wss://api.xeggex.com";
@@ -334,7 +333,6 @@ export class Xeggex {
     this.secret = secret;
     this.callbackMap = new CallbackMap();
     this.emitter = new EventEmitter();
-    this.forceCrash = true;
     this.connect();
   }
 
@@ -376,9 +374,8 @@ export class Xeggex {
 
   private connect = async (): Promise<void> => {
     this.ws = new WebSocket(this.WebSocketURL);
-
+  
     this.ws.on("open", async () => {
-      // Reset reconnection delay on successful connection
       this.loopPing();
       if (this.key && this.secret) {
         const result = await this.login();
@@ -389,38 +386,61 @@ export class Xeggex {
         }
       }
     });
-
-    this.emitter.on("login_failed", () => {
-      this.ws?.close(500, "Login Failed");
-    });
-
-    this.ws.on("close", async (code: number, reason: Buffer) => {
-      console.log(`${code}: ${reason.toString("utf-8")}`);
+  
+    this.ws.on("close", async (code: number) => {
+      console.log(`WebSocket closed with code ${code}.`);
       if (code === 1006) {
-        if (this.forceCrash === true) {
-          throw new Error("Error 1006: (Abnormal websocket close). Crashing the program as reconnecting does not work.");
-        }
-        console.log("Error (Abnormal websocket close), don't know what went wrong You may need to restart me.");
-        if (this.ws !== null) {
-          console.log("Terminated websocket.");
-          this.ws.terminate();
-          this.ws = null;
-        }
-        do {
-          await delay(300000);
-          console.log("Trying to reconnect.");
-          await this.connect();
-        } while (this.ws!.readyState !== WebSocket.OPEN);
+        console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
+        await this.handleReconnection(); // Trigger reconnection
       }
     });
-
+  
+    // New: Error event listener to catch connection errors and avoid unhandled exceptions
+    this.ws.on("error", (err) => {
+      console.error("WebSocket encountered an error:", err);
+      // Optionally, trigger reconnection if needed
+      if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+        console.log("Attempting to reconnect due to WebSocket error...");
+        this.handleReconnection();
+      }
+    });
+  
     this.ws.on("ping", (_buffer: Buffer) => {
       this.heartBeat();
     });
-
+  
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
     };
+  };
+
+  private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
+    let retries = 0;
+  
+    while (retries < maxRetries) {
+      if (this.ws) {
+        if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
+          this.ws.terminate();
+        }
+        this.ws = null;
+      }
+  
+      console.log(`Reconnecting in ${delayTime / 1000} seconds...`);
+      await delay(delayTime);
+  
+      console.log(`Attempt ${retries + 1} of ${maxRetries}: Trying to reconnect...`);
+      try {
+        await this.connect();
+        console.log("Reconnected successfully.");
+        return; 
+      } catch (error) {
+        console.error("Reconnection attempt failed:", error);
+        retries++; 
+        delayTime *= 2; 
+      }
+    }
+  
+    console.error(`Failed to reconnect after ${maxRetries} attempts. Please check network or server status.`);
   };
 
   private send = (message: any): void => {

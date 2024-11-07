@@ -293,20 +293,20 @@ const roundStep = (price: number, size: number): number => {
   }
 };
 
-export const placeSellOrder = async (exchange: Exchange, symbol: string, quantity: number, price: number): Promise<Order | undefined> => {
+export const placeSellOrder = async (exchange: Exchange, symbol: string, quantityinQuote: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
-  if (quantity === undefined || Number.isNaN(quantity)) {
+  if (quantityinQuote === undefined || Number.isNaN(quantityinQuote)) {
     return undefined;
   }
   try {
     if (isBinance(exchange)) {
-      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantity} qty`);
-      return await exchange.sell(symbol.split("/").join(""), quantity, price);
+      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityinQuote} qty`);
+      return await exchange.sell(symbol.split("/").join(""), quantityinQuote, price);
     } else if (isXeggex(exchange) || isNonKYC(exchange)) {
-      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantity} qty`);
-      const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantity, price);
+      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityinQuote} qty`);
+      const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityinQuote, price);
       if (xeggexOrder) {
         const order: Order = {
           symbol: symbol.split("/").join(""),
@@ -337,20 +337,20 @@ export const placeSellOrder = async (exchange: Exchange, symbol: string, quantit
   return undefined;
 };
 
-export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantity: number, price: number): Promise<Order | undefined> => {
+export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantityinQuote: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
-  if (quantity === undefined || Number.isNaN(quantity)) {
+  if (quantityinQuote === undefined || Number.isNaN(quantityinQuote)) {
     return undefined;
   }
   try {
     if (isBinance(exchange)) {
-      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantity} qty`);
-      return await exchange.buy(symbol.split("/").join(""), quantity, price);
+      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantityinQuote} qty`);
+      return await exchange.buy(symbol.split("/").join(""), quantityinQuote, price);
     } else if (isXeggex(exchange) || isNonKYC(exchange)) {
-      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantity} qty`);
-      const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantity, price);
+      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantityinQuote} qty`);
+      const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityinQuote, price);
       const order = {
         symbol: symbol.split("/").join(""),
         orderId: xeggexOrder.id,
@@ -415,7 +415,8 @@ export const sell = async (
   filter: Filter,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
+  forceQuantityInQuote: number | undefined,
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
@@ -430,10 +431,13 @@ export const sell = async (
       return false;
     }
     let bidQuantity = orderBook.bids[bidPrice.toString()];
-    let maxQuantityInBase = baseBalance * 0.98;
-    maxQuantityInBase = maxSellAmount(maxQuantityInBase, symbolOptions);
-    if (!isNaN(bidQuantity) && maxQuantityInBase > bidQuantity) {
-      maxQuantityInBase = bidQuantity;
+    let quantityInBase = baseBalance * 0.98;
+    quantityInBase = maxSellAmount(quantityInBase, symbolOptions);
+    if (!isNaN(bidQuantity) && quantityInBase > bidQuantity) {
+      quantityInBase = bidQuantity;
+    }
+    if (forceQuantityInQuote !== undefined) {
+      quantityInBase = forceQuantityInQuote / bidPrice;
     }
     const roundedPrice = roundStep(bidPrice, filter.tickSize);
     if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumSell !== undefined && symbolOptions.price?.maximumSell > roundedPrice) {
@@ -444,8 +448,9 @@ export const sell = async (
       consoleLogger.push("error", "Too low price to sell.");
       return false;
     }
-    const roundedQuantityInBase = roundStep(maxQuantityInBase, filter.stepSize);
-    const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
+    const quantityInQuote = (quantityInBase * bidPrice) * 0.98;
+    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
+    const roundedQuantityInQuote = roundStep(quantityInQuote * roundedPrice, filter.stepSize);
     if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
@@ -469,7 +474,7 @@ export const sell = async (
         return false;
       }
       createBlock(symbol);
-      let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
+      let order = await placeSellOrder(exchange, symbol, roundedQuantityInQuote, roundedPrice);
       if (order !== undefined) {
         // play(soundFile);
         let msg = "```";
@@ -566,7 +571,8 @@ export const buy = async (
   filter: Filter,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
+  forceQuantityInQuote: number | undefined,
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
@@ -581,12 +587,14 @@ export const buy = async (
       return false;
     }
     let askQuantity = orderBook.asks[askPrice.toString()];
-    let maxQuantityInQuote = quoteBalance;
-    maxQuantityInQuote = maxBuyAmount(maxQuantityInQuote, symbolOptions);
-    if (!isNaN(askQuantity) && maxQuantityInQuote > askQuantity) {
-      maxQuantityInQuote = askQuantity;
+    let quantityInQuote = quoteBalance;
+    quantityInQuote = maxBuyAmount(quantityInQuote, symbolOptions);
+    if (!isNaN(askQuantity) && quantityInQuote > askQuantity) {
+      quantityInQuote = askQuantity;
     }
-    const quantityInBase = (maxQuantityInQuote / askPrice) * 0.98;
+    if (forceQuantityInQuote !== undefined) {
+      quantityInQuote = forceQuantityInQuote;
+    }
     const roundedPrice = roundStep(askPrice, filter.tickSize);
     if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined && symbolOptions.price?.maximumBuy > roundedPrice) {
       consoleLogger.push("error", "Too high price to buy.");
@@ -596,8 +604,9 @@ export const buy = async (
       consoleLogger.push("error", "Too low price to buy.");
       return false;
     }
+    const quantityInBase = (quantityInQuote / askPrice) * 0.98;
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
-    const roundedQuantityInQuote = roundStep(roundedQuantityInBase * roundedPrice, filter.stepSize);
+    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
     if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
@@ -624,7 +633,7 @@ export const buy = async (
         return false;
       }
       createBlock(symbol);
-      let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
+      let order = await placeBuyOrder(exchange, symbol, roundedQuantityInQuote, roundedPrice);
       if (order !== undefined) {
         // play(soundFile);
         let msg = "```";

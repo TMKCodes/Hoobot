@@ -133,7 +133,7 @@ export const tradeDirection =  async (
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
   if (orderBook !== undefined) {
-    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions, symbolOptions, closePrice, filter);
+    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions, symbolOptions);
   } else {
     profit = await checkProfitSignalsFromCandlesticks(consoleLogger, next, trend, candlesticks[symbol.split("/").join("")][timeframes[0]], closeTime, exchangeOptions, symbolOptions);
   }
@@ -320,10 +320,10 @@ export const placeTrade = async (
   const [profit, direction] = await tradeDirection(consoleLogger, symbol, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
   if (direction === 'SELL' && profit !== 'BUY') {
     logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
-    return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+    return sell(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions, undefined);
   } else if (direction === 'BUY' && profit !== 'SELL') {
     logToFile("./logs/debug.log", `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`)
-    return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions);
+    return buy(discord, exchange, consoleLogger, symbol, profit, orderBook, filter, processOptions, exchangeOptions, symbolOptions, undefined);
   } else {
     return false;
   }

@@ -95,7 +95,8 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 - **timeframes**: (CandlestickInterval[]) Timeframes for candlestick data.
 - **agreement**: (number) Agreement percentage for indicators.
 - **source**: (string) Data source for indicators (close, high, low).
-- **consectutive**: (string) Trade direction (SELL, BUY, BOTH).
+- **consecutiveDirection**: (string) Trade direction (SELL, BUY).
+- **consecutiveQuantity**: (number) Amount in quote for the consecutive sell/buy orders.
 - **trend**: (object) Trend detection settings.
   - **current**: (string) The current trend direction (e.g., "up", "down").
   - **enabled**: (boolean) Enables or disables trend detection.
@@ -220,6 +221,170 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 - **serverId**: (string) Discord server ID.
 - **channelId**: (string) Discord channel ID.
 
+
+#### Example configurations for modes
+
+
+##### Algorithmic Scalping
+```json
+{
+  "debug": true,
+  "startTime": "1698789600",
+  "license": "",
+  "discord": {
+    "enabled": false,
+    "token": "4",
+    "applicationId": "",
+    "serverId": "",
+    "channelId": ""
+  },
+  "exchanges": [
+    {
+      "name": "xeggex",
+      "key": "",
+      "secret": "",
+      "mode": "consecutive",
+      "console": "update",
+      "symbols": [
+        {
+          "name": "HTN/USDT",
+          "timeframes": ["5m"],
+          "agreement": 75,
+          "source": "close",
+          "trend": {
+            "enabled": true,
+            "timeframe": "1d",
+            "ema": {
+              "short": 8,
+              "long": 26
+            }
+          },
+          "profit": {
+            "enabled": true,
+            "minimumSell": 0.15,
+            "minimumBuy": 0
+          },
+          "growingMax": {
+            "buy": 100,
+            "sell": 0
+          },
+          "closePercentage": 0.25,
+          "maximumAgeOfOrder": 60,
+          "tradeFeePercentage": 0.1,
+          "stopLoss": {
+            "enabled": true,
+            "stopTrading": false,
+            "pnl": -20,
+            "agingPerHour": 0.01
+          },
+          "takeProfit": {
+            "enabled": true,
+            "limit": 0.125,
+            "minimum": 1.5,
+            "drop": 0.05
+          },
+          "indicators": {
+            "macd": {
+              "enabled": true,
+              "fast": 5,
+              "slow": 15,
+              "signal": 6,
+              "weight": 1
+            }
+          }
+        }
+      ]
+    },
+```
+
+##### Grid
+```json
+{
+  "debug": true,
+  "startTime": "1698789600",
+  "license": "",
+  "discord": {
+    "enabled": false,
+    "token": "4",
+    "applicationId": "",
+    "serverId": "",
+    "channelId": ""
+  },
+  "exchanges": [
+    {
+      "name": "xeggex",
+      "key": "",
+      "secret": "",
+      "mode": "consecutive",
+      "console": "update",
+      "symbols": [
+        {
+          "name": "HTN/USDT",
+          "timeframes": ["5m"],
+          "agreement": 75,
+          "source": "close",
+          "gridOrderSize": 100000,
+          "gridDensity": "concentrated",
+          "gridLevels": 10,
+          "gridRange": {
+            "upper": 5,
+            "lower": 5
+          }
+        }
+      ]
+    },
+```
+
+##### Consectutive
+```json
+{
+  "debug": true,
+  "startTime": "1698789600",
+  "license": "",
+  "discord": {
+    "enabled": false,
+    "token": "4",
+    "applicationId": "",
+    "serverId": "",
+    "channelId": ""
+  },
+  "exchanges": [
+    {
+      "name": "xeggex",
+      "key": "",
+      "secret": "",
+      "mode": "consecutive",
+      "console": "update",
+      "symbols": [
+        {
+          "name": "HTN/USDT",
+          "timeframes": ["5m"],
+          "agreement": 75,
+          "source": "close",
+          "consecutiveQuantity": 100000,
+          "consecutiveDirection": "BUY",
+          "indicators": {
+            "srsi": {
+              "enabled": true,
+              "rsiLength": 14,
+              "stochLength": 14,
+              "kPeriod": 14,
+              "dPeriod": 1,
+              "smoothK": 3,
+              "smoothD": 3,
+              "history": 5,
+              "tresholds": {
+                "overbought": 80,
+                "oversold": 20
+              },
+              "weight": 1
+            }
+          }
+        }
+      ]
+    },
+```
+
 #### `settings/hoobot-options-simulate.json`
 
 This file is similar to `settings/hoobot-options.json` but is used for simulation mode. The simulation mode mimics trading without actual transactions, and it is only supported for Binance. This allows users to test strategies without risking real funds.
@@ -251,7 +416,6 @@ Ensure that your `settings/hoobot-options-simulate.json` includes the same struc
           "timeframes": ["1m", "5m", "15m"],
           "agreement": 75,
           "source": "close",
-          "consectutive": "BOTH",
           "trend": {
             "current": "up",
             "enabled": true,

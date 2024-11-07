@@ -152,9 +152,7 @@ export const checkProfitSignals = async (
   orderBook: Orderbook,
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
-  closePrice: number,
-  filter: Filter,
+  symbolOptions: SymbolOptions
 ) => {
   let check = 'HOLD';
   let lastPNL: number = 0;
@@ -174,87 +172,6 @@ export const checkProfitSignals = async (
         next: next,
         direction: check,
       });
-    } else if (symbolOptions.consectutive || symbolOptions.noPreviousTradeCheck) {
-      const { previousTrade, olderTrade } = getPreviousTrades(next, ExchangeOptions, symbolOptions);
-      if (olderTrade && previousTrade) {
-        if(olderTrade.isBuyer && !previousTrade.isBuyer) { 
-          lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(previousTrade.price));
-        } else if(!olderTrade.isBuyer && previousTrade.isBuyer) { 
-          lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(previousTrade.price));
-        }
-      } else {
-        lastPNL = 0;
-      }
-      if(olderTrade && previousTrade) {
-        const quoteBalance = ExchangeOptions.balances[symbolOptions.name.split("/")[1]].crypto;
-        const baseBalanceConverted = (ExchangeOptions.balances[symbolOptions.name.split("/")[0]].crypto * closePrice);
-        const orderBookBids = Object.keys(orderBook.bids).map(price => parseFloat(price)).sort((a, b) => b - a);
-        const orderBookAsks = Object.keys(orderBook.asks).map(price => parseFloat(price)).sort((a, b) => a - b);
-        if(previousTrade.isBuyer) {
-          unrealizedSellPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
-          if (!olderTrade.isBuyer) {
-            unrealizedBuyPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), orderBookAsks[0]);
-          }
-        } else if(!previousTrade.isBuyer) {
-          unrealizedBuyPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), orderBookBids[0]);
-          if (olderTrade.isBuyer) {
-            unrealizedSellPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(olderTrade.qty), parseFloat(olderTrade.price), orderBookAsks[0]);
-          }
-        }
-        if(isNaN(unrealizedBuyPNL)) {
-          unrealizedBuyPNL = 0;
-        }
-        if(isNaN(unrealizedSellPNL)) {
-          unrealizedSellPNL = 0;
-        }
-        if(quoteBalance > (parseFloat(filter.minQty) * 2) && quoteBalance > baseBalanceConverted) {
-          unrealizedPNL = unrealizedBuyPNL;
-          next = "BUY";
-        } else if(baseBalanceConverted > (parseFloat(filter.minQty) * 2) && baseBalanceConverted > quoteBalance) {
-          unrealizedPNL = unrealizedSellPNL;
-          next = "SELL";
-        } else {
-          next = "HOLD";
-        }
-        if (symbolOptions.takeProfit !== undefined) {
-          if (symbolOptions.takeProfit?.current === undefined) {
-            if (unrealizedPNL > 0) {
-              symbolOptions.takeProfit.current = unrealizedPNL;
-            }
-            symbolOptions.takeProfit.current = 0;
-          }
-          if (unrealizedPNL > symbolOptions.takeProfit?.current) {
-            symbolOptions.takeProfit.current = unrealizedPNL;
-          }
-        }
-        const signals = await calculateProfitSignals(trend, next, previousTrade, lastPNL, unrealizedPNL, closeTime, symbolOptions);
-        check = signals.check;
-        if(unrealizedPNL === null) {
-          check = "HOLD";
-        }
-        consoleLogger.push("PNL%", {
-          trend: trend,
-          previous: lastPNL,
-          unrealized: unrealizedPNL,
-          currentMax: symbolOptions.takeProfit?.current,
-          stopLoss: (signals.stopLoss < 0) ? signals.stopLoss : 0,
-          takeProfit: signals.takeProfit,
-          next: next,
-          direction: check,
-        });
-      } else {
-        check = "SKIP";
-        consoleLogger.push("PNL%", {
-          trend: trend,
-          previous: 0,
-          unrealized: 0,
-          currentMax: 0,
-          stopLoss: 0,
-          takeProfit: 0,
-          next: next,
-          direction: check,
-        });
-      }
     } else {
       let lastTrade = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")][ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")].length - 1];
       if(ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")]?.length > 1) {

@@ -45,6 +45,7 @@ import { logToFile } from "./Hoobot/Utilities/logToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Trade, getTradeHistory, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
+import { consecutive } from "./Hoobot/Modes/Consecutive";
 
 export var symbolFilters: Filters = {};
 
@@ -103,6 +104,32 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
           const logger = consoleLogger();
           await algorithmic(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
+        });
+      }
+    }
+  } else if (exchangeOptions.mode === "consecutive") {
+    console.log(`Start running exchange ${exchangeOptions.name} on consecutive mode.`);
+    if (Array.isArray(exchangeOptions.symbols)) {
+      if (exchangeOptions.orderbooks === undefined) {
+        exchangeOptions.orderbooks = {};
+      }
+      for (const symbolOptions of exchangeOptions.symbols) {
+        symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
+        listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
+          if (exchangeOptions.orderbooks === undefined) {
+            exchangeOptions.orderbooks = {};
+          }
+          if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined) {
+            exchangeOptions.orderbooks[symbol.split("/").join("")] = {
+              bids: {},
+              asks: {},
+            };
+          }
+          exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
+        });
+        listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
+          const logger = consoleLogger();
+          await consecutive(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
         });
       }
     }
@@ -194,21 +221,24 @@ const main = async () => {
     }
     var discord: any = undefined;
     const exchanges: Exchange[] = [];
-    for (var exchangeOptions of options.exchanges) {
-      if (exchangeOptions.name === "binance") {
-        exchanges.push(await startBinance(exchangeOptions));
-      } else if (exchangeOptions.name === "xeggex") {
-        exchanges.push(await startXeggex(exchangeOptions));
-      } else if (exchangeOptions.name === "nonkyc") {
-        exchanges.push(await startNonKYC(exchangeOptions));
-      }
-    }
     if (options.discord.enabled === true) {
       discord = await loginDiscord(exchanges, options);
     }
-    for (var exchange of exchanges) {
-      const exchangeOption = getExchangeOption(exchange, options);
-      runExchange(exchange, discord, exchangeOption);
+    for (var exchangeOptions of options.exchanges) {
+      let exchange;
+      if (exchangeOptions.name === "binance") {
+        exchange = await startBinance(exchangeOptions)
+        exchanges.push(exchange);
+      } else if (exchangeOptions.name === "xeggex") {
+        exchange = await startXeggex(exchangeOptions);
+        exchanges.push(exchange);
+      } else if (exchangeOptions.name === "nonkyc") {
+        exchange = await startNonKYC(exchangeOptions);
+        exchanges.push(exchange);
+      }
+      if (exchange !== undefined) {
+        runExchange(exchange, discord, exchangeOptions)
+      }
     }
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
