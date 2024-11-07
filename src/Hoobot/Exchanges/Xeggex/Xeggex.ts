@@ -325,14 +325,16 @@ export class Xeggex {
   private reportsCallbackId: number = 0;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
+  private forceStopOnDisconnect: boolean;
 
-  constructor(key: string, secret: string) {
+  constructor(key: string, secret: string, forceStopOnDisconnect: boolean) {
     this.WebSocketURL = "wss://api.xeggex.com";
     this.ApiURL = "https://api.xeggex.com/api/v2";
     this.key = key;
     this.secret = secret;
     this.callbackMap = new CallbackMap();
     this.emitter = new EventEmitter();
+    this.forceStopOnDisconnect = forceStopOnDisconnect;
     this.connect();
   }
 
@@ -372,7 +374,7 @@ export class Xeggex {
     });
   };
 
-  private connect = async (): Promise<void> => {
+  private connect = async (): Promise<WebSocket> => {
     this.ws = new WebSocket(this.WebSocketURL);
   
     this.ws.on("open", async () => {
@@ -412,11 +414,20 @@ export class Xeggex {
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
     };
+    return this.ws
   };
 
   private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
     let retries = 0;
-  
+    if(this.forceStopOnDisconnect) {
+      if (this.ws) {
+        if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
+          this.ws.terminate();
+        }
+        this.ws = null;
+      }
+      return;
+    }
     while (retries < maxRetries) {
       if (this.ws) {
         if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
@@ -427,12 +438,17 @@ export class Xeggex {
   
       console.log(`Reconnecting in ${delayTime / 1000} seconds...`);
       await delay(delayTime);
-  
       console.log(`Attempt ${retries + 1} of ${maxRetries}: Trying to reconnect...`);
       try {
-        await this.connect();
-        console.log("Reconnected successfully.");
-        return; 
+        this.ws = await this.connect();
+        await delay(250);
+        if (this.ws.readyState === WebSocket.OPEN) {
+          console.log("Reconnected successfully.");
+          return; 
+        } else {
+          console.log("Reconnecton failed.");
+          throw Error("Failed to connect.");
+        }
       } catch (error) {
         console.error("Reconnection attempt failed:", error);
         retries++; 

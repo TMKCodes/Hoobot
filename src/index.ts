@@ -201,7 +201,10 @@ const startBinance = async (exchangeOptions: ExchangeOptions) => {
 };
 
 const startXeggex = async (exchangeOptions: ExchangeOptions) => {
-  const exchange = new Xeggex(exchangeOptions.key, exchangeOptions.secret);
+  if (exchangeOptions.forceStopOnDisconnect === undefined) {
+    exchangeOptions.forceStopOnDisconnect = false;
+  }
+  const exchange = new Xeggex(exchangeOptions.key, exchangeOptions.secret, exchangeOptions.forceStopOnDisconnect);
   await exchange.waitConnect();
   return exchange;
 };

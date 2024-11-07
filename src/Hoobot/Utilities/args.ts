@@ -92,6 +92,7 @@ export interface ExchangeOptions {
   key: string;
   secret: string;
   mode: "algorithmic" | "hilow" | "grid" | "consecutive";
+  forceStopOnDisconnect: boolean;
   console: string;
   openOrders: OpenOrders;
   balances: Balances;
