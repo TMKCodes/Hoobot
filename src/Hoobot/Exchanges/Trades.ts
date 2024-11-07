@@ -249,7 +249,6 @@ export const isBlocking = async (symbol: string): Promise<boolean> => {
     if (blocks.length > 0) {
       for (const block of blocks) {
         if (block === symbol) {
-          logToFile("./logs/blocks.log", "Was blocked.");
           return true;
         }
       }
@@ -258,14 +257,12 @@ export const isBlocking = async (symbol: string): Promise<boolean> => {
     logToFile("./logs/error.log", `isBlocking: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
   }
-  logToFile("./logs/blocks.log", "Was not blocked.");
   return false;
 };
 
 export const createBlock = async (symbol: string) => {
   try {
     blocks = [...blocks, symbol.replace("/", "")];
-    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4));
   } catch (error) {
     logToFile("./logs/error.log", `createBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
@@ -276,7 +273,6 @@ export const removeBlock = async (symbol: string) => {
   try {
     symbol = symbol.replace("/", "");
     blocks = blocks.filter((block) => block !== symbol);
-    logToFile("./logs/blocks.log", JSON.stringify(blocks, null, 4));
   } catch (error) {
     logToFile("./logs/error.log", `removeBlock: ${JSON.stringify(error, null, 4)}`);
     console.error(error);
