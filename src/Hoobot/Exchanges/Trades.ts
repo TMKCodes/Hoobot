@@ -416,7 +416,7 @@ export const sell = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInQuote: number | undefined,
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
@@ -436,8 +436,8 @@ export const sell = async (
     if (!isNaN(bidQuantity) && quantityInBase > bidQuantity) {
       quantityInBase = bidQuantity;
     }
-    if (forceQuantityInQuote !== undefined) {
-      quantityInBase = forceQuantityInQuote / bidPrice;
+    if (forceQuantityInBase !== undefined) {
+      quantityInBase = forceQuantityInBase;
     }
     const roundedPrice = roundStep(bidPrice, filter.tickSize);
     if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumSell !== undefined && symbolOptions.price?.maximumSell > roundedPrice) {
@@ -449,8 +449,8 @@ export const sell = async (
       return false;
     }
     const quantityInQuote = (quantityInBase * bidPrice) * 0.98;
-    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
-    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
+    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
+    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize) - filter.tickSize;
     if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
@@ -572,7 +572,7 @@ export const buy = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInQuote: number | undefined,
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
@@ -592,8 +592,8 @@ export const buy = async (
     if (!isNaN(askQuantity) && quantityInQuote > askQuantity) {
       quantityInQuote = askQuantity;
     }
-    if (forceQuantityInQuote !== undefined) {
-      quantityInQuote = forceQuantityInQuote;
+    if (forceQuantityInBase !== undefined) {
+      quantityInQuote = forceQuantityInBase * askPrice;
     }
     const roundedPrice = roundStep(askPrice, filter.tickSize);
     if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined && symbolOptions.price?.maximumBuy > roundedPrice) {
@@ -606,7 +606,7 @@ export const buy = async (
     }
     const quantityInBase = (quantityInQuote / askPrice) * 0.98;
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
-    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
+    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize) - filter.tickSize;
     if (process.env.DEBUG == "true") {
       logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
