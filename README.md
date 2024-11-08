@@ -207,6 +207,11 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
       - **overbought**: (number) Overbought threshold.
       - **oversold**: (number) Oversold threshold.
     - **weight**: (number) Weight of the Stochastic RSI in trading decisions.
+  - **dmi**: (object) Directional Movement settings.
+    - **enabled**: (boolean) Enables or disables Directional Movement.
+    - **dmiLength**: (number) DMI length, default 14.
+    - **adxSmoothing**: (number) ADX Smoothing, default 14.
+    - **weight**: (number) Weight of the Directional Movement  in trading decisions.
   - **OpenAI**: (object) OpenAI model settings.
     - **enabled**: (boolean) Enables or disables OpenAI integration.
     - **key**: (string) Your OpenAI API key.

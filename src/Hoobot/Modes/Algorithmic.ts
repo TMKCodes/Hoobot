@@ -50,6 +50,7 @@ import { Balances } from "../Exchanges/Balances";
 import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/logToFile";
+import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
 
 export interface Indicators {
   'trend' : Trend;
@@ -88,6 +89,9 @@ export interface Indicators {
   },
   'bollingerBands':  {
     [time: string]: [number[], number[], number[]];
+  },
+  'dmi':  {
+    [time: string]: DMI;
   },
   [key: string]: {},
 }
@@ -151,6 +155,7 @@ export const tradeDirection =  async (
     OBVWeight: symbolOptions.indicators.obv?.weight!,
     CMFWeight: symbolOptions.indicators.cmf?.weight!,
     RenkoWeight: symbolOptions.indicators.renko?.weight!,
+    DMIWeight: symbolOptions.indicators.dmi?.weight!,
   }
   // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
@@ -165,6 +170,7 @@ export const tradeDirection =  async (
       BollingerBands: checkBollingerBandsSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.bollingerBands[timeframes[timeframeIndex]], symbolOptions),
       OBV: checkOBVSignals(candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]], indicators.obv[timeframes[timeframeIndex]], symbolOptions),
       CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], symbolOptions),
+      DMI: checkDMISignals(indicators.dmi[timeframes[timeframeIndex]], symbolOptions),
     }
     const keys = Object.keys(checks).filter(check => checks[check] !== 'SKIP');
     // console.log(`Keys: ${JSON.stringify(keys)}`);
@@ -372,6 +378,10 @@ const subCalculateIndicators = (
       indicators.cmf[timeframe] = calculateCMF(candlesticks, symbolOptions.indicators.cmf.length);
       logCMFSignals(consoleLogger, indicators.cmf[timeframe], symbolOptions);
     }
+    if (symbolOptions.indicators.dmi?.enabled) {
+      indicators.dmi[timeframe] = calculateDMI(candlesticks, symbolOptions.indicators.dmi.dmiLength, symbolOptions.indicators.dmi.adxSmoothing);
+      logDMISignals(consoleLogger, indicators.dmi[timeframe])
+    }
     return indicators;
   }
 }
@@ -395,6 +405,7 @@ export const calculateIndicators = (
     stochasticRSI: {},
     obv: {},
     cmf: {},
+    dmi: {},
     renko: {},
   };
   if (symbolOptions.trend?.enabled && candlesticks[symbol.split("/").join("")][symbolOptions.trend.timeframe] !== undefined) {

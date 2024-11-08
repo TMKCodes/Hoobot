@@ -263,6 +263,12 @@ export interface SymbolOptions {
       };
       weight?: number;
     };
+    dmi?: {
+      enabled: boolean;
+      dmiLength: number;
+      adxSmoothing: number;
+      weight?: number;
+    }
     OpenAI?: {
       enabled: boolean;
       key: string;
