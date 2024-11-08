@@ -50,7 +50,7 @@ export default {
         } else {
           const storedBalances = JSON.parse(fs.readFileSync(`./logs/balances-${exchangeName}.json`, 'utf-8') || "[]");
           const totalCurrentFiat = Object.values(currentBalances)
-                                  .reduce((acc, cur: Balance) => acc + cur.usdt, 0);
+                                  .reduce((acc, cur) => acc + cur.usdt, 0);
           const totalFirstFiat = Object.values(storedBalances[0][Object.keys(storedBalances[0])[0]] as Record<string, { crypto: number, usdt: number }>)
                                   .reduce((acc, cur) => acc + cur.usdt, 0);
           const diff = totalCurrentFiat - totalFirstFiat;

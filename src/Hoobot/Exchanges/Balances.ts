@@ -118,7 +118,7 @@ export const getCurrentBalances = async (
             }
             currentBalances[balance.asset] = {
               crypto: amount,
-              usdt: fiatAmount,
+              usdt: fiatAmount > 0 ? fiatAmount : 0,
             }
           }
         }
