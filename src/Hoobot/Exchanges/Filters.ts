@@ -28,18 +28,18 @@
 import { Exchange, isBinance, isXeggex } from "./Exchange";
 
 export interface Filter {
-  minPrice: any;
-  maxPrice: any;
-  tickSize: any;
-  minQty: any;
-  maxQty: any;
-  stepSize: any;
-  minNotional: any;
-  maxNotional: any;
-  bidMultiplierUp: any,
-  bidMultiplierDown: any,
-  askMultiplierUp: any,
-  askMultiplierDown: any
+  minPrice: number;
+  maxPrice: number;
+  tickSize: number;
+  minQty: number;
+  maxQty: number;
+  stepSize: number;
+  minNotional: number;
+  maxNotional: number;
+  bidMultiplierUp: number,
+  bidMultiplierDown: number,
+  askMultiplierUp: number,
+  askMultiplierDown: number
 }
 
 export interface Filters {
@@ -59,18 +59,18 @@ export const getFilters = async (
       const notionalFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "NOTIONAL");
       const percentPriceFilter = symbolInfo.filters.find((filter: { filterType: string; }) => filter.filterType === "PERCENT_PRICE_BY_SIDE");
       return {
-        minPrice: priceFilter.minPrice,
-        maxPrice: priceFilter.maxPrice,
-        tickSize: priceFilter.tickSize,
-        minQty: lotSizeFilter.minQty,
-        maxQty: lotSizeFilter.maxQty,
-        stepSize: lotSizeFilter.stepSize,
-        minNotional: notionalFilter.minNotional,
-        maxNotional: notionalFilter.maxNotional,
-        bidMultiplierUp: percentPriceFilter.bidMultiplierUp,
-        bidMultiplierDown: percentPriceFilter.bidMultiplierDown,
-        askMultiplierUp: percentPriceFilter.askMultiplierUp,
-        askMultiplierDown: percentPriceFilter.askMultiplierDown
+        minPrice: parseFloat(priceFilter.minPrice),
+        maxPrice: parseFloat(priceFilter.maxPrice),
+        tickSize: parseFloat(priceFilter.tickSize),
+        minQty: parseFloat(lotSizeFilter.minQty),
+        maxQty: parseFloat(lotSizeFilter.maxQty),
+        stepSize: parseFloat(lotSizeFilter.stepSize),
+        minNotional: parseFloat(notionalFilter.minNotional),
+        maxNotional: parseFloat(notionalFilter.maxNotional),
+        bidMultiplierUp: parseFloat(percentPriceFilter.bidMultiplierUp),
+        bidMultiplierDown: parseFloat(percentPriceFilter.bidMultiplierDown),
+        askMultiplierUp: parseFloat(percentPriceFilter.askMultiplierUp),
+        askMultiplierDown: parseFloat(percentPriceFilter.askMultiplierDown)
       };
     } else {
       throw new Error("Trading pair not found in exchange info");

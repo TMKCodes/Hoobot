@@ -445,10 +445,10 @@ export const sell = async (
       return false;
     }
     const quantityInQuote = (quantityInBase * bidPrice) * 0.98;
-    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
-    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize) - filter.tickSize;
+    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
+    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
     if (process.env.DEBUG == "true") {
-      logToFile("./logs/debug.log", `${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+      logToFile("./logs/debug.log", `TRADEDATA SELL ${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
@@ -472,7 +472,7 @@ export const sell = async (
       createBlock(symbol);
       let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
-        // play(soundFile);
+        play(soundFile);
         let msg = "```";
         msg += `SELL ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;
@@ -601,10 +601,10 @@ export const buy = async (
       return false;
     }
     const quantityInBase = (quantityInQuote / askPrice) * 0.98;
-    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize) - filter.tickSize;
-    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize) - filter.tickSize;
+    const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
+    const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
     if (process.env.DEBUG == "true") {
-      logToFile("./logs/debug.log", `${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+      logToFile("./logs/debug.log", `TRADEDATA BUY ${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
@@ -631,7 +631,7 @@ export const buy = async (
       createBlock(symbol);
       let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
-        // play(soundFile);
+        play(soundFile);
         let msg = "```";
         msg += `BUY ID: ${order.orderId}\r\n`;
         msg += `Symbol: ${symbol}\r\n`;

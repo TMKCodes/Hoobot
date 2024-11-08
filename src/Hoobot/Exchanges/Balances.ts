@@ -167,7 +167,7 @@ export const storeBalances = async (
   if(isXeggex(exchange) || isNonKYC(exchange)) {
     ex = "xeggex"
   }
-  const logsDir = path.join(__dirname, 'logs');
+  const logsDir = './logs';
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
   }

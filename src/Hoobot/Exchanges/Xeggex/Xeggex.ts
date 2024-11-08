@@ -353,7 +353,7 @@ export class Xeggex {
         this.ws = null;
         this.connect();
       }
-    }, 70000);
+    }, 140000);
   };
 
   private loopPing = () => {
@@ -363,7 +363,7 @@ export class Xeggex {
     this.keepAlive = setTimeout(() => {
       this.ws?.ping(new Date().getTime());
       this.loopPing();
-    }, 20000);
+    }, 60000);
   };
 
   public waitConnect = () => {
@@ -390,6 +390,7 @@ export class Xeggex {
     });
   
     this.ws.on("close", async (code: number) => {
+      clearTimeout(this.pingTimeout);
       console.log(`WebSocket closed with code ${code}.`);
       if (code === 1006) {
         console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
@@ -400,14 +401,18 @@ export class Xeggex {
     // New: Error event listener to catch connection errors and avoid unhandled exceptions
     this.ws.on("error", (err) => {
       console.error("WebSocket encountered an error:", err);
-      // Optionally, trigger reconnection if needed
       if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
         console.log("Attempting to reconnect due to WebSocket error...");
         this.handleReconnection();
       }
     });
-  
+
+    // Respond to server ping with a pong and reset heartbeat
     this.ws.on("ping", (_buffer: Buffer) => {
+      this.ws?.pong(); 
+    });
+  
+    this.ws.on("pong", (_buffer: Buffer) => {
       this.heartBeat();
     });
   
@@ -429,17 +434,19 @@ export class Xeggex {
         }
         this.ws = null;
       }
-  
       console.log(`Reconnecting in ${delayTime / 1000} seconds...`);
       await delay(delayTime);
       console.log(`Attempt ${retries + 1} of ${maxRetries}: Trying to reconnect...`);
       try {
         this.ws = await this.connect();
-        await delay(250);
+        while(this.ws.readyState === WebSocket.CONNECTING) {
+          await delay(50);
+        }
         if (this.ws.readyState === WebSocket.OPEN) {
           console.log("Reconnected successfully.");
           return; 
         } else {
+          this.ws = null;
           console.log("Reconnecton failed.");
           throw Error("Failed to connect.");
         }

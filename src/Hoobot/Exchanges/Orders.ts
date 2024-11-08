@@ -34,7 +34,7 @@ import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercenta
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/logToFile";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
-import { Filters } from "./Filters";
+import { Filter, Filters } from "./Filters";
 
 export interface Order {
   symbol: string;
@@ -183,7 +183,7 @@ export const openOrders = async (exchange: Exchange, symbol: string): Promise<bo
   return getOpenOrders(exchange, symbol);
 };
 
-export const checkBeforePlacingOrder = (baseQuantity: number, price: number, tradingPairFilters: any) => {
+export const checkBeforePlacingOrder = (baseQuantity: number, price: number, tradingPairFilters: Filter) => {
   const isValid = (min: number, max: number, value: number) => {
     if (value < min) {
       return false;
@@ -193,9 +193,9 @@ export const checkBeforePlacingOrder = (baseQuantity: number, price: number, tra
     return true;
   };
   if (
-    !isValid(parseFloat(tradingPairFilters.minPrice), parseFloat(tradingPairFilters.maxPrice), price) ||
-    !isValid(parseFloat(tradingPairFilters.minQty), parseFloat(tradingPairFilters.maxQty), baseQuantity) ||
-    !isValid(parseFloat(tradingPairFilters.minNotional), parseFloat(tradingPairFilters.maxNotional), price * baseQuantity)
+    !isValid(tradingPairFilters.minPrice, tradingPairFilters.maxPrice, price) ||
+    !isValid(tradingPairFilters.minQty, tradingPairFilters.maxQty, baseQuantity) ||
+    !isValid(tradingPairFilters.minNotional, tradingPairFilters.maxNotional, price)
   ) {
     return false;
   }
