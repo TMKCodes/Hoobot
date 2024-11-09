@@ -46,6 +46,7 @@ import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Trade, getTradeHistory, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { consecutive } from "./Hoobot/Modes/Consecutive";
+import { periodic } from "./Hoobot/Modes/Periodic";
 
 export var symbolFilters: Filters = {};
 
@@ -153,6 +154,26 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         hilow(discord, exchange, logger, symbolOptions.name, options, exchangeOptions, symbolOptions);
       });
     }
+  } else if (exchangeOptions.mode === "periodic") {
+    console.log(`Start running exchange  ${exchangeOptions.name} on periodic mode.`);
+    for (const symbolOptions of exchangeOptions.symbols) {
+      const filter = await getFilters(exchange, symbolOptions.name);
+      symbolFilters[symbolOptions.name.split("/").join("")] = filter;
+      listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
+        if (exchangeOptions.orderbooks === undefined) {
+          exchangeOptions.orderbooks = {};
+        }
+        if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] === undefined) {
+          exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = {
+            bids: {},
+            asks: {},
+          };
+        }
+        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = orderbook;
+        const logger = consoleLogger();
+        periodic(discord, exchange, logger, symbolOptions.name, options, exchangeOptions, symbolOptions);
+      });
+    }
   } else if (exchangeOptions.mode === "grid") {
     console.log(`Start running exchange ${exchangeOptions.name} on grid trading mode.`);
     if (Array.isArray(exchangeOptions.symbols)) {
@@ -215,7 +236,7 @@ const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
   return exchange;
 };
 
-const main = async () => {
+const hoobot = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
       console.log("License key is valid. Enjoy the trading with Hoobot!");
@@ -360,5 +381,5 @@ const simulate = async () => {
 if (process.env.SIMULATE === "true") {
   simulate();
 } else {
-  main();
+  hoobot();
 }

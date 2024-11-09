@@ -452,7 +452,7 @@ export const sell = async (
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (profit !== "GRID") {
+      if (profit !== "GRID" && profit !== "SKIP") {
         if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
           const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
           if (previousTrade) {
@@ -608,7 +608,7 @@ export const buy = async (
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
-      if (profit !== "GRID") {
+      if (profit !== "GRID" && profit !== "SKIP") {
         if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
           const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
           if (previousTrade) {

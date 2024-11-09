@@ -189,13 +189,13 @@ export const placeTrade = async (
   const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
   const direction = await tradeDirection(consoleLogger, symbol, candlesticks, indicators, exchangeOptions, symbolOptions, filter);
   if (direction === 'SELL') {
-    const sold = await sell(discord, exchange, consoleLogger, symbol, "100%", orderBook, filter, processOptions, exchangeOptions, symbolOptions, symbolOptions.consecutiveQuantity);
+    const sold = await sell(discord, exchange, consoleLogger, symbol, "SKIP", orderBook, filter, processOptions, exchangeOptions, symbolOptions, symbolOptions.consecutiveQuantity);
     if (sold !== false) {
       symbolOptions.consecutiveTradeAllowed = false
     }
     return sold; 
   } else if (direction === 'BUY') {
-    const bought = await buy(discord, exchange, consoleLogger, symbol, "100%", orderBook, filter, processOptions, exchangeOptions, symbolOptions, symbolOptions.consecutiveQuantity);
+    const bought = await buy(discord, exchange, consoleLogger, symbol, "SKIP", orderBook, filter, processOptions, exchangeOptions, symbolOptions, symbolOptions.consecutiveQuantity);
     if (bought !== false) {
       symbolOptions.consecutiveTradeAllowed = false
     }

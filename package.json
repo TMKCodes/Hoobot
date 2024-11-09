@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "hoobot",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Hoobot is reactive algorithmic crypto trading bot with suport for OpenAI GPT and many other indicators.",
   "main": "src/index.ts",
   "scripts": {
@@ -15,10 +15,16 @@
     "build:development": "npm-run-all -s clean:dev webpack:development",
     "build:production": "npm-run-all -s clean:build webpack:production",
     "build": "npm-run-all -s clean:ts build:production clean:ts",
-    "start": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js",
-    "start:development": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build-dev/hoobot.js",
+    "start": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" pm2 start node --name app-production -- build/hoobot.js",
+    "start:nopm2": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js",
+    "start:development": "npm run build:development && cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" pm2 start node --name app-development --instances 1 -- build-dev/hoobot.js",
     "dev": "npm-run-all -s clean:ts build:development clean:ts start:development",
-    "simulate": "cross-env SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js"
+    "simulate": "cross-env SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" pm2 start node --name app-simulate --instances 1 -- build/hoobot.js",
+    "stop": "pm2 stop app-production && pm2 delete app-production && pm2 save --force",
+    "stop:development": "pm2 stop app-development && pm2 delete app-development && pm2 save --force",
+    "stop:simulate": "pm2 stop app-simulate && pm2 delete app-simulate && pm2 save --force",
+    "list": "pm2 status",
+    "logs": "pm2 logs"
   },
   "author": "Toni Lukkaroinen",
   "license": "ISC",
@@ -34,6 +40,7 @@
     "original-fs": "^1.2.0",
     "patch-package": "^8.0.0",
     "play-sound": "^1.1.5",
+    "pm2": "^5.4.2",
     "utf-8-validate": "^5.0.10",
     "zlib-sync": "^0.1.9"
   },

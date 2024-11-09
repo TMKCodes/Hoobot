@@ -353,7 +353,7 @@ export class Xeggex {
         this.ws = null;
         this.connect();
       }
-    }, 140000);
+    }, 70000);
   };
 
   private loopPing = () => {
@@ -401,10 +401,6 @@ export class Xeggex {
     // New: Error event listener to catch connection errors and avoid unhandled exceptions
     this.ws.on("error", (err) => {
       console.error("WebSocket encountered an error:", err);
-      if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-        console.log("Attempting to reconnect due to WebSocket error...");
-        this.handleReconnection();
-      }
     });
 
     // Respond to server ping with a pong and reset heartbeat
@@ -428,27 +424,12 @@ export class Xeggex {
       process.exit(1);
     }
     while (retries < maxRetries) {
-      if (this.ws) {
-        if (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN) {
-          this.ws.terminate();
-        }
-        this.ws = null;
-      }
-      console.log(`Reconnecting in ${delayTime / 1000} seconds...`);
-      await delay(delayTime);
-      console.log(`Attempt ${retries + 1} of ${maxRetries}: Trying to reconnect...`);
       try {
-        this.ws = await this.connect();
-        while(this.ws.readyState === WebSocket.CONNECTING) {
-          await delay(50);
-        }
-        if (this.ws.readyState === WebSocket.OPEN) {
-          console.log("Reconnected successfully.");
-          return; 
-        } else {
+        if (this.ws) {
+          this.ws.terminate();
           this.ws = null;
-          console.log("Reconnecton failed.");
-          throw Error("Failed to connect.");
+          this.connect();
+          console.log("Reconnected.")
         }
       } catch (error) {
         console.error("Reconnection attempt failed:", error);

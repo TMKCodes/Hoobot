@@ -51,6 +51,7 @@ Dependencies are essential components that Hoobot needs to function correctly. F
    - In the terminal, navigate to the Hoobot folder.
    - Type `sh linux.sh` and press Enter to begin the dependency installation process.
 
+
 ### Configuration Files
 
 #### `settings/hoobot-options.json`
@@ -98,6 +99,9 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 - **source**: (string) Data source for indicators (close, high, low).
 - **consecutiveDirection**: (string) Trade direction (SELL, BUY).
 - **consecutiveQuantity**: (number) Amount in quote for the consecutive sell/buy orders.
+- **periodicDirection**: (string) Trade direction (SELL, BUY).
+- **periodicQuantity**: (number) Amount in quote for the consecutive sell/buy orders.
+- **periodicInterval**: (number) Interval in seconds, how often to do place a trade.
 - **trend**: (object) Trend detection settings.
   - **current**: (string) The current trend direction (e.g., "up", "down").
   - **enabled**: (boolean) Enables or disables trend detection.
@@ -454,11 +458,27 @@ With your configurations set, it's time to launch Hoobot:
 
 - Open a terminal and navigate to the Hoobot directory.
 - Execute the command `npm run start` to initialize Hoobot.
+- Hoobot will be ran with PM2 Node process manager to keep it up and running in case of unknown crashes.
 
 To run the simulation:
 
 - Open a terminal and navigate to the Hoobot directory.
 - Execute the command `npm run simulate` to initialize Hoobot simulation.
+- Hoobot will be ran with PM2 Node process manager to keep it up and running in case of unknown crashes.
+
+### Shutdown Hoobot 
+
+With your Hoobot running and you want to change settings and reboot it or stop running it:
+
+- Open a terminal and navigate to the Hoobot directory.
+- Execute the command `npm run stop` to stop Hoobot from being run on PM2.
+
+To stop the simulation:
+
+- Open a terminal and navigate to the Hoobot directory.
+- Execute the command `npm run stop:simulate` to stop Hoobot simulation from being run on PM2.
+
+When rebooting, you can now run `npm run start` again.
 
 ### Updating Hoobot
 

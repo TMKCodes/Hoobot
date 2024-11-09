@@ -91,7 +91,7 @@ export interface ExchangeOptions {
   name: string;
   key: string;
   secret: string;
-  mode: "algorithmic" | "hilow" | "grid" | "consecutive";
+  mode: "algorithmic" | "hilow" | "grid" | "consecutive" | "periodic";
   forceStopOnDisconnect: boolean;
   console: string;
   openOrders: OpenOrders;
@@ -121,6 +121,10 @@ export interface SymbolOptions {
   consecutivePreviousDirection: string | undefined;
   consecutiveNextTrade: string | undefined;
   consecutiveTradeAllowed: boolean | undefined;
+  periodicDirection: "SELL" | "BUY" | undefined;
+  periodicQuantity: number;
+  periodicInterval: number;
+  periodicTime: number;
   trend?: {
     current: string;
     enabled: boolean;
