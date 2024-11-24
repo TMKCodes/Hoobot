@@ -77,7 +77,7 @@ const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
 
 export const placeOrder = async (exchange: Exchange, symbol: string, direction: string, price: number, quantityInBase: number, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions): Promise<Order> => {
   if (direction === "sell") {
-    let order = await placeSellOrder(exchange, symbol, quantityInBase, price);
+    let order = await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
     if (order !== undefined) {
       exchangeOptions.balances = await getCurrentBalances(exchange);
       if (exchangeOptions.tradeHistory === undefined) {
@@ -89,7 +89,7 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
       return {} as Order;
     }
   } else if (direction === "buy") {
-    let order = await placeBuyOrder(exchange, symbol, quantityInBase, price);
+    let order = await placeBuyOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
     if (order !== undefined) {
       exchangeOptions.balances = await getCurrentBalances(exchange);
       if (exchangeOptions.tradeHistory === undefined) {
