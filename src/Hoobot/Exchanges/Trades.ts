@@ -26,16 +26,16 @@
  * ===================================================================== */
 
 import { Client } from "discord.js";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/Args";
 import { Filter } from "./Filters";
 import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { play } from "../Utilities/playSound";
+import { play } from "../Utilities/PlaySound";
 import { Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import path from "path";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 import { XeggexResponse, XeggexTrades } from "./Xeggex/Xeggex";
@@ -289,7 +289,7 @@ const roundStep = (price: number, size: number): number => {
   }
 };
 
-export const placeSellOrder = async (exchange: Exchange, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
+export const placeSellOrder = async (exchange: Exchange, exchangeOptions: ExchangeOptions, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
@@ -323,8 +323,9 @@ export const placeSellOrder = async (exchange: Exchange, symbol: string, quantit
       }
     }
   } catch (error) {
-    if (error.code === 20001) {
+    if (error.code === 20001 || error.code === -2021 || error.code === -2010) {
       console.error(`Insufficient funds for SELL order creation in ${symbol}`);
+      exchangeOptions.balances = await getCurrentBalances(exchange);
     } else {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(error);
@@ -333,7 +334,7 @@ export const placeSellOrder = async (exchange: Exchange, symbol: string, quantit
   return undefined;
 };
 
-export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
+export const placeBuyOrder = async (exchange: Exchange, exchangeOptions: ExchangeOptions, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
@@ -365,8 +366,9 @@ export const placeBuyOrder = async (exchange: Exchange, symbol: string, quantity
       return order;
     }
   } catch (error) {
-    if (error.code === 20001) {
+    if (error.code === 20001 || error.code === 2021) {
       console.error(`Insufficient funds for BUY order creation in ${symbol}`);
+      exchangeOptions.balances = await getCurrentBalances(exchange);
     } else {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(error);
@@ -470,7 +472,7 @@ export const sell = async (
         return false;
       }
       createBlock(symbol);
-      let order = await placeSellOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
+      let order = await placeSellOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
         play(soundFile);
         let msg = "```";
@@ -629,7 +631,7 @@ export const buy = async (
         return false;
       }
       createBlock(symbol);
-      let order = await placeBuyOrder(exchange, symbol, roundedQuantityInBase, roundedPrice);
+      let order = await placeBuyOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
       if (order !== undefined) {
         play(soundFile);
         let msg = "```";

@@ -27,12 +27,12 @@
 
 import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
-import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/Args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { Candlesticks } from "../Exchanges/Candlesticks";
 import { getTradeHistory, createBlock, placeBuyOrder, removeBlock, placeSellOrder, delay } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import { cancelOrder, getAllOrders, getOpenOrders, getOrder, Order } from "../Exchanges/Orders";
 import { getCurrentBalances } from "../Exchanges/Balances";
 import { symbolFilters } from "../..";

@@ -26,8 +26,8 @@
 * ===================================================================== */
 
 import { REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from 'discord.js';
-import { ConfigOptions } from 'src/Hoobot/Utilities/args';
-import { logToFile } from '../../Hoobot/Utilities/logToFile';
+import { ConfigOptions } from 'src/Hoobot/Utilities/Args';
+import { logToFile } from '../../Hoobot/Utilities/LogToFile';
 
 // const token = process.env.DISCORD_BOT_TOKEN;
 // const clientId = process.env.DISCORD_APPLICATION_ID;

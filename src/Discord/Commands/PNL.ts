@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/Args';
 import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 import { Exchange, getExchangeByName } from '../../Hoobot/Exchanges/Exchange';
 

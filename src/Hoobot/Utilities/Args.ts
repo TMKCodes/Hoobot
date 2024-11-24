@@ -29,7 +29,7 @@ import { Balances } from "../Exchanges/Balances";
 import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
 import { Order } from "../Exchanges/Orders";
-import { logToFile } from "./logToFile";
+import { logToFile } from "./LogToFile";
 import { Exchange } from "../Exchanges/Exchange";
 import { Filter } from "../Exchanges/Filters";
 

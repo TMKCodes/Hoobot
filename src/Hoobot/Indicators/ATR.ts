@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateATR = (

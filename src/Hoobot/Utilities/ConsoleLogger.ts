@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 import fs from 'fs';
-import { logToFile } from './logToFile';
+import { logToFile } from './LogToFile';
 export interface ConsoleLogger {
   push: (key: string, value: any | any[]) => ConsoleLogger;
   print: (color?: string) => void;

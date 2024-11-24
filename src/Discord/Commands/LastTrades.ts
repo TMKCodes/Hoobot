@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/Args';
 import { Trade, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 import { Exchange, getExchangeByName } from '../../Hoobot/Exchanges/Exchange';
 

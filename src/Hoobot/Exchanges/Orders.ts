@@ -28,11 +28,11 @@
 import Binance from "node-binance-api";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
-import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/args";
-import { consoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/Args";
+import { consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 import { Filter, Filters } from "./Filters";
 

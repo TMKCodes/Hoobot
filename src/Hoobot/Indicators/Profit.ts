@@ -26,8 +26,8 @@
 * ===================================================================== */
 
 import { Orderbook } from "../Exchanges/Orderbook";
-import { ExchangeOptions, SymbolOptions } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ExchangeOptions, SymbolOptions } from "../Utilities/Args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getPreviousTrades, readForceSkip } from "../Exchanges/Trades";
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { reverseSign } from "../Modes/Algorithmic";

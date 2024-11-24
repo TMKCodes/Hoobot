@@ -27,8 +27,8 @@
 
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { Indicators } from "../Modes/Algorithmic";
-import { ConfigOptions, SymbolOptions } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 
 export interface sma {
   short: number[];

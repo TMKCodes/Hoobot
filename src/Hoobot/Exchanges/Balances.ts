@@ -30,7 +30,7 @@ import path from 'path';
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
 import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
-import { logToFile } from '../Utilities/logToFile';
+import { logToFile } from '../Utilities/LogToFile';
 
 export interface DatedBalances {
   [date: string] : Balances,

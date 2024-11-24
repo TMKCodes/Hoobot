@@ -27,9 +27,9 @@
 
 import { Client, GatewayIntentBits, Events, RESTPostAPIChatInputApplicationCommandsJSONBody, TextChannel, Interaction, CacheType } from 'discord.js'; 
 import { deployCommands } from './Commands/deploy';
-import { ConfigOptions } from '../Hoobot/Utilities/args';
+import { ConfigOptions } from '../Hoobot/Utilities/Args';
 import { Exchange } from '../Hoobot/Exchanges/Exchange';
-import { logToFile } from '../Hoobot/Utilities/logToFile';
+import { logToFile } from '../Hoobot/Utilities/LogToFile';
 
 const deployable: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 interface command {

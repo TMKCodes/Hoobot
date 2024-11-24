@@ -27,7 +27,7 @@
 import fs from 'fs';
 import Binance from "node-binance-api";
 import { Exchange, isBinance } from './Exchange';
-import { logToFile } from '../Utilities/logToFile';
+import { logToFile } from '../Utilities/LogToFile';
 
 export interface SymbolInfo {
   symbol: string;

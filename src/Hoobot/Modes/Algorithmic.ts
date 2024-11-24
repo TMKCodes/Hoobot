@@ -27,8 +27,8 @@
 
 import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
-import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/args";
-import { ConsoleLogger, consoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/Args";
+import { ConsoleLogger, consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend, logEMASignals } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
@@ -49,7 +49,7 @@ import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances } from "../Exchanges/Balances";
 import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals, logRenkoSignals } from "../Indicators/Renko";
 import { Exchange } from "../Exchanges/Exchange";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
 
 export interface Indicators {

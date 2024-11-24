@@ -27,7 +27,7 @@
 
 import Binance from "node-binance-api";
 import { Xeggex } from "./Xeggex/Xeggex";
-import { ConfigOptions, ExchangeOptions } from "../Utilities/args";
+import { ConfigOptions, ExchangeOptions } from "../Utilities/Args";
 import { NonKYC } from "./NonKYC/NonKYC";
 
 export type Exchange = Binance | Xeggex | NonKYC;

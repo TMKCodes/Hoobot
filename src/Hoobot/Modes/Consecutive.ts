@@ -27,11 +27,11 @@
 
 import { Client } from "discord.js";
 import { symbolFilters } from "../..";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, ExchangeOptions, getSecondsFromInterval, SymbolOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
+import { ConfigOptions, ExchangeOptions, getSecondsFromInterval, SymbolOptions } from "../Utilities/Args";
 import { buy, calculateROI, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory, sell } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import { Candlesticks } from "../Exchanges/Candlesticks";
 import { calculateIndicators, Indicators } from "./Algorithmic";
 import { Filter } from "../Exchanges/Filters";

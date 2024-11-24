@@ -28,7 +28,7 @@
 import { CacheType, ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
 import { Exchange, getExchangeByName } from '../../Hoobot/Exchanges/Exchange';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/Args';
 
 export interface balancesWithUSDT { 
   [symbol: string]: {

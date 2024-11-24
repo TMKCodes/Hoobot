@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { logToFile } from '../Utilities/logToFile';
+import { logToFile } from '../Utilities/LogToFile';
 import { Exchange, isBinance, isNonKYC, isXeggex } from './Exchange';
 import { XeggexOrderbook, XeggexResponse } from './Xeggex/Xeggex';
 

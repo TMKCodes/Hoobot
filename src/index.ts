@@ -28,25 +28,26 @@
 import Binance from "node-binance-api";
 import { loginDiscord, sendMessageToChannel } from "./Discord/discord";
 import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from "./Hoobot/Exchanges/Candlesticks";
-import { ExchangeOptions, parseArgs } from "./Hoobot/Utilities/args";
+import { ExchangeOptions, parseArgs } from "./Hoobot/Utilities/Args";
 import { getCurrentBalances, storeBalances } from "./Hoobot/Exchanges/Balances";
-import { consoleLogger } from "./Hoobot/Utilities/consoleLogger";
+import { consoleLogger } from "./Hoobot/Utilities/ConsoleLogger";
 import { Filters, getFilters } from "./Hoobot/Exchanges/Filters";
 import dotenv from "dotenv";
 import { algorithmic, simulateAlgorithmic } from "./Hoobot/Modes/Algorithmic";
-import { checkLicenseValidity } from "./Hoobot/Utilities/license";
+import { checkLicenseValidity } from "./Hoobot/Utilities/License";
 import { Orderbook, listenForOrderbooks } from "./Hoobot/Exchanges/Orderbook";
 import { hilow } from "./Hoobot/Modes/HiLow";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { Xeggex } from "./Hoobot/Exchanges/Xeggex/Xeggex";
 import { Exchange, getExchangeOption, isBinance, isXeggex } from "./Hoobot/Exchanges/Exchange";
-import { logToFile } from "./Hoobot/Utilities/logToFile";
+import { logToFile } from "./Hoobot/Utilities/LogToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Trade, getTradeHistory, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { consecutive } from "./Hoobot/Modes/Consecutive";
 import { periodic } from "./Hoobot/Modes/Periodic";
+import express, { Express } from 'express';
 
 export var symbolFilters: Filters = {};
 
@@ -378,8 +379,38 @@ const simulate = async () => {
   }
 };
 
+
+const webServer = async () => {
+  const app = express();
+  const PORT = process.env.PORT || 5656;
+
+  // Serve static files from the build/frontend directory
+  let frontendPath = './build/Frontend';
+  if (process.env.DEVELOPMENT === 'true') {
+    frontendPath = './src/Frontend';
+  }
+  app.use(express.static(frontendPath));
+
+  // Serve index.html on root route
+  app.get('/', (_, res) => {
+    res.sendFile(frontendPath +'/index.html');
+  });
+
+  // Start the server and return the Express app instance
+  await new Promise<void>((resolve) => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+      resolve();
+    });
+  });
+
+  return app;
+}
+
 if (process.env.SIMULATE === "true") {
   simulate();
 } else {
+  webServer();
   hoobot();
 }
+

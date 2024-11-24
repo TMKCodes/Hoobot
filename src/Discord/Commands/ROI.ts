@@ -29,7 +29,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import fs from 'fs';
 import { Balance, getCurrentBalances } from '../../Hoobot/Exchanges/Balances';
 import { Exchange, getExchangeByName } from '../../Hoobot/Exchanges/Exchange';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/Args';
 
 export default {
   builder: new SlashCommandBuilder()

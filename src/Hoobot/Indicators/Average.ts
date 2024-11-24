@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 
 export const calculateAverage = (
   candlesticks: Candlestick[]

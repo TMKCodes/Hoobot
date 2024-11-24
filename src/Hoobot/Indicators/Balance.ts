@@ -25,8 +25,8 @@
 * the use of this software.
 * ===================================================================== */
 
-import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ExchangeOptions, SymbolOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
+import { ExchangeOptions, SymbolOptions } from "../Utilities/Args";
 import { Filter } from "../Exchanges/Filters";
 import { checkPreviousTrade } from "../Exchanges/Trades";
 

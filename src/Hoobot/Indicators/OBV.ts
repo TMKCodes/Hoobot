@@ -26,8 +26,8 @@
 * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
-import { ConfigOptions, SymbolOptions } from "../Utilities/args";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
+import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateOBV = (

@@ -25,7 +25,7 @@
 * the use of this software.
 * ===================================================================== */
 
-import { logToFile } from "./logToFile";
+import { logToFile } from "./LogToFile";
 
 
 // Function to check if the provided license key is valid

@@ -26,13 +26,13 @@
  * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { CandlestickInterval, ConfigOptions, ExchangeOptions, SymbolOptions, getMinutesFromInterval } from "../Utilities/args";
+import { CandlestickInterval, ConfigOptions, ExchangeOptions, SymbolOptions, getMinutesFromInterval } from "../Utilities/Args";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import AdmZip from "adm-zip";
 import path from "path";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 import { XeggexCandles, XeggexResponse } from "./Xeggex/Xeggex";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 import { delay } from "./Trades";
 
 export interface Candlesticks {

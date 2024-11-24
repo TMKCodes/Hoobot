@@ -26,10 +26,10 @@
 * ===================================================================== */
 
 import { SlashCommandBuilder } from 'discord.js';
-import { ConfigOptions } from '../../Hoobot/Utilities/args';
+import { ConfigOptions } from '../../Hoobot/Utilities/Args';
 import { Trade, calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, getTradeHistory } from '../../Hoobot/Exchanges/Trades';
 import { Orderbook } from '../../Hoobot/Exchanges/Orderbook';
-import { logToFile } from '../../Hoobot/Utilities/logToFile';
+import { logToFile } from '../../Hoobot/Utilities/LogToFile';
 import { Exchange, getExchangeByName, getExchangeOption } from '../../Hoobot/Exchanges/Exchange';
 
 export default {

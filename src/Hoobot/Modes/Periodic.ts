@@ -27,11 +27,11 @@
 
 import { Client } from "discord.js";
 import { symbolFilters } from "../..";
-import { ConsoleLogger } from "../Utilities/consoleLogger";
-import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/args";
+import { ConsoleLogger } from "../Utilities/ConsoleLogger";
+import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/Args";
 import { buy, sell } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
-import { logToFile } from "../Utilities/logToFile";
+import { logToFile } from "../Utilities/LogToFile";
 
 export const periodic = async (
   discord: Client, 

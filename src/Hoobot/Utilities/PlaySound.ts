@@ -26,7 +26,7 @@
 * ===================================================================== */
 
 import playSound from 'play-sound';
-import { logToFile } from './logToFile';
+import { logToFile } from './LogToFile';
 
 export const play = (file: string): Promise<void> => {
   return new Promise((resolve, reject) => {

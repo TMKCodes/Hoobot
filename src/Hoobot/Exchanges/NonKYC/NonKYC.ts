@@ -1,7 +1,7 @@
 
 import crypto from 'crypto';
 import EventEmitter from 'events';
-import { logToFile } from '../../../Hoobot/Utilities/logToFile';
+import { logToFile } from '../../Utilities/LogToFile';
 import { URL } from 'url';
 import WebSocket from 'ws';
 
