@@ -199,6 +199,7 @@ export interface SymbolOptions {
       slow: number;
       signal: number;
       weight?: number;
+      skipHistogram?: boolean;
     };
     rsi?: {
       enabled: boolean;

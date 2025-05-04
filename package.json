@@ -19,10 +19,8 @@
     "start:nopm2": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build/hoobot.js",
     "start:development": "npm run build:development && cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" DEVELOPMENT=true node --experimental-modules build-dev/hoobot.js",
     "dev": "npm-run-all -s clean:ts build:development clean:ts start:development",
-    "simulate": "cross-env SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" pm2 start node --name app-simulate --instances 1 -- build/hoobot.js",
+    "simulate": "cross-env SIMULATE=\"true\" NODE_OPTIONS=\"--max-old-space-size=8192\" node --experimental-modules build-dev/hoobot.js",
     "stop": "pm2 stop app-production && pm2 delete app-production && pm2 save --force",
-    "stop:development": "pm2 stop app-development && pm2 delete app-development && pm2 save --force",
-    "stop:simulate": "pm2 stop app-simulate && pm2 delete app-simulate && pm2 save --force",
     "list": "pm2 status",
     "logs": "pm2 logs"
   },

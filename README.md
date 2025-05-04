@@ -120,6 +120,8 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
   - **maximumBuy**: (number) Maximum price for buy trades.
   - **minimumBuy**: (number) Minimum price for buy trades.
 - **growingMax**: (object) Growing max settings for buy/sell.
+  - **buy**: (number) Maximum price for buy trades. (Note starting balance for simulation)
+  - **sell**: (number) Minimum price for sell trades.
 - **closePercentage**: (number) Close percentage for trades.
 - **maximumAgeOfOrder**: (number) Maximum age of an order.
 - **tradeFeePercentage**: (number) Trade fee percentage.
@@ -464,7 +466,7 @@ To run the simulation:
 
 - Open a terminal and navigate to the Hoobot directory.
 - Execute the command `npm run simulate` to initialize Hoobot simulation.
-- Hoobot will be ran with PM2 Node process manager to keep it up and running in case of unknown crashes.
+- Remember that the simulaton works with only with Binance data and growingMax.buy must be set for starting balance.
 
 ### Shutdown Hoobot 
 
@@ -472,11 +474,6 @@ With your Hoobot running and you want to change settings and reboot it or stop r
 
 - Open a terminal and navigate to the Hoobot directory.
 - Execute the command `npm run stop` to stop Hoobot from being run on PM2.
-
-To stop the simulation:
-
-- Open a terminal and navigate to the Hoobot directory.
-- Execute the command `npm run stop:simulate` to stop Hoobot simulation from being run on PM2.
 
 When rebooting, you can now run `npm run start` again.
 

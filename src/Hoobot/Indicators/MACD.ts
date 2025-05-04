@@ -148,8 +148,8 @@ export const checkMACDSignals = (
       if(currentHistogram !== undefined && prevHistogram !== undefined && currentMacdLine !== undefined && currentSignalLine !== undefined) {
         const isPrevHistogramPositive = prevHistogram > 0;
         const isPrevHistogramNegative = prevHistogram < 0;
-        const isHistogramPositive = currentHistogram > 0;
-        const isHistogramNegative = currentHistogram < 0;
+        var isHistogramPositive = currentHistogram > 0;
+        var isHistogramNegative = currentHistogram < 0;
         const isNPCrossover = isPrevHistogramNegative && isHistogramPositive; // BUY
         const isPNCrossover = isPrevHistogramPositive && isHistogramNegative; // SELL
         const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
@@ -158,8 +158,14 @@ export const checkMACDSignals = (
         const isPrevMacdLineBelowSignalLine = prevMacdLine < prevSignalLine;
         const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
         const isSignalLineBelowHistogram = currentSignalLine < currentHistogram;
-        const isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
-        const isMacdLineBelowHstogram = currentMacdLine < currentHistogram;
+        var isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
+        var isMacdLineBelowHistogram = currentMacdLine < currentHistogram;
+        if (symbolOptions.indicators.macd.skipHistogram === true) {
+          isMacdLineAboveHistogram = true
+          isMacdLineBelowHistogram = true
+          isHistogramNegative = true
+          isHistogramPositive = true
+        }
         const isMACDSignalCrossover = isMacdLineAboveSignalLine && isPrevMacdLineBelowSignalLine; // BUY
         const isSignalMACDCrossover = isMacdLineBelowSignalLine && isPrevMacdLineAboveSignalLine; // SELL
         if (isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
@@ -180,7 +186,7 @@ export const checkMACDSignals = (
         } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
           symbolOptions.indicators.macd.weight = 1.5;
           check = 'SELL';
-        } else if (isMacdLineAboveSignalLine && isHistogramPositive && isMacdLineBelowHstogram && isSignalLineBelowHistogram ) {
+        } else if (isMacdLineAboveSignalLine && isHistogramPositive && isMacdLineBelowHistogram && isSignalLineBelowHistogram ) {
           symbolOptions.indicators.macd.weight = 1;
           check = 'BUY';
         } else if (isMacdLineBelowSignalLine && isHistogramNegative && isMacdLineAboveHistogram && isSignalLineAboveHistogram) {
