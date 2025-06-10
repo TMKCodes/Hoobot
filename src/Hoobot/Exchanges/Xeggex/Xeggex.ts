@@ -23,7 +23,15 @@ export interface XeggexResponse {
   jsonrpc: string;
   method?: string;
   params?: XeggexTickers | XeggexOrderbook | XeggexCandles | XeggexTrades;
-  result?: XeggexAsset | XeggexAsset[] | XeggexMarket | XeggexMarket[] | XeggexBalance[] | XeggexOrder | XeggexOrder[] | boolean;
+  result?:
+    | XeggexAsset
+    | XeggexAsset[]
+    | XeggexMarket
+    | XeggexMarket[]
+    | XeggexBalance[]
+    | XeggexOrder
+    | XeggexOrder[]
+    | boolean;
   error?: XeggexError;
   id: number;
   name?: string;
@@ -376,7 +384,7 @@ export class Xeggex {
 
   private connect = async (): Promise<WebSocket> => {
     this.ws = new WebSocket(this.WebSocketURL);
-  
+
     this.ws.on("open", async () => {
       this.loopPing();
       if (this.key && this.secret) {
@@ -388,7 +396,7 @@ export class Xeggex {
         }
       }
     });
-  
+
     this.ws.on("close", async (code: number) => {
       clearTimeout(this.pingTimeout);
       console.log(`WebSocket closed with code ${code}.`);
@@ -397,7 +405,7 @@ export class Xeggex {
         await this.handleReconnection(); // Trigger reconnection
       }
     });
-  
+
     // New: Error event listener to catch connection errors and avoid unhandled exceptions
     this.ws.on("error", (err) => {
       console.error("WebSocket encountered an error:", err);
@@ -405,22 +413,22 @@ export class Xeggex {
 
     // Respond to server ping with a pong and reset heartbeat
     this.ws.on("ping", (_buffer: Buffer) => {
-      this.ws?.pong(); 
+      this.ws?.pong();
     });
-  
+
     this.ws.on("pong", (_buffer: Buffer) => {
       this.heartBeat();
     });
-  
+
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
     };
-    return this.ws
+    return this.ws;
   };
 
   private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
     let retries = 0;
-    if(this.forceStopOnDisconnect) {
+    if (this.forceStopOnDisconnect) {
       process.exit(1);
     }
     while (retries < maxRetries) {
@@ -429,15 +437,15 @@ export class Xeggex {
           this.ws.terminate();
           this.ws = null;
           this.connect();
-          console.log("Reconnected.")
+          console.log("Reconnected.");
         }
       } catch (error) {
         console.error("Reconnection attempt failed:", error);
-        retries++; 
-        delayTime *= 2; 
+        retries++;
+        delayTime *= 2;
       }
     }
-  
+
     console.error(`Failed to reconnect after ${maxRetries} attempts. Please check network or server status.`);
   };
 
@@ -464,7 +472,9 @@ export class Xeggex {
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
-      let callbacks = this.symbolCallbacks.filter((scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join(""))[0];
+      let callbacks = this.symbolCallbacks.filter(
+        (scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join("")
+      )[0];
       if (response.method === "ticker") {
         this.callbackMap.call(callbacks.tickerCallbackId, response);
       } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
@@ -509,7 +519,15 @@ export class Xeggex {
     });
   };
 
-  public newOrder = async (symbol: string, side: "buy" | "sell", type: "limit" | "market", quantity: number, price: number = 0, useProvidedId: string | null = null, strictValidate: boolean = false): Promise<XeggexOrder> => {
+  public newOrder = async (
+    symbol: string,
+    side: "buy" | "sell",
+    type: "limit" | "market",
+    quantity: number,
+    price: number = 0,
+    useProvidedId: string | null = null,
+    strictValidate: boolean = false
+  ): Promise<XeggexOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "newOrder",
@@ -701,7 +719,15 @@ export class Xeggex {
     });
   };
 
-  public getTrades = (symbol: string, callback: (response: XeggexResponse) => void, limit: number = 100, offset: number = 0, sort: string | null = null, from: string | null = null, till: string | null = null) => {
+  public getTrades = (
+    symbol: string,
+    callback: (response: XeggexResponse) => void,
+    limit: number = 100,
+    offset: number = 0,
+    sort: string | null = null,
+    from: string | null = null,
+    till: string | null = null
+  ) => {
     let messageId = this.messageId++;
     this.send({
       method: "getTrades",
@@ -859,7 +885,12 @@ export class Xeggex {
     });
   };
 
-  public subscribeCandles = async (symbol: string, period: number, callback: (response: XeggexResponse) => void, limit: number = 100) => {
+  public subscribeCandles = async (
+    symbol: string,
+    period: number,
+    callback: (response: XeggexResponse) => void,
+    limit: number = 100
+  ) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
     let symbols = this.symbolCallbacks.length + 1;
@@ -1023,7 +1054,14 @@ export class Xeggex {
     return this.apiCall(`/market/getorderbookbymarketid/${id}`, "GET", {}, {});
   };
 
-  public getCandles = async (symbol: string, from: number | null, to: number | null, resolution: number, countBack: number, firstDataRequest: number) => {
+  public getCandles = async (
+    symbol: string,
+    from: number | null,
+    to: number | null,
+    resolution: number,
+    countBack: number,
+    firstDataRequest: number
+  ) => {
     if (from === null && to === null) {
       return this.apiCall(
         `/market/candles`,

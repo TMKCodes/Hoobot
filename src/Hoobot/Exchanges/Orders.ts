@@ -213,19 +213,32 @@ export const addOpenOrder = (symbol: string, order: Order, exchangeOptions: Exch
 
 export const openOrderDone = (symbol: string, orderId: string, exchangeOptions: ExchangeOptions) => {
   if (exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined) {
-    exchangeOptions.openOrders[symbol.split("/").join("")] = exchangeOptions.openOrders[symbol.split("/").join("")].filter((order) => order.orderId !== orderId);
+    exchangeOptions.openOrders[symbol.split("/").join("")] = exchangeOptions.openOrders[
+      symbol.split("/").join("")
+    ].filter((order) => order.orderId !== orderId);
   }
 };
 
 export const checkOpenOrders = (symbol: string, exchangeOptions: ExchangeOptions) => {
-  if (exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined && exchangeOptions.openOrders[symbol.split("/").join("")]?.length > 0) {
+  if (
+    exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined &&
+    exchangeOptions.openOrders[symbol.split("/").join("")]?.length > 0
+  ) {
     return true;
   } else {
     return false;
   }
 };
 
-export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbol: string, order: Order, orderBook: Orderbook, processOptions: ConfigOptions, symbolOptions: SymbolOptions): Promise<string> => {
+export const handleOpenOrder = async (
+  discord: Client,
+  exchange: Exchange,
+  symbol: string,
+  order: Order,
+  orderBook: Orderbook,
+  processOptions: ConfigOptions,
+  symbolOptions: SymbolOptions
+): Promise<string> => {
   try {
     if (isBinance(exchange)) {
       let partiallyFilledSent = false;
@@ -246,34 +259,46 @@ export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbo
         logger.push("Age seconds: ", orderAgeSeconds);
         let tryToCancel = false;
         if (orderStatus.status === "CANCELED") {
-          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+            .split("/")
+            .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "CANCELED";
         } else if (orderStatus.status === "EXPIRED") {
-          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+            .split("/")
+            .join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "EXPIRED";
         } else if (orderStatus.status === "FILLED") {
-          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+            .split("/")
+            .join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "FILLED";
         } else if (orderStatus.status === "NEW") {
           tryToCancel = true;
         } else if (orderStatus.status === "PARTIALLY_FILLED") {
           if (partiallyFilledSent === false) {
-            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+              .split("/")
+              .join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             partiallyFilledSent = true;
           }
         } else if (orderStatus.status === "REJECTED") {
-          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+            .split("/")
+            .join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
           sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "REJECTED";
         }
         if (tryToCancel === true) {
           if (orderAgeSeconds > symbolOptions.maximumAgeOfOrder!) {
             await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
-            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+              .split("/")
+              .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             return "CANCELED";
           } else {
@@ -282,16 +307,26 @@ export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbo
               const orderBookBids = Object.keys(orderBook.bids)
                 .map((price) => parseFloat(price))
                 .sort((a, b) => b - a);
-              unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
+              unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+                parseFloat(order.quoteQty),
+                parseFloat(order.price),
+                orderBookBids[0]
+              );
             } else {
               const orderBookAsks = Object.keys(orderBook.asks)
                 .map((price) => parseFloat(price))
                 .sort((a, b) => a - b);
-              unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
+              unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+                parseFloat(order.quoteQty),
+                parseFloat(order.price),
+                orderBookAsks[0]
+              );
             }
             if (unrealizedPNL < symbolOptions.closePercentage!) {
               await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
-              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                .split("/")
+                .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
               sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
               return "CANCELED";
             }
@@ -314,7 +349,9 @@ export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbo
               const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
               if (orderAgeSeconds > symbolOptions.maximumAgeOfOrder!) {
                 await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
-                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                  .split("/")
+                  .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
                 sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
                 return "CANCELED";
               } else {
@@ -323,16 +360,26 @@ export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbo
                   const orderBookBids = Object.keys(orderBook.bids)
                     .map((price) => parseFloat(price))
                     .sort((a, b) => b - a);
-                  unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(order.quoteQty), parseFloat(order.price), orderBookBids[0]);
+                  unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+                    parseFloat(order.quoteQty),
+                    parseFloat(order.price),
+                    orderBookBids[0]
+                  );
                 } else {
                   const orderBookAsks = Object.keys(orderBook.asks)
                     .map((price) => parseFloat(price))
                     .sort((a, b) => a - b);
-                  unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(order.quoteQty), parseFloat(order.price), orderBookAsks[0]);
+                  unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+                    parseFloat(order.quoteQty),
+                    parseFloat(order.price),
+                    orderBookAsks[0]
+                  );
                 }
                 if (unrealizedPNL < symbolOptions.closePercentage!) {
                   await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
-                  const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                  const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                    .split("/")
+                    .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
                   sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
                   return "CANCELED";
                 }
@@ -349,13 +396,17 @@ export const handleOpenOrder = async (discord: Client, exchange: Exchange, symbo
             if (cancelledOrders !== undefined) {
               for (const cancelledOrder of cancelledOrders) {
                 if (String(cancelledOrder.id) === order.orderId) {
-                  const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                  const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                    .split("/")
+                    .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
                   sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
                   return "CANCELED";
                 }
               }
             }
-            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol.split("/").join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+            const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+              .split("/")
+              .join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
             sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
             return "FILLED";
           }

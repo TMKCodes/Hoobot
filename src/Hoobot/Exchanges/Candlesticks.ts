@@ -26,14 +26,19 @@
  * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { CandlestickInterval, ConfigOptions, ExchangeOptions, SymbolOptions, getMinutesFromInterval } from "../Utilities/Args";
+import {
+  CandlestickInterval,
+  ConfigOptions,
+  ExchangeOptions,
+  SymbolOptions,
+  getMinutesFromInterval,
+} from "../Utilities/Args";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import AdmZip from "adm-zip";
 import path from "path";
 import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
 import { XeggexCandles, XeggexResponse } from "./Xeggex/Xeggex";
 import { logToFile } from "../Utilities/LogToFile";
-import { delay } from "./Trades";
 
 export interface Candlesticks {
   [symbol: string]: {
@@ -59,7 +64,12 @@ export interface Candlestick {
   [key: string]: string | number | boolean;
 }
 
-export async function getLastCandlesticks(exchange: Exchange, symbol: string, interval: CandlestickInterval, limit: number = 500): Promise<Candlestick[]> {
+export async function getLastCandlesticks(
+  exchange: Exchange,
+  symbol: string,
+  interval: CandlestickInterval,
+  limit: number = 500
+): Promise<Candlestick[]> {
   return new Promise<Candlestick[]>(async (resolve, _reject) => {
     if (isBinance(exchange)) {
       exchange.candlesticks(
@@ -93,22 +103,24 @@ export async function getLastCandlesticks(exchange: Exchange, symbol: string, in
       );
     } else if (isXeggex(exchange) || isNonKYC(exchange)) {
       const candlesticks = await exchange.getCandles(symbol, null, null, getMinutesFromInterval(interval), limit, 1);
-      const parsedData: Candlestick[] = candlesticks.bars.map((candle: { time: number; close: number; open: number; high: number; low: number; volume: number }) => ({
-        symbol: symbol,
-        interval: interval,
-        type: "kline",
-        time: candle.time,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-        trades: 0,
-        volume: candle.volume,
-        quoteVolume: 0,
-        buyVolume: 0,
-        quoteBuyVolume: 0,
-        isFinal: true,
-      }));
+      const parsedData: Candlestick[] = candlesticks.bars.map(
+        (candle: { time: number; close: number; open: number; high: number; low: number; volume: number }) => ({
+          symbol: symbol,
+          interval: interval,
+          type: "kline",
+          time: candle.time,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+          trades: 0,
+          volume: candle.volume,
+          quoteVolume: 0,
+          buyVolume: 0,
+          quoteBuyVolume: 0,
+          isFinal: true,
+        })
+      );
       resolve(parsedData);
     }
   });
@@ -137,7 +149,19 @@ export const listenForCandlesticks = async (
         symbol = symbol.split("/").join("");
         websocket.candlesticks(symbol, timeframes[i], async (candlestick: { e: any; E: any; s: any; k: any }) => {
           let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlestick;
-          let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
+          let {
+            o: open,
+            h: high,
+            l: low,
+            c: close,
+            v: volume,
+            n: trades,
+            i: interval,
+            x: isFinal,
+            q: quoteVolume,
+            V: buyVolume,
+            Q: quoteBuyVolume,
+          } = ticks;
           const newCandlestick: Candlestick = {
             symbol: symbol,
             interval: interval,
@@ -160,7 +184,10 @@ export const listenForCandlesticks = async (
               [timeframes[i]]: [...oldCandlesticks, newCandlestick],
             };
           } else if (candleStore[symbol][timeframes[i]] === undefined) {
-            candleStore[symbol][timeframes[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick];
+            candleStore[symbol][timeframes[i]] = [
+              ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+              newCandlestick,
+            ];
           } else if (newCandlestick.isFinal === true) {
             candleStore[symbol][timeframes[i]].push(newCandlestick);
           } else {
@@ -231,8 +258,15 @@ export const listenForCandlesticks = async (
               const timeOfCandle = new Date(candle.timestamp).getTime();
               // const currentTime = new Date().getTime() - (30 * 1000);
               let isFinal = false;
-              if (candleStore[symbol.split("/").join("")] !== undefined && candleStore[symbol.split("/").join("")][timeframes[i]] !== undefined && candleStore[symbol.split("/").join("")][timeframes[i]].length > 0) {
-                const previousCandle = candleStore[symbol.split("/").join("")][timeframes[i]][candleStore[symbol.split("/").join("")][timeframes[i]].length - 1];
+              if (
+                candleStore[symbol.split("/").join("")] !== undefined &&
+                candleStore[symbol.split("/").join("")][timeframes[i]] !== undefined &&
+                candleStore[symbol.split("/").join("")][timeframes[i]].length > 0
+              ) {
+                const previousCandle =
+                  candleStore[symbol.split("/").join("")][timeframes[i]][
+                    candleStore[symbol.split("/").join("")][timeframes[i]].length - 1
+                  ];
                 if (previousCandle.time !== timeOfCandle) {
                   isFinal = true;
                 }
@@ -257,17 +291,27 @@ export const listenForCandlesticks = async (
               };
               if (candleStore[symbol.split("/").join("")] === undefined) {
                 candleStore[symbol.split("/").join("")] = {
-                  [timeframes[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick],
+                  [timeframes[i]]: [
+                    ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+                    newCandlestick,
+                  ],
                 };
               } else if (candleStore[symbol.split("/").join("")][timeframes[i]] === undefined) {
-                candleStore[symbol.split("/").join("")][timeframes[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)), newCandlestick];
+                candleStore[symbol.split("/").join("")][timeframes[i]] = [
+                  ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+                  newCandlestick,
+                ];
               } else if (newCandlestick.isFinal === true) {
                 candleStore[symbol.split("/").join("")][timeframes[i]].push(newCandlestick);
               } else {
-                candleStore[symbol.split("/").join("")][timeframes[i]][candleStore[symbol.split("/").join("")][timeframes[i]].length - 1] = newCandlestick;
+                candleStore[symbol.split("/").join("")][timeframes[i]][
+                  candleStore[symbol.split("/").join("")][timeframes[i]].length - 1
+                ] = newCandlestick;
               }
               if (candleStore[symbol.split("/").join("")][timeframes[i]].length > maxCandlesticks) {
-                candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][timeframes[i]].slice(-maxCandlesticks);
+                candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][
+                  timeframes[i]
+                ].slice(-maxCandlesticks);
               }
               if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
                 await callback(candleStore);
@@ -375,7 +419,10 @@ function shellSortCandlesticksByTime(nums: Candlestick[]): Candlestick[] {
   return nums;
 }
 
-export const downloadHistoricalCandlesticks = async (symbols: string[], intervals: string[]): Promise<Candlestick[]> => {
+export const downloadHistoricalCandlesticks = async (
+  symbols: string[],
+  intervals: string[]
+): Promise<Candlestick[]> => {
   let allCandlesticks: Candlestick[] = [];
   for (let symbolIndex = 0; symbolIndex < symbols?.length; symbolIndex++) {
     console.log(`Downloading symbol ${symbols[symbolIndex]} candlesticks.`);
@@ -385,12 +432,20 @@ export const downloadHistoricalCandlesticks = async (symbols: string[], interval
       const startYear = 2020;
       const startMonth = 1;
       for (let year = startYear; year <= currentYear; year++) {
-        for (let month = year === startYear ? startMonth : 1; month <= (year === currentYear ? currentMonth : 12); month++) {
+        for (
+          let month = year === startYear ? startMonth : 1;
+          month <= (year === currentYear ? currentMonth : 12);
+          month++
+        ) {
           const formattedYear = year.toString();
           const formattedMonth = addLeadingZero(month);
-          const url = `https://data.binance.vision/data/spot/monthly/klines/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}/${intervals[intervalIndex]}/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${
-            intervals[intervalIndex]
-          }-${formattedYear}-${formattedMonth}.zip`;
+          const url = `https://data.binance.vision/data/spot/monthly/klines/${symbols[symbolIndex]
+            .split("/")
+            .join("")
+            .toLocaleUpperCase()}/${intervals[intervalIndex]}/${symbols[symbolIndex]
+            .split("/")
+            .join("")
+            .toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.zip`;
           const destinationPath = "./candlestore/";
           if (!existsSync(destinationPath)) {
             try {
@@ -401,7 +456,9 @@ export const downloadHistoricalCandlesticks = async (symbols: string[], interval
               console.error(`Error creating directory '${destinationPath}': ${error}`);
             }
           }
-          const filePath = `./candlestore/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.csv`;
+          const filePath = `./candlestore/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${
+            intervals[intervalIndex]
+          }-${formattedYear}-${formattedMonth}.csv`;
           if (!existsSync(filePath)) {
             const dlresult = await downloadAndExtractZipFile(url, destinationPath);
             console.log(`Downloaded file ${url}: ${dlresult}`);
@@ -439,7 +496,13 @@ export const downloadHistoricalCandlesticks = async (symbols: string[], interval
   return allCandlesticks;
 };
 
-export const simulateListenForCandlesticks = async (symbols: string[], candlesticks: Candlestick[], candleStore: Candlesticks, options: ConfigOptions, callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>) => {
+export const simulateListenForCandlesticks = async (
+  symbols: string[],
+  candlesticks: Candlestick[],
+  candleStore: Candlesticks,
+  options: ConfigOptions,
+  callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>
+) => {
   const maxCandlesticks = 2000;
   for (let candleIndex = 0; candleIndex < candlesticks.length; candleIndex++) {
     const candlestick = candlesticks[candleIndex];

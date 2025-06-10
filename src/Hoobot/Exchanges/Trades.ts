@@ -42,6 +42,8 @@ import { XeggexResponse, XeggexTrades } from "./Xeggex/Xeggex";
 
 const soundFile = "./alarm.mp3";
 
+const sleep = async (ms: number) => await new Promise((r) => setTimeout(r, ms));
+
 export interface Trade {
   symbol: string;
   id: string;
@@ -63,7 +65,11 @@ export interface TradeHistory {
   [symbol: string]: Trade[];
 }
 
-export const listenForTrades = async (exchange: Exchange, symbol: string, callback: (trades: Trade) => Promise<void>): Promise<void> => {
+export const listenForTrades = async (
+  exchange: Exchange,
+  symbol: string,
+  callback: (trades: Trade) => Promise<void>
+): Promise<void> => {
   try {
     if (isXeggex(exchange)) {
       exchange.subscribeTrades(symbol, async (response: XeggexResponse) => {
@@ -139,11 +145,19 @@ export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: nu
   return ((entryPrice - exitPrice) / entryPrice) * 100;
 };
 
-export const calculateUnrealizedPNLPercentageForLong = (entryQty: number, entryPrice: number, highestBidPrice: number): number => {
+export const calculateUnrealizedPNLPercentageForLong = (
+  entryQty: number,
+  entryPrice: number,
+  highestBidPrice: number
+): number => {
   return (((highestBidPrice - entryPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
 
-export const calculateUnrealizedPNLPercentageForShort = (entryQty: number, entryPrice: number, lowestAskPrice: number): number => {
+export const calculateUnrealizedPNLPercentageForShort = (
+  entryQty: number,
+  entryPrice: number,
+  lowestAskPrice: number
+): number => {
   return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
 
@@ -154,21 +168,32 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string, proces
   } else if (isXeggex(exchange) || isNonKYC(exchange)) {
     const history = await exchange.getAllTrades(symbol, 500, 0);
     history.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
-    tradeHistory = history.map((trade: { id: string; orderid: string; price: string; quantity: string; fee: any; alternateFeeAsset: any; createdAt: any; side: string }) => ({
-      symbol: symbol.split("/").join(""),
-      id: parseFloat(trade.id),
-      orderId: parseFloat(trade.orderid),
-      orderListID: parseFloat(trade.orderid),
-      price: trade.price,
-      qty: trade.quantity,
-      quoteQty: (parseFloat(trade.quantity) * parseFloat(trade.price)).toString(),
-      commission: trade.fee,
-      commissionAsset: trade.alternateFeeAsset,
-      time: trade.createdAt,
-      isBuyer: trade.side === "buy" ? true : false,
-      isMaker: true,
-      isBestMatch: true,
-    }));
+    tradeHistory = history.map(
+      (trade: {
+        id: string;
+        orderid: string;
+        price: string;
+        quantity: string;
+        fee: any;
+        alternateFeeAsset: any;
+        createdAt: any;
+        side: string;
+      }) => ({
+        symbol: symbol.split("/").join(""),
+        id: parseFloat(trade.id),
+        orderId: parseFloat(trade.orderid),
+        orderListID: parseFloat(trade.orderid),
+        price: trade.price,
+        qty: trade.quantity,
+        quoteQty: (parseFloat(trade.quantity) * parseFloat(trade.price)).toString(),
+        commission: trade.fee,
+        commissionAsset: trade.alternateFeeAsset,
+        time: trade.createdAt,
+        isBuyer: trade.side === "buy" ? true : false,
+        isMaker: true,
+        isBestMatch: true,
+      })
+    );
   }
   let compactedTradeHistory: Trade[] = [];
   let currentTrade: Trade | null = null;
@@ -289,22 +314,101 @@ const roundStep = (price: number, size: number): number => {
   }
 };
 
-export const placeSellOrder = async (exchange: Exchange, exchangeOptions: ExchangeOptions, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
+export const placeSellOrder = async (
+  exchange: Exchange,
+  exchangeOptions: ExchangeOptions,
+  symbol: string,
+  quantityInBase: number,
+  price: number,
+  maxRetries: number = 5
+): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
   }
   if (quantityInBase === undefined || Number.isNaN(quantityInBase)) {
     return undefined;
   }
-  try {
-    if (isBinance(exchange)) {
-      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`);
-      return await exchange.sell(symbol.split("/").join(""), quantityInBase, price);
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
-      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`);
-      const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityInBase, price);
-      if (xeggexOrder) {
-        const order: Order = {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      if (isBinance(exchange)) {
+        logToFile(
+          "./logs/trades-binance.log",
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`
+        );
+        return await exchange.sell(symbol.split("/").join(""), quantityInBase, price);
+      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+        logToFile(
+          "./logs/trades-xeggex.log",
+          `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`
+        );
+        const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityInBase, price);
+        if (xeggexOrder) {
+          const order: Order = {
+            symbol: symbol.split("/").join(""),
+            orderId: xeggexOrder.id,
+            price: xeggexOrder.price,
+            qty: xeggexOrder.quantity,
+            quoteQty: (parseFloat(xeggexOrder.quantity) * parseFloat(xeggexOrder.price)).toString(),
+            commission: "",
+            commissionAsset: "",
+            time: xeggexOrder.createdAt,
+            isBuyer: xeggexOrder.side === "buy" ? true : false,
+            isMaker: true,
+            isBestMatch: true,
+            orderStatus: "NEW",
+            tradeId: parseFloat(xeggexOrder.id),
+          };
+          return order;
+        }
+      }
+    } catch (error) {
+      console.error(`Error happened in placing SELL order ${error}, retrying (${retries}/${maxRetries})`);
+      if (error.code === 20001 || error.code === -2021 || error.code === -2010) {
+        console.error(
+          `Insufficient funds for SELL order creation in ${symbol}, decreasing quantity for next try by 1%`
+        );
+        quantityInBase = quantityInBase * 0.99;
+        exchangeOptions.balances = await getCurrentBalances(exchange);
+      } else {
+        logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+        console.error(error);
+      }
+    }
+  }
+  return undefined;
+};
+
+export const placeBuyOrder = async (
+  exchange: Exchange,
+  exchangeOptions: ExchangeOptions,
+  symbol: string,
+  quantityInBase: number,
+  price: number,
+  maxRetries: number = 5
+): Promise<Order | undefined> => {
+  if (price === undefined || Number.isNaN(price)) {
+    return undefined;
+  }
+  if (quantityInBase === undefined || Number.isNaN(quantityInBase)) {
+    return undefined;
+  }
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      if (isBinance(exchange)) {
+        logToFile(
+          "./logs/trades-binance.log",
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+        );
+        return await exchange.buy(symbol.split("/").join(""), quantityInBase, price);
+      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+        logToFile(
+          "./logs/trades-xeggex.log",
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+        );
+        const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityInBase, price);
+        const order = {
           symbol: symbol.split("/").join(""),
           orderId: xeggexOrder.id,
           price: xeggexOrder.price,
@@ -321,63 +425,28 @@ export const placeSellOrder = async (exchange: Exchange, exchangeOptions: Exchan
         };
         return order;
       }
-    }
-  } catch (error) {
-    if (error.code === 20001 || error.code === -2021 || error.code === -2010) {
-      console.error(`Insufficient funds for SELL order creation in ${symbol}`);
-      exchangeOptions.balances = await getCurrentBalances(exchange);
-    } else {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(error);
+    } catch (error) {
+      retries++;
+      console.error(`Error happened in placing BUY order ${error}, retrying (${retries}/${maxRetries})`);
+      if (error.code === 20001 || error.code === -2021 || error.code === -2010) {
+        console.error(`Insufficient funds for BUY order creation in ${symbol}, decreasing quantity for next try by 1%`);
+        quantityInBase = quantityInBase * 0.99;
+        exchangeOptions.balances = await getCurrentBalances(exchange);
+      } else {
+        logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+        console.error(error);
+      }
     }
   }
+  console.error(`Max retries reached for placing buy order in ${symbol}`);
   return undefined;
 };
 
-export const placeBuyOrder = async (exchange: Exchange, exchangeOptions: ExchangeOptions, symbol: string, quantityInBase: number, price: number): Promise<Order | undefined> => {
-  if (price === undefined || Number.isNaN(price)) {
-    return undefined;
-  }
-  if (quantityInBase === undefined || Number.isNaN(quantityInBase)) {
-    return undefined;
-  }
-  try {
-    if (isBinance(exchange)) {
-      logToFile("./logs/trades-binance.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantityInBase} qty`);
-      return await exchange.buy(symbol.split("/").join(""), quantityInBase, price);
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
-      logToFile("./logs/trades-xeggex.log", `${Date.now().toLocaleString("fi-FI")} ${symbol} by at ${price} price, ${quantityInBase} qty`);
-      const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityInBase, price);
-      const order = {
-        symbol: symbol.split("/").join(""),
-        orderId: xeggexOrder.id,
-        price: xeggexOrder.price,
-        qty: xeggexOrder.quantity,
-        quoteQty: (parseFloat(xeggexOrder.quantity) * parseFloat(xeggexOrder.price)).toString(),
-        commission: "",
-        commissionAsset: "",
-        time: xeggexOrder.createdAt,
-        isBuyer: xeggexOrder.side === "buy" ? true : false,
-        isMaker: true,
-        isBestMatch: true,
-        orderStatus: "NEW",
-        tradeId: parseFloat(xeggexOrder.id),
-      };
-      return order;
-    }
-  } catch (error) {
-    if (error.code === 20001 || error.code === 2021) {
-      console.error(`Insufficient funds for BUY order creation in ${symbol}`);
-      exchangeOptions.balances = await getCurrentBalances(exchange);
-    } else {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(error);
-    }
-  }
-  return undefined;
-};
-
-export const getPreviousTrades = (direction: string, ExchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions) => {
+export const getPreviousTrades = (
+  direction: string,
+  ExchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
+) => {
   const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
   let previousTrade = null;
   let olderTrade = null;
@@ -414,7 +483,7 @@ export const sell = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined,
+  forceQuantityInBase: number | undefined
 ): Promise<Order | boolean> => {
   try {
     const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
@@ -438,29 +507,56 @@ export const sell = async (
       quantityInBase = forceQuantityInBase;
     }
     const roundedPrice = roundStep(bidPrice, filter.tickSize);
-    if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumSell !== undefined && symbolOptions.price?.maximumSell > roundedPrice) {
+    if (
+      symbolOptions.price?.enabled === true &&
+      symbolOptions.price?.maximumSell !== undefined &&
+      symbolOptions.price?.maximumSell > roundedPrice
+    ) {
       consoleLogger.push("error", "Too low price to sell.");
       return false;
     }
-    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumSell !== undefined && symbolOptions.price?.minimumSell < roundedPrice) {
+    if (
+      symbolOptions.price?.enabled === true &&
+      symbolOptions.price?.minimumSell !== undefined &&
+      symbolOptions.price?.minimumSell < roundedPrice
+    ) {
       consoleLogger.push("error", "Too low price to sell.");
       return false;
     }
-    const quantityInQuote = (quantityInBase * bidPrice) * 0.98;
+    const quantityInQuote = quantityInBase * bidPrice * 0.98;
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
     if (process.env.DEBUG == "true") {
-      logToFile("./logs/debug.log", `TRADEDATA SELL ${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+      logToFile(
+        "./logs/debug.log",
+        `TRADEDATA SELL ${orderBookBids[0]} ${bidPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      );
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (profit !== "GRID" && profit !== "SKIP") {
-        if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        if (
+          exchangeOptions.tradeHistory !== undefined &&
+          exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0
+        ) {
           const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
           if (previousTrade) {
-            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
-            if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) {
-              if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+              parseFloat(previousTrade.qty),
+              parseFloat(previousTrade.price),
+              roundedPrice
+            );
+            if (
+              symbolOptions.profit !== undefined &&
+              profit !== "STOP_LOSS" &&
+              profit !== "TAKE_PROFIT" &&
+              symbolOptions.profit?.minimumSell !== 0
+            ) {
+              if (
+                symbolOptions.profit.enabled === true &&
+                unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! &&
+                readForceSkip(symbol.split("/").join("")) === false
+              ) {
                 consoleLogger.push("error", "Not positive trade");
                 return false;
               }
@@ -497,7 +593,11 @@ export const sell = async (
         if (exchangeOptions.tradeHistory === undefined) {
           exchangeOptions.tradeHistory = {};
         }
-        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+          exchange,
+          symbol,
+          processOptions
+        );
         removeBlock(symbol);
         return order;
       } else {
@@ -570,7 +670,7 @@ export const buy = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined,
+  forceQuantityInBase: number | undefined
 ): Promise<Order | boolean> => {
   try {
     const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
@@ -594,11 +694,19 @@ export const buy = async (
       quantityInQuote = forceQuantityInBase * askPrice;
     }
     const roundedPrice = roundStep(askPrice, filter.tickSize);
-    if (symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined && symbolOptions.price?.maximumBuy > roundedPrice) {
+    if (
+      symbolOptions.price?.enabled === true &&
+      symbolOptions.price?.maximumBuy !== undefined &&
+      symbolOptions.price?.maximumBuy > roundedPrice
+    ) {
       consoleLogger.push("error", "Too high price to buy.");
       return false;
     }
-    if (symbolOptions.price?.enabled === true && symbolOptions.price?.minimumBuy !== undefined && symbolOptions.price?.minimumBuy < roundedPrice) {
+    if (
+      symbolOptions.price?.enabled === true &&
+      symbolOptions.price?.minimumBuy !== undefined &&
+      symbolOptions.price?.minimumBuy < roundedPrice
+    ) {
       consoleLogger.push("error", "Too low price to buy.");
       return false;
     }
@@ -606,20 +714,39 @@ export const buy = async (
     const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
     const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
     if (process.env.DEBUG == "true") {
-      logToFile("./logs/debug.log", `TRADEDATA BUY ${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`);
+      logToFile(
+        "./logs/debug.log",
+        `TRADEDATA BUY ${orderBookAsks[0]} ${askPrice} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      );
     }
     if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
       let unrealizedPNL = 0;
       if (profit !== "GRID" && profit !== "SKIP") {
-        if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+        if (
+          exchangeOptions.tradeHistory !== undefined &&
+          exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0
+        ) {
           const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
           if (previousTrade) {
-            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(parseFloat(previousTrade.qty), parseFloat(previousTrade.price), roundedPrice);
+            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+              parseFloat(previousTrade.qty),
+              parseFloat(previousTrade.price),
+              roundedPrice
+            );
             if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
               symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
             }
-            if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
-              if (symbolOptions.profit.enabled === true && unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+            if (
+              symbolOptions.profit !== undefined &&
+              profit !== "STOP_LOSS" &&
+              profit !== "TAKE_PROFIT" &&
+              symbolOptions.profit?.minimumBuy !== 0
+            ) {
+              if (
+                symbolOptions.profit.enabled === true &&
+                unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! &&
+                readForceSkip(symbol.split("/").join("")) === false
+              ) {
                 consoleLogger.push("error", "Not positive trade");
                 return false;
               }
@@ -656,7 +783,11 @@ export const buy = async (
         if (exchangeOptions.tradeHistory === undefined) {
           exchangeOptions.tradeHistory = {};
         }
-        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+        exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+          exchange,
+          symbol,
+          processOptions
+        );
         removeBlock(symbol);
         return order;
       } else {
@@ -676,8 +807,14 @@ export const buy = async (
 
 export const checkPreviousTrade = (symbol: string, exchangeOptions: ExchangeOptions) => {
   let check = "SELL";
-  if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
-    const lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
+  if (
+    exchangeOptions.tradeHistory !== undefined &&
+    exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0
+  ) {
+    const lastTrade =
+      exchangeOptions.tradeHistory[symbol.split("/").join("")][
+        exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
+      ];
     if (lastTrade.isBuyer) {
       check = "BUY";
     } else {
@@ -725,15 +862,30 @@ export const simulateSell = async (
       isBestMatch: true,
     };
     let pnl = 0;
-    if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0) {
-      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
+    if (
+      exchangeOptions.tradeHistory !== undefined &&
+      exchangeOptions.tradeHistory[symbol.split("/").join("")].length > 0
+    ) {
+      lastTrade =
+        exchangeOptions.tradeHistory[symbol.split("/").join("")][
+          exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
+        ];
       pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), price);
     }
     if (exchangeOptions.tradeHistory === undefined) {
       exchangeOptions.tradeHistory = {};
     }
-    if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumSell !== 0) {
-      if (symbolOptions.profit.enabled === true && pnl < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+    if (
+      symbolOptions.profit !== undefined &&
+      profit !== "STOP_LOSS" &&
+      profit !== "TAKE_PROFIT" &&
+      symbolOptions.profit?.minimumSell !== 0
+    ) {
+      if (
+        symbolOptions.profit.enabled === true &&
+        pnl < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! &&
+        readForceSkip(symbol.split("/").join("")) === false
+      ) {
         return false;
       }
     }
@@ -833,14 +985,26 @@ export const simulateBuy = async (
     };
     let pnl = 0;
     if (options.tradeHistory !== undefined && exchangeOptions.tradeHistory[symbol.split("/").join("")].length >= 2) {
-      lastTrade = exchangeOptions.tradeHistory[symbol.split("/").join("")][exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1];
+      lastTrade =
+        exchangeOptions.tradeHistory[symbol.split("/").join("")][
+          exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
+        ];
       pnl = calculatePNLPercentageForShort(parseFloat(lastTrade.price), price);
     }
     if (options.tradeHistory === undefined) {
       options.tradeHistory = {};
     }
-    if (symbolOptions.profit !== undefined && profit !== "STOP_LOSS" && profit !== "TAKE_PROFIT" && symbolOptions.profit?.minimumBuy !== 0) {
-      if (symbolOptions.profit.enabled === true && pnl < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! && readForceSkip(symbol.split("/").join("")) === false) {
+    if (
+      symbolOptions.profit !== undefined &&
+      profit !== "STOP_LOSS" &&
+      profit !== "TAKE_PROFIT" &&
+      symbolOptions.profit?.minimumBuy !== 0
+    ) {
+      if (
+        symbolOptions.profit.enabled === true &&
+        pnl < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! &&
+        readForceSkip(symbol.split("/").join("")) === false
+      ) {
         return false;
       }
     }
