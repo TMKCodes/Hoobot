@@ -71,7 +71,7 @@ export const listenForTrades = async (
   callback: (trades: Trade) => Promise<void>
 ): Promise<void> => {
   try {
-    if (isXeggex(exchange)) {
+    if (isXeggex(exchange) || isNonKYC(exchange)) {
       exchange.subscribeTrades(symbol, async (response: XeggexResponse) => {
         if (response.params) {
           const trades = (response.params as XeggexTrades).data;

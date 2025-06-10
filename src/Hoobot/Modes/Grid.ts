@@ -45,16 +45,17 @@ const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] =
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
   const step = (upper - lower) / options.gridLevels;
-  
+
   for (let i = 0; i < options.gridLevels; i++) {
     const price = lower + i * step;
     const type = price < currentPrice ? "buy" : "sell";
-    grid.push({ 
-      orderId: "", 
-      price: price, 
-      type: type, 
-      executed: false, 
-      size: options.gridOrderSize.toFixed(8) });
+    grid.push({
+      orderId: "",
+      price: price,
+      type: type,
+      executed: false,
+      size: options.gridOrderSize.toFixed(8),
+    });
   }
   return grid;
 };
@@ -75,7 +76,15 @@ const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
   return grid;
 };
 
-export const placeOrder = async (exchange: Exchange, symbol: string, direction: string, price: number, quantityInBase: number, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions): Promise<Order> => {
+export const placeOrder = async (
+  exchange: Exchange,
+  symbol: string,
+  direction: string,
+  price: number,
+  quantityInBase: number,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions
+): Promise<Order> => {
   if (direction === "sell") {
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
     if (order !== undefined) {
@@ -83,7 +92,11 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+        exchange,
+        symbol,
+        processOptions
+      );
       return order;
     } else {
       return {} as Order;
@@ -95,7 +108,11 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+        exchange,
+        symbol,
+        processOptions
+      );
       return order;
     } else {
       return {} as Order;
@@ -104,12 +121,29 @@ export const placeOrder = async (exchange: Exchange, symbol: string, direction: 
   return {} as Order;
 };
 
-const placeGridOrders = async (exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, grid: GridLevel[], _filter: Filter, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions): Promise<void> => {
+const placeGridOrders = async (
+  exchange: Exchange,
+  consoleLogger: ConsoleLogger,
+  symbol: string,
+  grid: GridLevel[],
+  _filter: Filter,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
+): Promise<void> => {
   const placedOrders = [];
   for (var i = 0; i < grid.length; i++) {
     if (!grid[i].executed) {
       try {
-        const order = await placeOrder(exchange, symbol, grid[i].type, grid[i].price, parseFloat(grid[i].size), processOptions, exchangeOptions);
+        const order = await placeOrder(
+          exchange,
+          symbol,
+          grid[i].type,
+          grid[i].price,
+          parseFloat(grid[i].size),
+          processOptions,
+          exchangeOptions
+        );
         grid[i].orderId = order.orderId;
         grid[i].size = order.qty;
         placedOrders.push({
@@ -119,7 +153,10 @@ const placeGridOrders = async (exchange: Exchange, consoleLogger: ConsoleLogger,
           size: symbolOptions.gridOrderSize,
         });
       } catch (error) {
-        consoleLogger.push(`Failed to place order`, `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`);
+        consoleLogger.push(
+          `Failed to place order`,
+          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`
+        );
       }
     }
   }
@@ -132,7 +169,16 @@ const isOutsideGridRange = (currentPrice: number, grid: GridLevel[]): boolean =>
   return currentPrice < lowestPrice || currentPrice > highestPrice;
 };
 
-const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, currentPrice: number, filter: Filter, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions): Promise<void> => {
+const rebalanceGrid = async (
+  exchange: Exchange,
+  consoleLogger: ConsoleLogger,
+  symbol: string,
+  currentPrice: number,
+  filter: Filter,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
+): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
   if (openOrders.length < symbolOptions.gridOrderSize * 2) {
@@ -150,7 +196,16 @@ const rebalanceGrid = async (exchange: Exchange, consoleLogger: ConsoleLogger, s
     await cancelOrder(exchange, symbol, order.orderId);
   }
   symbolOptions.grid = createGrid(currentPrice, symbolOptions);
-  await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+  await placeGridOrders(
+    exchange,
+    consoleLogger,
+    symbol,
+    symbolOptions.grid,
+    filter,
+    processOptions,
+    exchangeOptions,
+    symbolOptions
+  );
   consoleLogger.push("Grid rebalanced", `New center price: ${currentPrice}`);
 };
 
@@ -195,7 +250,10 @@ const manageGridOrders = async (
           msg += "```";
 
           sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-          consoleLogger.push(`Order executed`, `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`);
+          consoleLogger.push(
+            `Order executed`,
+            `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`
+          );
 
           // Calculate new order details
           const newDirection = grid[i].type === "buy" ? "sell" : "buy";
@@ -206,11 +264,20 @@ const manageGridOrders = async (
 
           const fees = 0.2; // Assume 0.2% fee, adjust as needed
           const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
-          var minimumProfit = newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
+          var minimumProfit =
+            newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
 
           if (potentialProfit >= minimumProfit / 100) {
             try {
-              const newOrder = await placeOrder(exchange, symbol, newDirection, newOrderPrice, symbolOptions.gridOrderSize, processOptions, exchangeOptions);
+              const newOrder = await placeOrder(
+                exchange,
+                symbol,
+                newDirection,
+                newOrderPrice,
+                symbolOptions.gridOrderSize,
+                processOptions,
+                exchangeOptions
+              );
 
               // Update the grid level with new order details
               grid[i].type = newDirection;
@@ -228,12 +295,21 @@ const manageGridOrders = async (
               // msg += "```";
               // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
 
-              consoleLogger.push(`Placed new ${newDirection} order`, `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`);
+              consoleLogger.push(
+                `Placed new ${newDirection} order`,
+                `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`
+              );
             } catch (error) {
-              consoleLogger.push(`Failed to place new ${newDirection} order`, `Price: ${newOrderPrice}, Error: ${error}`);
+              consoleLogger.push(
+                `Failed to place new ${newDirection} order`,
+                `Price: ${newOrderPrice}, Error: ${error}`
+              );
             }
           } else {
-            consoleLogger.push(`Skipped unprofitable ${newDirection} order`, `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`);
+            consoleLogger.push(
+              `Skipped unprofitable ${newDirection} order`,
+              `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`
+            );
           }
         }
       }
@@ -260,7 +336,16 @@ function summarizeGrid(_openOrders: Order[], grid: GridLevel[]): object {
   };
 }
 
-export const gridTrading = async (discord: Client, exchange: Exchange, consoleLogger: ConsoleLogger, symbol: string, candlesticks: Candlesticks, processOptions: ConfigOptions, exchangeOptions: ExchangeOptions, symbolOptions: SymbolOptions) => {
+export const gridTrading = async (
+  discord: Client,
+  exchange: Exchange,
+  consoleLogger: ConsoleLogger,
+  symbol: string,
+  candlesticks: Candlesticks,
+  processOptions: ConfigOptions,
+  exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions
+) => {
   try {
     const startTime = Date.now();
     consoleLogger.push("Time", startTime);
@@ -284,11 +369,19 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
 
     if (exchangeOptions.tradeHistory === undefined) {
       exchangeOptions.tradeHistory = {};
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+        exchange,
+        symbol,
+        processOptions
+      );
     }
 
     if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+        exchange,
+        symbol,
+        processOptions
+      );
     }
 
     if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
@@ -296,7 +389,10 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
       return false;
     }
 
-    const latestCandle = candlesticks[symbol.split("/").join("")][timeframe[0]][candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1];
+    const latestCandle =
+      candlesticks[symbol.split("/").join("")][timeframe[0]][
+        candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1
+      ];
     const currentPrice = latestCandle.close;
 
     consoleLogger.push("Symbol", symbol.split("/").join(""));
@@ -310,15 +406,45 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
     }
     if (!symbolOptions.grid || openOrders.length === 0) {
       symbolOptions.grid = createGrid(currentPrice, symbolOptions);
-      await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
+      await placeGridOrders(
+        exchange,
+        consoleLogger,
+        symbol,
+        symbolOptions.grid,
+        filter,
+        processOptions,
+        exchangeOptions,
+        symbolOptions
+      );
     }
 
     if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length > symbolOptions.gridLevels * 2 - 1) {
       consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
-      await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, processOptions, exchangeOptions, symbolOptions);
+      await rebalanceGrid(
+        exchange,
+        consoleLogger,
+        symbol,
+        currentPrice,
+        filter,
+        processOptions,
+        exchangeOptions,
+        symbolOptions
+      );
     }
-    const orderExecuted = await manageGridOrders(discord, exchange, consoleLogger, openOrders, symbol, currentPrice, symbolOptions.grid, filter, processOptions, exchangeOptions, symbolOptions);
-    
+    const orderExecuted = await manageGridOrders(
+      discord,
+      exchange,
+      consoleLogger,
+      openOrders,
+      symbol,
+      currentPrice,
+      symbolOptions.grid,
+      filter,
+      processOptions,
+      exchangeOptions,
+      symbolOptions
+    );
+
     consoleLogger.push(
       "Open Orders:",
       openOrders.map((order) => {
@@ -336,13 +462,21 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
     consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
 
     if (latestCandle.isFinal === true) {
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
+        exchange,
+        symbol,
+        processOptions
+      );
     }
     if (exchangeOptions.name === "binance") {
       if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
         consoleLogger.print("blue");
         consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+      } else if (
+        exchangeOptions.console === "trade/final" &&
+        orderExecuted === false &&
+        latestCandle.isFinal === false
+      ) {
         consoleLogger.flush();
       } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
         consoleLogger.print("blue");
@@ -358,11 +492,15 @@ export const gridTrading = async (discord: Client, exchange: Exchange, consoleLo
         consoleLogger.print("blue");
         consoleLogger.flush();
       }
-    } else if (exchangeOptions.name === "xeggex") {
+    } else if (exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
       if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
         consoleLogger.print("green");
         consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+      } else if (
+        exchangeOptions.console === "trade/final" &&
+        orderExecuted === false &&
+        latestCandle.isFinal === false
+      ) {
         consoleLogger.flush();
       } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
         consoleLogger.print("green");

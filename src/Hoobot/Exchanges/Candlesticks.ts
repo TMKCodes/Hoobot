@@ -202,7 +202,7 @@ export const listenForCandlesticks = async (
             websocket.terminate();
           }
         });
-      } else if (isXeggex(exchange)) {
+      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
         // exchange.subscribeTicker(symbol, async (response: XeggexResponse) => {
         //   console.log(JSON.stringify(response, null, 4));
         //   if (response.method === "ticker") {

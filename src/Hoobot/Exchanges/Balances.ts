@@ -155,8 +155,10 @@ export const getCurrentBalance = async (exchange: Exchange, asset: string): Prom
 export const storeBalances = async (exchange: Exchange, balances: Balances) => {
   const currentDate = new Date().toLocaleString();
   let ex = "binance";
-  if (isXeggex(exchange) || isNonKYC(exchange)) {
+  if (isXeggex(exchange)) {
     ex = "xeggex";
+  } else if (isNonKYC(exchange)) {
+    ex = "nonkyc";
   }
   const logsDir = "./logs";
   if (!fs.existsSync(logsDir)) {
