@@ -1,19 +1,17 @@
-
-import crypto from 'crypto';
-import EventEmitter from 'events';
-import { logToFile } from '../../Utilities/LogToFile';
-import { URL } from 'url';
-import WebSocket from 'ws';
-
+import crypto from "crypto";
+import EventEmitter from "events";
+import { logToFile } from "../../Utilities/LogToFile";
+import { URL } from "url";
+import WebSocket from "ws";
 
 interface urlParams {
-  [key: string]: string | string[];   
+  [key: string]: string | string[];
 }
 
 export interface NonKYCOptions {
-  wssHost: string,
-  key: string,
-  secret: string,
+  wssHost: string;
+  key: string;
+  secret: string;
 }
 
 export interface NonKYCError {
@@ -24,54 +22,81 @@ export interface NonKYCError {
 export interface NonKYCResponse {
   jsonrpc: string;
   method?: string;
-  params?: NonKYCTicker | NonKYCOrderbook | NonKYCCandles;
-  result?: NonKYCAsset | NonKYCAsset[] | NonKYCMarket | NonKYCMarket[] | NonKYCBalance[] | NonKYCOrder | NonKYCOrder[] | boolean;
+  params?: NonKYCTickers | NonKYCOrderbook | NonKYCCandles | NonKYCTrades;
+  result?:
+    | NonKYCAsset
+    | NonKYCAsset[]
+    | NonKYCMarket
+    | NonKYCMarket[]
+    | NonKYCBalance[]
+    | NonKYCOrder
+    | NonKYCOrder[]
+    | boolean;
   error?: NonKYCError;
   id: number;
   name?: string;
 }
+export interface NonKYCTickers {
+  data: NonKYCTicker[];
+  symbol: string;
+  period: number;
+}
+
+export interface NonKYCTrades {
+  data: NonKYCTrade[];
+  symbol: string;
+  period: number;
+}
+
+export interface NonKYCTrade {
+  id: string;
+  price: string;
+  quantity: string;
+  side: string;
+  timestamp: string;
+}
 
 export interface NonKYCBalance {
-  asset: string,
-  available: string,
-  held: string,
+  asset: string;
+  available: string;
+  held: string;
 }
 
 export interface NonKYCOrder {
-  id: string,
-  userProvidedId: string,
-  symbol: string,
-  side: string,
-  type: string,
-  price: string,
-  numberprice: number,
-  quantity: string,
-  executedQuantity: string,
-  remainQuantity: string,
-  remainTotal: string,
-  remainTotalWithFee: string,
-  lastTradeAt: number,
-  status: string,
-  isActive: boolean,
-  isNew: boolean,
-  createdAt: number,
-  updatedAt: number,
-  reportType: string
+  id: string;
+  userProvidedId: string;
+  symbol: string;
+  side: string;
+  type: string;
+  price: string;
+  numberprice: number;
+  quantity: string;
+  executedQuantity: string;
+  remainQuantity: string;
+  remainTotal: string;
+  remainTotalWithFee: string;
+  lastTradeAt: number;
+  status: string;
+  isActive: boolean;
+  isNew: boolean;
+  createdAt: number;
+  updatedAt: number;
+  reportType: string;
 }
 
 export interface NonKYCCandles {
-  data: NonKYCCandle[],
-  symbol: string,
-  period: number
+  data: NonKYCCandle[];
+  symbol: string;
+  period: number;
 }
 
 export interface NonKYCCandle {
-  timestamp: string,
-  open: string,
-  close: string,
-  min: string,
-  max: string,
-  volume: string,
+  timestamp: string;
+  open: string;
+  close: string;
+  min: string;
+  max: string;
+  volume: string;
 }
 
 export interface NonKYCOrderbook {
@@ -93,29 +118,29 @@ export interface NonKYCBids {
 }
 
 export interface NonKYCTicker {
-  symbol: string
-  lastPrice: string, 
-  lastPriceUpDown: string,
-  yesterdayPrice: string, 
-  changePercent: string, 
-  highPrice: string, 
-  lowPrice: string, 
-  volume: string, 
-  bestBid: string, 
-  bestAsk: string, 
-  spreadPercent: string,
-  lastPriceNumber: number, 
-  yesterdayPriceNumber: number, 
-  changePercentNumber: number, 
-  highPriceNumber: number, 
-  lowPriceNumber: number, 
-  volumeNumber: number, 
-  volumeUsdNumber: number, 
-  bestBidNumber: number, 
-  bestAskNumber: number, 
-  lastTradeAt: number, 
-  updatedAt: number,
-  sequence: number
+  symbol: string;
+  lastPrice: string;
+  lastPriceUpDown: string;
+  yesterdayPrice: string;
+  changePercent: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  bestBid: string;
+  bestAsk: string;
+  spreadPercent: string;
+  lastPriceNumber: number;
+  yesterdayPriceNumber: number;
+  changePercentNumber: number;
+  highPriceNumber: number;
+  lowPriceNumber: number;
+  volumeNumber: number;
+  volumeUsdNumber: number;
+  bestBidNumber: number;
+  bestAskNumber: number;
+  lastTradeAt: number;
+  updatedAt: number;
+  sequence: number;
 }
 
 export interface NonKYCSocialLinks {
@@ -181,69 +206,66 @@ export interface NonKYCAsset {
 }
 
 export interface NonKYCMarket {
-  _id : string,
-  createdAt : number,
-  updatedAt : number,
-  symbol : string,
-  primaryName : string,
-  primaryTicker : string,
-  lastPrice : string,
-  yesterdayPrice : string,
-  highPrice : string,
-  lowPrice : string,
-  volume : string,
-  lastTradeAt : number,
-  priceDecimals : number,
-  quantityDecimals : number,
-  isActive : boolean,
-  primaryAsset : string,
-  secondaryAsset : string,
-  bestAsk : string,
-  bestAskNumber : number,
-  bestBid : string,
-  bestBidNumber : number,
-  changePercent : string,
-  changePercentNumber : number,
-  highPriceNumber : number,
-  lastPriceNumber : number,
-  lowPriceNumber : number,
-  volumeNumber : number,
-  yesterdayPriceNumber : number,
-  volumeUsdNumber : number,
-  primaryCirculation : string,
-  primaryUsdValue : string,
-  secondaryCirculation : string,
-  secondaryUsdValue : string,
-  marketcapNumber : number,
-  spreadPercent : string,
-  lastPriceUpDown : string,
-  engineId : number,
-  isPaused : boolean,
-  imageUUID : string
+  _id: string;
+  createdAt: number;
+  updatedAt: number;
+  symbol: string;
+  primaryName: string;
+  primaryTicker: string;
+  lastPrice: string;
+  yesterdayPrice: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  lastTradeAt: number;
+  priceDecimals: number;
+  quantityDecimals: number;
+  isActive: boolean;
+  primaryAsset: string;
+  secondaryAsset: string;
+  bestAsk: string;
+  bestAskNumber: number;
+  bestBid: string;
+  bestBidNumber: number;
+  changePercent: string;
+  changePercentNumber: number;
+  highPriceNumber: number;
+  lastPriceNumber: number;
+  lowPriceNumber: number;
+  volumeNumber: number;
+  yesterdayPriceNumber: number;
+  volumeUsdNumber: number;
+  primaryCirculation: string;
+  primaryUsdValue: string;
+  secondaryCirculation: string;
+  secondaryUsdValue: string;
+  marketcapNumber: number;
+  spreadPercent: string;
+  lastPriceUpDown: string;
+  engineId: number;
+  isPaused: boolean;
+  imageUUID: string;
 }
 
+const delay = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
-const delay = (
-  ms: number
-) => {
-  return new Promise( resolve => setTimeout(resolve, ms) );
-}
-
-var xeggexBlocked: boolean = false;
+var NonKYCBlocked: boolean = false;
 
 const waitToBlock = async () => {
-  while (xeggexBlocked === true) {
+  while (NonKYCBlocked === true) {
     await delay(5);
   }
-  xeggexBlocked = true;
-}
+  NonKYCBlocked = true;
+};
 
 const unBlock = async () => {
-  xeggexBlocked = false;
-} 
+  NonKYCBlocked = false;
+};
 
 /*
- * Utility class to map numbers to callbacks. 
+ * Utility class to map numbers to callbacks.
  */
 
 class CallbackMap {
@@ -255,7 +277,7 @@ class CallbackMap {
 
   public add(id: number, callback: Function): void {
     if (this.callbacks.has(id)) {
-      throw new Error(`Callback with ID ${id} already exists.`);
+      console.warn(`Callback with ID ${id} already exists.`);
     }
     this.callbacks.set(id, callback);
   }
@@ -265,6 +287,7 @@ class CallbackMap {
   }
 
   public get(id: number): Function | undefined {
+    100;
     return this.callbacks.get(id);
   }
 
@@ -281,17 +304,17 @@ class CallbackMap {
   }
 }
 
-/* 
+/*
  * NonKYC WebSocket API
- * const xeggex = new NonKYC("key", "secret");
- * await xeggex.waitConnect();
+ * const NonKYC = new NonKYC("key", "secret");
+ * await NonKYC.waitConnect();
  * ...
  */
 
 interface symbolCallbacks {
   symbol: string;
   tickerCallbackId: number;
-  orderbookCallbackId: number; 
+  orderbookCallbackId: number;
   tradesCallbackId: number;
   candlesCallbackId: number;
 }
@@ -310,41 +333,36 @@ export class NonKYC {
   private reportsCallbackId: number = 0;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
-  private shouldReconnect: boolean = false;
-  private reconnectionDelay: number;
-  private maxReconnectionDelay: number;
+  private forceStopOnDisconnect: boolean;
 
-  constructor(key: string, secret: string) {
-    this.WebSocketURL = "wss://api.nonkyc.io";
-    this.ApiURL = "https://api.nonkyc.io/api/v2";
+  constructor(key: string, secret: string, forceStopOnDisconnect: boolean) {
+    this.WebSocketURL = "wss://api.NonKYC.com";
+    this.ApiURL = "https://api.NonKYC.com/api/v2";
     this.key = key;
     this.secret = secret;
     this.callbackMap = new CallbackMap();
     this.emitter = new EventEmitter();
-    this.shouldReconnect = true; // Flag to control the reconnection behavior
-    this.reconnectionDelay = 1000; // Initial reconnection delay in milliseconds
-    this.maxReconnectionDelay = 10000; // Maximum reconnection delay
+    this.forceStopOnDisconnect = forceStopOnDisconnect;
     this.connect();
   }
 
-
   public NonKYC = () => {
-    return "NonKYC"
-  }
+    return "NonKYC";
+  };
   // WebSocket handling
 
   private heartBeat = () => {
-    if ( this.pingTimeout ) {
-      clearTimeout( this.pingTimeout );
+    if (this.pingTimeout) {
+      clearTimeout(this.pingTimeout);
     }
     this.pingTimeout = setTimeout(() => {
-      if(this.ws) {
+      if (this.ws) {
         this.ws.terminate();
         this.ws = null;
         this.connect();
       }
     }, 70000);
-  }
+  };
 
   private loopPing = () => {
     if (this.keepAlive) {
@@ -353,8 +371,8 @@ export class NonKYC {
     this.keepAlive = setTimeout(() => {
       this.ws?.ping(new Date().getTime());
       this.loopPing();
-    }, 20000);
-  }
+    }, 60000);
+  };
 
   public waitConnect = () => {
     return new Promise((resolve, _reject) => {
@@ -362,23 +380,12 @@ export class NonKYC {
         resolve(true);
       });
     });
-  }
+  };
 
-  private reconnect = () => {
-    setTimeout(() => {
-      console.log(`Attempting to reconnect...`);
-      this.connect().catch(console.error);
-      // Implement exponential backoff with a maximum delay limit
-      this.reconnectionDelay = Math.min(this.reconnectionDelay * 2, this.maxReconnectionDelay);
-    }, this.reconnectionDelay);
-  }
-
-  private connect = async (): Promise<void> => {
+  private connect = async (): Promise<WebSocket> => {
     this.ws = new WebSocket(this.WebSocketURL);
 
     this.ws.on("open", async () => {
-      // Reset reconnection delay on successful connection
-      this.reconnectionDelay = 1000;
       this.loopPing();
       if (this.key && this.secret) {
         const result = await this.login();
@@ -390,50 +397,84 @@ export class NonKYC {
       }
     });
 
-    this.emitter.on("login_failed", () => {
-      this.ws?.close(500, "Login Failed");
-    });
-
-    this.ws.on("close", (code: number, reason: Buffer) => {
-      console.log(`${code}: ${reason.toString('utf-8')}`);
-      if (code === 1006 && this.shouldReconnect) {
-        this.reconnect();
+    this.ws.on("close", async (code: number) => {
+      clearTimeout(this.pingTimeout);
+      console.log(`WebSocket closed with code ${code}.`);
+      if (code === 1006) {
+        console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
+        await this.handleReconnection(); // Trigger reconnection
       }
     });
 
+    // New: Error event listener to catch connection errors and avoid unhandled exceptions
+    this.ws.on("error", (err) => {
+      console.error("WebSocket encountered an error:", err);
+    });
+
+    // Respond to server ping with a pong and reset heartbeat
     this.ws.on("ping", (_buffer: Buffer) => {
+      this.ws?.pong();
+    });
+
+    this.ws.on("pong", (_buffer: Buffer) => {
       this.heartBeat();
     });
 
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
     };
-  }
+    return this.ws;
+  };
+
+  private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
+    let retries = 0;
+    if (this.forceStopOnDisconnect) {
+      process.exit(1);
+    }
+    while (retries < maxRetries) {
+      try {
+        if (this.ws) {
+          this.ws.terminate();
+          this.ws = null;
+          this.connect();
+          console.log("Reconnected.");
+        }
+      } catch (error) {
+        console.error("Reconnection attempt failed:", error);
+        retries++;
+        delayTime *= 2;
+      }
+    }
+
+    console.error(`Failed to reconnect after ${maxRetries} attempts. Please check network or server status.`);
+  };
 
   private send = (message: any): void => {
-    if(this.ws) {
-      if(this.ws!.readyState !== WebSocket.OPEN) {
-        throw new Error(`WebSocket connection not established or not open.\r\nMessage: ${JSON.stringify(message, null, 4)}`);
+    if (this.ws) {
+      if (this.ws!.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(message));
+        this.logged = true;
       }
-      this.ws.send(JSON.stringify(message));
-      this.logged = true;
     } else {
-      throw new Error('WebSocket connection not established');
+      throw new Error("WebSocket connection not established");
     }
-  }
+  };
 
   private onMessage = (event: WebSocket.MessageEvent): void => {
-    if(!this.ws) {
-      throw new Error('WebSocket connection not established');
+    if (!this.ws) {
+      console.error("WebSocket connection not established");
+      throw new Error("WebSocket connection not established");
     }
-    const response: NonKYCResponse = JSON.parse(event.data.toString('utf-8'));
+    const response: NonKYCResponse = JSON.parse(event.data.toString("utf-8"));
     if (response.error) {
-      throw new Error(`Message error: ${JSON.stringify(response.error, null, 4)}`);
+      console.error(`Message error: ${JSON.stringify(response, null, 4)}`);
     }
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
-      let callbacks = this.symbolCallbacks.filter((scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join(""))[0];
+      let callbacks = this.symbolCallbacks.filter(
+        (scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join("")
+      )[0];
       if (response.method === "ticker") {
         this.callbackMap.call(callbacks.tickerCallbackId, response);
       } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
@@ -446,37 +487,37 @@ export class NonKYC {
         this.callbackMap.call(this.reportsCallbackId, response);
       }
     }
-  }
+  };
 
   // Private NonKYC Websocket API calls
 
   private login = async (): Promise<boolean> => {
     let nonce = crypto.randomBytes(10).toString("hex");
-    let hmac = crypto.createHmac('sha256', this.secret);
-		hmac.update(nonce);
-	  let signature = hmac.digest('hex');
-		let messageId = this.messageId++;
+    let hmac = crypto.createHmac("sha256", this.secret);
+    hmac.update(nonce);
+    let signature = hmac.digest("hex");
+    let messageId = this.messageId++;
     this.send({
       method: "login",
       params: {
         algo: "HS256",
         pKey: this.key,
         nonce: nonce,
-        signature: signature
+        signature: signature,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result == true) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public newOrder = async (
     symbol: string,
@@ -485,7 +526,7 @@ export class NonKYC {
     quantity: number,
     price: number = 0,
     useProvidedId: string | null = null,
-    strictValidate: boolean = false,
+    strictValidate: boolean = false
   ): Promise<NonKYCOrder> => {
     let messageId = this.messageId++;
     this.send({
@@ -499,23 +540,21 @@ export class NonKYC {
         price: price.toString(),
         strictValidate: strictValidate,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCOrder);
+        const result = response.result as NonKYCOrder;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
-  public cancelOrder = async (
-    orderId: string,
-  ): Promise<NonKYCOrder> => {
+  public cancelOrder = async (orderId: string): Promise<NonKYCOrder> => {
     let messageId = this.messageId++;
     this.send({
       method: "cancelOrder",
@@ -523,83 +562,80 @@ export class NonKYC {
         orderId: orderId,
         useProvidedId: orderId,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCOrder);
+        const result = response.result as NonKYCOrder;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
-  public getOrders = async (
-    symbol: string,
-  ): Promise<NonKYCOrder[]> => {
+  public getOrders = async (symbol: string): Promise<NonKYCOrder[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getOrders",
       params: {
         symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCOrder[]);
+        const result = response.result as NonKYCOrder[];
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public getTradingBalance = async (): Promise<NonKYCBalance[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getTradingBalance",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCBalance[]);
+        const result = response.result as NonKYCBalance[];
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public subscribeReports = async (callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     this.send({
       method: "subscribeReports",
       params: {},
-      id: this.reportsCallbackId
+      id: this.reportsCallbackId,
     });
     this.callbackMap.add(this.reportsCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeReports = () => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeReports",
       params: {},
-      id: messageId
+      id: messageId,
     });
     this.callbackMap.remove(this.reportsCallbackId);
-  }
-
+  };
 
   // Public NonKYC Websocket API calls
 
@@ -608,86 +644,86 @@ export class NonKYC {
     this.send({
       method: "getAsset",
       params: {
-        ticker: ticker
+        ticker: ticker,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCAsset);
+        const result = response.result as NonKYCAsset;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public getAssets = async (): Promise<NonKYCAsset[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getAssets",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCAsset[]);
+        const result = response.result as NonKYCAsset[];
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public getMarket = async (symbol: string): Promise<NonKYCMarket> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarket",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCMarket);
+        const result = response.result as NonKYCMarket;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public getMarkets = async (): Promise<NonKYCMarket[]> => {
     let messageId = this.messageId++;
     this.send({
       method: "getMarkets",
       params: {},
-      id: messageId
+      id: messageId,
     });
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as NonKYCMarket[]);
+        const result = response.result as NonKYCMarket[];
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public getTrades = (
-    symbol: string, 
-    callback: (response: NonKYCResponse) => void, 
-    limit: number = 100, 
-    offset: number = 0, 
+    symbol: string,
+    callback: (response: NonKYCResponse) => void,
+    limit: number = 100,
+    offset: number = 0,
     sort: string | null = null,
     from: string | null = null,
     till: string | null = null
@@ -696,176 +732,176 @@ export class NonKYC {
     this.send({
       method: "getTrades",
       params: {
-        "symbol": symbol,
-        "limit": limit,
-        "offset": offset,
-        "sort": sort,
-        "from": from,
-        "till": till
+        symbol: symbol,
+        limit: limit,
+        offset: offset,
+        sort: sort,
+        from: from,
+        till: till,
       },
-      id: messageId
+      id: messageId,
     });
     this.callbackMap.add(messageId, callback);
-  }
+  };
 
   public subscribeTicker = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
       method: "subscribeTicker",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
       id: symbolCallback.tickerCallbackId,
     });
     this.callbackMap.add(symbolCallback.tickerCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeTicker = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTicker",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public subscribeOrderbook = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
       method: "subscribeOrderbook",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: symbolCallback.orderbookCallbackId
+      id: symbolCallback.orderbookCallbackId,
     });
     this.callbackMap.add(symbolCallback.orderbookCallbackId, callback);
-    await unBlock()
-  }
+    await unBlock();
+  };
 
   public unsubscribeOrderbook = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeOrderbook",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public subscribeTrades = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
-    await waitToBlock(); 
+    await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
-      method: "tradesTrades",
+      method: "subscribeTrades",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: symbolCallback.tradesCallbackId
+      id: symbolCallback.tradesCallbackId,
     });
     this.callbackMap.add(symbolCallback.tradesCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeTrades = async (symbol: string): Promise<boolean> => {
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTrades",
       params: {
-        symbol: symbol
+        symbol: symbol,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   public subscribeCandles = async (
-    symbol: string, 
+    symbol: string,
     period: number,
     callback: (response: NonKYCResponse) => void,
-    limit: number = 100,
+    limit: number = 100
   ) => {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
-    let symbols = this.symbolCallbacks.length;
-    if(!symbolCallback) {
+    let symbols = this.symbolCallbacks.length + 1;
+    if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
-        tickerCallbackId: symbols*4+1,
-        orderbookCallbackId: symbols*4+2,
-        tradesCallbackId: symbols*4+3,
-        candlesCallbackId: symbols*4+4,
-      }
+        tickerCallbackId: symbols * 4 + 1,
+        orderbookCallbackId: symbols * 4 + 2,
+        tradesCallbackId: symbols * 4 + 3,
+        candlesCallbackId: symbols * 4 + 4,
+      };
       this.symbolCallbacks.push(symbolCallback);
     }
     this.send({
@@ -875,11 +911,11 @@ export class NonKYC {
         period: period,
         limit: limit,
       },
-      id: symbolCallback.candlesCallbackId
+      id: symbolCallback.candlesCallbackId,
     });
     this.callbackMap.add(symbolCallback.candlesCallbackId, callback);
     await unBlock();
-  }
+  };
 
   public unsubscribeCandles = async (symbol: string, period: number): Promise<boolean> => {
     let messageId = this.messageId++;
@@ -887,22 +923,22 @@ export class NonKYC {
       method: "unsubscribeCandles",
       params: {
         symbol: symbol,
-        period: period
+        period: period,
       },
-      id: messageId
+      id: messageId,
     });
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = (response.result as boolean);
+        const result = response.result as boolean;
         if (result) {
           resolve(result);
         } else {
-          reject(result);
+          reject(response.error);
         }
       });
     });
-  }
+  };
 
   // NonKYC REST API calls
 
@@ -913,7 +949,7 @@ export class NonKYC {
         const queryString = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
           if (Array.isArray(value)) {
-            value.forEach(v => queryString.append(key, v));
+            value.forEach((v) => queryString.append(key, v));
           } else {
             queryString.append(key, value);
           }
@@ -923,298 +959,395 @@ export class NonKYC {
         const response = await fetch(url, {
           method: method,
           headers: {
-            "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
-            "Content-Type": "application/json",
-          }
-        });
-        // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if(!response.ok) {
-          logToFile("./logs/error.log", JSON.stringify(response.status));
-          throw new Error(`API call failed with status ${response.status}`);
-        }
-        return await response.json();
-      } else  {
-        const url = new URL(uri);
-        const response = await fetch(url, {
-          method: method,
-          headers: {
-            "Authorization": "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+            Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(body)
         });
-        // logToFile("./logs/apicalls-xeggex.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if(!response.ok) {
+        // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+        if (!response.ok) {
           logToFile("./logs/error.log", JSON.stringify(response.status));
           throw new Error(`API call failed with status ${response.status}`);
         }
         return await response.json();
+      } else {
+        const url = new URL(uri);
+        if (method === "GET" || method === "HEAD") {
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+              "Content-Type": "application/json",
+            },
+          });
+          // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+          if (!response.ok) {
+            logToFile("./logs/error.log", JSON.stringify(response.status));
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          return await response.json();
+        } else {
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+          // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+          if (!response.ok) {
+            logToFile("./logs/error.log", JSON.stringify(response.status));
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          return await response.json();
+        }
       }
     } catch (error) {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(`Error fetching ${uri} :`, error);
     }
-  }
+  };
 
   // Public API calls
 
   public getAssetList = async () => {
     return this.apiCall("/asset/getlist", "GET", {}, {});
-  }
+  };
 
   public getAssetByID = async (id: string) => {
     return this.apiCall(`/asset/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getAssetByTicker = async (ticker: string) => {
     return this.apiCall(`/asset/getbyticker/${ticker}`, "GET", {}, {});
-  }
+  };
 
   public getMarketList = async () => {
     return this.apiCall("/market/getlist", "GET", {}, {});
-  }
+  };
 
   public getMarketByID = async (id: string) => {
     return this.apiCall(`/market/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getMarketBySymbol = async (symbol: string) => {
     return this.apiCall(`/market/getbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getPoolList = async () => {
     return this.apiCall("/pool/getlist", "GET", {}, {});
-  }
+  };
 
   public getPoolByID = async (id: string) => {
     return this.apiCall(`/pool/getbyid/${id}`, "GET", {}, {});
-  } 
+  };
 
   public getPoolBySymbol = async (symbol: string) => {
     return this.apiCall(`/pool/getbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getOrderbookBySymbol = async (symbol: string) => {
     return this.apiCall(`/market/getorderbookbysymbol/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getOrderbookByMarketID = async (id: string) => {
     return this.apiCall(`/market/getorderbookbymarketid/${id}`, "GET", {}, {});
-  }
+  };
 
-  public getCandles = async (symbol: string, from: number | null, to: number | null, resolution: number, countBack: number, firstDataRequest: number) => {
+  public getCandles = async (
+    symbol: string,
+    from: number | null,
+    to: number | null,
+    resolution: number,
+    countBack: number,
+    firstDataRequest: number
+  ) => {
     if (from === null && to === null) {
-      return this.apiCall(`/market/candles`, "GET", {}, {
-        symbol: symbol,
-        resolution: resolution?.toString()!, 
-        countBack: countBack?.toString()!, 
-        firstDataRequest: firstDataRequest?.toString()!
-      });
+      return this.apiCall(
+        `/market/candles`,
+        "GET",
+        {},
+        {
+          symbol: symbol,
+          resolution: resolution?.toString()!,
+          countBack: countBack?.toString()!,
+          firstDataRequest: firstDataRequest?.toString()!,
+        }
+      );
     } else {
-      return this.apiCall(`/market/candles`, "GET", {}, {
-        symbol: symbol,
-        from: from?.toString()!, 
-        to: to?.toString()!, 
-        resolution: resolution?.toString()!, 
-        countBack: countBack?.toString()!, 
-        firstDataRequest: firstDataRequest?.toString()!
-      });
+      return this.apiCall(
+        `/market/candles`,
+        "GET",
+        {},
+        {
+          symbol: symbol,
+          from: from?.toString()!,
+          to: to?.toString()!,
+          resolution: resolution?.toString()!,
+          countBack: countBack?.toString()!,
+          firstDataRequest: firstDataRequest?.toString()!,
+        }
+      );
     }
-  }
+  };
 
   // Aggregator API calls
 
   public getInfo = async () => {
     return this.apiCall("/info", "GET", {}, {});
-  }
+  };
 
   public getSummary = async () => {
     return this.apiCall("/summary", "GET", {}, {});
-  }
+  };
 
   public getAllCmcAssets = async () => {
     return this.apiCall("/cmcassets", "GET", {}, {});
-  }
+  };
 
   public getAllCmcTickers = async () => {
     return this.apiCall("/cmctickers", "GET", {}, {});
-  }
+  };
 
   public getCmcOrderookSymbol = async (symbol: string) => {
     return this.apiCall(`/cmcorderbook/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getCmcTradesBySymbol = async (symbol: string) => {
     return this.apiCall(`/cmctrades/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getAllMarkets = async (type: string) => {
-    return this.apiCall(`/markets`, "GET", {}, {
-      type: type
-    });
-  }
+    return this.apiCall(
+      `/markets`,
+      "GET",
+      {},
+      {
+        type: type,
+      }
+    );
+  };
 
   // public getAllTrades = async (market: string, since: string) => {
   //   return this.apiCall(`/trades/${market}/${since}`, "GET", {}, {});
   // }
 
   public getAllOrderSnapshots = async (market: string) => {
-    return this.apiCall(`/order/snapshots`, "GET", {}, {
-      market: market
-    });
-  }
+    return this.apiCall(
+      `/order/snapshots`,
+      "GET",
+      {},
+      {
+        market: market,
+      }
+    );
+  };
 
   public getAllPairs = async () => {
     return this.apiCall("/pairs", "GET", {}, {});
-  }
+  };
 
   public getTickerBySymbol = async (symbol: string) => {
     return this.apiCall(`/ticker/${symbol}`, "GET", {}, {});
-  }
+  };
 
   public getAllTickers = async () => {
     return this.apiCall("/tickers", "GET", {}, {});
-  }
+  };
 
   public getOrderbook = async (ticker: string, depth: string) => {
-    return this.apiCall(`/orderbook`, "GET", {}, {
-      ticker_id: ticker,
-      depth: depth
-    });
-  }
+    return this.apiCall(
+      `/orderbook`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        depth: depth,
+      }
+    );
+  };
 
   public getAllHistoricalTrades = async (ticker: string, limit: string) => {
-    return this.apiCall(`/historical_trades`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-    });
-  }
+    return this.apiCall(
+      `/historical_trades`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+      }
+    );
+  };
 
   public getAllHistoricalPoolTrades = async (ticker: string, limit: string) => {
-    return this.apiCall(`/historical_pooltrades`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-    });
-  }
+    return this.apiCall(
+      `/historical_pooltrades`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+      }
+    );
+  };
 
   // Account API calls
 
   public getBalances = async () => {
     return this.apiCall("/balances", "GET", {}, {});
-  }
+  };
 
   public getDepositoAddress = async (ticker: string) => {
     return this.apiCall(`/getdepositaddress/${ticker}`, "GET", {}, {});
-  }
+  };
 
-  public createOrder = async (
-    symbol: string,
-    side: string,
-    type: string,
-    quantity: string,
-    price: string,
-  ) => {
-    return this.apiCall(`/createorder/`, "POST", {
-      symbol: symbol,
-      side: side,
-      type: type,
-      quantity: quantity,
-      price: price,
-    }, {});
-  }
+  public createOrder = async (symbol: string, side: string, type: string, quantity: string, price: string) => {
+    return this.apiCall(
+      `/createorder/`,
+      "POST",
+      {
+        symbol: symbol,
+        side: side,
+        type: type,
+        quantity: quantity,
+        price: price,
+      },
+      {}
+    );
+  };
 
-  public cancelOrderByID = async (
-    id: string,
-  ) => {
-    return this.apiCall(`/cancelorder/`, "POST", {
-      id: id
-    }, {});
-  }
+  public cancelOrderByID = async (id: string) => {
+    return this.apiCall(
+      `/cancelorder/`,
+      "POST",
+      {
+        id: id,
+      },
+      {}
+    );
+  };
 
-  public cancelAllOrders = async (
-    symbol: string,
-    side: string
-  ) => {
-    return this.apiCall(`/cancelallorders/`, "POST", {
-      symbol: symbol,
-      side: side
-    }, {});
-  }
+  public cancelAllOrders = async (symbol: string, side: string) => {
+    return this.apiCall(
+      `/cancelallorders/`,
+      "POST",
+      {
+        symbol: symbol,
+        side: side,
+      },
+      {}
+    );
+  };
 
-  public createWithdrawal = async (
-    ticker: string,
-    quantity: string,
-    address: string,
-    paymentid: string
-  ) => {
-    return this.apiCall(`/cancelallorders/`, "POST", {
-      ticker: ticker,
-      quantity: quantity,
-      address: address,
-      paymentid: paymentid
-    }, {});
-  }
+  public createWithdrawal = async (ticker: string, quantity: string, address: string, paymentid: string) => {
+    return this.apiCall(
+      `/cancelallorders/`,
+      "POST",
+      {
+        ticker: ticker,
+        quantity: quantity,
+        address: address,
+        paymentid: paymentid,
+      },
+      {}
+    );
+  };
 
   public getAllDeposits = async (ticker: string, limit: string, skip: string) => {
-    return this.apiCall(`/getdeposits`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-      skip: skip,
-    });
-  }
+    return this.apiCall(
+      `/getdeposits`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+        skip: skip,
+      }
+    );
+  };
 
   public getAllWithdrawals = async (ticker: string, limit: string, skip: string) => {
-    return this.apiCall(`/getwitrdawals`, "GET", {}, {
-      ticker_id: ticker,
-      limit: limit,
-      skip: skip,
-    });
-  }
+    return this.apiCall(
+      `/getwitrdawals`,
+      "GET",
+      {},
+      {
+        ticker_id: ticker,
+        limit: limit,
+        skip: skip,
+      }
+    );
+  };
 
   public getOrderByID = async (id: string) => {
     return this.apiCall(`/getorder/${id}`, "GET", {}, {});
-  }
+  };
 
   public getAllOrders = async (symbol: string, status: string, limit: number, skip: number) => {
-    return this.apiCall(`/getorders`, "GET", {}, {
-      symbol: symbol,
-      status: status,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getorders`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        status: status,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllTrades = async (symbol: string, limit: number, skip: number) => {
-    return this.apiCall(`/gettrades`, "GET", {}, {
-      symbol: symbol,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/gettrades`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllTradesSince = async (symbol: string, since: string, limit: number, skip: number) => {
-    return this.apiCall(`/gettradessince`, "GET", {}, {
-      symbol: symbol,
-      since: since,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/gettradessince`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        since: since,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getAllPoolTrades = async (symbol: string, limit: number, skip: number) => {
-    return this.apiCall(`/getpooltrades`, "GET", {}, {
-      symbol: symbol,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getpooltrades`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 
   public getPoolTradesSince = async (symbol: string, since: string, limit: number, skip: number) => {
-    return this.apiCall(`/getpooltradessince`, "GET", {}, {
-      symbol: symbol,
-      since: since,
-      limit: limit.toString(),
-      skip: skip.toString(),
-    });
-  }
+    return this.apiCall(
+      `/getpooltradessince`,
+      "GET",
+      {},
+      {
+        symbol: symbol,
+        since: since,
+        limit: limit.toString(),
+        skip: skip.toString(),
+      }
+    );
+  };
 }

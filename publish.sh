@@ -29,5 +29,5 @@ zip -r hoobot-latest.zip hoobot-latest/
 # Delete the publish folder as it's not needed anymore
 rm -rf hoobot-latest/
 # Now move the zip to servers for users.
-rsync -avz --progress hoobot-latest.zip tonto@hoosat.fi:~/hoosat/client/public/hoobot/
+rsync -avz --progress hoobot-latest.zip tonto@hoosat.fi:~/new.hoosat.fi/build/public/hoobot/
 

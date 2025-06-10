@@ -27,7 +27,13 @@
 
 import Binance from "node-binance-api";
 import { loginDiscord, sendMessageToChannel } from "./Discord/discord";
-import { listenForCandlesticks, Candlesticks, downloadHistoricalCandlesticks, simulateListenForCandlesticks, Candlestick } from "./Hoobot/Exchanges/Candlesticks";
+import {
+  listenForCandlesticks,
+  Candlesticks,
+  downloadHistoricalCandlesticks,
+  simulateListenForCandlesticks,
+  Candlestick,
+} from "./Hoobot/Exchanges/Candlesticks";
 import { ExchangeOptions, parseArgs } from "./Hoobot/Utilities/Args";
 import { getCurrentBalances, storeBalances } from "./Hoobot/Exchanges/Balances";
 import { consoleLogger } from "./Hoobot/Utilities/ConsoleLogger";
@@ -40,14 +46,14 @@ import { hilow } from "./Hoobot/Modes/HiLow";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { Xeggex } from "./Hoobot/Exchanges/Xeggex/Xeggex";
-import { Exchange, getExchangeOption, isBinance, isXeggex } from "./Hoobot/Exchanges/Exchange";
+import { Exchange, getExchangeOption, isBinance, isXeggex, isNonKYC } from "./Hoobot/Exchanges/Exchange";
 import { logToFile } from "./Hoobot/Utilities/LogToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Trade, getTradeHistory, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { consecutive } from "./Hoobot/Modes/Consecutive";
 import { periodic } from "./Hoobot/Modes/Periodic";
-import express, { Express } from 'express';
+import express, { Express } from "express";
 
 export var symbolFilters: Filters = {};
 
@@ -72,7 +78,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         if (process.env.HOOSAT_NETWORKS_DEVELOPER === "true") {
-          if (isXeggex(exchange)) {
+          if (isXeggex(exchange) || isNonKYC(exchange)) {
             console.log("Starting to listen for trades with Hoosat Network enabled");
             listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
               if (trade.isBuyer) {
@@ -95,7 +101,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           if (exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {};
           }
-          if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined) {
+          if (
+            exchangeOptions.orderbooks !== undefined &&
+            exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined
+          ) {
             exchangeOptions.orderbooks[symbol.split("/").join("")] = {
               bids: {},
               asks: {},
@@ -103,10 +112,27 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           }
           exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
         });
-        listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
-          const logger = consoleLogger();
-          await algorithmic(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
-        });
+        listenForCandlesticks(
+          exchange,
+          symbolOptions.name,
+          symbolOptions.timeframes,
+          symbolCandlesticks,
+          candlesticksToPreload,
+          symbolOptions,
+          async (candlesticks: Candlesticks) => {
+            const logger = consoleLogger();
+            await algorithmic(
+              discord,
+              exchange,
+              logger,
+              symbolOptions.name,
+              candlesticks,
+              options,
+              exchangeOptions,
+              symbolOptions
+            );
+          }
+        );
       }
     }
   } else if (exchangeOptions.mode === "consecutive") {
@@ -121,7 +147,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           if (exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {};
           }
-          if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined) {
+          if (
+            exchangeOptions.orderbooks !== undefined &&
+            exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined
+          ) {
             exchangeOptions.orderbooks[symbol.split("/").join("")] = {
               bids: {},
               asks: {},
@@ -129,10 +158,27 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           }
           exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
         });
-        listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
-          const logger = consoleLogger();
-          await consecutive(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
-        });
+        listenForCandlesticks(
+          exchange,
+          symbolOptions.name,
+          symbolOptions.timeframes,
+          symbolCandlesticks,
+          candlesticksToPreload,
+          symbolOptions,
+          async (candlesticks: Candlesticks) => {
+            const logger = consoleLogger();
+            await consecutive(
+              discord,
+              exchange,
+              logger,
+              symbolOptions.name,
+              candlesticks,
+              options,
+              exchangeOptions,
+              symbolOptions
+            );
+          }
+        );
       }
     }
   } else if (exchangeOptions.mode === "hilow") {
@@ -144,7 +190,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
         }
-        if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] === undefined) {
+        if (
+          exchangeOptions.orderbooks !== undefined &&
+          exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] === undefined
+        ) {
           exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = {
             bids: {},
             asks: {},
@@ -164,7 +213,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
         }
-        if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] === undefined) {
+        if (
+          exchangeOptions.orderbooks !== undefined &&
+          exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] === undefined
+        ) {
           exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = {
             bids: {},
             asks: {},
@@ -184,7 +236,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           if (exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {};
           }
-          if (exchangeOptions.orderbooks !== undefined && exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined) {
+          if (
+            exchangeOptions.orderbooks !== undefined &&
+            exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined
+          ) {
             exchangeOptions.orderbooks[symbol.split("/").join("")] = {
               bids: {},
               asks: {},
@@ -202,10 +257,27 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         //   msg += "```";
         //   sendMessageToChannel(discord, options.discord.channelId!, msg);
         // });
-        listenForCandlesticks(exchange, symbolOptions.name, symbolOptions.timeframes, symbolCandlesticks, candlesticksToPreload, symbolOptions, async (candlesticks: Candlesticks) => {
-          const logger = consoleLogger();
-          await gridTrading(discord, exchange, logger, symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions);
-        });
+        listenForCandlesticks(
+          exchange,
+          symbolOptions.name,
+          symbolOptions.timeframes,
+          symbolCandlesticks,
+          candlesticksToPreload,
+          symbolOptions,
+          async (candlesticks: Candlesticks) => {
+            const logger = consoleLogger();
+            await gridTrading(
+              discord,
+              exchange,
+              logger,
+              symbolOptions.name,
+              candlesticks,
+              options,
+              exchangeOptions,
+              symbolOptions
+            );
+          }
+        );
       }
     }
   }
@@ -232,7 +304,7 @@ const startXeggex = async (exchangeOptions: ExchangeOptions) => {
 };
 
 const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
-  const exchange = new NonKYC(exchangeOptions.key, exchangeOptions.secret);
+  const exchange = new NonKYC(exchangeOptions.key, exchangeOptions.secret, exchangeOptions.forceStopOnDisconnect);
   await exchange.waitConnect();
   return exchange;
 };
@@ -242,7 +314,9 @@ const hoobot = async () => {
     if (await checkLicenseValidity(options.license)) {
       console.log("License key is valid. Enjoy the trading with Hoobot!");
     } else {
-      console.log("Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.");
+      console.log(
+        "Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check."
+      );
     }
     var discord: any = undefined;
     const exchanges: Exchange[] = [];
@@ -252,7 +326,7 @@ const hoobot = async () => {
     for (var exchangeOptions of options.exchanges) {
       let exchange;
       if (exchangeOptions.name === "binance") {
-        exchange = await startBinance(exchangeOptions)
+        exchange = await startBinance(exchangeOptions);
         exchanges.push(exchange);
       } else if (exchangeOptions.name === "xeggex") {
         exchange = await startXeggex(exchangeOptions);
@@ -262,7 +336,7 @@ const hoobot = async () => {
         exchanges.push(exchange);
       }
       if (exchange !== undefined) {
-        runExchange(exchange, discord, exchangeOptions)
+        runExchange(exchange, discord, exchangeOptions);
       }
     }
   } catch (error) {
@@ -277,7 +351,11 @@ const calculateBalance = (options: ExchangeOptions): number => {
     const uniqueQuoteCurrencies = new Set<string>();
     for (const symbolOptions of options.symbols) {
       const symbolKey = symbolOptions.name.split("/").join("");
-      if (options.tradeHistory !== undefined && options.tradeHistory[symbolKey] && options.tradeHistory[symbolKey].length > 0) {
+      if (
+        options.tradeHistory !== undefined &&
+        options.tradeHistory[symbolKey] &&
+        options.tradeHistory[symbolKey].length > 0
+      ) {
         const lastTrade = options.tradeHistory[symbolKey].slice(-1)[0];
         const lastPrice = parseFloat(lastTrade.price);
         const [base, quote] = symbolOptions.name.split("/");
@@ -302,7 +380,9 @@ const calculateBalance = (options: ExchangeOptions): number => {
 
 const simulate = async () => {
   const exchange = new Binance();
-  const exchangeOptions: ExchangeOptions = options.exchanges.filter((exchangeOption) => exchangeOption.name === "binance")[0];
+  const exchangeOptions: ExchangeOptions = options.exchanges.filter(
+    (exchangeOption) => exchangeOption.name === "binance"
+  )[0];
   exchange.options({
     APIKEY: exchangeOptions.key,
     APISECRET: exchangeOptions.secret,
@@ -319,7 +399,10 @@ const simulate = async () => {
     Logger.print();
     Logger.flush();
     const symbols = exchangeOptions.symbols.map((symbol) => symbol.name);
-    const timeframes = [...new Set(exchangeOptions.symbols.flatMap((symbol) => symbol.timeframes)), ...new Set(exchangeOptions.symbols.flatMap((symbol) => symbol.trend?.timeframe!))];
+    const timeframes = [
+      ...new Set(exchangeOptions.symbols.flatMap((symbol) => symbol.timeframes)),
+      ...new Set(exchangeOptions.symbols.flatMap((symbol) => symbol.trend?.timeframe!)),
+    ];
     const allCandlesticks = await downloadHistoricalCandlesticks(symbols, timeframes);
     console.log("Starting simulation with downloaded candlesticks.");
     for (const symbolOptions of exchangeOptions.symbols) {
@@ -350,17 +433,34 @@ const simulate = async () => {
         mkdirSync(directory, { recursive: true });
       }
       writeFileSync(filePath, JSON.stringify(options, null, 2));
-      await simulateListenForCandlesticks(symbols, allCandlesticks, candleStore, options, async (symbol: string, interval: string, candlesticks: Candlesticks) => {
-        try {
-          if (candlesticks[symbol.split("/").join("")][interval] == undefined || candlesticks[symbol.split("/").join("")][interval].length === 0) {
-            return;
+      await simulateListenForCandlesticks(
+        symbols,
+        allCandlesticks,
+        candleStore,
+        options,
+        async (symbol: string, interval: string, candlesticks: Candlesticks) => {
+          try {
+            if (
+              candlesticks[symbol.split("/").join("")][interval] == undefined ||
+              candlesticks[symbol.split("/").join("")][interval].length === 0
+            ) {
+              return;
+            }
+            await simulateAlgorithmic(
+              symbolOptions.name,
+              candlesticks,
+              options,
+              exchangeOptions,
+              symbolOptions,
+              exchangeOptions.balances!,
+              symbolFilters[symbol.split("/").join("")]
+            );
+          } catch (error) {
+            logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+            console.error(error);
           }
-          await simulateAlgorithmic(symbolOptions.name, candlesticks, options, exchangeOptions, symbolOptions, exchangeOptions.balances!, symbolFilters[symbol.split("/").join("")]);
-        } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-          console.error(error);
         }
-      });
+      );
     }
     let balance = calculateBalance(exchangeOptions);
     Logger.push("Starting balance", startingBalance.toFixed(2));
@@ -369,31 +469,44 @@ const simulate = async () => {
     for (const symbol of exchangeOptions.symbols) {
       Logger.push(`${symbol.name} max trade`, symbol.growingMax);
       Logger.push(`${symbol.name} trades`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].length);
-      Logger.push(`${symbol.name} stop losses`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "STOP_LOSS").length);
-      Logger.push(`${symbol.name} take profits`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "TAKE_PROFIT").length);
-      Logger.push(`${symbol.name} sells`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "SELL").length);
-      Logger.push(`${symbol.name} buys`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "BUY").length);
+      Logger.push(
+        `${symbol.name} stop losses`,
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "STOP_LOSS")
+          .length
+      );
+      Logger.push(
+        `${symbol.name} take profits`,
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "TAKE_PROFIT")
+          .length
+      );
+      Logger.push(
+        `${symbol.name} sells`,
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "SELL").length
+      );
+      Logger.push(
+        `${symbol.name} buys`,
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "BUY").length
+      );
     }
     Logger.print();
     Logger.flush();
   }
 };
 
-
 const webServer = async () => {
   const app = express();
   const PORT = process.env.PORT || 5656;
 
   // Serve static files from the build/frontend directory
-  let frontendPath = './build/Frontend';
-  if (process.env.DEVELOPMENT === 'true') {
-    frontendPath = './src/Frontend';
+  let frontendPath = "./build/Frontend";
+  if (process.env.DEVELOPMENT === "true") {
+    frontendPath = "./src/Frontend";
   }
   app.use(express.static(frontendPath));
 
   // Serve index.html on root route
-  app.get('/', (_, res) => {
-    res.sendFile(frontendPath +'/index.html');
+  app.get("/", (_, res) => {
+    res.sendFile(frontendPath + "/index.html");
   });
 
   // Start the server and return the Express app instance
@@ -405,7 +518,7 @@ const webServer = async () => {
   });
 
   return app;
-}
+};
 
 if (process.env.SIMULATE === "true") {
   simulate();
@@ -413,4 +526,3 @@ if (process.env.SIMULATE === "true") {
   webServer();
   hoobot();
 }
-
