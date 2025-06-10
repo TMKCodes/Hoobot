@@ -336,8 +336,8 @@ export class NonKYC {
   private forceStopOnDisconnect: boolean;
 
   constructor(key: string, secret: string, forceStopOnDisconnect: boolean) {
-    this.WebSocketURL = "wss://api.NonKYC.com";
-    this.ApiURL = "https://api.NonKYC.com/api/v2";
+    this.WebSocketURL = "wss://ws.nonkyc.io";
+    this.ApiURL = "https://api.nonkyc.io/api/v2";
     this.key = key;
     this.secret = secret;
     this.callbackMap = new CallbackMap();
