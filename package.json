@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "hoobot",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Hoobot is reactive algorithmic crypto trading bot with suport for OpenAI GPT and many other indicators.",
   "main": "src/index.ts",
   "scripts": {
