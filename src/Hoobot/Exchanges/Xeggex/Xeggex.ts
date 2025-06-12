@@ -428,20 +428,24 @@ export class Xeggex {
 
   private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
     let retries = 0;
+
     if (this.forceStopOnDisconnect) {
-      process.exit(1);
+      console.error("Force stop on disconnect is enabled. Attempting reconnection...");
     }
+
     while (retries < maxRetries) {
       try {
         if (this.ws) {
           this.ws.terminate();
-          this.ws = null;
-          this.connect();
-          console.log("Reconnected.");
         }
+        this.ws = null;
+        await this.connect();
+        console.log("Reconnected.");
+        return;
       } catch (error) {
         console.error("Reconnection attempt failed:", error);
         retries++;
+        await delay(delayTime);
         delayTime *= 2;
       }
     }
