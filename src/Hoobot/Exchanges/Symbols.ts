@@ -24,8 +24,6 @@
  * not be liable for any losses, damages, or liabilities arising from
  * the use of this software.
  * ===================================================================== */
-import fs from "fs";
-import Binance from "node-binance-api";
 import { Exchange, isBinance } from "./Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 

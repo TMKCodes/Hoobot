@@ -37,8 +37,8 @@ import { Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
 import { logToFile } from "../Utilities/LogToFile";
 import path from "path";
-import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
-import { XeggexResponse, XeggexTrades } from "./Xeggex/Xeggex";
+import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { NonKYCResponse, NonKYCTrades } from "./NonKYC/NonKYC";
 
 const soundFile = "./alarm.mp3";
 
@@ -71,10 +71,10 @@ export const listenForTrades = async (
   callback: (trades: Trade) => Promise<void>
 ): Promise<void> => {
   try {
-    if (isXeggex(exchange) || isNonKYC(exchange)) {
-      exchange.subscribeTrades(symbol, async (response: XeggexResponse) => {
+    if (isNonKYC(exchange) || isNonKYC(exchange)) {
+      exchange.subscribeTrades(symbol, async (response: NonKYCResponse) => {
         if (response.params) {
-          const trades = (response.params as XeggexTrades).data;
+          const trades = (response.params as NonKYCTrades).data;
           await callback({
             symbol: response.params.symbol,
             id: trades[0].id,
@@ -165,7 +165,7 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string, proces
   let tradeHistory: Trade[] = [];
   if (isBinance(exchange)) {
     tradeHistory = await exchange.trades(symbol.split("/").join(""));
-  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+  } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
     const history = await exchange.getAllTrades(symbol, 500, 0);
     history.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
     tradeHistory = history.map(
@@ -337,7 +337,7 @@ export const placeSellOrder = async (
           `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`
         );
         return await exchange.sell(symbol.split("/").join(""), quantityInBase, price);
-      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+      } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
           `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`
@@ -402,7 +402,7 @@ export const placeBuyOrder = async (
           `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
         );
         return await exchange.buy(symbol.split("/").join(""), quantityInBase, price);
-      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+      } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
           `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`

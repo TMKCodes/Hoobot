@@ -30,15 +30,13 @@ import { Filter } from "../Exchanges/Filters";
 import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { Candlesticks } from "../Exchanges/Candlesticks";
-import { getTradeHistory, createBlock, placeBuyOrder, removeBlock, placeSellOrder, delay } from "../Exchanges/Trades";
+import { getTradeHistory, placeBuyOrder, placeSellOrder, delay } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
-import { cancelOrder, getAllOrders, getOpenOrders, getOrder, Order } from "../Exchanges/Orders";
+import { cancelOrder, getOpenOrders, getOrder, Order } from "../Exchanges/Orders";
 import { getCurrentBalances } from "../Exchanges/Balances";
 import { symbolFilters } from "../..";
 import { sendMessageToChannel } from "../../Discord/discord";
-
-interface GridTradingOptions extends SymbolOptions {}
 
 const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] => {
   const grid: GridLevel[] = [];
@@ -191,6 +189,9 @@ const rebalanceGrid = async (
     return;
   }
 
+  if (symbolOptions.gridRebalance == false) {
+    return;
+  }
   // If we reach here, rebalancing is necessary
   for (const order of openOrders) {
     await cancelOrder(exchange, symbol, order.orderId);
@@ -230,10 +231,13 @@ const manageGridOrders = async (
   let orderExecuted = false;
   for (var i = 0; i < grid.length; i++) {
     if (grid[i].orderId.length > 0 && grid[i].executed == false) {
+      console.log(grid[i]);
       const orderExists = openOrders.some((order) => order.orderId === grid[i].orderId);
+      console.log(orderExists);
       if (!orderExists) {
         await delay(150);
         const order = await getOrder(exchange, symbol, grid[i].orderId);
+        console.log(order);
         if (order.orderStatus === "Cancelled") {
           grid[i].executed = true;
         } else if (order.orderStatus === "Filled") {
@@ -400,6 +404,7 @@ export const gridTrading = async (
     consoleLogger.push("Candle Time", new Date(latestCandle.time).toLocaleString());
 
     const openOrders = await getOpenOrders(exchange, symbol);
+    console.log(openOrders);
     // const filledOrders = orders.filter((order) => order.orderStatus.toLowerCase() === "filled");
     if (openOrders.length > 0) {
       symbolOptions.grid = buildGridFromExistingOrders(openOrders);

@@ -24,8 +24,6 @@
  * not be liable for any losses, damages, or liabilities arising from
  * the use of this software.
  * ===================================================================== */
-
-import Binance from "node-binance-api";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
 import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/Args";
@@ -33,8 +31,8 @@ import { consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/LogToFile";
-import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
-import { Filter, Filters } from "./Filters";
+import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { Filter } from "./Filters";
 
 export interface Order {
   symbol: string;
@@ -77,7 +75,7 @@ export interface OrderStatus {
 export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
   if (isBinance(exchange)) {
     return await exchange.openOrders(symbol.split("/").join(""));
-  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+  } else if (isNonKYC(exchange)) {
     const orders = await exchange.getAllOrders(symbol, "active", 500, 0);
     return orders.map(
       (order: any) =>
@@ -104,7 +102,7 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
 export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
   if (isBinance(exchange)) {
     return await exchange.allOrders(symbol.split("/").join(""));
-  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+  } else if (isNonKYC(exchange)) {
     const activeOrders = await exchange.getAllOrders(symbol, "active", 500, 0);
     const filledOrders = await exchange.getAllOrders(symbol, "filled", 500, 0);
     const canceledOrders = await exchange.getAllOrders(symbol, "cancelled", 500, 0);
@@ -136,7 +134,7 @@ export const getOrder = async (exchange: Exchange, symbol: string, orderId: stri
     if (isBinance(exchange)) {
       const response = await exchange.orderStatus(symbol, orderId);
       return response;
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange)) {
       const order = await exchange.getOrderByID(orderId);
       return {
         symbol: symbol.split("/").join(""),
@@ -167,7 +165,7 @@ export const cancelOrder = async (exchange: Exchange, symbol: string, orderId: s
     if (isBinance(exchange)) {
       const response = await exchange.cancel(symbol, orderId);
       return response;
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange)) {
       const response = await exchange.cancelOrder(orderId);
       return response;
     }
@@ -337,7 +335,7 @@ export const handleOpenOrder = async (
         orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
         delay(1500);
       } while (true);
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange)) {
       do {
         const currentTime = Date.now();
         const activeOrders = await exchange.getAllOrders(symbol, "active", 500, 0);

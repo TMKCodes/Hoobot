@@ -26,20 +26,14 @@
  * ===================================================================== */
 
 import Binance from "node-binance-api";
-import { Xeggex } from "./Xeggex/Xeggex";
 import { ConfigOptions, ExchangeOptions } from "../Utilities/Args";
 import { NonKYC } from "./NonKYC/NonKYC";
 
-export type Exchange = Binance | Xeggex | NonKYC;
+export type Exchange = Binance | NonKYC;
 
 export const isBinance = (exchange: any): exchange is Binance => {
   return exchange !== undefined && "candlesticks" in exchange;
 };
-
-export const isXeggex = (exchange: any): exchange is Xeggex => {
-  return exchange !== undefined && "Xeggex" in exchange;
-};
-
 export const isNonKYC = (exchange: any): exchange is NonKYC => {
   return exchange !== undefined && "NonKYC" in exchange;
 };
@@ -48,10 +42,6 @@ export const getExchangeOption = (exchange: Exchange, options: ConfigOptions): E
   const exchangeOption = options.exchanges.filter((exchangeOption) => {
     if (isBinance(exchange)) {
       if (exchangeOption.name === "binance") {
-        return true;
-      }
-    } else if (isXeggex(exchange)) {
-      if (exchangeOption.name === "xeggex") {
         return true;
       }
     } else if (isNonKYC(exchange)) {

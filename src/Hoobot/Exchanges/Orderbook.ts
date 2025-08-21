@@ -26,8 +26,8 @@
  * ===================================================================== */
 
 import { logToFile } from "../Utilities/LogToFile";
-import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
-import { XeggexOrderbook, XeggexResponse } from "./Xeggex/Xeggex";
+import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { NonKYCOrderbook, NonKYCResponse } from "./NonKYC/NonKYC";
 
 export interface Depth {
   [price: string]: number;
@@ -49,7 +49,7 @@ export const getOrderbook = async (exchange: Exchange, symbol: string): Promise<
   };
   if (isBinance(exchange)) {
     orderbook = await exchange.depth(symbol.split("/").join(""));
-  } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+  } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
     const fetchedOrderbook = await exchange.getOrderbook(symbol, "1");
     if (fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
       for (const ask of fetchedOrderbook.asks) {
@@ -85,15 +85,15 @@ export const listenForOrderbooks = async (
         };
         returnCallback(symbol, book);
       });
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
       const book: Orderbook = {
         asks: {},
         bids: {},
       };
-      exchange.subscribeOrderbook(symbol, (response: XeggexResponse) => {
+      exchange.subscribeOrderbook(symbol, (response: NonKYCResponse) => {
         if (response.method === "snapshotOrderbook") {
-          const asks = (response.params as XeggexOrderbook).asks;
-          const bids = (response.params as XeggexOrderbook).bids;
+          const asks = (response.params as NonKYCOrderbook).asks;
+          const bids = (response.params as NonKYCOrderbook).bids;
           for (const ask of asks) {
             if (book.asks[ask.price] !== undefined) {
               book.asks[ask.price] = typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
@@ -110,8 +110,8 @@ export const listenForOrderbooks = async (
           }
           returnCallback(symbol, book);
         } else if (response.method === "updateOrderbook") {
-          const asks = (response.params as XeggexOrderbook).asks;
-          const bids = (response.params as XeggexOrderbook).bids;
+          const asks = (response.params as NonKYCOrderbook).asks;
+          const bids = (response.params as NonKYCOrderbook).bids;
           for (const ask of asks) {
             if (typeof ask.quantity === "number" && ask.quantity === 0) {
               delete book.asks[ask.price];

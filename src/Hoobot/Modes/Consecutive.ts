@@ -29,20 +29,12 @@ import { Client } from "discord.js";
 import { symbolFilters } from "../..";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { ConfigOptions, ExchangeOptions, getSecondsFromInterval, SymbolOptions } from "../Utilities/Args";
-import {
-  buy,
-  calculateROI,
-  calculateUnrealizedPNLPercentageForLong,
-  calculateUnrealizedPNLPercentageForShort,
-  getTradeHistory,
-  sell,
-} from "../Exchanges/Trades";
+import { buy, getTradeHistory, sell } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 import { Candlesticks } from "../Exchanges/Candlesticks";
 import { calculateIndicators, Indicators } from "./Algorithmic";
 import { Filter } from "../Exchanges/Filters";
-import { Orderbook } from "../Exchanges/Orderbook";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { checkEMASignals, checkTrendSignal } from "../Indicators/EMA";
 import { checkSMASignals } from "../Indicators/SMA";

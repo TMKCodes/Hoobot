@@ -319,6 +319,16 @@ interface symbolCallbacks {
   candlesCallbackId: number;
 }
 
+interface Subscription {
+  symbol: string;
+  tickerCallback?: (response: NonKYCResponse) => void;
+  orderbookCallback?: (response: NonKYCResponse) => void;
+  tradesCallback?: (response: NonKYCResponse) => void;
+  candlesCallback?: (response: NonKYCResponse) => void;
+  candlesPeriod?: number;
+  candlesLimit?: number;
+}
+
 export class NonKYC {
   private readonly WebSocketURL: string;
   private readonly ApiURL: string;
@@ -331,9 +341,12 @@ export class NonKYC {
   private pingTimeout: NodeJS.Timeout | undefined;
   private symbolCallbacks: symbolCallbacks[] = [];
   private reportsCallbackId: number = 0;
+  private reportsCallback?: (response: NonKYCResponse) => void;
   private callbackMap: CallbackMap;
   private emitter: EventEmitter;
   private forceStopOnDisconnect: boolean;
+  private subscriptions: Subscription[] = []; // Store active subscriptions
+  private maxReconnectionAttempts: number = 5; // Configurable max attempts
 
   constructor(key: string, secret: string, forceStopOnDisconnect: boolean) {
     this.WebSocketURL = "wss://ws.nonkyc.io";
@@ -357,11 +370,11 @@ export class NonKYC {
     }
     this.pingTimeout = setTimeout(() => {
       if (this.ws) {
+        console.warn("Ping timeout. Terminating WebSocket...");
         this.ws.terminate();
         this.ws = null;
-        this.connect();
       }
-    }, 70000);
+    }, 70000); // Configurable timeout
   };
 
   private loopPing = () => {
@@ -371,7 +384,7 @@ export class NonKYC {
     this.keepAlive = setTimeout(() => {
       this.ws?.ping(new Date().getTime());
       this.loopPing();
-    }, 60000);
+    }, 20000);
   };
 
   public waitConnect = () => {
@@ -386,39 +399,50 @@ export class NonKYC {
     this.ws = new WebSocket(this.WebSocketURL);
 
     this.ws.on("open", async () => {
+      console.log("WebSocket connected.");
       this.loopPing();
       if (this.key && this.secret) {
-        const result = await this.login();
-        if (result === true) {
-          this.emitter.emit("logged");
-        } else {
-          this.emitter.emit("login_failed");
+        try {
+          const result = await this.login();
+          if (result === true) {
+            this.emitter.emit("logged");
+            // Restore subscriptions after successful login
+            await this.restoreSubscriptions();
+          } else {
+          }
+        } catch (error) {
+          console.error("Login failed during connection:", error);
         }
       }
     });
 
     this.ws.on("close", async (code: number) => {
-      clearTimeout(this.pingTimeout);
       console.log(`WebSocket closed with code ${code}.`);
-      if (code === 1006) {
-        console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
-        await this.handleReconnection(); // Trigger reconnection
+      if (!this.forceStopOnDisconnect) {
+        if (code === 1006) {
+          console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
+          const reconnected = await this.handleReconnection();
+          if (reconnected) {
+            console.log("Reconnection successful.");
+          } else {
+            console.error("Reconnection failed after maximum attempts.");
+          }
+        }
       }
+      clearTimeout(this.pingTimeout);
+      clearTimeout(this.keepAlive);
     });
 
-    // New: Error event listener to catch connection errors and avoid unhandled exceptions
     this.ws.on("error", (err) => {
       console.error("WebSocket encountered an error:", err);
+      this.emitter.emit("websocket_error", err);
     });
 
-    // Respond to server ping with a pong and reset heartbeat
     this.ws.on("ping", (_buffer: Buffer) => {
-      this.ws?.pong();
-    });
-
-    this.ws.on("pong", (_buffer: Buffer) => {
       this.heartBeat();
     });
+
+    this.ws.on("pong", (_buffer: Buffer) => {});
 
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);
@@ -426,31 +450,84 @@ export class NonKYC {
     return this.ws;
   };
 
-  private handleReconnection = async (maxRetries: number = 5, delayTime: number = 30000): Promise<void> => {
-    let retries = 0;
+  public disconnect() {
+    try {
+      if (this.ws) {
+        this.forceStopOnDisconnect = true;
+        this.ws.terminate();
+        this.ws = null;
+        console.log("NonKYC disconnected.");
+      }
+    } catch (err) {
+      console.error("Error during disconnect:", err);
+    }
+  }
 
+  private async restoreSubscriptions() {
+    console.log("Restoring subscriptions...");
+    for (const sub of this.subscriptions) {
+      if (sub.tickerCallback) {
+        await this.subscribeTicker(sub.symbol, sub.tickerCallback);
+      }
+      if (sub.orderbookCallback) {
+        await this.subscribeOrderbook(sub.symbol, sub.orderbookCallback);
+      }
+      if (sub.tradesCallback) {
+        await this.subscribeTrades(sub.symbol, sub.tradesCallback);
+      }
+      if (sub.candlesCallback && sub.candlesPeriod) {
+        await this.subscribeCandles(sub.symbol, sub.candlesPeriod, sub.candlesCallback, sub.candlesLimit);
+      }
+    }
+    if (this.reportsCallback) {
+      await this.subscribeReports(this.reportsCallback);
+    }
+    console.log("Subscriptions restored.");
+  }
+
+  private handleReconnection = async (
+    maxRetries: number = this.maxReconnectionAttempts,
+    delayTime: number = 10000
+  ): Promise<boolean> => {
     if (this.forceStopOnDisconnect) {
-      console.error("Force stop on disconnect is enabled. Attempting reconnection...");
+      console.error("Force stop on disconnect is enabled. Reconnection aborted.");
+      this.emitter.emit("reconnect_aborted");
+      return false;
     }
 
+    let retries = 0;
+    const maxDelay = 300000; // 5 minutes max delay
+    let currentDelay = delayTime;
+
     while (retries < maxRetries) {
+      retries++;
+      console.log(`Reconnection attempt ${retries}/${maxRetries}...`);
+      this.emitter.emit("reconnect_attempt", { attempt: retries, maxRetries });
+
       try {
-        if (this.ws) {
+        // Wait before attempting reconnection
+        await delay(currentDelay);
+
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.terminate();
         }
-        this.ws = null;
-        await this.connect();
-        console.log("Reconnected.");
-        return;
+
+        this.ws = await this.connect();
+        await Promise.race([
+          this.waitConnect(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Login timeout")), 30000)), // 30s timeout
+        ]);
+        return true;
       } catch (error) {
-        console.error("Reconnection attempt failed:", error);
-        retries++;
-        await delay(delayTime);
-        delayTime *= 2;
+        console.error(`Reconnection attempt ${retries} failed:`, error);
+        this.emitter.emit("reconnect_attempt_failed", { attempt: retries, error });
+        currentDelay = Math.min(currentDelay * 2, maxDelay); // Exponential backoff with cap
       }
     }
 
-    console.error(`Failed to reconnect after ${maxRetries} attempts. Please check network or server status.`);
+    console.error(`Failed to reconnect after ${maxRetries} attempts.`);
+    this.emitter.emit("reconnect_failed");
+    return false;
   };
 
   private send = (message: any): void => {
@@ -622,6 +699,7 @@ export class NonKYC {
 
   public subscribeReports = async (callback: (response: NonKYCResponse) => void) => {
     await waitToBlock();
+    this.reportsCallback = callback; // Store callback
     this.send({
       method: "subscribeReports",
       params: {},
@@ -632,12 +710,14 @@ export class NonKYC {
   };
 
   public unsubscribeReports = () => {
+    console.log("Unsubscribing Reports");
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeReports",
       params: {},
       id: messageId,
     });
+    this.reportsCallback = undefined;
     this.callbackMap.remove(this.reportsCallbackId);
   };
 
@@ -761,27 +841,27 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
+      this.subscriptions.push({ symbol, tickerCallback: callback });
     }
     this.send({
       method: "subscribeTicker",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: symbolCallback.tickerCallbackId,
     });
     this.callbackMap.add(symbolCallback.tickerCallbackId, callback);
     await unBlock();
   };
 
+  // Update unsubscribe methods to remove from subscriptions
   public unsubscribeTicker = async (symbol: string): Promise<boolean> => {
+    console.log("Unsubscribing Tickers");
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTicker",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: messageId,
     });
+    this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.tickerCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
@@ -808,12 +888,11 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
+      this.subscriptions.push({ symbol, orderbookCallback: callback });
     }
     this.send({
       method: "subscribeOrderbook",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: symbolCallback.orderbookCallbackId,
     });
     this.callbackMap.add(symbolCallback.orderbookCallbackId, callback);
@@ -821,14 +900,14 @@ export class NonKYC {
   };
 
   public unsubscribeOrderbook = async (symbol: string): Promise<boolean> => {
+    console.log("Unsubscribing Orderbooks");
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeOrderbook",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: messageId,
     });
+    this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.orderbookCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
@@ -855,12 +934,11 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
+      this.subscriptions.push({ symbol, tradesCallback: callback });
     }
     this.send({
       method: "subscribeTrades",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: symbolCallback.tradesCallbackId,
     });
     this.callbackMap.add(symbolCallback.tradesCallbackId, callback);
@@ -868,14 +946,14 @@ export class NonKYC {
   };
 
   public unsubscribeTrades = async (symbol: string): Promise<boolean> => {
+    console.log("Unsubscribing Trades");
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeTrades",
-      params: {
-        symbol: symbol,
-      },
+      params: { symbol },
       id: messageId,
     });
+    this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.tradesCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
@@ -907,14 +985,11 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
+      this.subscriptions.push({ symbol, candlesCallback: callback, candlesPeriod: period, candlesLimit: limit });
     }
     this.send({
       method: "subscribeCandles",
-      params: {
-        symbol: symbol,
-        period: period,
-        limit: limit,
-      },
+      params: { symbol, period, limit },
       id: symbolCallback.candlesCallbackId,
     });
     this.callbackMap.add(symbolCallback.candlesCallbackId, callback);
@@ -922,15 +997,14 @@ export class NonKYC {
   };
 
   public unsubscribeCandles = async (symbol: string, period: number): Promise<boolean> => {
+    console.log("Unsubscribing Candles");
     let messageId = this.messageId++;
     this.send({
       method: "unsubscribeCandles",
-      params: {
-        symbol: symbol,
-        period: period,
-      },
+      params: { symbol, period },
       id: messageId,
     });
+    this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.candlesCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {

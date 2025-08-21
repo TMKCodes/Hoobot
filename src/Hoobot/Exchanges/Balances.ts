@@ -26,10 +26,7 @@
  * ===================================================================== */
 
 import fs from "fs";
-import path from "path";
-import Binance from "node-binance-api";
-import { Xeggex } from "./Xeggex/Xeggex";
-import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
+import { Exchange, isBinance, isNonKYC } from "./Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 
 export interface DatedBalances {
@@ -90,7 +87,7 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
           };
         }
       }
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange)) {
       const balances = await exchange.getTradingBalance();
       const prices = await exchange.getMarkets();
       const symbols = prices.map((price) => price.symbol.split("/").join(""));
@@ -155,9 +152,7 @@ export const getCurrentBalance = async (exchange: Exchange, asset: string): Prom
 export const storeBalances = async (exchange: Exchange, balances: Balances) => {
   const currentDate = new Date().toLocaleString();
   let ex = "binance";
-  if (isXeggex(exchange)) {
-    ex = "xeggex";
-  } else if (isNonKYC(exchange)) {
+  if (isNonKYC(exchange)) {
     ex = "nonkyc";
   }
   const logsDir = "./logs";
@@ -165,13 +160,17 @@ export const storeBalances = async (exchange: Exchange, balances: Balances) => {
     fs.mkdirSync(logsDir);
   }
   const filePath = `./logs/balances-${ex}.json`;
-  let existingBalances: DatedBalances[] = [];
+  let balancesInFile: DatedBalances[] = [];
   if (fs.existsSync(filePath)) {
     const fileContent = fs.readFileSync(filePath, "utf8");
-    existingBalances = JSON.parse(fileContent);
+    if (fileContent != undefined) {
+      balancesInFile = JSON.parse(fileContent);
+    }
   } else {
     fs.writeFileSync(filePath, JSON.stringify([], null, 4));
   }
-  existingBalances.push({ [currentDate]: balances });
-  fs.writeFileSync(filePath, JSON.stringify(existingBalances, null, 4));
+  if (balancesInFile.length == 0) {
+    balancesInFile.push({ [currentDate]: balances });
+    fs.writeFileSync(filePath, JSON.stringify(balancesInFile, null, 4));
+  }
 };

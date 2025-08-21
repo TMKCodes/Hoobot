@@ -1,17 +1,1754 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Basic Page</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div id="app">
-    <h1>Welcome to Hoobot!</h1>
-    <p>If you are seeing this, hoobot should be running on the background!</p>
-  </div>
-  <script src="app.js"></script> 
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoobot Trading Bot Configuration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+      :root {
+        --sidebar-width: 280px;
+        --sidebar-width-collapsed: 0px;
+        --transition: 0.3s ease;
+        --sidebar-bg: #116466;
+        --accent: #2c3531;
+        --text-muted: #a8adb5;
+        --text-active: #d9dfe6;
+        --main-bg: #f1f3f5;
+        --primary: #fff;
+        --notification: #e63946;
+        --sidebar-button: #2c3531;
+        --button-radius: 0.5rem;
+        --button-padding: 0.6rem 1.2rem;
+        --button-font-weight: 600;
+        --button-transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+
+        /* Colors (already defined in your root, just reused here) */
+        --button-primary-bg: #3ba99c; /* softened teal-green */
+        --button-primary-text: #fff;
+        --button-primary-hover: #2e857a; /* darker hover shade */
+
+        --button-secondary-bg: #116466;
+        --button-secondary-text: #fff;
+        --button-secondary-hover: #0e4f50;
+
+        --button-ghost-bg: transparent;
+        --button-ghost-border: #a8adb5;
+        --button-ghost-text: #a8adb5;
+        --button-ghost-hover-bg: rgba(168, 173, 181, 0.1);
+
+        --button-danger-bg: #b23a48; /* muted brick red */
+        --button-danger-text: #fff;
+        --button-danger-hover: #8f2e3a; /* darker shade for hover */
+
+        --button-success-bg: #2ecc71; /* fresh emerald green */
+        --button-success-text: #fff;
+        --button-success-hover: #27ae60; /* darker shade */
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: var(--button-font-weight);
+        padding: var(--button-padding);
+        border-radius: var(--button-radius);
+        border: none;
+        cursor: pointer;
+        transition: var(--button-transition);
+        text-decoration: none;
+        font-size: 1rem;
+        line-height: 1.2;
+      }
+
+      .btn:disabled,
+      .btn[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      /* Primary */
+      .btn-primary {
+        color: var(--button-primary-text);
+        background-color: var(--button-primary-bg);
+      }
+      .btn-primary:hover:not(:disabled),
+      .btn-primary:focus {
+        background-color: var(--button-primary-hover);
+      }
+
+      /* Secondary */
+      .btn-secondary {
+        color: var(--button-secondary-text);
+        background-color: var(--button-secondary-bg);
+      }
+      .btn-secondary:hover:not(:disabled),
+      .btn-secondary:focus {
+        background-color: var(--button-secondary-hover);
+      }
+
+      /* Ghost */
+      .btn-ghost {
+        color: var(--button-ghost-text);
+        background-color: var(--button-ghost-bg);
+        border: 1px solid var(--button-ghost-border);
+      }
+      .btn-ghost:hover:not(:disabled),
+      .btn-ghost:focus {
+        background-color: var(--button-ghost-hover-bg);
+      }
+
+      /* Danger */
+      .btn-danger {
+        color: var(--button-danger-text);
+        background-color: var(--button-danger-bg);
+      }
+      .btn-danger:hover:not(:disabled),
+      .btn-danger:focus {
+        background-color: var(--button-danger-hover);
+      }
+
+      .btn-success {
+        color: var(--button-success-text);
+        background-color: var(--button-success-bg);
+      }
+      .btn-success:hover:not(:disabled),
+      .btn-success:focus {
+        background-color: var(--button-success-hover);
+      }
+
+      body {
+        overflow-x: hidden;
+        margin: 0;
+      }
+
+      .sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        min-height: 100%;
+        background: var(--sidebar-bg); /* Changed: Solid color, no gradient */
+        transition: width var(--transition);
+      }
+
+      .sidebar.collapsed {
+        width: var(--sidebar-width-collapsed);
+      }
+
+      .sidebar-link {
+        position: relative;
+        color: var(--text-muted);
+        border-radius: 6px; /* Changed: Slightly smaller radius for less gloss */
+        margin: 4px 16px;
+        white-space: nowrap;
+        overflow: hidden;
+        transition: all 0.2s ease;
+      }
+
+      .sidebar-link:hover,
+      .sidebar-link.active {
+        color: var(--text-active);
+        background: var(--accent);
+      }
+
+      .sidebar-link:hover {
+        transform: translateX(3px); /* Changed: Reduced transform for subtler effect */
+      }
+
+      .logo-text {
+        color: var(--primary); /* Changed: Solid color, no gradient */
+        transition: opacity var(--transition);
+      }
+
+      .notification-badge {
+        background: var(--notification);
+        padding: 2px 6px;
+        border-radius: 4px; /* Changed: Smaller radius for less shine */
+        font-size: 0.7rem;
+      }
+
+      .nav-bottom-section {
+        border-top: 1px solid var(--accent);
+      }
+
+      .main-content {
+        width: calc(100vw - var(--sidebar-width));
+        margin-left: var(--sidebar-width);
+        background: var(--main-bg);
+        min-height: 100vh;
+        padding: 20px;
+        transition: margin-left var(--transition), width var(--transition);
+      }
+
+      .collapsed ~ .main-content {
+        margin-left: var(--sidebar-width-collapsed);
+        width: calc(100vw - var(--sidebar-width-collapsed));
+      }
+
+      .toggle-btn {
+        position: absolute;
+        right: -15px;
+        top: 20px;
+        background: var(--sidebar-button);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        border: none;
+        box-shadow: 0 1px 4px rgb(0, 0, 0); /* Changed: Softer shadow */
+        cursor: pointer;
+        transition: transform var(--transition);
+      }
+
+      .collapsed .toggle-btn {
+        transform: rotate(180deg);
+      }
+
+      .collapsed .hide-on-collapse,
+      .collapsed .logo-text,
+      .collapsed .nav-bottom-info {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .collapsed .sidebar-link {
+        text-align: center;
+        display: none;
+        margin: 4px 8px;
+      }
+
+      .collapsed .sidebar-link i {
+        margin: 0;
+      }
+
+      .nav-bottom-info {
+        transition: opacity 0.2s ease;
+      }
+
+      .settings-container {
+        display: none;
+      }
+
+      .nav-bottom-run-buttons > button {
+        width: 100%;
+        margin-bottom: 5px;
+      }
+
+      .collapsed .nav-bottom-section {
+        display: none;
+      }
+      #stop {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="d-flex">
+      <nav class="sidebar d-flex flex-column flex-shrink-0 position-fixed">
+        <button class="toggle-btn" onclick="toggleSidebar()">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <div class="p-4">
+          <h4 class="logo-text fw-bold mb-0">Hoobot</h4>
+        </div>
+
+        <div class="nav flex-column">
+          <a href="#" class="sidebar-link sidebar-dashboard-button active text-decoration-none p-3">
+            <i class="fas fa-home me-3"></i>
+            <span class="hide-on-collapse">Dashboard</span>
+          </a>
+          <a href="#" class="sidebar-link sidebar-settings-button text-decoration-none p-3">
+            <i class="fas fa-chart-bar me-3"></i>
+            <span class="hide-on-collapse">Settings</span>
+          </a>
+        </div>
+
+        <div class="nav-bottom-section mt-auto p-4">
+          <div class="d-flex align-items-center">
+            <div class="mt-1 mb-1 nav-bottom-run-buttons">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="simulate"
+                title="Only available for Algorithmic in Binance"
+              >
+                Run Simulation
+              </button>
+              <button type="button" class="btn btn-primary" id="run">Run Hoobot</button>
+              <button type="button" class="btn btn-danger" id="stop">Stop Hoobot</button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main class="main-content">
+        <div class="container-fluid settings-container">
+          <h1 class="mb-4">Settings</h1>
+
+          <!-- General Settings -->
+          <div class="config-section">
+            <h3>General Settings</h3>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="debug" />
+              <label class="form-check-label" for="debug">Debug</label>
+            </div>
+            <div class="mb-3">
+              <label for="license" class="form-label">License</label>
+              <input type="text" class="form-control" id="license" placeholder="Enter license key" />
+            </div>
+          </div>
+
+          <!-- Discord Settings -->
+          <div class="config-section">
+            <h3>Discord Settings</h3>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="discordEnabled" />
+              <label class="form-check-label" for="discordEnabled">Enabled</label>
+            </div>
+            <div class="mb-3">
+              <label for="discordToken" class="form-label">Token</label>
+              <input type="text" class="form-control" id="discordToken" placeholder="Enter Discord token" />
+            </div>
+            <div class="mb-3">
+              <label for="applicationId" class="form-label">Application ID</label>
+              <input type="text" class="form-control" id="applicationId" placeholder="Enter Application ID" />
+            </div>
+            <div class="mb-3">
+              <label for="serverId" class="form-label">Server ID</label>
+              <input type="text" class="form-control" id="serverId" placeholder="Enter Server ID" />
+            </div>
+            <div class="mb-3">
+              <label for="channelId" class="form-label">Channel ID</label>
+              <input type="text" class="form-control" id="channelId" placeholder="Enter Channel ID" />
+            </div>
+          </div>
+
+          <!-- Exchanges -->
+          <div class="config-section">
+            <h3>Exchanges</h3>
+            <div id="exchangesList"></div>
+            <button type="button" class="btn btn-primary mt-2" id="addExchangeButton">Add Exchange</button>
+          </div>
+
+          <!-- Error Message -->
+          <div id="errorMessage" class="error-message mt-3"></div>
+
+          <!-- Action Buttons -->
+          <div class="mt-4 mb-4">
+            <button type="button" class="btn btn-success me-2" id="generateConfigButton">Save Configuration</button>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function toggleSidebar() {
+        const sidebar = document.querySelector(".sidebar");
+        sidebar.classList.toggle("collapsed");
+      }
+
+      $(".sidebar-settings-button").on("click", () => {
+        $(".sidebar-settings-button").addClass("active");
+        $(".sidebar-dashboard-button").removeClass("active");
+        $(".settings-container").show();
+      });
+      $(".sidebar-dashboard-button").on("click", () => {
+        $(".sidebar-dashboard-button").addClass("active");
+        $(".sidebar-settings-button").removeClass("active");
+        $(".settings-container").hide();
+      });
+
+      $(document).ready(function () {
+        // Function to display error messages
+        function showError(message) {
+          $("#errorMessage").text(message).show();
+          setTimeout(() => $("#errorMessage").hide(), 5000);
+        }
+
+        // Function to add a new exchange entry
+        function addExchange(exchangeData = {}) {
+          const $exchangeDiv = $(`
+                        <div class="exchange-entry">
+                            <div class="mb-3">
+                                <label class="form-label">Exchange Name</label>
+                                <input type="text" class="form-control exchange-name" placeholder="Enter exchange name (e.g., binance)" value="${
+                                  exchangeData.name || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Key</label>
+                                <input type="text" class="form-control exchange-key" placeholder="Enter API key" value="${
+                                  exchangeData.key || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Secret</label>
+                                <input type="text" class="form-control exchange-secret" placeholder="Enter API secret" value="${
+                                  exchangeData.secret || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mode</label>
+                                <select class="form-select exchange-mode">
+                                    <option value="algorithmic" ${
+                                      exchangeData.mode === "algorithmic" ? "selected" : ""
+                                    }>Algorithmic</option>
+                                    <option value="grid" ${exchangeData.mode === "grid" ? "selected" : ""}>Grid</option>
+                                    <option value="hilow" ${
+                                      exchangeData.mode === "hilow" ? "selected" : ""
+                                    }>HiLow</option>
+                                    <option value="periodic" ${
+                                      exchangeData.mode === "periodic" ? "selected" : ""
+                                    }>Periodic</option>
+                                </select>
+                            </div>
+                            <h4>Symbols</h4>
+                            <div class="symbols-list nested-section"></div>
+                            <button type="button" class="btn btn-primary btn-sm mt-2 add-symbol">Add Symbol</button>
+                            <button type="button" class="btn btn-danger btn-sm mt-2 remove-exchange">Remove Exchange</button>
+                        </div>
+                    `);
+          $("#exchangesList").append($exchangeDiv);
+
+          // Add symbol entries
+          const $symbolsList = $exchangeDiv.find(".symbols-list");
+          if (exchangeData.symbols && Array.isArray(exchangeData.symbols)) {
+            exchangeData.symbols.forEach((symbol) => addSymbol($symbolsList, symbol));
+          }
+
+          // Add event listeners
+          $exchangeDiv.find(".add-symbol").on("click", () => addSymbol($symbolsList));
+          $exchangeDiv.find(".remove-exchange").on("click", () => $exchangeDiv.remove());
+          $exchangeDiv.find(".exchange-mode").on("change", () => {
+            $symbolsList.empty();
+          });
+        }
+
+        // Function to add a new symbol entry
+        function addSymbol($symbolsList, symbolData = {}) {
+          console.log(symbolData);
+          const $exchangeEntry = $symbolsList.closest(".exchange-entry");
+          const exchangeName = $exchangeEntry.find(".exchange-name").val();
+          const exchangeMode = $exchangeEntry.find(".exchange-mode").val();
+          const $symbolDiv = $(`<div class="symbol-entry">
+                                      <div class="mb-3">
+                                          <label class="form-label">Symbol Name</label>
+                                          <input type="text" class="form-control symbol-name" placeholder="Enter symbol (e.g., HTN/USDT)" value="${
+                                            symbolData.name || ""
+                                          }">
+                                      </div>
+                                      <div class="symbol-mode-options">
+                                      </div>
+                                      <button type="button" class="btn btn-danger btn-sm mt-2 remove-symbol">Remove Symbol</button>
+                                    </div>`);
+          if (exchangeMode == "algorithmic") {
+            const $modeSymbolOptions = $(`
+                            <div class="mb-3">
+                                <label class="form-label">Timeframes (comma-separated)</label>
+                                <input type="text" class="form-control symbol-timeframes" placeholder="e.g., 5m,15m" value="${(
+                                  symbolData.timeframes || []
+                                ).join(",")}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Source</label>
+                                <select class="form-select symbol-source">
+                                    <option value="close" ${
+                                      symbolData.source === "close" ? "selected" : ""
+                                    }>Close</option>
+                                    <option value="open" ${symbolData.source === "open" ? "selected" : ""}>Open</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Indicator Agreement Percentage (%)</label>
+                              <input type="number" step="1s" class="form-control agreement" placeholder="e.g., 25" value="${
+                                symbolData.agreement || ""
+                              }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Close Percentage (%)</label>
+                                <input type="number" step="0.01" class="form-control close-percentage" placeholder="e.g., 0.25" value="${
+                                  symbolData.closePercentage || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Maximum Age of Order (min)</label>
+                                <input type="number" class="form-control maximum-age-of-order" placeholder="e.g., 60" value="${
+                                  symbolData.maximumAgeOfOrder || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Trade Fee Percentage (%)</label>
+                                <input type="number" step="0.01" class="form-control trade-fee-percentage" placeholder="e.g., 0.1" value="${
+                                  symbolData.tradeFeePercentage || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                              <h5>Trend</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Enabled</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input trend-enabled" ${
+                                          symbolData.trend?.enabled ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Enabled</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Timeframe</label></td>
+                                    <td>
+                                      <input type="text" class="form-control trend-timeframe" placeholder="e.g., 1d" value="${
+                                        symbolData.trend?.timeframe || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">EMA Short</label></td>
+                                    <td>
+                                      <input type="number" class="form-control trend-ema-short" placeholder="e.g., 8" value="${
+                                        symbolData.trend?.ema?.short || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">EMA Long</label></td>
+                                    <td>
+                                      <input type="number" class="form-control trend-ema-long" placeholder="e.g., 26" value="${
+                                        symbolData.trend?.ema?.long || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Profit</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Enabled</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input profit-enabled" ${
+                                          symbolData.profit?.enabled ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Enabled</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Minimum Sell (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control profit-minimum-sell" placeholder="e.g., 0.15" value="${
+                                        symbolData.profit?.minimumSell || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Minimum Buy (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control profit-minimum-buy" placeholder="e.g., 0" value="${
+                                        symbolData.profit?.minimumBuy || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Growing Max</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Buy</label></td>
+                                    <td>
+                                      <input type="number" class="form-control growing-max-buy" placeholder="e.g., 100" value="${
+                                        symbolData.growingMax?.buy || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Sell</label></td>
+                                    <td>
+                                      <input type="number" class="form-control growing-max-sell" placeholder="e.g., 0" value="${
+                                        symbolData.growingMax?.sell || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Stop Loss</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Enabled</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input stop-loss-enabled" ${
+                                          symbolData.stopLoss?.enabled ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Enabled</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Stop Trading</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input stop-loss-stop-trading" ${
+                                          symbolData.stopLoss?.stopTrading ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Stop Trading</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">PnL (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control stop-loss-pnl" placeholder="e.g., -20" value="${
+                                        symbolData.stopLoss?.pnl || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Aging Per Hour (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control stop-loss-aging-per-hour" placeholder="e.g., 0.01" value="${
+                                        symbolData.stopLoss?.agingPerHour || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Take Profit</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Enabled</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input take-profit-enabled" ${
+                                          symbolData.takeProfit?.enabled ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Enabled</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Limit (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-limit" placeholder="e.g., 0.125" value="${
+                                        symbolData.takeProfit?.limit || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Minimum (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-minimum" placeholder="e.g., 1.5" value="${
+                                        symbolData.takeProfit?.minimum || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Drop (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-drop" placeholder="e.g., 0.05" value="${
+                                        symbolData.takeProfit?.drop || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Indicators</h5>
+                              <div class="nested-section">
+                                <div class="mb-3">
+                                  <h6>Renko Candlesticks</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input renko-enabled" ${
+                                              symbolData.indicators?.renko?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Multiplier</label></td>
+                                        <td>
+                                          <input type="number" class="form-control renko-multiplier" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.renko?.multiplier || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Long</label></td>
+                                        <td>
+                                          <input type="number" class="form-control renko-long" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.renko?.long || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control renko-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.renko?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>SMA - Simple Moving Average</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input sma-enabled" ${
+                                              symbolData.indicators?.sma?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control sma-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.sma?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control sma-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.sma?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>EMA - Exponential Moving Average</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input ema-enabled" ${
+                                              symbolData.indicators?.ema?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Short</label></td>
+                                        <td>
+                                          <input type="number" class="form-control ema-short" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.ema?.short || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Long</label></td>
+                                        <td>
+                                          <input type="number" class="form-control ema-long" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.ema?.long || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control ema-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.ema?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>MACD - Moving Average Convergence Divergence</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input macd-enabled" ${
+                                              symbolData.indicators?.macd?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Fast</label></td>
+                                        <td>
+                                          <input type="number" class="form-control macd-fast" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.macd?.fast || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Slow</label></td>
+                                        <td>
+                                          <input type="number" class="form-control macd-slow" placeholder="e.g., 15" value="${
+                                            symbolData.indicators?.macd?.slow || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Signal</label></td>
+                                        <td>
+                                          <input type="number" class="form-control macd-signal" placeholder="e.g., 6" value="${
+                                            symbolData.indicators?.macd?.signal || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control macd-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.macd?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>RSI - Relative Strength Index</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input rsi-enabled" ${
+                                              symbolData.indicators?.rsi?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.rsi?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Smoothing source</label></td>
+                                        <td>
+                                          <select class="form-select rsi-smoothing-type">
+                                            <option value="EMA" ${
+                                              symbolData.indicators?.rsi?.smoothing?.type === "EMA" ? "selected" : ""
+                                            }>EMA</option>
+                                            <option value="SMA" ${
+                                              symbolData.indicators?.rsi?.smoothing?.type === "SMA" ? "selected" : ""
+                                            }>SMA</option>
+                                          </select>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Smoothing Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-smoothing-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.rsi?.smoothing?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">History</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-history" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.rsi?.history || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold overbought</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-treshold-overbought" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.rsi?.tresholds?.overbought || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold oversold</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-treshold-oversold" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.rsi?.tresholds?.oversold || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control rsi-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.rsi?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>ATR - Average True Range</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input atr-enabled" ${
+                                              symbolData.indicators?.atr?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control atr-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.atr?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control atr-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.atr?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>OBV - On-balance volume</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input obv-enabled" ${
+                                              symbolData.indicators?.obv?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control obv-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.obv?.Length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control obv-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.obv?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>CMF - Chaikin Money Flow</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input cmf-enabled" ${
+                                              symbolData.indicators?.cmf?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control cmf-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.cmf?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">History</label></td>
+                                        <td>
+                                          <input type="number" class="form-control cmf-history" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.cmf?.history || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold overbought</label></td>
+                                        <td>
+                                          <input type="number" class="form-control cmf-treshold-overbought" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.cmf?.treshold?.overbought || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold oversold</label></td>
+                                        <td>
+                                          <input type="number" class="form-control cmf-treshold-oversold" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.cmf?.treshold?.oversold || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control cmf-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.cmf?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>BB - Bollinger Bands</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input bb-enabled" ${
+                                              symbolData.indicators?.bb?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control bb-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.bb?.length || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Multiplier</label></td>
+                                        <td>
+                                          <input type="number" class="form-control bb-multiplier" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.bb?.multiplier || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Average</label></td>
+                                        <td>
+                                          <select class="form-select symbol-source">
+                                            <option value="SMA" ${
+                                              symbolData.source === "SMA" ? "selected" : ""
+                                            }>SMA</option>
+                                            <option value="EMA" ${
+                                              symbolData.source === "EMA" ? "selected" : ""
+                                            }>EMA</option>
+                                          </select>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">History</label></td>
+                                        <td>
+                                          <input type="number" class="form-control bb-history" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.bb?.history || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control bb-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.bb?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>SO - Stochastic Oscillator</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input so-enabled" ${
+                                              symbolData.indicators?.so?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">kPeriod</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-k-period" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.so?.kPeriod || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">dPeriod</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-d-period" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.so?.dPeriod || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Smoothing</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-smoothing" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.so?.smoothing || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold overbought</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-treshold-overbought" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.so?.treshold?.overbought || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold oversold</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-treshold-oversold" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.so?.treshold?.oversold || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control so-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.so?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="mb-3">
+                                  <h6>SRSI - Stochastic Relative Strength Index</h6>
+                                  <table class="table table-bordered">
+                                    <tbody>
+                                      <tr>
+                                        <td class="col-4"><label class="form-label">Enabled</label></td>
+                                        <td>
+                                          <div class="form-check">
+                                            <input type="checkbox" class="form-check-input srsi-enabled" ${
+                                              symbolData.indicators?.srsi?.enabled ? "checked" : ""
+                                            }>
+                                            <label class="form-check-label">Enabled</label>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">RSI Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-rsi-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.srsi?.rsiLength || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Stoch Length</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-stoch-length" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.srsi?.stochLength || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">kPeriod</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-k-period" placeholder="e.g., 5" value="${
+                                            symbolData.indicators?.srsi?.kPeriod || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">dPeriod</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-d-period" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.srsi?.dPeriod || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">kSmooth</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-smooth-k" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.srsi?.smoothK || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">dSmooth</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-smooth-d" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.srsi?.smoothD || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold overbought</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-treshold-overbought" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.srsi?.treshold?.overbought || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Threshold oversold</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-treshold-oversきた"></td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Weight</label></td>
+                                        <td>
+                                          <input type="number" class="form-control srsi-weight" placeholder="e.g., 1" value="${
+                                            symbolData.indicators?.srsi?.weight || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                  <div class="mb-3">
+                                    <h6>DMI - Directional Movement Index</h6>
+                                    <table class="table table-bordered">
+                                      <tbody>
+                                        <tr>
+                                          <td class="col-4"><label class="form-label">Enabled</label></td>
+                                          <td>
+                                            <div class="form-check">
+                                              <input type="checkbox" class="form-check-input dmi-enabled" ${
+                                                symbolData.indicators?.dmi?.enabled ? "checked" : ""
+                                              }>
+                                              <label class="form-check-label">Enabled</label>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                        <tr>
+                                          <td><label class="form-label">Length</label></td>
+                                          <td>
+                                            <input type="number" class="form-control dmi-length" placeholder="e.g., 5" value="${
+                                              symbolData.indicators?.dmi?.dmiLength || ""
+                                            }">
+                                          </td>
+                                        </tr>
+                                        <tr>
+                                          <td><label class="form-label">ADX Smoothing</label></td>
+                                          <td>
+                                            <input type="number" class="form-control dmi-adx-smoothing" placeholder="e.g., 5" value="${
+                                              symbolData.indicators?.dmi?.adxSmoothing || ""
+                                            }">
+                                          </td>
+                                        </tr>
+                                        <tr>
+                                          <td><label class="form-label">Weight</label></td>
+                                          <td>
+                                            <input type="number" class="form-control dmi-weight" placeholder="e.g., 1" value="${
+                                              symbolData.indicators?.dmi?.weight || ""
+                                            }">
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                              </div>
+                            </div>
+                    `);
+            $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
+          } else if (exchangeMode == "grid") {
+            $modeSymbolOptions = $(`
+                            <div class="mb-3">
+                                <label class="form-label">Timeframes (comma-separated)</label>
+                                <input type="text" class="form-control symbol-timeframes" placeholder="e.g., 5m,15m" value="${(
+                                  symbolData.timeframes || []
+                                ).join(",")}">
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Source</label>
+                              <select class="form-select symbol-source">
+                                <option value="close" ${symbolData.source === "close" ? "selected" : ""}>Close</option>
+                                <option value="open" ${symbolData.source === "open" ? "selected" : ""}>Open</option>
+                              </select>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Grid Options</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Grid Order Size (Base)</label></td>
+                                    <td>
+                                      <input type="number" step="0.000000001" class="form-control grid-order-size" placeholder="e.g., 0.25" value="${
+                                        symbolData.gridOrderSize || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Automatic Grid Rebalance</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input grid-rebalance" ${
+                                          symbolData.gridRebalance ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Automatic Grid Rebalance</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Grid Levels</label></td>
+                                    <td>
+                                      <input type="number" step="1" class="form-control grid-levels" placeholder="e.g., 10" value="${
+                                        symbolData.gridLevels || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Grid Upper Limit (% from current price)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control grid-range-upper" placeholder="e.g., 0.25" value="${
+                                        symbolData.gridRange?.upper || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Grid Lower Limit (% from current price)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control grid-range-lower" placeholder="e.g., 0.25" value="${
+                                        symbolData.gridRange?.lower || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>`);
+            $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
+          } else if (exchangeMode == "hilow") {
+            $modeSymbolOptions = $(`
+                            <div class="mb-3">
+                              <h5>Take Profit</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Enabled</label></td>
+                                    <td>
+                                      <div class="form-check">
+                                        <input type="checkbox" class="form-check-input take-profit-enabled" ${
+                                          symbolData.takeProfit?.enabled ? "checked" : ""
+                                        }>
+                                        <label class="form-check-label">Enabled</label>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Limit (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-limit" placeholder="e.g., 0.125" value="${
+                                        symbolData.takeProfit?.limit || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Minimum (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-minimum" placeholder="e.g., 1.5" value="${
+                                        symbolData.takeProfit?.minimum || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Drop (%)</label></td>
+                                    <td>
+                                      <input type="number" step="0.01" class="form-control take-profit-drop" placeholder="e.g., 0.05" value="${
+                                        symbolData.takeProfit?.drop || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="mb-3">
+                              <h5>Growing Max</h5>
+                              <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <td class="col-4"><label class="form-label">Buy</label></td>
+                                    <td>
+                                      <input type="number" class="form-control growing-max-buy" placeholder="e.g., 100" value="${
+                                        symbolData.growingMax?.buy || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><label class="form-label">Sell</label></td>
+                                    <td>
+                                      <input type="number" class="form-control growing-max-sell" placeholder="e.g., 0" value="${
+                                        symbolData.growingMax?.sell || ""
+                                      }">
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>`);
+            $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
+          } else if (exchangeMode == "periodic") {
+            $modeSymbolOptions = $(`
+                            <div class="mb-3">
+                                <label class="form-label">Direction</label>
+                                <select class="form-select periodic-direction">
+                                    <option value="SELL" ${symbolData.source === "SELL" ? "selected" : ""}>Sell</option>
+                                    <option value="BUY" ${symbolData.source === "BUY" ? "selected" : ""}>Buy</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantity (Base)</label>
+                                <input type="number" step="0.000000001" class="form-control periodic-quantity" placeholder="e.g., 0.25" value="${
+                                  symbolData.periodicQuantity || ""
+                                }">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Interval (Seconds)</label>
+                                <input type="number" step="1" class="form-control periodic-interval" placeholder="e.g., 0.25" value="${
+                                  symbolData.periodicInterval || ""
+                                }">
+                            </div>`);
+            $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
+          }
+          $symbolsList.append($symbolDiv);
+          // Add event listener for remove button
+          $symbolDiv.find(".remove-symbol").on("click", () => $symbolDiv.remove());
+        }
+
+        // Event listener for adding an exchange
+        $("#addExchangeButton").on("click", () => addExchange());
+
+        // Function to generate configuration JSON
+        $("#generateConfigButton").on("click", function () {
+          const config = {
+            debug: false,
+            startTime: Date.now(),
+            license: $("#license").val(),
+            discord: {
+              enabled: $("#discordEnabled").is(":checked"),
+              token: $("#discordToken").val(),
+              applicationId: $("#applicationId").val(),
+              serverId: $("#serverId").val(),
+              channelId: $("#channelId").val(),
+            },
+            exchanges: [],
+          };
+
+          $(".exchange-entry").each(function () {
+            const $exchange = $(this);
+            const exchange = {
+              name: $exchange.find(".exchange-name").val().trim(),
+              key: $exchange.find(".exchange-key").val().trim(),
+              secret: $exchange.find(".exchange-secret").val().trim(),
+              mode: $exchange.find(".exchange-mode").val(),
+              console: "update",
+              symbols: [],
+            };
+
+            $exchange.find(".symbol-entry").each(function () {
+              const $symbol = $(this);
+              const symbol = {
+                name: $symbol.find(".symbol-name").val().trim(),
+                timeframes: $symbol
+                  .find(".symbol-timeframes")
+                  .val()
+                  .split(",")
+                  .map((tf) => tf.trim())
+                  .filter((tf) => tf),
+                agreement: parseFloat($symbol.find(".symbol-agreement").val()) || 0,
+                source: $symbol.find(".symbol-source").val(),
+                trend: {
+                  enabled: $symbol.find(".trend-enabled").is(":checked"),
+                  timeframe: $symbol.find(".trend-timeframe").val() || "1d",
+                  ema: {
+                    short: parseInt($symbol.find(".trend-ema-short").val()) || 0,
+                    long: parseInt($symbol.find(".trend-ema-long").val()) || 0,
+                  },
+                },
+                gridOrderSize: parseFloat($symbol.find(".grid-order-size").val()) || 0,
+                gridRebalance: $symbol.find(".grid-rebalance").is(":checked"),
+                gridLevels: parseFloat($symbol.find(".grid-levels").val()) || 0,
+                gridRange: {
+                  upper: parseFloat($symbol.find(".grid-range-upper").val()) || 0,
+                  lower: parseFloat($symbol.find(".grid-range-lower").val()) || 0,
+                },
+                periodicDirection: $symbol.find(".periodic-direction").val() || undefined,
+                periodicQuantity: parseFloat($symbol.find(".periodic-quantity").val()) || 0,
+                periodicInterval: parseFloat($symbol.find(".periodic-interval").val()) || 0,
+                profit: {
+                  enabled: $symbol.find(".profit-enabled").is(":checked"),
+                  minimumSell: parseFloat($symbol.find(".profit-minimum-sell").val()) || 0,
+                  minimumBuy: parseFloat($symbol.find(".profit-minimum-buy").val()) || 0,
+                },
+                growingMax: {
+                  buy: parseInt($symbol.find(".growing-max-buy").val()) || 0,
+                  sell: parseInt($symbol.find(".growing-max-sell").val()) || 0,
+                },
+                closePercentage: parseFloat($symbol.find(".close-percentage").val()) || 0,
+                maximumAgeOfOrder: parseInt($symbol.find(".maximum-age-of-order").val()) || 0,
+                tradeFeePercentage: parseFloat($symbol.find(".trade-fee-percentage").val()) || 0,
+                stopLoss: {
+                  enabled: $symbol.find(".stop-loss-enabled").is(":checked"),
+                  stopTrading: $symbol.find(".stop-loss-stop-trading").is(":checked"),
+                  pnl: parseFloat($symbol.find(".stop-loss-pnl").val()) || 0,
+                  agingPerHour: parseFloat($symbol.find(".stop-loss-aging-per-hour").val()) || 0,
+                },
+                takeProfit: {
+                  enabled: $symbol.find(".take-profit-enabled").is(":checked"),
+                  limit: parseFloat($symbol.find(".take-profit-limit").val()) || 0,
+                  minimum: parseFloat($symbol.find(".take-profit-minimum").val()) || 0,
+                  drop: parseFloat($symbol.find(".take-profit-drop").val()) || 0,
+                },
+                indicators: {
+                  sma: {
+                    enabled: $symbol.find(".sma-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".sma-length").val()) || 0,
+                    weight: parseInt($symbol.find(".sma-weight").val()) || 0,
+                  },
+                  renko: {
+                    enabled: $symbol.find(".renko-enabled").is(":checked"),
+                    multiplier: parseInt($symbol.find(".renko-multiplier").val()) || 0,
+                    brickSize: parseInt($symbol.find(".renko-brick-size").val()) || 0,
+                    weight: parseInt($symbol.find(".renko-weight").val()) || 0,
+                  },
+                  ema: {
+                    enabled: $symbol.find(".ema-enabled").is(":checked"),
+                    short: parseInt($symbol.find(".ema-short").val()) || 0,
+                    long: parseInt($symbol.find(".ema-long").val()) || 0,
+                    weight: parseInt($symbol.find(".ema-weight").val()) || 0,
+                  },
+                  macd: {
+                    enabled: $symbol.find(".macd-enabled").is(":checked"),
+                    fast: parseInt($symbol.find(".macd-fast").val()) || 0,
+                    slow: parseInt($symbol.find(".macd-slow").val()) || 0,
+                    signal: parseInt($symbol.find(".macd-signal").val()) || 0,
+                    weight: parseInt($symbol.find(".macd-weight").val()) || 0,
+                  },
+                  rsi: {
+                    enabled: $symbol.find(".rsi-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".rsi-length").val()) || 0,
+                    smoothing: {
+                      type: $symbol.find(".rsi-smoothing-type").val(),
+                      length: parseInt($symbol.find(".rsi-smoothing-length").val()) || 0,
+                    },
+                    history: parseInt($symbol.find(".rsi-history").val()) || 0,
+                    tresholds: {
+                      overbought: parseInt($symbol.find(".rsi-smoothing-overbought").val()) || 0,
+                      oversold: parseInt($symbol.find(".rsi-smoothing-oversold").val()) || 0,
+                    },
+                    weight: parseInt($symbol.find(".rsi-weight").val()) || 0,
+                  },
+                  atr: {
+                    enabled: $symbol.find(".atr-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".atr-length").val()) || 0,
+                    weight: parseInt($symbol.find(".atr-weight").val()) || 0,
+                  },
+                  obv: {
+                    enabled: $symbol.find(".obv-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".obv-length").val()) || 0,
+                    weight: parseInt($symbol.find(".obv-weight").val()) || 0,
+                  },
+                  cmf: {
+                    enabled: $symbol.find(".cmf-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".cmf-length").val()) || 0,
+                    history: parseInt($symbol.find(".cmf-history").val()) || 0,
+                    tresholds: {
+                      overbought: parseInt($symbol.find(".cmf-smoothing-overbought").val()) || 0,
+                      oversold: parseInt($symbol.find(".cmf-smoothing-oversold").val()) || 0,
+                    },
+                    weight: parseInt($symbol.find(".cmf-weight").val()) || 0,
+                  },
+                  bb: {
+                    enabled: $symbol.find(".bb-enabled").is(":checked"),
+                    length: parseInt($symbol.find(".bb-length").val()) || 0,
+                    multiplier: parseFloat($symbol.find(".bb-multiplier").val()) || 0,
+                    average: $symbol.find(".bb-multiplier").val(),
+                    history: parseInt($symbol.find(".bb-history").val()) || 0,
+                    weight: parseInt($symbol.find(".bb-weight").val()) || 0,
+                  },
+                  so: {
+                    enabled: $symbol.find(".so-enabled").is(":checked"),
+                    kPeriod: parseInt($symbol.find(".so-k-period").val()) || 0,
+                    dPeriod: parseInt($symbol.find(".so-d-period").val()) || 0,
+                    smoothing: parseInt($symbol.find(".so-smoothing").val()) || 0,
+                    tresholds: {
+                      overbought: parseInt($symbol.find(".so-smoothing-overbought").val()) || 0,
+                      oversold: parseInt($symbol.find(".so-smoothing-oversold").val()) || 0,
+                    },
+                    weight: parseInt($symbol.find(".so-weight").val()) || 0,
+                  },
+                  srsi: {
+                    enabled: $symbol.find(".srsi-enabled").is(":checked"),
+                    rsiLength: parseInt($symbol.find(".srsi-rsi-length").val()) || 0,
+                    stochLength: parseInt($symbol.find(".srsi-stoch-length").val()) || 0,
+                    kPeriod: parseInt($symbol.find(".srsi-k-period").val()) || 0,
+                    dPeriod: parseInt($symbol.find(".srsi-d-period").val()) || 0,
+                    smoothk: parseInt($symbol.find(".srsi-smooth-k").val()) || 0,
+                    smoothD: parseInt($symbol.find(".srsi-smooth-d").val()) || 0,
+                    history: parseInt($symbol.find(".srsi-history").val()) || 0,
+                    tresholds: {
+                      overbought: parseInt($symbol.find(".srsi-smoothing-overbought").val()) || 0,
+                      oversold: parseInt($symbol.find(".srsi-smoothing-oversold").val()) || 0,
+                    },
+                    weight: parseInt($symbol.find(".srsi-weight").val()) || 0,
+                  },
+                  dmi: {
+                    enabled: $symbol.find(".dmi-enabled").is(":checked"),
+                    dmiLength: parseInt($symbol.find(".dmi-length").val()) || 0,
+                    adxSmoothing: parseFloat($symbol.find(".dmi-adx-smoothing").val()) || 0,
+                    average: $symbol.find(".dmi-multiplier").val(),
+                    history: parseInt($symbol.find(".dmi-history").val()) || 0,
+                    weight: parseInt($symbol.find(".dmi-weight").val()) || 0,
+                  },
+                },
+              };
+              if (symbol.name) exchange.symbols.push(symbol);
+            });
+
+            if (exchange.name || exchange.symbols.length > 0) config.exchanges.push(exchange);
+          });
+          console.log(JSON.stringify(config, null, 2));
+          $.ajax({
+            url: "http://localhost:5656/settings",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(config, null, 2),
+            success: function (response) {
+              console.log("Server response:", response);
+              alert("Configuration sent successfully!");
+            },
+            error: function (xhr, status, error) {
+              console.error("Error sending configuration:", error);
+              alert("Failed to send configuration.");
+            },
+          });
+        });
+
+        $("#run").on("click", () => {
+          $.ajax({
+            url: "http://localhost:5656/run",
+            method: "GET",
+            dataType: "json",
+            success: function (response) {
+              $("#run").hide();
+              $("#simulate").hide();
+              $("#stop").show();
+              console.log("Server response:", response);
+              alert("Hoobot launched!");
+            },
+            error: function (xhr, status, error) {
+              console.error("Error running hoobot:", error);
+              alert("Failed to run hoobot.");
+            },
+          });
+        });
+
+        $("#stop").on("click", () => {
+          $.ajax({
+            url: "http://localhost:5656/stop",
+            method: "GET",
+            dataType: "json",
+            success: function (response) {
+              $("#run").show();
+              $("#simulate").show();
+              $("#stop").hide();
+              console.log("Server response:", response);
+              alert("Hoobot stopped!");
+            },
+            error: function (xhr, status, error) {
+              console.error("Error stopping hoobot:", error);
+              alert("Failed to stop hoobot.");
+            },
+          });
+        });
+
+        // Function to load settings from server
+        $("document").ready(() => {
+          $.ajax({
+            url: "http://localhost:5656/settings",
+            method: "GET",
+            dataType: "json",
+            success: function (settings) {
+              // Populate general settings
+              $("#debug").prop("checked", settings.debug || false);
+              $("#startTime").val(settings.startTime || "");
+              $("#license").val(settings.license || "");
+              $("#discordEnabled").prop("checked", settings.discord?.enabled || false);
+              $("#discordToken").val(settings.discord?.token || "");
+              $("#applicationId").val(settings.discord?.applicationId || "");
+              $("#serverId").val(settings.discord?.serverId || "");
+              $("#channelId").val(settings.discord?.channelId || "");
+              if (settings.running) {
+                $("#run").hide();
+                $("#simulate").hide();
+                $("#stop").show();
+              }
+
+              // Clear existing exchanges
+              $("#exchangesList").empty();
+              // Populate exchanges
+              if (settings.exchanges && Array.isArray(settings.exchanges)) {
+                settings.exchanges.forEach((exchange) => addExchange(exchange));
+              }
+            },
+            error: function (xhr, status, error) {
+              showError(`Failed to load settings: ${xhr.status} ${error}`);
+            },
+          });
+        });
+      });
+    </script>
+  </body>
 </html>

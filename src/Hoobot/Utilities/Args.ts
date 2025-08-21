@@ -30,14 +30,27 @@ import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
 import { Order } from "../Exchanges/Orders";
 import { logToFile } from "./LogToFile";
-import { Exchange } from "../Exchanges/Exchange";
-import { Filter } from "../Exchanges/Filters";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
 }
 
-export type CandlestickInterval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
+export type CandlestickInterval =
+  | "1m"
+  | "3m"
+  | "5m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "2h"
+  | "4h"
+  | "6h"
+  | "8h"
+  | "12h"
+  | "1d"
+  | "3d"
+  | "1w"
+  | "1M";
 
 export type BotMode = "algorithmic" | "hilow" | "arbitrage";
 
@@ -89,6 +102,7 @@ export interface OpenOrders {
 
 export interface ExchangeOptions {
   name: string;
+  socket: any;
   key: string;
   secret: string;
   mode: "algorithmic" | "hilow" | "grid" | "consecutive" | "periodic";
@@ -169,6 +183,7 @@ export interface SymbolOptions {
   };
   grid: GridLevel[];
   gridOrderSize: number;
+  gridRebalance: boolean;
   gridLevels: number;
   gridRange: {
     upper: number;
@@ -218,6 +233,7 @@ export interface SymbolOptions {
     atr?: {
       enabled: boolean;
       length: number;
+      weight?: number;
     };
     obv?: {
       enabled: boolean;
@@ -273,7 +289,7 @@ export interface SymbolOptions {
       dmiLength: number;
       adxSmoothing: number;
       weight?: number;
-    }
+    };
     OpenAI?: {
       enabled: boolean;
       key: string;
@@ -293,17 +309,31 @@ export interface DiscordOptions {
 }
 
 export interface ConfigOptions {
+  running: boolean;
   debug: boolean;
   startTime: string;
   exchanges: ExchangeOptions[];
   license: string;
   simulate: boolean;
   discord: DiscordOptions;
-  [key: string]: ExchangeOptions[] | DiscordOptions | string | string[] | number | boolean | undefined | number | TradeHistory | Orderbooks | Balances | OpenOrders; // Index signature
+  [key: string]:
+    | ExchangeOptions[]
+    | DiscordOptions
+    | string
+    | string[]
+    | number
+    | boolean
+    | undefined
+    | number
+    | TradeHistory
+    | Orderbooks
+    | Balances
+    | OpenOrders; // Index signature
 }
 
 export const parseArgs = (): ConfigOptions => {
   var options: ConfigOptions = {
+    running: false,
     debug: false,
     startTime: "",
     exchanges: [],

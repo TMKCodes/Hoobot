@@ -29,7 +29,7 @@ import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
 import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/Args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/ConsoleLogger";
-import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend, logEMASignals } from "../Indicators/EMA";
+import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
 import { calculateMACD, checkMACDSignals, logMACDSignals, macd } from "../Indicators/MACD";
 import { Candlestick, Candlesticks } from "../Exchanges/Candlesticks";

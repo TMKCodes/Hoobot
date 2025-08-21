@@ -26,18 +26,12 @@
  * ===================================================================== */
 
 import Binance from "node-binance-api";
-import {
-  CandlestickInterval,
-  ConfigOptions,
-  ExchangeOptions,
-  SymbolOptions,
-  getMinutesFromInterval,
-} from "../Utilities/Args";
+import { CandlestickInterval, ConfigOptions, SymbolOptions, getMinutesFromInterval } from "../Utilities/Args";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import AdmZip from "adm-zip";
 import path from "path";
-import { Exchange, isBinance, isNonKYC, isXeggex } from "./Exchange";
-import { XeggexCandles, XeggexResponse } from "./Xeggex/Xeggex";
+import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { NonKYCCandles, NonKYCResponse } from "./NonKYC/NonKYC";
 import { logToFile } from "../Utilities/LogToFile";
 
 export interface Candlesticks {
@@ -101,7 +95,7 @@ export async function getLastCandlesticks(
         },
         { limit: limit }
       );
-    } else if (isXeggex(exchange) || isNonKYC(exchange)) {
+    } else if (isNonKYC(exchange)) {
       const candlesticks = await exchange.getCandles(symbol, null, null, getMinutesFromInterval(interval), limit, 1);
       const parsedData: Candlestick[] = candlesticks.bars.map(
         (candle: { time: number; close: number; open: number; high: number; low: number; volume: number }) => ({
@@ -202,55 +196,13 @@ export const listenForCandlesticks = async (
             websocket.terminate();
           }
         });
-      } else if (isXeggex(exchange) || isNonKYC(exchange)) {
-        // exchange.subscribeTicker(symbol, async (response: XeggexResponse) => {
-        //   console.log(JSON.stringify(response, null, 4));
-        //   if (response.method === "ticker") {
-        //     const ticker = (response.params as XeggexTicker);
-        //     const newCandlestick: Candlestick = {
-        //       symbol: symbol,
-        //       interval: timeframe[i],
-        //       type: "kline",
-        //       time: new Date(ticker.updatedAt).getTime(),
-        //       open: parseFloat(ticker.lastPrice),
-        //       high: parseFloat(ticker.highPrice),
-        //       low: parseFloat(ticker.lowPrice),
-        //       close: parseFloat(ticker.lastPrice),
-        //       trades: 0,
-        //       volume: parseFloat(ticker.volume),
-        //       quoteVolume: 0,
-        //       buyVolume: 0,
-        //       quoteBuyVolume: 0,
-        //       isFinal: false,
-        //     };
-        //     if (candleStore[symbol.split("/").join("")] === undefined) {
-        //       candleStore[symbol.split("/").join("")] = {
-        //         [timeframe[i]]: [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick]
-        //       }
-        //     } else if (candleStore[symbol.split("/").join("")][timeframe[i]] === undefined) {
-        //       candleStore[symbol.split("/").join("")][timeframe[i]] = [...(await getLastCandlesticks(exchange, symbol, timeframe[i], historyLength)), newCandlestick];
-        //     } else if(newCandlestick.isFinal === true) {
-        //       candleStore[symbol.split("/").join("")][timeframe[i]].push(newCandlestick);
-        //     } else {
-        //       candleStore[symbol.split("/").join("")][timeframe[i]][candleStore[symbol.split("/").join("")][timeframe[i]].length - 1] = newCandlestick;
-        //     }
-        //     if (candleStore[symbol.split("/").join("")][timeframe[i]].length > maxCandlesticks) {
-        //       candleStore[symbol.split("/").join("")][timeframe[i]] = candleStore[symbol.split("/").join("")][timeframe[i]].slice(-maxCandlesticks);
-        //     }
-        //     if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true))  {
-        //       await callback(candleStore);
-        //     } else {
-        //       exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframe[i]));
-        //       exchange.unsubscribeTicker(symbol);
-        //     }
-        //   }
-        // });
+      } else if (isNonKYC(exchange)) {
         exchange.subscribeCandles(
           symbol,
           getMinutesFromInterval(timeframes[i]),
-          async (response: XeggexResponse) => {
+          async (response: NonKYCResponse) => {
             if (response.method === "updateCandles") {
-              const candles = (response.params as XeggexCandles).data;
+              const candles = (response.params as NonKYCCandles).data;
               if (candles.length < 1) {
                 return;
               }

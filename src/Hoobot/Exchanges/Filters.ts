@@ -25,7 +25,7 @@
  * the use of this software.
  * ===================================================================== */
 
-import { Exchange, isBinance, isXeggex } from "./Exchange";
+import { Exchange, isBinance } from "./Exchange";
 
 export interface Filter {
   minPrice: number;
