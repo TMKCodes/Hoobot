@@ -43,110 +43,98 @@ export interface Balances {
 }
 
 export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> => {
-  try {
-    const fiat = "USDT";
-    const currentBalances: Balances = {
-      USDT: {
-        crypto: 0,
-        usdt: 0,
-      },
-    };
-    if (isBinance(exchange)) {
-      const balances = await exchange.balance();
-      const assets = Object.keys(balances);
-      const prices = await exchange.prices();
-      const symbols = Object.keys(prices);
-      for (let i = 0; i < assets.length; i++) {
-        const { available, onOrder } = balances[assets[i]];
-        const amount = parseFloat(available) + parseFloat(onOrder);
-        if (amount === 0) {
-          currentBalances[assets[i]] = {
-            crypto: 0,
-            usdt: 0,
-          };
-          continue;
+  const fiat = "USDT";
+  const currentBalances: Balances = {
+    USDT: {
+      crypto: 0,
+      usdt: 0,
+    },
+  };
+  if (isBinance(exchange)) {
+    const balances = await exchange.balance();
+    const assets = Object.keys(balances);
+    const prices = await exchange.prices();
+    const symbols = Object.keys(prices);
+    for (let i = 0; i < assets.length; i++) {
+      const { available, onOrder } = balances[assets[i]];
+      const amount = parseFloat(available) + parseFloat(onOrder);
+      if (amount === 0) {
+        currentBalances[assets[i]] = {
+          crypto: 0,
+          usdt: 0,
+        };
+        continue;
+      }
+      if (assets[i] === "USDT") {
+        currentBalances[assets[i]] = {
+          crypto: amount,
+          usdt: amount,
+        };
+      } else {
+        let fiatAmount = 0;
+        if (symbols.includes(assets[i] + fiat)) {
+          fiatAmount = prices[assets[i] + fiat] * amount;
+        } else if (symbols.includes(fiat + assets[i])) {
+          fiatAmount = amount / prices[fiat + assets[i]];
+        } else {
+          let tempAmount = amount / prices["BTC" + assets[i]];
+          fiatAmount = prices[assets[i] + fiat] * tempAmount;
         }
-        if (assets[i] === "USDT") {
-          currentBalances[assets[i]] = {
+        currentBalances[assets[i]] = {
+          crypto: amount,
+          usdt: Number.isNaN(fiatAmount) ? 0 : fiatAmount,
+        };
+      }
+    }
+  } else if (isNonKYC(exchange)) {
+    const balances = await exchange.getTradingBalance();
+    const prices = await exchange.getMarkets();
+    const symbols = prices.map((price) => price.symbol.split("/").join(""));
+    if (balances.length > 0) {
+      for (const balance of balances) {
+        const amount = parseFloat(balance.available);
+        if (balance.asset === "USDT") {
+          currentBalances[balance.asset] = {
             crypto: amount,
             usdt: amount,
           };
         } else {
           let fiatAmount = 0;
-          if (symbols.includes(assets[i] + fiat)) {
-            fiatAmount = prices[assets[i] + fiat] * amount;
-          } else if (symbols.includes(fiat + assets[i])) {
-            fiatAmount = amount / prices[fiat + assets[i]];
+          const price = prices.find((price) => price.symbol.split("/").join("") === balance.asset + fiat);
+          if (symbols.includes(balance.asset + fiat)) {
+            fiatAmount = parseFloat(price?.lastPrice!) * amount;
+          } else if (symbols.includes(fiat + balance.asset)) {
+            fiatAmount = amount / parseFloat(price?.lastPrice!);
           } else {
-            let tempAmount = amount / prices["BTC" + assets[i]];
-            fiatAmount = prices[assets[i] + fiat] * tempAmount;
+            const tempPrice = prices.find((price) => price.symbol.split("/").join("") === "BTC" + balance.asset);
+            let tempAmount = amount / parseFloat(tempPrice?.lastPrice!);
+            fiatAmount = parseFloat(price?.lastPrice!) * tempAmount;
           }
-          currentBalances[assets[i]] = {
+          currentBalances[balance.asset] = {
             crypto: amount,
-            usdt: Number.isNaN(fiatAmount) ? 0 : fiatAmount,
+            usdt: fiatAmount > 0 ? fiatAmount : 0,
           };
         }
       }
-    } else if (isNonKYC(exchange)) {
-      const balances = await exchange.getTradingBalance();
-      const prices = await exchange.getMarkets();
-      const symbols = prices.map((price) => price.symbol.split("/").join(""));
-      if (balances.length > 0) {
-        for (const balance of balances) {
-          const amount = parseFloat(balance.available);
-          if (balance.asset === "USDT") {
-            currentBalances[balance.asset] = {
-              crypto: amount,
-              usdt: amount,
-            };
-          } else {
-            let fiatAmount = 0;
-            const price = prices.find((price) => price.symbol.split("/").join("") === balance.asset + fiat);
-            if (symbols.includes(balance.asset + fiat)) {
-              fiatAmount = parseFloat(price?.lastPrice!) * amount;
-            } else if (symbols.includes(fiat + balance.asset)) {
-              fiatAmount = amount / parseFloat(price?.lastPrice!);
-            } else {
-              const tempPrice = prices.find((price) => price.symbol.split("/").join("") === "BTC" + balance.asset);
-              let tempAmount = amount / parseFloat(tempPrice?.lastPrice!);
-              fiatAmount = parseFloat(price?.lastPrice!) * tempAmount;
-            }
-            currentBalances[balance.asset] = {
-              crypto: amount,
-              usdt: fiatAmount > 0 ? fiatAmount : 0,
-            };
-          }
-        }
-      } else {
-        // Possibly build empty currentBalances.
-      }
+    } else {
+      // Possibly build empty currentBalances.
     }
-    const balanceAssets = Object.keys(currentBalances);
-    for (const balanceAsset of balanceAssets) {
-      if (currentBalances[balanceAsset].crypto === undefined) {
-        currentBalances[balanceAsset].crypto = 0;
-      }
-      if (currentBalances[balanceAsset].usdt === undefined) {
-        currentBalances[balanceAsset].usdt = 0;
-      }
-    }
-    return Object.fromEntries(Object.entries(currentBalances).sort((a, b) => b[1].usdt - a[1].usdt));
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error("Error fetching balances:", error);
-    throw error;
   }
+  const balanceAssets = Object.keys(currentBalances);
+  for (const balanceAsset of balanceAssets) {
+    if (currentBalances[balanceAsset].crypto === undefined) {
+      currentBalances[balanceAsset].crypto = 0;
+    }
+    if (currentBalances[balanceAsset].usdt === undefined) {
+      currentBalances[balanceAsset].usdt = 0;
+    }
+  }
+  return Object.fromEntries(Object.entries(currentBalances).sort((a, b) => b[1].usdt - a[1].usdt));
 };
 
 export const getCurrentBalance = async (exchange: Exchange, asset: string): Promise<Balance> => {
-  try {
-    const balances = await getCurrentBalances(exchange);
-    return balances[asset];
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error("Error fetching balances:", error);
-    throw error;
-  }
+  const balances = await getCurrentBalances(exchange);
+  return balances[asset];
 };
 
 export const storeBalances = async (exchange: Exchange, balances: Balances) => {

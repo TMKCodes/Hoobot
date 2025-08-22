@@ -51,7 +51,6 @@ Dependencies are essential components that Hoobot needs to function correctly. F
    - In the terminal, navigate to the Hoobot folder.
    - Type `sh linux.sh` and press Enter to begin the dependency installation process.
 
-
 ### Configuration Files
 
 #### `settings/hoobot-options.json`
@@ -120,8 +119,8 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
   - **maximumBuy**: (number) Maximum price for buy trades.
   - **minimumBuy**: (number) Minimum price for buy trades.
 - **growingMax**: (object) Growing max settings for buy/sell.
-  - **buy**: (number) Maximum price for buy trades. (Note starting balance for simulation)
-  - **sell**: (number) Minimum price for sell trades.
+  - **buy**: (number) Maximum amount (quote) for buy trades. (Note starting balance for simulation)
+  - **sell**: (number) Maximum amount (base) for sell trades.
 - **closePercentage**: (number) Close percentage for trades.
 - **maximumAgeOfOrder**: (number) Maximum age of an order.
 - **tradeFeePercentage**: (number) Trade fee percentage.
@@ -217,7 +216,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
     - **enabled**: (boolean) Enables or disables Directional Movement.
     - **dmiLength**: (number) DMI length, default 14.
     - **adxSmoothing**: (number) ADX Smoothing, default 14.
-    - **weight**: (number) Weight of the Directional Movement  in trading decisions.
+    - **weight**: (number) Weight of the Directional Movement in trading decisions.
   - **OpenAI**: (object) OpenAI model settings.
     - **enabled**: (boolean) Enables or disables OpenAI integration.
     - **key**: (string) Your OpenAI API key.
@@ -233,11 +232,10 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 - **serverId**: (string) Discord server ID.
 - **channelId**: (string) Discord channel ID.
 
-
 #### Example configurations for modes
 
-
 ##### Algorithmic Scalping
+
 ```json
 {
   "debug": true,
@@ -310,6 +308,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 ```
 
 ##### Grid
+
 ```json
 {
   "debug": true,
@@ -348,6 +347,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
 ```
 
 ##### Consectutive
+
 ```json
 {
   "debug": true,
@@ -468,7 +468,7 @@ To run the simulation:
 - Execute the command `npm run simulate` to initialize Hoobot simulation.
 - Remember that the simulaton works with only with Binance data and growingMax.buy must be set for starting balance.
 
-### Shutdown Hoobot 
+### Shutdown Hoobot
 
 With your Hoobot running and you want to change settings and reboot it or stop running it:
 

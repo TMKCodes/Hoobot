@@ -406,8 +406,6 @@ export class NonKYC {
           const result = await this.login();
           if (result === true) {
             this.emitter.emit("logged");
-            // Restore subscriptions after successful login
-            await this.restoreSubscriptions();
           } else {
           }
         } catch (error) {
@@ -417,20 +415,19 @@ export class NonKYC {
     });
 
     this.ws.on("close", async (code: number) => {
-      console.log(`WebSocket closed with code ${code}.`);
       if (!this.forceStopOnDisconnect) {
+        clearTimeout(this.pingTimeout);
+        clearTimeout(this.keepAlive);
+        console.log(`WebSocket closed with code ${code}.`);
         if (code === 1006) {
           console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
-          const reconnected = await this.handleReconnection();
-          if (reconnected) {
-            console.log("Reconnection successful.");
-          } else {
-            console.error("Reconnection failed after maximum attempts.");
-          }
+          delay(1000);
+          throw new Error(`WebSocket closed abnormally with code 1006`);
         }
+      } else {
+        clearTimeout(this.pingTimeout);
+        clearTimeout(this.keepAlive);
       }
-      clearTimeout(this.pingTimeout);
-      clearTimeout(this.keepAlive);
     });
 
     this.ws.on("error", (err) => {
@@ -462,73 +459,6 @@ export class NonKYC {
       console.error("Error during disconnect:", err);
     }
   }
-
-  private async restoreSubscriptions() {
-    console.log("Restoring subscriptions...");
-    for (const sub of this.subscriptions) {
-      if (sub.tickerCallback) {
-        await this.subscribeTicker(sub.symbol, sub.tickerCallback);
-      }
-      if (sub.orderbookCallback) {
-        await this.subscribeOrderbook(sub.symbol, sub.orderbookCallback);
-      }
-      if (sub.tradesCallback) {
-        await this.subscribeTrades(sub.symbol, sub.tradesCallback);
-      }
-      if (sub.candlesCallback && sub.candlesPeriod) {
-        await this.subscribeCandles(sub.symbol, sub.candlesPeriod, sub.candlesCallback, sub.candlesLimit);
-      }
-    }
-    if (this.reportsCallback) {
-      await this.subscribeReports(this.reportsCallback);
-    }
-    console.log("Subscriptions restored.");
-  }
-
-  private handleReconnection = async (
-    maxRetries: number = this.maxReconnectionAttempts,
-    delayTime: number = 10000
-  ): Promise<boolean> => {
-    if (this.forceStopOnDisconnect) {
-      console.error("Force stop on disconnect is enabled. Reconnection aborted.");
-      this.emitter.emit("reconnect_aborted");
-      return false;
-    }
-
-    let retries = 0;
-    const maxDelay = 300000; // 5 minutes max delay
-    let currentDelay = delayTime;
-
-    while (retries < maxRetries) {
-      retries++;
-      console.log(`Reconnection attempt ${retries}/${maxRetries}...`);
-      this.emitter.emit("reconnect_attempt", { attempt: retries, maxRetries });
-
-      try {
-        // Wait before attempting reconnection
-        await delay(currentDelay);
-
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          this.ws.terminate();
-        }
-
-        this.ws = await this.connect();
-        await Promise.race([
-          this.waitConnect(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Login timeout")), 30000)), // 30s timeout
-        ]);
-        return true;
-      } catch (error) {
-        console.error(`Reconnection attempt ${retries} failed:`, error);
-        this.emitter.emit("reconnect_attempt_failed", { attempt: retries, error });
-        currentDelay = Math.min(currentDelay * 2, maxDelay); // Exponential backoff with cap
-      }
-    }
-
-    console.error(`Failed to reconnect after ${maxRetries} attempts.`);
-    this.emitter.emit("reconnect_failed");
-    return false;
-  };
 
   private send = (message: any): void => {
     if (this.ws) {
@@ -841,13 +771,13 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
-      this.subscriptions.push({ symbol, tickerCallback: callback });
     }
     this.send({
       method: "subscribeTicker",
       params: { symbol },
       id: symbolCallback.tickerCallbackId,
     });
+    this.subscriptions.push({ symbol, tickerCallback: callback });
     this.callbackMap.add(symbolCallback.tickerCallbackId, callback);
     await unBlock();
   };
@@ -888,13 +818,13 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
-      this.subscriptions.push({ symbol, orderbookCallback: callback });
     }
     this.send({
       method: "subscribeOrderbook",
       params: { symbol },
       id: symbolCallback.orderbookCallbackId,
     });
+    this.subscriptions.push({ symbol, orderbookCallback: callback });
     this.callbackMap.add(symbolCallback.orderbookCallbackId, callback);
     await unBlock();
   };
@@ -934,13 +864,13 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
-      this.subscriptions.push({ symbol, tradesCallback: callback });
     }
     this.send({
       method: "subscribeTrades",
       params: { symbol },
       id: symbolCallback.tradesCallbackId,
     });
+    this.subscriptions.push({ symbol, tradesCallback: callback });
     this.callbackMap.add(symbolCallback.tradesCallbackId, callback);
     await unBlock();
   };
@@ -985,13 +915,13 @@ export class NonKYC {
         candlesCallbackId: symbols * 4 + 4,
       };
       this.symbolCallbacks.push(symbolCallback);
-      this.subscriptions.push({ symbol, candlesCallback: callback, candlesPeriod: period, candlesLimit: limit });
     }
     this.send({
       method: "subscribeCandles",
       params: { symbol, period, limit },
       id: symbolCallback.candlesCallbackId,
     });
+    this.subscriptions.push({ symbol, candlesCallback: callback, candlesPeriod: period, candlesLimit: limit });
     this.callbackMap.add(symbolCallback.candlesCallbackId, callback);
     await unBlock();
   };

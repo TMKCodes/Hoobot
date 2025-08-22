@@ -25,7 +25,6 @@
  * the use of this software.
  * ===================================================================== */
 
-import Binance from "node-binance-api";
 import { CandlestickInterval, ConfigOptions, SymbolOptions, getMinutesFromInterval } from "../Utilities/Args";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import AdmZip from "adm-zip";
@@ -70,28 +69,23 @@ export async function getLastCandlesticks(
         symbol.split("/").join(""),
         interval,
         (_error: any, ticks: any, symbol: string, interval: string) => {
-          try {
-            const parsedData: Candlestick[] = ticks.map((candle: string[]) => ({
-              symbol: symbol,
-              interval: interval,
-              type: candle[8],
-              time: parseFloat(candle[0]),
-              open: parseFloat(candle[1]),
-              high: parseFloat(candle[2]),
-              low: parseFloat(candle[3]),
-              close: parseFloat(candle[4]),
-              trades: parseFloat(candle[9]),
-              volume: parseFloat(candle[5]),
-              quoteVolume: parseFloat(candle[7]),
-              buyVolume: parseFloat(candle[10]),
-              quoteBuyVolume: parseFloat(candle[11]),
-              isFinal: candle[12],
-            }));
-            resolve(parsedData);
-          } catch (error) {
-            logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-            console.error(error);
-          }
+          const parsedData: Candlestick[] = ticks.map((candle: string[]) => ({
+            symbol: symbol,
+            interval: interval,
+            type: candle[8],
+            time: parseFloat(candle[0]),
+            open: parseFloat(candle[1]),
+            high: parseFloat(candle[2]),
+            low: parseFloat(candle[3]),
+            close: parseFloat(candle[4]),
+            trades: parseFloat(candle[9]),
+            volume: parseFloat(candle[5]),
+            quoteVolume: parseFloat(candle[7]),
+            buyVolume: parseFloat(candle[10]),
+            quoteBuyVolume: parseFloat(candle[11]),
+            isFinal: candle[12],
+          }));
+          resolve(parsedData);
         },
         { limit: limit }
       );
@@ -136,150 +130,145 @@ export const listenForCandlesticks = async (
       timeframes.push(symbolOptions.trend?.timeframe!);
     }
   }
-  try {
-    for (let i = 0; i < timeframes.length; i++) {
-      if (isBinance(exchange)) {
-        const websocket = exchange.websockets;
-        symbol = symbol.split("/").join("");
-        websocket.candlesticks(symbol, timeframes[i], async (candlestick: { e: any; E: any; s: any; k: any }) => {
-          let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlestick;
-          let {
-            o: open,
-            h: high,
-            l: low,
-            c: close,
-            v: volume,
-            n: trades,
-            i: interval,
-            x: isFinal,
-            q: quoteVolume,
-            V: buyVolume,
-            Q: quoteBuyVolume,
-          } = ticks;
-          const newCandlestick: Candlestick = {
-            symbol: symbol,
-            interval: interval,
-            type: eventType,
-            time: parseFloat(eventTime),
-            open: parseFloat(open),
-            high: parseFloat(high),
-            low: parseFloat(low),
-            close: parseFloat(close),
-            trades: parseFloat(trades),
-            volume: parseFloat(volume),
-            quoteVolume: parseFloat(quoteVolume),
-            buyVolume: parseFloat(buyVolume),
-            quoteBuyVolume: parseFloat(quoteBuyVolume),
-            isFinal: isFinal,
+  for (let i = 0; i < timeframes.length; i++) {
+    if (isBinance(exchange)) {
+      const websocket = exchange.websockets;
+      symbol = symbol.split("/").join("");
+      websocket.candlesticks(symbol, timeframes[i], async (candlestick: { e: any; E: any; s: any; k: any }) => {
+        let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlestick;
+        let {
+          o: open,
+          h: high,
+          l: low,
+          c: close,
+          v: volume,
+          n: trades,
+          i: interval,
+          x: isFinal,
+          q: quoteVolume,
+          V: buyVolume,
+          Q: quoteBuyVolume,
+        } = ticks;
+        const newCandlestick: Candlestick = {
+          symbol: symbol,
+          interval: interval,
+          type: eventType,
+          time: parseFloat(eventTime),
+          open: parseFloat(open),
+          high: parseFloat(high),
+          low: parseFloat(low),
+          close: parseFloat(close),
+          trades: parseFloat(trades),
+          volume: parseFloat(volume),
+          quoteVolume: parseFloat(quoteVolume),
+          buyVolume: parseFloat(buyVolume),
+          quoteBuyVolume: parseFloat(quoteBuyVolume),
+          isFinal: isFinal,
+        };
+        if (candleStore[symbol] === undefined) {
+          const oldCandlesticks = await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength);
+          candleStore[symbol] = {
+            [timeframes[i]]: [...oldCandlesticks, newCandlestick],
           };
-          if (candleStore[symbol] === undefined) {
-            const oldCandlesticks = await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength);
-            candleStore[symbol] = {
-              [timeframes[i]]: [...oldCandlesticks, newCandlestick],
-            };
-          } else if (candleStore[symbol][timeframes[i]] === undefined) {
-            candleStore[symbol][timeframes[i]] = [
-              ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
-              newCandlestick,
-            ];
-          } else if (newCandlestick.isFinal === true) {
-            candleStore[symbol][timeframes[i]].push(newCandlestick);
-          } else {
-            candleStore[symbol][timeframes[i]][candleStore[symbol][timeframes[i]].length - 1] = newCandlestick;
-          }
-          if (candleStore[symbol][timeframes[i]].length > maxCandlesticks) {
-            candleStore[symbol][timeframes[i]] = candleStore[symbol][timeframes[i]].slice(-maxCandlesticks);
-          }
-          if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
-            await callback(candleStore);
-          } else {
-            websocket.terminate();
-          }
-        });
-      } else if (isNonKYC(exchange)) {
-        exchange.subscribeCandles(
-          symbol,
-          getMinutesFromInterval(timeframes[i]),
-          async (response: NonKYCResponse) => {
-            if (response.method === "updateCandles") {
-              const candles = (response.params as NonKYCCandles).data;
-              if (candles.length < 1) {
-                return;
-              }
-              const candle = candles[0];
-              const timeOfCandle = new Date(candle.timestamp).getTime();
-              // const currentTime = new Date().getTime() - (30 * 1000);
-              let isFinal = false;
-              if (
-                candleStore[symbol.split("/").join("")] !== undefined &&
-                candleStore[symbol.split("/").join("")][timeframes[i]] !== undefined &&
-                candleStore[symbol.split("/").join("")][timeframes[i]].length > 0
-              ) {
-                const previousCandle =
-                  candleStore[symbol.split("/").join("")][timeframes[i]][
-                    candleStore[symbol.split("/").join("")][timeframes[i]].length - 1
-                  ];
-                if (previousCandle.time !== timeOfCandle) {
-                  isFinal = true;
-                }
-              } else if (candleStore[symbol.split("/").join("")] === undefined) {
-                isFinal = true;
-              }
-              const newCandlestick: Candlestick = {
-                symbol: symbol,
-                interval: timeframes[i],
-                type: "",
-                time: timeOfCandle,
-                open: parseFloat(candle.open),
-                high: parseFloat(candle.max),
-                low: parseFloat(candle.min),
-                close: parseFloat(candle.close),
-                trades: 0,
-                volume: parseFloat(candle.volume),
-                quoteVolume: 0,
-                buyVolume: 0,
-                quoteBuyVolume: 0,
-                isFinal: isFinal,
-              };
-              if (candleStore[symbol.split("/").join("")] === undefined) {
-                candleStore[symbol.split("/").join("")] = {
-                  [timeframes[i]]: [
-                    ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
-                    newCandlestick,
-                  ],
-                };
-              } else if (candleStore[symbol.split("/").join("")][timeframes[i]] === undefined) {
-                candleStore[symbol.split("/").join("")][timeframes[i]] = [
-                  ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
-                  newCandlestick,
-                ];
-              } else if (newCandlestick.isFinal === true) {
-                candleStore[symbol.split("/").join("")][timeframes[i]].push(newCandlestick);
-              } else {
+        } else if (candleStore[symbol][timeframes[i]] === undefined) {
+          candleStore[symbol][timeframes[i]] = [
+            ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+            newCandlestick,
+          ];
+        } else if (newCandlestick.isFinal === true) {
+          candleStore[symbol][timeframes[i]].push(newCandlestick);
+        } else {
+          candleStore[symbol][timeframes[i]][candleStore[symbol][timeframes[i]].length - 1] = newCandlestick;
+        }
+        if (candleStore[symbol][timeframes[i]].length > maxCandlesticks) {
+          candleStore[symbol][timeframes[i]] = candleStore[symbol][timeframes[i]].slice(-maxCandlesticks);
+        }
+        if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
+          await callback(candleStore);
+        } else {
+          websocket.terminate();
+        }
+      });
+    } else if (isNonKYC(exchange)) {
+      exchange.subscribeCandles(
+        symbol,
+        getMinutesFromInterval(timeframes[i]),
+        async (response: NonKYCResponse) => {
+          if (response.method === "updateCandles") {
+            const candles = (response.params as NonKYCCandles).data;
+            if (candles.length < 1) {
+              return;
+            }
+            const candle = candles[0];
+            const timeOfCandle = new Date(candle.timestamp).getTime();
+            // const currentTime = new Date().getTime() - (30 * 1000);
+            let isFinal = false;
+            if (
+              candleStore[symbol.split("/").join("")] !== undefined &&
+              candleStore[symbol.split("/").join("")][timeframes[i]] !== undefined &&
+              candleStore[symbol.split("/").join("")][timeframes[i]].length > 0
+            ) {
+              const previousCandle =
                 candleStore[symbol.split("/").join("")][timeframes[i]][
                   candleStore[symbol.split("/").join("")][timeframes[i]].length - 1
-                ] = newCandlestick;
+                ];
+              if (previousCandle.time !== timeOfCandle) {
+                isFinal = true;
               }
-              if (candleStore[symbol.split("/").join("")][timeframes[i]].length > maxCandlesticks) {
-                candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][
-                  timeframes[i]
-                ].slice(-maxCandlesticks);
-              }
-              if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
-                await callback(candleStore);
-              } else {
-                exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframes[i]));
-                exchange.unsubscribeTicker(symbol);
-              }
+            } else if (candleStore[symbol.split("/").join("")] === undefined) {
+              isFinal = true;
             }
-          },
-          10
-        );
-      }
+            const newCandlestick: Candlestick = {
+              symbol: symbol,
+              interval: timeframes[i],
+              type: "",
+              time: timeOfCandle,
+              open: parseFloat(candle.open),
+              high: parseFloat(candle.max),
+              low: parseFloat(candle.min),
+              close: parseFloat(candle.close),
+              trades: 0,
+              volume: parseFloat(candle.volume),
+              quoteVolume: 0,
+              buyVolume: 0,
+              quoteBuyVolume: 0,
+              isFinal: isFinal,
+            };
+            if (candleStore[symbol.split("/").join("")] === undefined) {
+              candleStore[symbol.split("/").join("")] = {
+                [timeframes[i]]: [
+                  ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+                  newCandlestick,
+                ],
+              };
+            } else if (candleStore[symbol.split("/").join("")][timeframes[i]] === undefined) {
+              candleStore[symbol.split("/").join("")][timeframes[i]] = [
+                ...(await getLastCandlesticks(exchange, symbol, timeframes[i], historyLength)),
+                newCandlestick,
+              ];
+            } else if (newCandlestick.isFinal === true) {
+              candleStore[symbol.split("/").join("")][timeframes[i]].push(newCandlestick);
+            } else {
+              candleStore[symbol.split("/").join("")][timeframes[i]][
+                candleStore[symbol.split("/").join("")][timeframes[i]].length - 1
+              ] = newCandlestick;
+            }
+            if (candleStore[symbol.split("/").join("")][timeframes[i]].length > maxCandlesticks) {
+              candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][
+                timeframes[i]
+              ].slice(-maxCandlesticks);
+            }
+            if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
+              await callback(candleStore);
+            } else {
+              exchange.unsubscribeCandles(symbol, getMinutesFromInterval(timeframes[i]));
+              exchange.unsubscribeTicker(symbol);
+            }
+          }
+        },
+        10
+      );
     }
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(error);
   }
 };
 
@@ -299,54 +288,42 @@ interface Candlerow {
 }
 
 export const readCsvFile = async (filePath: string): Promise<Candlerow[]> => {
-  try {
-    const data = readFileSync(filePath, { encoding: "utf8" });
-    const lines = data.split("\n");
-    const rows: Candlerow[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      const values = lines[i].split(",");
-      const row: Candlerow = {
-        opentime: parseInt(values[0], 10),
-        open: parseFloat(values[1]),
-        high: parseFloat(values[2]),
-        low: parseFloat(values[3]),
-        close: parseFloat(values[4]),
-        volume: parseFloat(values[5]),
-        quoteVolume: parseFloat(values[6]),
-        closetime: parseInt(values[7], 10),
-        trades: parseInt(values[8], 10),
-        takerQtyBase: parseFloat(values[9]),
-        takerQtyQuote: parseFloat(values[10]),
-        unused: parseInt(values[11], 10),
-      };
-      rows.push(row);
-    }
-    return rows;
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(error);
+  const data = readFileSync(filePath, { encoding: "utf8" });
+  const lines = data.split("\n");
+  const rows: Candlerow[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const values = lines[i].split(",");
+    const row: Candlerow = {
+      opentime: parseInt(values[0], 10),
+      open: parseFloat(values[1]),
+      high: parseFloat(values[2]),
+      low: parseFloat(values[3]),
+      close: parseFloat(values[4]),
+      volume: parseFloat(values[5]),
+      quoteVolume: parseFloat(values[6]),
+      closetime: parseInt(values[7], 10),
+      trades: parseInt(values[8], 10),
+      takerQtyBase: parseFloat(values[9]),
+      takerQtyQuote: parseFloat(values[10]),
+      unused: parseInt(values[11], 10),
+    };
+    rows.push(row);
   }
-  return [];
+  return rows;
 };
 
 export const downloadAndExtractZipFile = async (url: string, destinationPath: string): Promise<boolean | string> => {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      return "404 NOT FOUND";
-    }
-    const buffer = await response.arrayBuffer();
-    const zipFilePath = path.join(destinationPath, "downloaded.zip");
-    writeFileSync(zipFilePath, Buffer.from(buffer));
-    const zip = new AdmZip(zipFilePath);
-    zip.extractAllTo(destinationPath, true);
-    unlinkSync(zipFilePath);
-    return true;
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error("Error:", error);
+  const response = await fetch(url);
+  if (!response.ok) {
+    return "404 NOT FOUND";
   }
-  return false;
+  const buffer = await response.text();
+  const zipFilePath = path.join(destinationPath, "downloaded.zip");
+  writeFileSync(zipFilePath, buffer);
+  const zip = new AdmZip(zipFilePath);
+  zip.extractAllTo(destinationPath, true);
+  unlinkSync(zipFilePath);
+  return true;
 };
 
 const addLeadingZero = (n: number) => {
@@ -400,13 +377,8 @@ export const downloadHistoricalCandlesticks = async (
             .toLocaleUpperCase()}-${intervals[intervalIndex]}-${formattedYear}-${formattedMonth}.zip`;
           const destinationPath = "./candlestore/";
           if (!existsSync(destinationPath)) {
-            try {
-              mkdirSync(destinationPath);
-              console.log(`Directory '${destinationPath}' created successfully.`);
-            } catch (error) {
-              logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-              console.error(`Error creating directory '${destinationPath}': ${error}`);
-            }
+            mkdirSync(destinationPath);
+            console.log(`Directory '${destinationPath}' created successfully.`);
           }
           const filePath = `./candlestore/${symbols[symbolIndex].split("/").join("").toLocaleUpperCase()}-${
             intervals[intervalIndex]

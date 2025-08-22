@@ -67,7 +67,7 @@ import { checkGPTSignals } from "../Indicators/GPT";
 import { Orderbook } from "../Exchanges/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
-import { Balances } from "../Exchanges/Balances";
+import { Balances, getCurrentBalances } from "../Exchanges/Balances";
 import {
   RenkoBrick,
   calculateBrickSize,
@@ -259,20 +259,15 @@ export const tradeDirection = async (
   actions = actions.filter((action) => directions[action] !== undefined);
   for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
     // console.log(`${directions[actions[actionsIndex]]} >= ${options.directionAgreement}`)
-    if (
-      (profit == actions[actionsIndex] || profit === "SKIP" || profit === "TAKE_PROFIT" || profit === "STOP_LOSS") &&
-      next == actions[actionsIndex]
-    ) {
-      if (profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= symbolOptions.agreement / 2) {
-        direction = next;
-        break;
-      } else if (profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= symbolOptions.agreement / 2) {
-        direction = next;
-        break;
-      } else if (directions[actions[actionsIndex]] >= symbolOptions.agreement) {
-        direction = actions[actionsIndex];
-        break;
-      }
+    if (profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= symbolOptions.agreement) {
+      direction = next;
+      break;
+    } else if (profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= symbolOptions.agreement) {
+      direction = next;
+      break;
+    } else if (directions[actions[actionsIndex]] >= symbolOptions.agreement) {
+      direction = actions[actionsIndex];
+      break;
     }
   }
 
@@ -391,7 +386,7 @@ export const placeTrade = async (
     symbolOptions,
     filter
   );
-  if (direction === "SELL" && profit !== "BUY") {
+  if (direction === "SELL" && profit !== "BUY" && profit !== "SKIP" && profit !== "HOLD") {
     logToFile(
       "./logs/debug.log",
       `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
@@ -409,7 +404,7 @@ export const placeTrade = async (
       symbolOptions,
       undefined
     );
-  } else if (direction === "BUY" && profit !== "SELL") {
+  } else if (direction === "BUY" && profit !== "SELL" && profit !== "SKIP" && profit !== "HOLD") {
     logToFile(
       "./logs/debug.log",
       `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
@@ -622,175 +617,160 @@ export const algorithmic = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ) => {
-  try {
-    const startTime = Date.now();
-    const filter = symbolFilters[symbol.split("/").join("")];
-    if (candlesticks[symbol.split("/").join("")] === undefined) {
-      return false;
-    }
-    const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
-    if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
-      return false;
-    }
-    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
-      return false;
-    }
-    if (exchangeOptions.tradeHistory === undefined) {
-      exchangeOptions.tradeHistory = {};
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
-    }
-    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
-    }
-    if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-      console.error(`${symbol}: could not retrieve trade history`);
-      return false;
-    }
-    if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
-      consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
-      return false;
-    }
-    const latestCandle =
-      candlesticks[symbol.split("/").join("")][timeframe[0]][
-        candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1
-      ];
-    const prevCandle =
-      candlesticks[symbol.split("/").join("")][timeframe[0]][
-        candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2
-      ];
-    const candleTime = new Date(latestCandle.time).toLocaleString("fi-FI");
-    consoleLogger.push("Symbol", symbol.split("/").join(""));
-    if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-      const lastTradeTime =
-        exchangeOptions.tradeHistory[symbol.split("/").join("")][
-          exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
-        ].time;
-      const lastTradeDate = new Date(lastTradeTime);
-      consoleLogger.push("Last trade time", lastTradeDate.toLocaleString("fi-FI"));
-    } else {
-      consoleLogger.push("Last trade time", "No trades done!");
-    }
-    if (latestCandle !== undefined) {
-      consoleLogger.push("Candlestick", {
-        time: candleTime,
-        open: latestCandle.open,
-        high: latestCandle.high,
-        low: latestCandle.low,
-        close: latestCandle.close,
-        color: latestCandle.close > latestCandle.open ? "Green" : "Red",
-        direction:
-          latestCandle.close > prevCandle?.close
-            ? "Rising"
-            : latestCandle.close < prevCandle?.close
-            ? "Dropping"
-            : "Stagnant",
-        final: latestCandle.isFinal,
-      });
-    }
-    const [baseCurrency, quoteCurrency] = symbol.split("/");
-    const baseBalance = exchangeOptions.balances[baseCurrency]
-      ? exchangeOptions.balances[baseCurrency].crypto.toFixed(7) + " " + baseCurrency
-      : "0 " + baseCurrency;
-    const quoteBalance = exchangeOptions.balances[quoteCurrency]
-      ? exchangeOptions.balances[quoteCurrency].crypto.toFixed(7) + " " + quoteCurrency
-      : "0 " + quoteCurrency;
-    consoleLogger.push("Balance", {
-      base: baseBalance,
-      quote: quoteBalance,
-    });
-    const placedTrade = await placeTrade(
-      discord,
-      exchange,
-      consoleLogger,
-      symbol,
-      candlesticks,
-      filter,
-      processOptions,
-      exchangeOptions,
-      symbolOptions
-    );
-    const stopTime = Date.now();
-    consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
-    if (latestCandle.isFinal === true) {
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
-    }
-    if (exchangeOptions.name === "binance") {
-      if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
-        consoleLogger.print("blue");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade" && placedTrade === true) {
-        consoleLogger.print("blue");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade" && placedTrade === false) {
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
-        consoleLogger.print("blue");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
-        consoleLogger.flush();
-      } else {
-        consoleLogger.print("blue");
-        consoleLogger.flush();
-      }
-    } else if (exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
-      if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
-        consoleLogger.print("green");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade" && placedTrade === true) {
-        consoleLogger.print("green");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "trade" && placedTrade === false) {
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
-        consoleLogger.print("green");
-        consoleLogger.flush();
-      } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
-        consoleLogger.flush();
-      } else {
-        consoleLogger.print("green");
-        consoleLogger.flush();
-      }
-    }
-
-    return true;
-  } catch (error) {
-    consoleLogger.flush();
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+  exchangeOptions.balances = await getCurrentBalances(exchange);
+  const startTime = Date.now();
+  const filter = symbolFilters[symbol.split("/").join("")];
+  if (candlesticks[symbol.split("/").join("")] === undefined) {
+    return false;
   }
-  return false;
+  const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
+
+  for (var i = 0; i < timeframe.length; i++) {
+    for (var x = 0; x < candlesticks[symbol.split("/").join("")][timeframe[i]].length; x++) {
+      if (candlesticks[symbol.split("/").join("")][timeframe[i]][x].high == undefined) {
+        console.log(candlesticks[symbol.split("/").join("")][timeframe[i]][x]);
+      }
+    }
+  }
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+    return false;
+  }
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+    return false;
+  }
+  if (exchangeOptions.tradeHistory === undefined) {
+    exchangeOptions.tradeHistory = {};
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+  }
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+  }
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+    console.error(`${symbol}: could not retrieve trade history`);
+    return false;
+  }
+  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
+    consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
+    return false;
+  }
+  const latestCandle =
+    candlesticks[symbol.split("/").join("")][timeframe[0]][
+      candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1
+    ];
+  const prevCandle =
+    candlesticks[symbol.split("/").join("")][timeframe[0]][
+      candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2
+    ];
+  const candleTime = new Date(latestCandle.time).toLocaleString("fi-FI");
+  consoleLogger.push("Symbol", symbol.split("/").join(""));
+  if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+    const lastTradeTime =
+      exchangeOptions.tradeHistory[symbol.split("/").join("")][
+        exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
+      ].time;
+    const lastTradeDate = new Date(lastTradeTime);
+    consoleLogger.push("Last trade time", lastTradeDate.toLocaleString("fi-FI"));
+  } else {
+    consoleLogger.push("Last trade time", "No trades done!");
+  }
+  if (latestCandle !== undefined) {
+    consoleLogger.push("Candlestick", {
+      time: candleTime,
+      open: latestCandle.open,
+      high: latestCandle.high,
+      low: latestCandle.low,
+      close: latestCandle.close,
+      color: latestCandle.close > latestCandle.open ? "Green" : "Red",
+      direction:
+        latestCandle.close > prevCandle?.close
+          ? "Rising"
+          : latestCandle.close < prevCandle?.close
+          ? "Dropping"
+          : "Stagnant",
+      final: latestCandle.isFinal,
+      candlesticks: candlesticks[symbol.split("/").join("")][timeframe[0]]?.length,
+    });
+  }
+  const [baseCurrency, quoteCurrency] = symbol.split("/");
+  const baseBalance = exchangeOptions.balances[baseCurrency]
+    ? exchangeOptions.balances[baseCurrency].crypto.toFixed(7) + " " + baseCurrency
+    : "0 " + baseCurrency;
+  const quoteBalance = exchangeOptions.balances[quoteCurrency]
+    ? exchangeOptions.balances[quoteCurrency].crypto.toFixed(7) + " " + quoteCurrency
+    : "0 " + quoteCurrency;
+  consoleLogger.push("Balance", {
+    base: baseBalance,
+    quote: quoteBalance,
+  });
+  const placedTrade = await placeTrade(
+    discord,
+    exchange,
+    consoleLogger,
+    symbol,
+    candlesticks,
+    filter,
+    processOptions,
+    exchangeOptions,
+    symbolOptions
+  );
+  const stopTime = Date.now();
+  consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
+  if (latestCandle.isFinal === true) {
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+  }
+  if (exchangeOptions.name === "binance") {
+    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
+      consoleLogger.print("blue");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
+      consoleLogger.print("blue");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+      consoleLogger.print("blue");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+      consoleLogger.flush();
+    } else {
+      consoleLogger.print("blue");
+      consoleLogger.flush();
+    }
+  } else if (exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
+    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
+      consoleLogger.print("green");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
+      consoleLogger.print("green");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+      consoleLogger.print("green");
+      consoleLogger.flush();
+    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+      consoleLogger.flush();
+    } else {
+      consoleLogger.print("green");
+      consoleLogger.flush();
+    }
+  }
+
+  return true;
 };
 
 const getRandomValueBetween = (x: number, close: number): number => {
-  try {
-    const rangeStart = Math.min(x, close);
-    const rangeEnd = Math.max(x, close);
-    if (rangeEnd - rangeStart < 0.01) {
-      return close;
-    }
-    const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
-    return Number(randomValue.toFixed(2));
-  } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+  const rangeStart = Math.min(x, close);
+  const rangeEnd = Math.max(x, close);
+  if (rangeEnd - rangeStart < 0.01) {
+    return close;
   }
-  return close;
+  const randomValue = Math.random() * (rangeEnd - rangeStart) + rangeStart;
+  return Number(randomValue.toFixed(2));
 };
 
 export const simulateAlgorithmic = async (

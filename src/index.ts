@@ -48,9 +48,9 @@ import path from "path";
 import { Exchange, isNonKYC } from "./Hoobot/Exchanges/Exchange";
 import { logToFile } from "./Hoobot/Utilities/LogToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
+import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
 import { Trade, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
-import { consecutive } from "./Hoobot/Modes/Consecutive";
 import { periodic } from "./Hoobot/Modes/Periodic";
 import express from "express";
 
@@ -76,29 +76,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       }
       for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
-        if (process.env.HOOSAT_NETWORKS_DEVELOPER === "true") {
-          if (isNonKYC(exchange)) {
-            console.log("Starting to listen for trades with Hoosat Network enabled");
-            listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
-              console.log("Received trade message.");
-              if (trade.isBuyer) {
-                const buyAmount = (parseFloat(trade.qty) * parseFloat(trade.price)).toFixed(6);
-                if (parseFloat(buyAmount) > 10) {
-                  let msg = "```";
-                  msg += `Someone made buy order for symbol ${trade.symbol} in Xeggex!\r\n`;
-                  msg += `For the quantity of: ${trade.qty} ${trade.symbol.split("/")[0]}\r\n`;
-                  msg += `With the price of: ${trade.price}\r\n`;
-                  msg += `Which equals: ${buyAmount} ${trade.symbol.split("/")[1]}`;
-                  msg += "```";
-                  console.log(msg);
-                  sendMessageToChannel(discord, "1244212931286269972", msg);
-                }
-              }
-            });
-          }
-        }
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
-          console.log("Received orderbook message.");
           if (exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {};
           }
@@ -121,56 +99,8 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           candlesticksToPreload,
           symbolOptions,
           async (candlesticks: Candlesticks) => {
-            console.log("Received candlesticks message.");
             const logger = consoleLogger();
             await algorithmic(
-              discord,
-              exchange,
-              logger,
-              symbolOptions.name,
-              candlesticks,
-              options,
-              exchangeOptions,
-              symbolOptions
-            );
-          }
-        );
-      }
-    }
-  } else if (exchangeOptions.mode === "consecutive") {
-    console.log(`Start running exchange ${exchangeOptions.name} on consecutive mode.`);
-    if (Array.isArray(exchangeOptions.symbols)) {
-      if (exchangeOptions.orderbooks === undefined) {
-        exchangeOptions.orderbooks = {};
-      }
-      for (const symbolOptions of exchangeOptions.symbols) {
-        symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
-        listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
-          if (exchangeOptions.orderbooks === undefined) {
-            exchangeOptions.orderbooks = {};
-          }
-          if (
-            exchangeOptions.orderbooks !== undefined &&
-            exchangeOptions.orderbooks[symbol.split("/").join("")] === undefined
-          ) {
-            exchangeOptions.orderbooks[symbol.split("/").join("")] = {
-              bids: {},
-              asks: {},
-            };
-          }
-          exchangeOptions.orderbooks[symbol.split("/").join("")] = orderbook;
-        });
-        listenForCandlesticks(
-          exchange,
-          symbolOptions.name,
-          symbolOptions.timeframes,
-          symbolCandlesticks,
-          candlesticksToPreload,
-          symbolOptions,
-          async (candlesticks: Candlesticks) => {
-            console.log("Received candlesticks message.");
-            const logger = consoleLogger();
-            await consecutive(
               discord,
               exchange,
               logger,
@@ -190,7 +120,6 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       const filter = await getFilters(exchange, symbolOptions.name);
       symbolFilters[symbolOptions.name.split("/").join("")] = filter;
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
-        console.log("Received orderbooks message.");
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
         }
@@ -214,7 +143,6 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       const filter = await getFilters(exchange, symbolOptions.name);
       symbolFilters[symbolOptions.name.split("/").join("")] = filter;
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
-        console.log("Received orderbooks message.");
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
         }
@@ -238,7 +166,6 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       for (const symbolOptions of exchangeOptions.symbols) {
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
-          console.log("Received orderbooks message.");
           if (exchangeOptions.orderbooks === undefined) {
             exchangeOptions.orderbooks = {};
           }
@@ -271,7 +198,6 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           candlesticksToPreload,
           symbolOptions,
           async (candlesticks: Candlesticks) => {
-            console.log("Received candlesticks message.");
             const logger = consoleLogger();
             await gridTrading(
               discord,
@@ -312,6 +238,16 @@ const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
   return exchange;
 };
 
+const startMexc = async (exchangeOptions: ExchangeOptions) => {
+  if (exchangeOptions.forceStopOnDisconnect === undefined) {
+    exchangeOptions.forceStopOnDisconnect = false;
+  }
+  const exchange = new Mexc({ key: exchangeOptions.key, secret: exchangeOptions.secret });
+  await exchange.waitConnect();
+  console.log("Started NonKYC");
+  return exchange;
+};
+
 const hoobot = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -333,14 +269,21 @@ const hoobot = async () => {
       } else if (exchangeOptions.name === "nonkyc") {
         exchangeOptions.socket = await startNonKYC(exchangeOptions);
         exchanges.push(exchangeOptions.socket);
+      } else if (exchangeOptions.name === "mexc") {
+        exchangeOptions.socket = await startMexc(exchangeOptions);
+        exchanges.push(exchangeOptions.socket);
       }
       if (exchangeOptions.socket !== undefined) {
         runExchange(exchangeOptions.socket, discord, exchangeOptions);
       }
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+    if (error == "WebSocket closed abnormally with code 1006") {
+      hoobot();
+    } else {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(JSON.stringify(error, null, 4));
+    }
   }
 };
 
@@ -571,9 +514,8 @@ const webServer = async () => {
 
   app.post("/settings", (req, res) => {
     const optionsFilename = "./settings/hoobot-options.json";
-    fs.writeFileSync(optionsFilename, JSON.stringify(req.body, null, 2));
     req.body.running = options.running;
-    options = req.body;
+    fs.writeFileSync(optionsFilename, JSON.stringify(req.body, null, 2));
     res.json({ message: "Options updated successfully", options });
   });
 

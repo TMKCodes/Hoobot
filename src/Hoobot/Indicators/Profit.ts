@@ -199,8 +199,6 @@ export const checkProfitSignals = async (
   let check = "HOLD";
   let lastPNL: number = 0;
   let unrealizedPNL: number = 0;
-  let unrealizedSellPNL: number = 0;
-  let unrealizedBuyPNL: number = 0;
   const skip = readForceSkip(symbolOptions.name.split("/").join(""));
   if (
     ExchangeOptions.tradeHistory !== undefined &&
@@ -233,7 +231,7 @@ export const checkProfitSignals = async (
           lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
         }
       }
-      if (lastTrade.isBuyer) {
+      if (!lastTrade.isBuyer) {
         const orderBookBids = Object.keys(orderBook.bids)
           .map((price) => parseFloat(price))
           .sort((a, b) => b - a);
@@ -242,7 +240,7 @@ export const checkProfitSignals = async (
           parseFloat(lastTrade.price),
           orderBookBids[0]
         );
-      } else if (!lastTrade.isBuyer) {
+      } else if (lastTrade.isBuyer) {
         const orderBookAsks = Object.keys(orderBook.asks)
           .map((price) => parseFloat(price))
           .sort((a, b) => a - b);

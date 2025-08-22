@@ -98,33 +98,72 @@ export const calculateMACD = (
   signalLength = 9,
   source: string
 ) => {
+  // Validate inputs
+  if (!candles || candles.length === 0 || !source || shortEMA <= 0 || longEMA <= 0 || signalLength <= 0) {
+    return { macdLine: [], signalLine: [], histogram: [] }; // Return empty arrays if inputs are invalid
+  }
+
+  // Calculate short and long EMAs
   let shortEMAs = calculateEMA(candles, shortEMA, source);
   let longEMAs = calculateEMA(candles, longEMA, source);
+
+  // Handle empty or invalid EMA results
+  if (!shortEMAs.length || !longEMAs.length) {
+    return { macdLine: [], signalLine: [], histogram: [] };
+  }
+
+  // Align EMA arrays by trimming to the shorter length
   if (longEMAs.length < shortEMAs.length) {
     shortEMAs = shortEMAs.slice(-longEMAs.length);
-  }
-  if (shortEMAs.length < longEMAs.length) {
+  } else if (shortEMAs.length < longEMAs.length) {
     longEMAs = longEMAs.slice(-shortEMAs.length);
   }
-  let macdLine: number[] = [];
+
+  // Calculate MACD line (shortEMA - longEMA)
+  var macdLine: number[] = [];
   for (let i = 0; i < shortEMAs.length; i++) {
-    macdLine.push(shortEMAs[i] - longEMAs[i]);
+    var macdValue = shortEMAs[i] - longEMAs[i];
+    // Skip if macdValue is NaN or undefined
+    if (isNaN(macdValue) || macdValue === undefined) {
+      continue;
+    }
+    macdLine.push(macdValue);
   }
+
+  // Return empty if macdLine is empty
+  if (!macdLine.length) {
+    return { macdLine: [], signalLine: [], histogram: [] };
+  }
+
+  // Calculate signal line from MACD line
   let signalLine = calculateEMA(
     macdLine.map((value) => ({ close: value } as Candlestick)),
     signalLength,
     source
   );
+
+  // Handle empty signal line
+  if (!signalLine.length) {
+    return { macdLine: [], signalLine: [], histogram: [] };
+  }
+
+  // Align macdLine and signalLine arrays
   if (signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
-  }
-  if (macdLine.length < signalLine.length) {
+  } else if (macdLine.length < signalLine.length) {
     signalLine = signalLine.slice(-macdLine.length);
   }
-  const histogram: number[] = [];
-  for (let i = 0; i < signalLine.length; i++) {
-    histogram.push(macdLine[i] - signalLine[i]);
+
+  // Calculate histogram (macdLine - signalLine)
+  var histogram: number[] = [];
+  for (let i = 0; i < macdLine.length; i++) {
+    var histValue = macdLine[i] - signalLine[i];
+    // Only push valid numbers to histogram
+    if (!isNaN(histValue) && histValue !== undefined) {
+      histogram.push(histValue);
+    }
   }
+
   return {
     macdLine,
     signalLine,

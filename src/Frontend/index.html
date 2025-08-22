@@ -563,7 +563,7 @@
                               <table class="table table-bordered">
                                 <tbody>
                                   <tr>
-                                    <td class="col-4"><label class="form-label">Buy</label></td>
+                                    <td class="col-4"><label class="form-label">Buy Maximum value (Quote) - Also used as starting balance for simulation.</label></td>
                                     <td>
                                       <input type="number" class="form-control growing-max-buy" placeholder="e.g., 100" value="${
                                         symbolData.growingMax?.buy || ""
@@ -571,7 +571,7 @@
                                     </td>
                                   </tr>
                                   <tr>
-                                    <td><label class="form-label">Sell</label></td>
+                                    <td><label class="form-label">Sell Maximum value (Base) </label></td>
                                     <td>
                                       <input type="number" class="form-control growing-max-sell" placeholder="e.g., 0" value="${
                                         symbolData.growingMax?.sell || ""
@@ -822,9 +822,14 @@
                                       <tr>
                                         <td><label class="form-label">Signal</label></td>
                                         <td>
-                                          <input type="number" class="form-control macd-signal" placeholder="e.g., 6" value="${
-                                            symbolData.indicators?.macd?.signal || ""
-                                          }">
+                                          <select class="form-select macd-signal">
+                                            <option value="close" ${
+                                              symbolData.indicators?.macd?.signal === "close" ? "selected" : ""
+                                            }>Close</option>
+                                            <option value="open" ${
+                                              symbolData.indicators?.macd?.signal === "open" ? "selected" : ""
+                                            }>Open</option>
+                                          </select>
                                         </td>
                                       </tr>
                                       <tr>
@@ -1420,7 +1425,7 @@
                               <table class="table table-bordered">
                                 <tbody>
                                   <tr>
-                                    <td class="col-4"><label class="form-label">Buy</label></td>
+                                    <td class="col-4"><label class="form-label">Buy Maximum value (Quote) - Also used as starting balance for simulation.</label></td>
                                     <td>
                                       <input type="number" class="form-control growing-max-buy" placeholder="e.g., 100" value="${
                                         symbolData.growingMax?.buy || ""
@@ -1428,7 +1433,7 @@
                                     </td>
                                   </tr>
                                   <tr>
-                                    <td><label class="form-label">Sell</label></td>
+                                    <td><label class="form-label">Sell Maximum value (Base) </label></td>
                                     <td>
                                       <input type="number" class="form-control growing-max-sell" placeholder="e.g., 0" value="${
                                         symbolData.growingMax?.sell || ""
@@ -1507,7 +1512,7 @@
                   .split(",")
                   .map((tf) => tf.trim())
                   .filter((tf) => tf),
-                agreement: parseFloat($symbol.find(".symbol-agreement").val()) || 0,
+                agreement: parseFloat($symbol.find(".agreement").val()) || 0,
                 source: $symbol.find(".symbol-source").val(),
                 trend: {
                   enabled: $symbol.find(".trend-enabled").is(":checked"),
@@ -1573,7 +1578,7 @@
                     enabled: $symbol.find(".macd-enabled").is(":checked"),
                     fast: parseInt($symbol.find(".macd-fast").val()) || 0,
                     slow: parseInt($symbol.find(".macd-slow").val()) || 0,
-                    signal: parseInt($symbol.find(".macd-signal").val()) || 0,
+                    signal: $symbol.find(".macd-signal").val() || 0,
                     weight: parseInt($symbol.find(".macd-weight").val()) || 0,
                   },
                   rsi: {

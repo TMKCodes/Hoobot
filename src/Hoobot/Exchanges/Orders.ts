@@ -130,50 +130,36 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
 };
 
 export const getOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
-  try {
-    if (isBinance(exchange)) {
-      const response = await exchange.orderStatus(symbol, orderId);
-      return response;
-    } else if (isNonKYC(exchange)) {
-      const order = await exchange.getOrderByID(orderId);
-      return {
-        symbol: symbol.split("/").join(""),
-        orderId: order.id,
-        price: order.price,
-        qty: order.quantity,
-        quoteQty: (parseFloat(order.quantity) * parseFloat(order.price)).toString(),
-        commission: "",
-        commissionAsset: "",
-        time: order.createdAt,
-        isBuyer: order.side === "buy" ? true : false,
-        isMaker: true,
-        isBestMatch: true,
-        orderStatus: order.status,
-        tradeId: parseFloat(order.id),
-      } as Order;
-    }
-  } catch (error) {
-    if (error?.message !== "Order not found.") {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(`An error occurred while cancelling the order: ${error}`);
-    }
+  if (isBinance(exchange)) {
+    const response = await exchange.orderStatus(symbol, orderId);
+    return response;
+  } else if (isNonKYC(exchange)) {
+    const order = await exchange.getOrderByID(orderId);
+    return {
+      symbol: symbol.split("/").join(""),
+      orderId: order.id,
+      price: order.price,
+      qty: order.quantity,
+      quoteQty: (parseFloat(order.quantity) * parseFloat(order.price)).toString(),
+      commission: "",
+      commissionAsset: "",
+      time: order.createdAt,
+      isBuyer: order.side === "buy" ? true : false,
+      isMaker: true,
+      isBestMatch: true,
+      orderStatus: order.status,
+      tradeId: parseFloat(order.id),
+    } as Order;
   }
 };
 
 export const cancelOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
-  try {
-    if (isBinance(exchange)) {
-      const response = await exchange.cancel(symbol, orderId);
-      return response;
-    } else if (isNonKYC(exchange)) {
-      const response = await exchange.cancelOrder(orderId);
-      return response;
-    }
-  } catch (error) {
-    if (error?.message !== "Order not found.") {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(`An error occurred while cancelling the order: ${error}`);
-    }
+  if (isBinance(exchange)) {
+    const response = await exchange.cancel(symbol, orderId);
+    return response;
+  } else if (isNonKYC(exchange)) {
+    const response = await exchange.cancelOrder(orderId);
+    return response;
   }
 };
 
