@@ -8,22 +8,22 @@ rm -rf node_modules/
 npm install
 npm run build
 # Change out of project dir to create publish dir and move required files for publish.
+mkdir ../hoobot-latest
+mkdir ../hoobot-latest/settings
+mkdir ../hoobot-latest/logs
+cp ./settings/hoobot-options.json.example ../hoobot-latest/settings/hoobot-options.json.example
+cp ./settings/hoobot-options-simulate.json.example ../hoobot-latest/settings/hoobot-options-simulate.json.example
+cp ./alarm2.mp3 ../hoobot-latest/alarm2.mp3
+cp ./alarm.mp3 ../hoobot-latest/alarm.mp3
+cp ./hoobot.service ../hoobot-latest/hoobot.service
+cp ./linux.sh ../hoobot-latest/linux.sh
+cp ./osx.sh ../hoobot-latest/osx.sh
+cp ./package.json ../hoobot-latest/package.json
+cp ./publish.sh ../hoobot-latest/publish.sh
+cp ./README.md ../hoobot-latest/README.md
+cp ./windows.bat ../hoobot-latest/windows.bat
+cp -r ./build ../hoobot-latest/build
 cd ..
-mkdir hoobot-latest
-mkdir hoobot-latest/settings
-mkdir hoobot-latest/logs
-cp Hoobot/settings/hoobot-options.json.example hoobot-latest/settings/hoobot-options.json.example
-cp Hoobot/settings/hoobot-options-simulate.json.example hoobot-latest/settings/hoobot-options-simulate.json.example
-cp Hoobot/alarm2.mp3 hoobot-latest/alarm2.mp3
-cp Hoobot/alarm.mp3 hoobot-latest/alarm.mp3
-cp Hoobot/hoobot.service hoobot-latest/hoobot.service
-cp Hoobot/linux.sh hoobot-latest/linux.sh
-cp Hoobot/osx.sh hoobot-latest/osx.sh
-cp Hoobot/package.json hoobot-latest/package.json
-cp Hoobot/publish.sh hoobot-latest/publish.sh
-cp Hoobot/README.md hoobot-latest/README.md
-cp Hoobot/windows.bat hoobot-latest/windows.bat
-cp -r Hoobot/build hoobot-latest/build
 # Zip the publish folder for delivery
 zip -r hoobot-latest.zip hoobot-latest/
 # Delete the publish folder as it's not needed anymore

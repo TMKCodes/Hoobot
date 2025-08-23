@@ -27,7 +27,7 @@
 
 import fs from "fs";
 import Binance from "node-binance-api";
-import { loginDiscord, sendMessageToChannel } from "./Discord/discord";
+import { loginDiscord } from "./Discord/discord";
 import {
   listenForCandlesticks,
   Candlesticks,
@@ -45,11 +45,10 @@ import { Orderbook, listenForOrderbooks } from "./Hoobot/Exchanges/Orderbook";
 import { hilow } from "./Hoobot/Modes/HiLow";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
-import { Exchange, isNonKYC } from "./Hoobot/Exchanges/Exchange";
+import { Exchange } from "./Hoobot/Exchanges/Exchange";
 import { logToFile } from "./Hoobot/Utilities/LogToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
-import { Trade, listenForTrades } from "./Hoobot/Exchanges/Trades";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
 import express from "express";
@@ -268,6 +267,9 @@ const hoobot = async () => {
         exchanges.push(exchangeOptions.socket);
       } else if (exchangeOptions.name === "nonkyc") {
         exchangeOptions.socket = await startNonKYC(exchangeOptions);
+        exchangeOptions.socket.on("try-to-reconnect", () => {
+          runExchange(exchangeOptions.socket, discord, exchangeOptions);
+        });
         exchanges.push(exchangeOptions.socket);
       } else if (exchangeOptions.name === "mexc") {
         exchangeOptions.socket = await startMexc(exchangeOptions);
@@ -278,13 +280,8 @@ const hoobot = async () => {
       }
     }
   } catch (error) {
-    if (error.message.includes("WebSocket closed abnormally with code 1006")) {
-      console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
-      setTimeout(hoobot, 1000); // Add delay to prevent rapid retries
-    } else {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(JSON.stringify(error, null, 4));
-    }
+    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+    console.error(JSON.stringify(error, null, 4));
   }
 };
 

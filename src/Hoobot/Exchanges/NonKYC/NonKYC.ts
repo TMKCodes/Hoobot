@@ -329,7 +329,7 @@ interface Subscription {
   candlesLimit?: number;
 }
 
-export class NonKYC {
+export class NonKYC extends EventEmitter {
   private readonly WebSocketURL: string;
   private readonly ApiURL: string;
   private key: string;
@@ -349,6 +349,7 @@ export class NonKYC {
   private maxReconnectionAttempts: number = 5; // Configurable max attempts
 
   constructor(key: string, secret: string, forceStopOnDisconnect: boolean) {
+    super();
     this.WebSocketURL = "wss://ws.nonkyc.io";
     this.ApiURL = "https://api.nonkyc.io/api/v2";
     this.key = key;
@@ -413,7 +414,7 @@ export class NonKYC {
         if (code === 1006) {
           console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
           delay(1000);
-          throw new Error(`WebSocket closed abnormally with code 1006`);
+          this.emit("try-to-reconnect");
         }
       } else {
         clearTimeout(this.pingTimeout);
