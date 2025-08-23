@@ -80,7 +80,6 @@ export const placeOrder = async (
   direction: string,
   price: number,
   quantityInBase: number,
-  processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions
 ): Promise<Order> => {
   if (direction === "sell") {
@@ -90,11 +89,7 @@ export const placeOrder = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
       return {} as Order;
@@ -106,11 +101,7 @@ export const placeOrder = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
       return {} as Order;
@@ -125,7 +116,6 @@ const placeGridOrders = async (
   symbol: string,
   grid: GridLevel[],
   _filter: Filter,
-  processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ): Promise<void> => {
@@ -139,7 +129,6 @@ const placeGridOrders = async (
           grid[i].type,
           grid[i].price,
           parseFloat(grid[i].size),
-          processOptions,
           exchangeOptions
         );
         grid[i].orderId = order.orderId;
@@ -173,7 +162,6 @@ const rebalanceGrid = async (
   symbol: string,
   currentPrice: number,
   filter: Filter,
-  processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ): Promise<void> => {
@@ -197,16 +185,7 @@ const rebalanceGrid = async (
     await cancelOrder(exchange, symbol, order.orderId);
   }
   symbolOptions.grid = createGrid(currentPrice, symbolOptions);
-  await placeGridOrders(
-    exchange,
-    consoleLogger,
-    symbol,
-    symbolOptions.grid,
-    filter,
-    processOptions,
-    exchangeOptions,
-    symbolOptions
-  );
+  await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, exchangeOptions, symbolOptions);
   consoleLogger.push("Grid rebalanced", `New center price: ${currentPrice}`);
 };
 
@@ -275,7 +254,6 @@ const manageGridOrders = async (
               newDirection,
               newOrderPrice,
               symbolOptions.gridOrderSize,
-              processOptions,
               exchangeOptions
             );
 
@@ -363,11 +341,11 @@ export const gridTrading = async (
 
   if (exchangeOptions.tradeHistory === undefined) {
     exchangeOptions.tradeHistory = {};
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   }
 
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   }
 
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
@@ -386,37 +364,18 @@ export const gridTrading = async (
   consoleLogger.push("Candle Time", new Date(latestCandle.time).toLocaleString());
 
   const openOrders = await getOpenOrders(exchange, symbol);
-  console.log(openOrders);
   // const filledOrders = orders.filter((order) => order.orderStatus.toLowerCase() === "filled");
   if (openOrders.length > 0) {
     symbolOptions.grid = buildGridFromExistingOrders(openOrders);
   }
   if (!symbolOptions.grid || openOrders.length === 0) {
     symbolOptions.grid = createGrid(currentPrice, symbolOptions);
-    await placeGridOrders(
-      exchange,
-      consoleLogger,
-      symbol,
-      symbolOptions.grid,
-      filter,
-      processOptions,
-      exchangeOptions,
-      symbolOptions
-    );
+    await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, exchangeOptions, symbolOptions);
   }
 
   if (isOutsideGridRange(currentPrice, symbolOptions.grid) || openOrders.length > symbolOptions.gridLevels * 2 - 1) {
     consoleLogger.push("Rebalancing grid", `Current price (${currentPrice}) is outside the grid range`);
-    await rebalanceGrid(
-      exchange,
-      consoleLogger,
-      symbol,
-      currentPrice,
-      filter,
-      processOptions,
-      exchangeOptions,
-      symbolOptions
-    );
+    await rebalanceGrid(exchange, consoleLogger, symbol, currentPrice, filter, exchangeOptions, symbolOptions);
   }
   const orderExecuted = await manageGridOrders(
     discord,
@@ -449,7 +408,7 @@ export const gridTrading = async (
   consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
 
   if (latestCandle.isFinal === true) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   }
   if (exchangeOptions.name === "binance") {
     if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {

@@ -51,7 +51,7 @@ export const hilow = async (
 ) => {
   const filter = symbolFilters[symbol.split("/").join("")];
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   }
   const tradeHistory = exchangeOptions.tradeHistory[symbol.split("/").join("")];
   const lastTrade = tradeHistory[tradeHistory.length - 1];

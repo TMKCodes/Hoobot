@@ -822,12 +822,20 @@
                                       <tr>
                                         <td><label class="form-label">Signal</label></td>
                                         <td>
+                                          <input type="number" class="form-control macd-signal" placeholder="e.g., 15" value="${
+                                            symbolData.indicators?.macd?.signal || ""
+                                          }">
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td><label class="form-label">Source</label></td>
+                                        <td>
                                           <select class="form-select macd-signal">
                                             <option value="close" ${
-                                              symbolData.indicators?.macd?.signal === "close" ? "selected" : ""
+                                              symbolData.indicators?.macd?.source === "close" ? "selected" : ""
                                             }>Close</option>
                                             <option value="open" ${
-                                              symbolData.indicators?.macd?.signal === "open" ? "selected" : ""
+                                              symbolData.indicators?.macd?.source === "open" ? "selected" : ""
                                             }>Open</option>
                                           </select>
                                         </td>
@@ -1578,7 +1586,8 @@
                     enabled: $symbol.find(".macd-enabled").is(":checked"),
                     fast: parseInt($symbol.find(".macd-fast").val()) || 0,
                     slow: parseInt($symbol.find(".macd-slow").val()) || 0,
-                    signal: $symbol.find(".macd-signal").val() || 0,
+                    signal: parseInt($symbol.find(".macd-signal").val()) || 0,
+                    source: $symbol.find(".macd-source").val(),
                     weight: parseInt($symbol.find(".macd-weight").val()) || 0,
                   },
                   rsi: {

@@ -25,7 +25,6 @@
  * the use of this software.
  * ===================================================================== */
 
-import { logToFile } from "../Utilities/LogToFile";
 import { Exchange, isBinance, isNonKYC } from "./Exchange";
 import { NonKYCOrderbook, NonKYCResponse } from "./NonKYC/NonKYC";
 
@@ -49,20 +48,17 @@ export const getOrderbook = async (exchange: Exchange, symbol: string): Promise<
   };
   if (isBinance(exchange)) {
     orderbook = await exchange.depth(symbol.split("/").join(""));
-  } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
-    const fetchedOrderbook = await exchange.getOrderbook(symbol, "1");
+  } else if (isNonKYC(exchange)) {
+    const fetchedOrderbook = await exchange.getOrderbook(symbol, "50");
+    console.log(fetchedOrderbook);
     if (fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
       for (const ask of fetchedOrderbook.asks) {
-        if (orderbook.asks[ask[0]] !== undefined) {
-          orderbook.asks[ask[0]] = parseFloat(ask[1]);
-        }
+        orderbook.asks[ask[0]] = parseFloat(ask[1]);
       }
     }
     if (fetchedOrderbook.bids && fetchedOrderbook.bids.length > 0) {
       for (const bid of fetchedOrderbook.bids) {
-        if (orderbook.bids[bid[0]] !== undefined) {
-          orderbook.bids[bid[0]] = parseFloat(bid[1]);
-        }
+        orderbook.bids[bid[0]] = parseFloat(bid[1]);
       }
     }
   }

@@ -66,7 +66,7 @@ var options = parseArgs();
 const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: ExchangeOptions) => {
   exchangeOptions.balances = await getCurrentBalances(exchange);
   storeBalances(exchange, exchangeOptions.balances);
-  const candlesticksToPreload = 1000;
+  const candlesticksToPreload = 10000;
   const symbolCandlesticks: Candlesticks = {};
   if (exchangeOptions.mode === "algorithmic") {
     console.log(`Start running exchange ${exchangeOptions.name} on algorithmic mode.`);
@@ -278,8 +278,9 @@ const hoobot = async () => {
       }
     }
   } catch (error) {
-    if (error == "WebSocket closed abnormally with code 1006") {
-      hoobot();
+    if (error.message.includes("WebSocket closed abnormally with code 1006")) {
+      console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
+      setTimeout(hoobot, 1000); // Add delay to prevent rapid retries
     } else {
       logToFile("./logs/error.log", JSON.stringify(error, null, 4));
       console.error(JSON.stringify(error, null, 4));

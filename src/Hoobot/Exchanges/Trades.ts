@@ -33,7 +33,7 @@ import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/PlaySound";
-import { Orderbook } from "./Orderbook";
+import { getOrderbook, Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
 import { logToFile } from "../Utilities/LogToFile";
 import path from "path";
@@ -94,7 +94,6 @@ export const listenForTrades = async (
     });
   } else if (isBinance(exchange)) {
     exchange.websockets.trades([symbol.split("/").join()], async (trades) => {
-      console.log(trades);
       await callback(trades);
     });
   }
@@ -156,10 +155,11 @@ export const calculateUnrealizedPNLPercentageForShort = (
   return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
 
-export const getTradeHistory = async (exchange: Exchange, symbol: string, processOptions: ConfigOptions) => {
+export const getTradeHistory = async (exchange: Exchange, symbol: string) => {
   let tradeHistory: Trade[] = [];
   if (isBinance(exchange)) {
     tradeHistory = await exchange.trades(symbol.split("/").join(""));
+    return tradeHistory;
   } else if (isNonKYC(exchange)) {
     const history = await exchange.getAllTrades(symbol, 500, 0);
     history.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
@@ -189,37 +189,9 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string, proces
         isBestMatch: true,
       })
     );
+    return tradeHistory;
   }
-  let compactedTradeHistory: Trade[] = [];
-  let currentTrade: Trade | null = null;
-  if (processOptions.startTime !== undefined) {
-    tradeHistory = tradeHistory.filter((trade) => trade.time > parseFloat(processOptions.startTime as string));
-  }
-  for (const trade of tradeHistory) {
-    if (currentTrade === null) {
-      currentTrade = trade;
-    } else if (currentTrade.isBuyer === trade.isBuyer) {
-      currentTrade.qty = (parseFloat(currentTrade.qty) + parseFloat(trade.qty)).toString();
-      currentTrade.price = trade.price;
-      if (currentTrade.commissionAsset === trade.commissionAsset) {
-        currentTrade.commission = (parseFloat(currentTrade.commission) + parseFloat(trade.commission)).toString();
-      }
-    } else {
-      compactedTradeHistory.push(currentTrade);
-      currentTrade = trade;
-    }
-  }
-  if (currentTrade !== null) {
-    compactedTradeHistory.push(currentTrade);
-  }
-  for (let i = 0; i < compactedTradeHistory.length - 1; i++) {
-    const currentTrade = compactedTradeHistory[i];
-    const nextTrade = compactedTradeHistory[i + 1];
-    if (currentTrade.isBuyer === nextTrade.isBuyer) {
-      console.log("Trade history is not in the expected order of 1 buy followed by 1 sell.");
-    }
-  }
-  return compactedTradeHistory;
+  return [];
 };
 
 export const delay = (ms: number) => {
@@ -467,7 +439,7 @@ export const sell = async (
 ): Promise<Order | boolean> => {
   const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
   if (orderBook === undefined || orderBook.asks === undefined) {
-    return false;
+    orderBook = await getOrderbook(exchange, symbol);
   }
   const orderBookAsks = Object.keys(orderBook.asks)
     .map((price) => parseFloat(price))
@@ -507,6 +479,10 @@ export const sell = async (
   const quantityInQuote = quantityInBase * askPriceDiscounted * 0.98; // Use discounted price
   const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
+  if (roundedQuantityInQuote < 1.1) {
+    consoleLogger.push("error", "Too low quantity to sell. Minimum 1.1 Quote.");
+    return false;
+  }
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
@@ -522,7 +498,7 @@ export const sell = async (
       ) {
         const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
         if (previousTrade) {
-          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
             roundedPrice // Use discounted ask price for PNL calculation
@@ -541,7 +517,7 @@ export const sell = async (
               unrealizedPNL < symbolOptions.profit.minimumSell + symbolOptions.tradeFeePercentage! &&
               readForceSkip(symbol.split("/").join("")) === false
             ) {
-              consoleLogger.push("error", "Not positive trade");
+              consoleLogger.push("error", "Not positive trade " + unrealizedPNL);
               return false;
             }
           }
@@ -577,11 +553,7 @@ export const sell = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       removeBlock(symbol);
       return order;
     } else {
@@ -653,7 +625,7 @@ export const buy = async (
 ): Promise<Order | boolean> => {
   const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
   if (orderBook === undefined || orderBook.bids === undefined) {
-    return false;
+    orderBook = await getOrderbook(exchange, symbol);
   }
   const orderBookBids = Object.keys(orderBook.bids)
     .map((price) => parseFloat(price))
@@ -693,6 +665,10 @@ export const buy = async (
   const quantityInBase = (quantityInQuote / bidPriceIncremented) * 0.98; // Use incremented price
   const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
+  if (roundedQuantityInQuote < 1.1) {
+    consoleLogger.push("error", "Too low quantity to buy. Minimum 1.1 Quote.");
+    return false;
+  }
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
@@ -708,7 +684,7 @@ export const buy = async (
       ) {
         const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
         if (previousTrade) {
-          unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+          unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
             roundedPrice // Use incremented bid price for PNL calculation
@@ -727,7 +703,7 @@ export const buy = async (
               unrealizedPNL < symbolOptions.profit.minimumBuy + symbolOptions.tradeFeePercentage! &&
               readForceSkip(symbol.split("/").join("")) === false
             ) {
-              consoleLogger.push("error", "Not positive trade");
+              consoleLogger.push("error", "Not positive trade " + unrealizedPNL);
               return false;
             }
           }
@@ -763,11 +739,7 @@ export const buy = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(
-        exchange,
-        symbol,
-        processOptions
-      );
+      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       removeBlock(symbol);
       return order;
     } else {

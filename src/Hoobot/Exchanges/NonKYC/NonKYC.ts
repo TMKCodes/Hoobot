@@ -362,34 +362,26 @@ export class NonKYC {
   public NonKYC = () => {
     return "NonKYC";
   };
-  // WebSocket handling
-
-  private heartBeat = () => {
-    if (this.pingTimeout) {
-      clearTimeout(this.pingTimeout);
-    }
-    this.pingTimeout = setTimeout(() => {
-      if (this.ws) {
-        console.warn("Ping timeout. Terminating WebSocket...");
-        this.ws.terminate();
-        this.ws = null;
-      }
-    }, 70000); // Configurable timeout
-  };
 
   private loopPing = () => {
     if (this.keepAlive) {
       clearTimeout(this.keepAlive);
     }
+
     this.keepAlive = setTimeout(() => {
-      this.ws?.ping(new Date().getTime());
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        console.log("Ping NonKYC.");
+        this.ws.ping();
+      }
+      // schedule the next ping
       this.loopPing();
-    }, 20000);
+    }, 60000);
   };
 
   public waitConnect = () => {
     return new Promise((resolve, _reject) => {
       this.emitter.on("logged", () => {
+        this.loopPing();
         resolve(true);
       });
     });
@@ -400,7 +392,6 @@ export class NonKYC {
 
     this.ws.on("open", async () => {
       console.log("WebSocket connected.");
-      this.loopPing();
       if (this.key && this.secret) {
         try {
           const result = await this.login();
@@ -435,11 +426,18 @@ export class NonKYC {
       this.emitter.emit("websocket_error", err);
     });
 
-    this.ws.on("ping", (_buffer: Buffer) => {
-      this.heartBeat();
+    this.ws.on("ping", (data: Buffer) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        console.log("Received NonKYC Ping, replying with Pong.");
+        this.ws.pong(data, true, (err?: Error) => {
+          if (err) console.error("Error sending pong:", err);
+        });
+      }
     });
 
-    this.ws.on("pong", (_buffer: Buffer) => {});
+    this.ws.on("pong", (_data: Buffer) => {
+      console.log("Received NonKYC Pong.");
+    });
 
     this.ws.onmessage = (event: WebSocket.MessageEvent) => {
       this.onMessage(event);

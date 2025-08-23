@@ -98,72 +98,33 @@ export const calculateMACD = (
   signalLength = 9,
   source: string
 ) => {
-  // Validate inputs
-  if (!candles || candles.length === 0 || !source || shortEMA <= 0 || longEMA <= 0 || signalLength <= 0) {
-    return { macdLine: [], signalLine: [], histogram: [] }; // Return empty arrays if inputs are invalid
+  if (candles.length < longEMA) {
+    return;
   }
-
-  // Calculate short and long EMAs
   let shortEMAs = calculateEMA(candles, shortEMA, source);
   let longEMAs = calculateEMA(candles, longEMA, source);
-
-  // Handle empty or invalid EMA results
-  if (!shortEMAs.length || !longEMAs.length) {
-    return { macdLine: [], signalLine: [], histogram: [] };
-  }
-
-  // Align EMA arrays by trimming to the shorter length
   if (longEMAs.length < shortEMAs.length) {
     shortEMAs = shortEMAs.slice(-longEMAs.length);
-  } else if (shortEMAs.length < longEMAs.length) {
+  }
+  if (shortEMAs.length < longEMAs.length) {
     longEMAs = longEMAs.slice(-shortEMAs.length);
   }
-
-  // Calculate MACD line (shortEMA - longEMA)
-  var macdLine: number[] = [];
+  let macdLine: number[] = [];
   for (let i = 0; i < shortEMAs.length; i++) {
-    var macdValue = shortEMAs[i] - longEMAs[i];
-    // Skip if macdValue is NaN or undefined
-    if (isNaN(macdValue) || macdValue === undefined) {
-      continue;
-    }
-    macdLine.push(macdValue);
+    macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
-
-  // Return empty if macdLine is empty
-  if (!macdLine.length) {
-    return { macdLine: [], signalLine: [], histogram: [] };
-  }
-
-  // Calculate signal line from MACD line
-  let signalLine = calculateEMA(
-    macdLine.map((value) => ({ close: value } as Candlestick)),
-    signalLength,
-    source
-  );
-
-  // Handle empty signal line
-  if (!signalLine.length) {
-    return { macdLine: [], signalLine: [], histogram: [] };
-  }
-
-  // Align macdLine and signalLine arrays
+  var signalCandles = macdLine.map((value) => ({ close: value } as Candlestick));
+  let signalLine = calculateEMA(signalCandles, signalLength, source);
   if (signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
-  } else if (macdLine.length < signalLine.length) {
+  }
+  if (macdLine.length < signalLine.length) {
     signalLine = signalLine.slice(-macdLine.length);
   }
-
-  // Calculate histogram (macdLine - signalLine)
-  var histogram: number[] = [];
-  for (let i = 0; i < macdLine.length; i++) {
-    var histValue = macdLine[i] - signalLine[i];
-    // Only push valid numbers to histogram
-    if (!isNaN(histValue) && histValue !== undefined) {
-      histogram.push(histValue);
-    }
+  const histogram: number[] = [];
+  for (let i = 0; i < signalLine.length; i++) {
+    histogram.push(macdLine[i] - signalLine[i]);
   }
-
   return {
     macdLine,
     signalLine,
@@ -210,23 +171,26 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         }
         const isMACDSignalCrossover = isMacdLineAboveSignalLine && isPrevMacdLineBelowSignalLine; // BUY
         const isSignalMACDCrossover = isMacdLineBelowSignalLine && isPrevMacdLineAboveSignalLine; // SELL
-        if (isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
+        if (symbolOptions.indicators.macd.weight == undefined) {
           symbolOptions.indicators.macd.weight = 1;
-          check = "BUY";
-        } else if (isMacdLineBelowSignalLine && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight = 1;
-          check = "SELL";
-        } else if (isNPCrossover && isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
-          symbolOptions.indicators.macd.weight = 1.1;
-          check = "BUY";
-        } else if (isPNCrossover && isMacdLineBelowSignalLine && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight = 1.1;
-          check = "SELL";
-        } else if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
-          symbolOptions.indicators.macd.weight = 1.5;
+        }
+        if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
+          symbolOptions.indicators.macd.weight *= 1.5;
           check = "BUY";
         } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight = 1.5;
+          symbolOptions.indicators.macd.weight *= 1.5;
+          check = "SELL";
+        } else if (isNPCrossover && isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
+          symbolOptions.indicators.macd.weight *= 1.1;
+          check = "BUY";
+        } else if (isPNCrossover && isMacdLineBelowSignalLine && isMacdLineAboveHistogram) {
+          symbolOptions.indicators.macd.weight *= 1.1;
+          check = "SELL";
+        } else if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
+          symbolOptions.indicators.macd.weight *= 1;
+          check = "BUY";
+        } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
+          symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         } else if (
           isMacdLineAboveSignalLine &&
@@ -234,7 +198,7 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
           isMacdLineBelowHistogram &&
           isSignalLineBelowHistogram
         ) {
-          symbolOptions.indicators.macd.weight = 1;
+          symbolOptions.indicators.macd.weight *= 1;
           check = "BUY";
         } else if (
           isMacdLineBelowSignalLine &&
@@ -242,7 +206,7 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
           isMacdLineAboveHistogram &&
           isSignalLineAboveHistogram
         ) {
-          symbolOptions.indicators.macd.weight = 1;
+          symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         }
       }

@@ -64,7 +64,7 @@ import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF"
 import { calculateAverage, logAverageSignals } from "../Indicators/Average";
 import { symbolFilters } from "../..";
 import { checkGPTSignals } from "../Indicators/GPT";
-import { Orderbook } from "../Exchanges/Orderbook";
+import { getOrderbook, Orderbook } from "../Exchanges/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances, getCurrentBalances } from "../Exchanges/Balances";
@@ -78,6 +78,7 @@ import {
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
+import { getOpenOrders } from "../Exchanges/Orders";
 
 export interface Indicators {
   trend: Trend;
@@ -257,18 +258,15 @@ export const tradeDirection = async (
   directions.HOLD = Number(directions.HOLD.toFixed(2));
   consoleLogger.push("Directions", directions);
   actions = actions.filter((action) => directions[action] !== undefined);
-  for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
-    // console.log(`${directions[actions[actionsIndex]]} >= ${options.directionAgreement}`)
-    if (profit === "TAKE_PROFIT" && directions[actions[actionsIndex]] >= symbolOptions.agreement) {
-      direction = next;
-      break;
-    } else if (profit === "STOP_LOSS" && directions[actions[actionsIndex]] >= symbolOptions.agreement) {
-      direction = next;
-      break;
-    } else if (directions[actions[actionsIndex]] >= symbolOptions.agreement) {
-      direction = actions[actionsIndex];
-      break;
-    }
+  if (directions[next] >= symbolOptions.agreement) {
+    direction = next;
+  } else if (
+    (profit === "TAKE_PROFIT" || profit === "STOP_LOSS") &&
+    directions[next] >= symbolOptions.agreement / 0.75
+  ) {
+    direction = next;
+  } else if (directions.HOLD >= symbolOptions.agreement) {
+    direction = "HOLD";
   }
 
   if (symbolOptions.indicators.OpenAI !== undefined && symbolOptions.indicators.OpenAI.enabled) {
@@ -386,45 +384,49 @@ export const placeTrade = async (
     symbolOptions,
     filter
   );
-  if (direction === "SELL" && profit !== "BUY" && profit !== "SKIP" && profit !== "HOLD") {
-    logToFile(
-      "./logs/debug.log",
-      `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
-    );
-    return sell(
-      discord,
-      exchange,
-      consoleLogger,
-      symbol,
-      profit,
-      orderBook,
-      filter,
-      processOptions,
-      exchangeOptions,
-      symbolOptions,
-      undefined
-    );
-  } else if (direction === "BUY" && profit !== "SELL" && profit !== "SKIP" && profit !== "HOLD") {
-    logToFile(
-      "./logs/debug.log",
-      `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
-    );
-    return buy(
-      discord,
-      exchange,
-      consoleLogger,
-      symbol,
-      profit,
-      orderBook,
-      filter,
-      processOptions,
-      exchangeOptions,
-      symbolOptions,
-      undefined
-    );
+  const orders = await getOpenOrders(exchange, symbol);
+  if (orders.length == 0) {
+    if (direction === "SELL" && (profit === "SELL" || profit === "SKIP")) {
+      logToFile(
+        "./logs/debug.log",
+        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
+      );
+      return sell(
+        discord,
+        exchange,
+        consoleLogger,
+        symbol,
+        profit,
+        orderBook,
+        filter,
+        processOptions,
+        exchangeOptions,
+        symbolOptions,
+        undefined
+      );
+    } else if (direction === "BUY" && (profit === "BUY" || profit === "SKIP")) {
+      logToFile(
+        "./logs/debug.log",
+        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
+      );
+      return buy(
+        discord,
+        exchange,
+        consoleLogger,
+        symbol,
+        profit,
+        orderBook,
+        filter,
+        processOptions,
+        exchangeOptions,
+        symbolOptions,
+        undefined
+      );
+    }
   } else {
-    return false;
+    consoleLogger.push("Open Orders", orders.length);
   }
+  return false;
 };
 
 const subCalculateIndicators = (
@@ -624,27 +626,14 @@ export const algorithmic = async (
     return false;
   }
   const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
-
-  for (var i = 0; i < timeframe.length; i++) {
-    for (var x = 0; x < candlesticks[symbol.split("/").join("")][timeframe[i]].length; x++) {
-      if (candlesticks[symbol.split("/").join("")][timeframe[i]][x].high == undefined) {
-        console.log(candlesticks[symbol.split("/").join("")][timeframe[i]][x]);
-      }
-    }
-  }
   if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
     return false;
   }
   if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
     return false;
   }
-  if (exchangeOptions.tradeHistory === undefined) {
-    exchangeOptions.tradeHistory = {};
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-  }
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
-  }
+  exchangeOptions.tradeHistory = exchangeOptions.tradeHistory || {};
+  exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
     console.error(`${symbol}: could not retrieve trade history`);
     return false;
@@ -716,7 +705,7 @@ export const algorithmic = async (
   const stopTime = Date.now();
   consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
   if (latestCandle.isFinal === true) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol, processOptions);
+    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   }
   if (exchangeOptions.name === "binance") {
     if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
