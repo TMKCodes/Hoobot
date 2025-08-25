@@ -358,7 +358,7 @@ export const placeTrade = async (
     filter
   );
   const handledOpenOrders = await handleOpenOrders(discord, exchange, symbol, orderBook, processOptions, symbolOptions);
-  console.log(handledOpenOrders);
+  // console.log(handledOpenOrders);
   if (handledOpenOrders) {
     if (direction === "SELL" && (profit === "SELL" || profit === "SKIP")) {
       logToFile(

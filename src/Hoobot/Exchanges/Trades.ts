@@ -529,7 +529,7 @@ export const sell = async (
     }
     createBlock(symbol);
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
-    console.log(order);
+    // console.log(order);
     if (order !== undefined) {
       play(soundFile);
       let msg = "```";
@@ -717,7 +717,7 @@ export const buy = async (
     }
     createBlock(symbol);
     let order = await placeBuyOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
-    console.log(order);
+    // console.log(order);
     if (order !== undefined) {
       play(soundFile);
       let msg = "```";
