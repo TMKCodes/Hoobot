@@ -104,7 +104,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           symbolOptions,
           async (candlesticks: Candlesticks) => {
             const logger = consoleLogger();
-            console.log("Got a Candle");
+            // console.log("Got a Candle");
             await algorithmic(
               discord,
               exchange,
