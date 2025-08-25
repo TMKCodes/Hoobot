@@ -30,6 +30,7 @@ import { Orderbooks } from "../Exchanges/Orderbook";
 import { TradeHistory } from "../Exchanges/Trades";
 import { Order } from "../Exchanges/Orders";
 import { logToFile } from "./LogToFile";
+import { Exchange } from "../Exchanges/Exchange";
 
 export interface CurrentProfitMax {
   [symbol: string]: number;
@@ -102,7 +103,7 @@ export interface OpenOrders {
 
 export interface ExchangeOptions {
   name: string;
-  socket: any;
+  socket: Exchange;
   key: string;
   secret: string;
   mode: "algorithmic" | "hilow" | "grid" | "consecutive" | "periodic";

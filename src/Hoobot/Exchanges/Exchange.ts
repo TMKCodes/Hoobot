@@ -28,13 +28,17 @@
 import Binance from "node-binance-api";
 import { ConfigOptions, ExchangeOptions } from "../Utilities/Args";
 import { NonKYC } from "./NonKYC/NonKYC";
+import { Mexc } from "./Mexc/Mexc";
 
-export type Exchange = Binance | NonKYC;
+export type Exchange = Binance | NonKYC | Mexc;
 
 export const isBinance = (exchange: any): exchange is Binance => {
   return exchange !== undefined && "candlesticks" in exchange;
 };
 export const isNonKYC = (exchange: any): exchange is NonKYC => {
+  if (exchange.name == "NonKYC") {
+    return true;
+  }
   return exchange !== undefined && "NonKYC" in exchange;
 };
 

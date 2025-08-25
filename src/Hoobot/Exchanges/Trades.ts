@@ -289,7 +289,7 @@ export const placeSellOrder = async (
           `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`
         );
         return await exchange.sell(symbol.split("/").join(""), quantityInBase, price);
-      } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
+      } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
           `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`
@@ -354,7 +354,7 @@ export const placeBuyOrder = async (
           `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
         );
         return await exchange.buy(symbol.split("/").join(""), quantityInBase, price);
-      } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
+      } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
           `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
@@ -529,6 +529,7 @@ export const sell = async (
     }
     createBlock(symbol);
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
+    console.log(order);
     if (order !== undefined) {
       play(soundFile);
       let msg = "```";
@@ -542,6 +543,7 @@ export const sell = async (
       msg += "```";
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       if (order.orderId !== undefined) {
+        await delay(30000);
         handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
       }
       updateBuyAmount(roundedQuantityInQuote, symbolOptions);
@@ -715,6 +717,7 @@ export const buy = async (
     }
     createBlock(symbol);
     let order = await placeBuyOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
+    console.log(order);
     if (order !== undefined) {
       play(soundFile);
       let msg = "```";
@@ -728,6 +731,7 @@ export const buy = async (
       msg += "```";
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       if (order.orderId !== undefined) {
+        await delay(30000);
         handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
       }
       updateSellAmount(roundedQuantityInBase, symbolOptions);

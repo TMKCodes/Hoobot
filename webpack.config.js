@@ -2,11 +2,11 @@
 
 // webpack.server.config.js
 import { resolve as _resolve } from "path";
-import webpack from 'webpack';
+import webpack from "webpack";
 
 export default (_env, argv) => {
-  const isDevelopment = argv.mode === 'development'
-  const buildDir = isDevelopment ? 'build-dev': 'build';
+  const isDevelopment = argv.mode === "development";
+  const buildDir = isDevelopment ? "build-dev" : "build";
   return {
     devtool: "source-map",
     mode: isDevelopment ? "production" : "development",
@@ -54,38 +54,30 @@ export default (_env, argv) => {
         },
         {
           test: /\.json$/,
-          loader: 'json-loader',
-          type: 'javascript/auto',
+          loader: "json-loader",
+          type: "javascript/auto",
         },
         {
           test: /\.(png\|jpg\|gif\|avif\|\/otf\/|ttf)$/i,
-          loader: 'ignore-loader',
+          loader: "ignore-loader",
         },
         {
           test: /\.node$/,
-          loader: 'node-loader',
+          loader: "node-loader",
         },
       ],
     },
     resolve: {
       alias: {
-        'mongodb-client-encryption': 'mongodb-client-encryption-browserify'
+        "mongodb-client-encryption": "mongodb-client-encryption-browserify",
       },
       extensions: [".tsx", ".ts", ".js", ".jsx"],
     },
-    ignoreWarnings: [
-      /aws-crt/, 
-      /mongodb\/lib\/utils.js/, 
-      /mongodb\/lib\/deps.js/
-    ],
+    ignoreWarnings: [/aws-crt/, /mongodb\/lib\/utils.js/, /mongodb\/lib\/deps.js/],
     plugins: [
       new webpack.DefinePlugin({
-        'global.GENTLY': false,
-      }),
-      new webpack.DefinePlugin({
-        '__dirname': JSON.stringify(_resolve()),
-        '__filename': JSON.stringify(_resolve('server.js')),
+        "global.GENTLY": false,
       }),
     ],
-  }
+  };
 };

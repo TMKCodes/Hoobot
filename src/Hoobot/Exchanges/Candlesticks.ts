@@ -69,6 +69,9 @@ export async function getLastCandlesticks(
         symbol.split("/").join(""),
         interval,
         (_error: any, ticks: any, symbol: string, interval: string) => {
+          if (ticks === undefined) {
+            resolve([]);
+          }
           const parsedData: Candlestick[] = ticks.map((candle: string[]) => ({
             symbol: symbol,
             interval: interval,
@@ -123,7 +126,8 @@ export const listenForCandlesticks = async (
   symbolOptions: SymbolOptions,
   callback: (candlesticks: Candlesticks) => Promise<void>
 ): Promise<void> => {
-  const maxCandlesticks = 5000;
+  console.log("Start listening for Candlesticks");
+  const maxCandlesticks = 10000;
   let timeframes = [...intervals];
   if (isBinance(exchange) && symbolOptions.trend?.enabled) {
     if (!intervals.includes(symbolOptions.trend?.timeframe!)) {
@@ -190,10 +194,12 @@ export const listenForCandlesticks = async (
         }
       });
     } else if (isNonKYC(exchange)) {
+      console.log("Subscribe to candles");
       exchange.subscribeCandles(
         symbol,
         getMinutesFromInterval(timeframes[i]),
         async (response: NonKYCResponse) => {
+          console.log("Subscribe Candles callback called!");
           if (response.method === "updateCandles") {
             const candles = (response.params as NonKYCCandles).data;
             if (candles.length < 1) {

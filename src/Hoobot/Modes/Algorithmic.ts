@@ -48,37 +48,21 @@ import {
   logStochasticOscillatorSignals,
   logStochasticRSISignals,
 } from "../Indicators/StochasticOscillator";
-import {
-  Trade,
-  buy,
-  calculatePNLPercentageForLong,
-  calculatePNLPercentageForShort,
-  calculateROI,
-  getTradeHistory,
-  sell,
-  simulateBuy,
-  simulateSell,
-} from "../Exchanges/Trades";
+import { buy, getTradeHistory, sell, simulateBuy, simulateSell } from "../Exchanges/Trades";
 import { calculateOBV, checkOBVSignals, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF";
-import { calculateAverage, logAverageSignals } from "../Indicators/Average";
+import { calculateAverage } from "../Indicators/Average";
 import { symbolFilters } from "../..";
 import { checkGPTSignals } from "../Indicators/GPT";
-import { getOrderbook, Orderbook } from "../Exchanges/Orderbook";
+import { Orderbook } from "../Exchanges/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
 import { checkBalanceSignals } from "../Indicators/Balance";
 import { Balances, getCurrentBalances } from "../Exchanges/Balances";
-import {
-  RenkoBrick,
-  calculateBrickSize,
-  calculateRenko,
-  checkRenkoSignals,
-  logRenkoSignals,
-} from "../Indicators/Renko";
+import { RenkoBrick, calculateBrickSize, calculateRenko, checkRenkoSignals } from "../Indicators/Renko";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
-import { getOpenOrders } from "../Exchanges/Orders";
+import { getOpenOrders, handleOpenOrder, handleOpenOrders } from "../Exchanges/Orders";
 
 export interface Indicators {
   trend: Trend;
@@ -361,17 +345,6 @@ export const placeTrade = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ) => {
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
-    const lastTradeTime =
-      exchangeOptions.tradeHistory[symbol.split("/").join("")][
-        exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
-      ].time;
-    const currentTime = Date.now();
-    const timeDifferenceInSeconds = (currentTime - lastTradeTime) / 1000;
-    if (timeDifferenceInSeconds < getSecondsFromInterval(symbolOptions.timeframes[0])) {
-      return false;
-    }
-  }
   const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
   const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
   const [profit, direction] = await tradeDirection(
@@ -384,8 +357,9 @@ export const placeTrade = async (
     symbolOptions,
     filter
   );
-  const orders = await getOpenOrders(exchange, symbol);
-  if (orders.length == 0) {
+  const handledOpenOrders = await handleOpenOrders(discord, exchange, symbol, orderBook, processOptions, symbolOptions);
+  console.log(handledOpenOrders);
+  if (handledOpenOrders) {
     if (direction === "SELL" && (profit === "SELL" || profit === "SKIP")) {
       logToFile(
         "./logs/debug.log",
@@ -423,8 +397,6 @@ export const placeTrade = async (
         undefined
       );
     }
-  } else {
-    consoleLogger.push("Open Orders", orders.length);
   }
   return false;
 };

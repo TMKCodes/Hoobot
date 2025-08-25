@@ -122,7 +122,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
   - **buy**: (number) Maximum amount (quote) for buy trades. (Note starting balance for simulation)
   - **sell**: (number) Maximum amount (base) for sell trades.
 - **closePercentage**: (number) Close percentage for trades.
-- **maximumAgeOfOrder**: (number) Maximum age of an order.
+- **maximumAgeOfOrder**: (number) Maximum age of an order in seconds.
 - **tradeFeePercentage**: (number) Trade fee percentage.
 - **stopLoss**: (object) Stop loss settings.
   - **enabled**: (boolean) Enables or disables stop loss.

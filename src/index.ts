@@ -41,7 +41,7 @@ import { Filters, getFilters } from "./Hoobot/Exchanges/Filters";
 import dotenv from "dotenv";
 import { algorithmic, simulateAlgorithmic } from "./Hoobot/Modes/Algorithmic";
 import { checkLicenseValidity } from "./Hoobot/Utilities/License";
-import { Orderbook, listenForOrderbooks } from "./Hoobot/Exchanges/Orderbook";
+import { Orderbook, getOrderbook, listenForOrderbooks } from "./Hoobot/Exchanges/Orderbook";
 import { hilow } from "./Hoobot/Modes/HiLow";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
@@ -51,6 +51,7 @@ import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
+import { fileURLToPath } from "url";
 import express from "express";
 
 export var symbolFilters: Filters = {};
@@ -74,6 +75,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         exchangeOptions.orderbooks = {};
       }
       for (const symbolOptions of exchangeOptions.symbols) {
+        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
+          exchange,
+          symbolOptions.name
+        );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if (exchangeOptions.orderbooks === undefined) {
@@ -99,6 +104,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           symbolOptions,
           async (candlesticks: Candlesticks) => {
             const logger = consoleLogger();
+            console.log("Got a Candle");
             await algorithmic(
               discord,
               exchange,
@@ -116,8 +122,11 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
   } else if (exchangeOptions.mode === "hilow") {
     console.log(`Start running exchange  ${exchangeOptions.name} on hilow mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
-      const filter = await getFilters(exchange, symbolOptions.name);
-      symbolFilters[symbolOptions.name.split("/").join("")] = filter;
+      exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
+        exchange,
+        symbolOptions.name
+      );
+      symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
@@ -139,8 +148,11 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
   } else if (exchangeOptions.mode === "periodic") {
     console.log(`Start running exchange  ${exchangeOptions.name} on periodic mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
-      const filter = await getFilters(exchange, symbolOptions.name);
-      symbolFilters[symbolOptions.name.split("/").join("")] = filter;
+      exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
+        exchange,
+        symbolOptions.name
+      );
+      symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
         if (exchangeOptions.orderbooks === undefined) {
           exchangeOptions.orderbooks = {};
@@ -163,6 +175,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     console.log(`Start running exchange ${exchangeOptions.name} on grid trading mode.`);
     if (Array.isArray(exchangeOptions.symbols)) {
       for (const symbolOptions of exchangeOptions.symbols) {
+        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
+          exchange,
+          symbolOptions.name
+        );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if (exchangeOptions.orderbooks === undefined) {
@@ -215,7 +231,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
   }
 };
 
-const startBinance = async (exchangeOptions: ExchangeOptions) => {
+const startBinance = async (exchangeOptions: ExchangeOptions): Promise<Exchange> => {
   const exchange = new Binance();
   exchange.options({
     APIKEY: exchangeOptions.key,
@@ -227,7 +243,7 @@ const startBinance = async (exchangeOptions: ExchangeOptions) => {
   return exchange;
 };
 
-const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
+const startNonKYC = async (exchangeOptions: ExchangeOptions): Promise<Exchange> => {
   if (exchangeOptions.forceStopOnDisconnect === undefined) {
     exchangeOptions.forceStopOnDisconnect = false;
   }
@@ -237,13 +253,13 @@ const startNonKYC = async (exchangeOptions: ExchangeOptions) => {
   return exchange;
 };
 
-const startMexc = async (exchangeOptions: ExchangeOptions) => {
+const startMexc = async (exchangeOptions: ExchangeOptions): Promise<Exchange> => {
   if (exchangeOptions.forceStopOnDisconnect === undefined) {
     exchangeOptions.forceStopOnDisconnect = false;
   }
   const exchange = new Mexc({ key: exchangeOptions.key, secret: exchangeOptions.secret });
   await exchange.waitConnect();
-  console.log("Started NonKYC");
+  console.log("Started Mexc");
   return exchange;
 };
 
@@ -266,10 +282,16 @@ const hoobot = async () => {
         exchangeOptions.socket = await startBinance(exchangeOptions);
         exchanges.push(exchangeOptions.socket);
       } else if (exchangeOptions.name === "nonkyc") {
-        exchangeOptions.socket = await startNonKYC(exchangeOptions);
-        exchangeOptions.socket.on("try-to-reconnect", () => {
-          runExchange(exchangeOptions.socket, discord, exchangeOptions);
-        });
+        const setupNonKYC = async (exchangeOptions: any, discord: any): Promise<Exchange> => {
+          exchangeOptions.socket = await startNonKYC(exchangeOptions);
+          exchangeOptions.socket.on("try-to-reconnect", async () => {
+            console.log("Trying to reconnect");
+            exchangeOptions.socket = await setupNonKYC(exchangeOptions, discord);
+            runExchange(exchangeOptions.socket, discord, exchangeOptions);
+          });
+          return exchangeOptions.socket;
+        };
+        exchangeOptions.socket = await setupNonKYC(exchangeOptions, discord);
         exchanges.push(exchangeOptions.socket);
       } else if (exchangeOptions.name === "mexc") {
         exchangeOptions.socket = await startMexc(exchangeOptions);
@@ -433,20 +455,50 @@ const simulate = async () => {
   }
 };
 
+const stopHoobot = () => {
+  console.log("Exchanges to shut down %d", options.exchanges.length);
+  for (var i = 0; i < options.exchanges.length; i++) {
+    console.log(
+      "Symbols to to shut down %d in the exchange %s",
+      options.exchanges[i].symbols.length,
+      options.exchanges[i].name
+    );
+    if (options.exchanges[i].name == "nonkyc" || options.exchanges[i].name == "xeggex") {
+      for (var x = 0; x < options.exchanges[i].symbols.length; x++) {
+        for (var y = 0; y < options.exchanges[i].symbols[x].timeframes.length; y++) {
+          (options.exchanges[i].socket as NonKYC).unsubscribeCandles(
+            options.exchanges[i].symbols[x].name,
+            getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y])
+          );
+        }
+        (options.exchanges[i].socket as NonKYC).unsubscribeOrderbook(options.exchanges[i].symbols[x].name);
+        (options.exchanges[i].socket as NonKYC).unsubscribeTrades(options.exchanges[i].symbols[x].name);
+        (options.exchanges[i].socket as NonKYC).unsubscribeTicker(options.exchanges[i].symbols[x].name);
+        (options.exchanges[i].socket as NonKYC).unsubscribeReports();
+      }
+      (options.exchanges[i].socket as NonKYC).disconnect();
+    } else if (options.exchanges[i].name == "binance") {
+      (options.exchanges[i].socket as Binance).websockets.terminate();
+    }
+  }
+};
+
 const webServer = async () => {
   const app = express();
   const PORT = process.env.PORT || 5656;
 
   app.use(express.json());
+
   // Serve static files from the build/frontend directory
-  let frontendPath = "./build/Frontend";
+  let frontendPath = path.join(__dirname, "Frontend");
   if (process.env.DEVELOPMENT === "true") {
-    frontendPath = "./src/Frontend";
+    frontendPath = path.join(__dirname, "Frontend");
   }
   app.use(express.static(frontendPath));
 
   // Serve index.html on root route
   app.get("/", (_, res) => {
+    console.log(frontendPath);
     res.sendFile(frontendPath + "/index.html");
   });
 
@@ -468,32 +520,8 @@ const webServer = async () => {
   app.get("/stop", (_, res) => {
     console.log("Got command to stop hoobot");
     if (options.running == true) {
-      console.log("Exchanges to shut down %d", options.exchanges.length);
-      for (var i = 0; i < options.exchanges.length; i++) {
-        console.log(
-          "Symbols to to shut down %d in the exchange %s",
-          options.exchanges[i].symbols.length,
-          options.exchanges[i].name
-        );
-        if (options.exchanges[i].name == "nonkyc" || options.exchanges[i].name == "xeggex") {
-          for (var x = 0; x < options.exchanges[i].symbols.length; x++) {
-            for (var y = 0; y < options.exchanges[i].symbols[x].timeframes.length; y++) {
-              options.exchanges[i].socket.unsubscribeCandles(
-                options.exchanges[i].symbols[x].name,
-                getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y])
-              );
-            }
-            options.exchanges[i].socket.unsubscribeOrderbook(options.exchanges[i].symbols[x].name);
-            options.exchanges[i].socket.unsubscribeTrades(options.exchanges[i].symbols[x].name);
-            options.exchanges[i].socket.unsubscribeTicker(options.exchanges[i].symbols[x].name);
-            options.exchanges[i].socket.unsubscribeReports();
-          }
-          options.exchanges[i].socket.disconnect();
-        } else if (options.exchanges[i].name == "binance") {
-          options.exchanges[i].socket.websockets.terminate();
-        }
-      }
       options.running = false;
+      stopHoobot();
       res.json({ message: "Hoobot stopping" });
     } else {
       res.json({ message: "Couldn't stop hoobot, since it was not running." });
@@ -511,9 +539,15 @@ const webServer = async () => {
   });
 
   app.post("/settings", (req, res) => {
+    if (options.running == true) {
+      stopHoobot();
+    }
     const optionsFilename = "./settings/hoobot-options.json";
     req.body.running = options.running;
     fs.writeFileSync(optionsFilename, JSON.stringify(req.body, null, 2));
+    if (options.running == true) {
+      hoobot();
+    }
     res.json({ message: "Options updated successfully", options });
   });
 

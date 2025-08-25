@@ -381,7 +381,7 @@ export class NonKYC extends EventEmitter {
 
   public waitConnect = () => {
     return new Promise((resolve, _reject) => {
-      this.emitter.on("logged", () => {
+      this.on("logged", () => {
         this.loopPing();
         resolve(true);
       });
@@ -392,13 +392,12 @@ export class NonKYC extends EventEmitter {
     this.ws = new WebSocket(this.WebSocketURL);
 
     this.ws.on("open", async () => {
-      console.log("WebSocket connected.");
+      console.log("NonKYC WebSocket connected.");
       if (this.key && this.secret) {
         try {
           const result = await this.login();
           if (result === true) {
-            this.emitter.emit("logged");
-          } else {
+            this.emit("logged");
           }
         } catch (error) {
           console.error("Login failed during connection:", error);
@@ -422,7 +421,7 @@ export class NonKYC extends EventEmitter {
       }
     });
 
-    this.ws.on("error", (err) => {
+    this.ws.on("error", (err: Error) => {
       console.error("WebSocket encountered an error:", err);
       this.emitter.emit("websocket_error", err);
     });
@@ -461,9 +460,21 @@ export class NonKYC extends EventEmitter {
 
   private send = (message: any): void => {
     if (this.ws) {
-      if (this.ws!.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify(message));
-        this.logged = true;
+      if (this.ws.readyState === WebSocket.OPEN) {
+        try {
+          this.ws.send(JSON.stringify(message), (err?: Error) => {
+            if (err) {
+              console.error("WebSocket send error:", err);
+              // You could trigger a reconnect or custom error handling here
+            } else {
+              this.logged = true;
+            }
+          });
+        } catch (error) {
+          console.error("Unexpected WebSocket send exception:", error);
+        }
+      } else {
+        console.warn("WebSocket is not open. ReadyState:", this.ws.readyState);
       }
     } else {
       throw new Error("WebSocket connection not established");
@@ -635,6 +646,7 @@ export class NonKYC extends EventEmitter {
       id: this.reportsCallbackId,
     });
     this.callbackMap.add(this.reportsCallbackId, callback);
+    console.log("Subscribed Reports");
     await unBlock();
   };
 
@@ -758,6 +770,7 @@ export class NonKYC extends EventEmitter {
   };
 
   public subscribeTicker = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
+    console.log("Subscribing Ticker");
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
     let symbols = this.symbolCallbacks.length + 1;
@@ -805,6 +818,7 @@ export class NonKYC extends EventEmitter {
   };
 
   public subscribeOrderbook = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
+    console.log("Subscribing Orderbook");
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
     let symbols = this.symbolCallbacks.length + 1;
@@ -851,6 +865,7 @@ export class NonKYC extends EventEmitter {
   };
 
   public subscribeTrades = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
+    console.log("Subscribing Trades");
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
     let symbols = this.symbolCallbacks.length + 1;
@@ -902,6 +917,7 @@ export class NonKYC extends EventEmitter {
     callback: (response: NonKYCResponse) => void,
     limit: number = 100
   ) => {
+    console.log("Subscribing Candles");
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
     let symbols = this.symbolCallbacks.length + 1;
@@ -951,67 +967,102 @@ export class NonKYC extends EventEmitter {
 
   private apiCall = async (route: string, method: string, body: object, params: urlParams): Promise<any> => {
     let uri = `${this.ApiURL}${route}`;
-    try {
-      if (params && Object.keys(params).length > 0) {
-        const queryString = new URLSearchParams();
-        for (const [key, value] of Object.entries(params)) {
-          if (Array.isArray(value)) {
-            value.forEach((v) => queryString.append(key, v));
-          } else {
-            queryString.append(key, value);
-          }
-        }
-        uri += `?${queryString.toString()}`;
-        const url = new URL(uri);
-        const response = await fetch(url, {
-          method: method,
-          headers: {
-            Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
-            "Content-Type": "application/json",
-          },
-        });
-        // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-        if (!response.ok) {
-          logToFile("./logs/error.log", JSON.stringify(response.status));
-          throw new Error(`API call failed with status ${response.status}`);
-        }
-        return await response.json();
-      } else {
-        const url = new URL(uri);
-        if (method === "GET" || method === "HEAD") {
-          const response = await fetch(url, {
-            method: method,
-            headers: {
-              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
-              "Content-Type": "application/json",
-            },
-          });
-          // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-          if (!response.ok) {
-            logToFile("./logs/error.log", JSON.stringify(response.status));
-            throw new Error(`API call failed with status ${response.status}`);
-          }
-          return await response.json();
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second delay between retries
+
+    if (params && Object.keys(params).length > 0) {
+      const queryString = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryString.append(key, v));
         } else {
-          const response = await fetch(url, {
-            method: method,
-            headers: {
-              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-          });
-          // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
-          if (!response.ok) {
-            logToFile("./logs/error.log", JSON.stringify(response.status));
-            throw new Error(`API call failed with status ${response.status}`);
-          }
-          return await response.json();
+          queryString.append(key, value);
         }
       }
-    } catch (error) {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(`Error fetching ${uri} :`, error);
+      uri += `?${queryString.toString()}`;
+      const url = new URL(uri);
+
+      let attempts = 0;
+      while (attempts < maxRetries) {
+        try {
+          const response = await fetch(url, {
+            method: method,
+            headers: {
+              Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+              "Content-Type": "application/json",
+            },
+          });
+          // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+          if (!response.ok) {
+            logToFile("./logs/error.log", JSON.stringify(response.status));
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          logToFile("./logs/error.log", error.message); // Log network or other errors
+          attempts++;
+          if (attempts >= maxRetries) {
+            throw error;
+          }
+          await delay(retryDelay);
+        }
+      }
+    } else {
+      const url = new URL(uri);
+      if (method === "GET" || method === "HEAD") {
+        let attempts = 0;
+        while (attempts < maxRetries) {
+          try {
+            const response = await fetch(url, {
+              method: method,
+              headers: {
+                Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+                "Content-Type": "application/json",
+              },
+            });
+            // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+            if (!response.ok) {
+              logToFile("./logs/error.log", JSON.stringify(response.status));
+              throw new Error(`API call failed with status ${response.status}`);
+            }
+            return await response.json();
+          } catch (error) {
+            logToFile("./logs/error.log", error.message); // Log network or other errors
+            attempts++;
+            if (attempts >= maxRetries) {
+              throw error;
+            }
+            await delay(retryDelay);
+          }
+        }
+      } else {
+        let attempts = 0;
+        while (attempts < maxRetries) {
+          try {
+            const response = await fetch(url, {
+              method: method,
+              headers: {
+                Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+            });
+            // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
+            if (!response.ok) {
+              logToFile("./logs/error.log", JSON.stringify(response.status));
+              throw new Error(`API call failed with status ${response.status}`);
+            }
+            return await response.json();
+          } catch (error) {
+            logToFile("./logs/error.log", error.message); // Log network or other errors
+            attempts++;
+            if (attempts >= maxRetries) {
+              throw error;
+            }
+            await delay(retryDelay);
+          }
+        }
+      }
     }
   };
 

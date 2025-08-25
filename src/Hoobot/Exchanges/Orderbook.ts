@@ -50,7 +50,6 @@ export const getOrderbook = async (exchange: Exchange, symbol: string): Promise<
     orderbook = await exchange.depth(symbol.split("/").join(""));
   } else if (isNonKYC(exchange)) {
     const fetchedOrderbook = await exchange.getOrderbook(symbol, "50");
-    console.log(fetchedOrderbook);
     if (fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
       for (const ask of fetchedOrderbook.asks) {
         orderbook.asks[ask[0]] = parseFloat(ask[1]);
@@ -80,7 +79,7 @@ export const listenForOrderbooks = async (
       };
       returnCallback(symbol, book);
     });
-  } else if (isNonKYC(exchange) || isNonKYC(exchange)) {
+  } else if (isNonKYC(exchange)) {
     const book: Orderbook = {
       asks: {},
       bids: {},

@@ -220,23 +220,23 @@ export const checkProfitSignals = async (
     }
     if (lastTrade.isBuyer) {
       // selling
-      const orderBookBids = Object.keys(orderBook.bids)
-        .map((price) => parseFloat(price))
-        .sort((a, b) => b - a);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
-        parseFloat(lastTrade.qty),
-        parseFloat(lastTrade.price),
-        orderBookBids[0]
-      );
-    } else if (!lastTrade.isBuyer) {
-      // buying
       const orderBookAsks = Object.keys(orderBook.asks)
         .map((price) => parseFloat(price))
         .sort((a, b) => a - b);
-      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+      unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
         orderBookAsks[0]
+      );
+    } else if (!lastTrade.isBuyer) {
+      // buying
+      const orderBookBids = Object.keys(orderBook.bids)
+        .map((price) => parseFloat(price))
+        .sort((a, b) => b - a);
+      unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+        parseFloat(lastTrade.qty),
+        parseFloat(lastTrade.price),
+        orderBookBids[0]
       );
     }
     if (lastTrade.isBuyer && next === "BUY") {

@@ -149,63 +149,19 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         currentMacdLine !== undefined &&
         currentSignalLine !== undefined
       ) {
-        const isPrevHistogramPositive = prevHistogram > 0;
-        const isPrevHistogramNegative = prevHistogram < 0;
         var isHistogramPositive = currentHistogram > 0;
         var isHistogramNegative = currentHistogram < 0;
-        const isNPCrossover = isPrevHistogramNegative && isHistogramPositive; // BUY
-        const isPNCrossover = isPrevHistogramPositive && isHistogramNegative; // SELL
         const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
         const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
-        const isPrevMacdLineAboveSignalLine = prevMacdLine > prevSignalLine;
-        const isPrevMacdLineBelowSignalLine = prevMacdLine < prevSignalLine;
-        const isSignalLineAboveHistogram = currentSignalLine > currentHistogram;
-        const isSignalLineBelowHistogram = currentSignalLine < currentHistogram;
         var isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
         var isMacdLineBelowHistogram = currentMacdLine < currentHistogram;
-        if (symbolOptions.indicators.macd.skipHistogram === true) {
-          isMacdLineAboveHistogram = true;
-          isMacdLineBelowHistogram = true;
-          isHistogramNegative = true;
-          isHistogramPositive = true;
-        }
-        const isMACDSignalCrossover = isMacdLineAboveSignalLine && isPrevMacdLineBelowSignalLine; // BUY
-        const isSignalMACDCrossover = isMacdLineBelowSignalLine && isPrevMacdLineAboveSignalLine; // SELL
         if (symbolOptions.indicators.macd.weight == undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
-        if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
-          symbolOptions.indicators.macd.weight *= 1.5;
-          check = "BUY";
-        } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight *= 1.5;
-          check = "SELL";
-        } else if (isNPCrossover && isMacdLineAboveSignalLine && isSignalLineBelowHistogram) {
-          symbolOptions.indicators.macd.weight *= 1.1;
-          check = "BUY";
-        } else if (isPNCrossover && isMacdLineBelowSignalLine && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight *= 1.1;
-          check = "SELL";
-        } else if (isMACDSignalCrossover && isNPCrossover && isSignalLineBelowHistogram) {
+        if (isMacdLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramPositive) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "BUY";
-        } else if (isSignalMACDCrossover && isPNCrossover && isMacdLineAboveHistogram) {
-          symbolOptions.indicators.macd.weight *= 1;
-          check = "SELL";
-        } else if (
-          isMacdLineAboveSignalLine &&
-          isHistogramPositive &&
-          isMacdLineBelowHistogram &&
-          isSignalLineBelowHistogram
-        ) {
-          symbolOptions.indicators.macd.weight *= 1;
-          check = "BUY";
-        } else if (
-          isMacdLineBelowSignalLine &&
-          isHistogramNegative &&
-          isMacdLineAboveHistogram &&
-          isSignalLineAboveHistogram
-        ) {
+        } else if (isMacdLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramNegative) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         }
