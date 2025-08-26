@@ -539,12 +539,14 @@ const webServer = async () => {
   });
 
   app.post("/settings", (req, res) => {
-    if (options.running == true) {
+    var running = options.running;
+    if (running == true) {
       stopHoobot();
     }
     const optionsFilename = "./settings/hoobot-options.json";
-    req.body.running = options.running;
     fs.writeFileSync(optionsFilename, JSON.stringify(req.body, null, 2));
+    options = req.body;
+    options.running = running;
     if (options.running == true) {
       hoobot();
     }
