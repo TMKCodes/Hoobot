@@ -179,6 +179,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           exchange,
           symbolOptions.name
         );
+        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
+          exchange,
+          symbolOptions.name
+        );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if (exchangeOptions.orderbooks === undefined) {

@@ -22,6 +22,7 @@ cp ./package.json ../hoobot-latest/package.json
 cp ./publish.sh ../hoobot-latest/publish.sh
 cp ./README.md ../hoobot-latest/README.md
 cp ./windows.bat ../hoobot-latest/windows.bat
+cp -r ./build ../hoobot-latest/build
 cd ..
 # Zip the publish folder for delivery
 zip -r hoobot-latest.zip hoobot-latest/
