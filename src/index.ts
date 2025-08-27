@@ -267,6 +267,10 @@ const startMexc = async (exchangeOptions: ExchangeOptions): Promise<Exchange> =>
   return exchange;
 };
 
+const delay = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
 const hoobot = async () => {
   try {
     if (await checkLicenseValidity(options.license)) {
@@ -282,10 +286,7 @@ const hoobot = async () => {
       discord = await loginDiscord(exchanges, options);
     }
     for (var exchangeOptions of options.exchanges) {
-      if (exchangeOptions.name === "binance") {
-        exchangeOptions.socket = await startBinance(exchangeOptions);
-        exchanges.push(exchangeOptions.socket);
-      } else if (exchangeOptions.name === "nonkyc") {
+      if (exchangeOptions.name === "nonkyc") {
         const setupNonKYC = async (exchangeOptions: any, discord: any): Promise<Exchange> => {
           exchangeOptions.socket = await startNonKYC(exchangeOptions);
           exchangeOptions.socket.on("try-to-reconnect", async () => {
@@ -297,12 +298,18 @@ const hoobot = async () => {
         };
         exchangeOptions.socket = await setupNonKYC(exchangeOptions, discord);
         exchanges.push(exchangeOptions.socket);
-      } else if (exchangeOptions.name === "mexc") {
+      }
+      if (exchangeOptions.name === "mexc") {
         exchangeOptions.socket = await startMexc(exchangeOptions);
+        exchanges.push(exchangeOptions.socket);
+      }
+      if (exchangeOptions.name === "binance") {
+        exchangeOptions.socket = await startBinance(exchangeOptions);
         exchanges.push(exchangeOptions.socket);
       }
       if (exchangeOptions.socket !== undefined) {
         runExchange(exchangeOptions.socket, discord, exchangeOptions);
+        await delay(1000);
       }
     }
   } catch (error) {

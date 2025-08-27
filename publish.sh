@@ -19,7 +19,6 @@ cp ./hoobot.service ../hoobot-latest/hoobot.service
 cp ./linux.sh ../hoobot-latest/linux.sh
 cp ./osx.sh ../hoobot-latest/osx.sh
 cp ./package.json ../hoobot-latest/package.json
-cp ./publish.sh ../hoobot-latest/publish.sh
 cp ./README.md ../hoobot-latest/README.md
 cp ./windows.bat ../hoobot-latest/windows.bat
 cp -r ./build ../hoobot-latest/build

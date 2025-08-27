@@ -40,18 +40,16 @@ export const checkBalanceSignals = (
   let check = "HOLD";
   if (exchangeOptions.balances !== undefined) {
     if (exchangeOptions.balances[symbol.split("/")[0]] == undefined) {
-      consoleLogger.push("Trades", {
-        error: `Can not find balance for ${symbol.split("/")[0]}.`,
-        next: `Most likely need manual trade as starting point for the symbol.`,
-      });
-      return check;
+      exchangeOptions.balances[symbol.split("/")[0]] = {
+        crypto: 0,
+        usdt: 0,
+      };
     }
     if (exchangeOptions.balances[symbol.split("/")[1]] == undefined) {
-      consoleLogger.push("Trades", {
-        error: `Can not find balance for ${symbol.split("/")[1]}.`,
-        next: `Most likely need manual trade as starting point for the symbol.`,
-      });
-      return check;
+      exchangeOptions.balances[symbol.split("/")[1]] = {
+        crypto: 0,
+        usdt: 0,
+      };
     }
     const baseBalance = exchangeOptions.balances[symbol.split("/")[0]].crypto;
     const quoteBalance = exchangeOptions.balances[symbol.split("/")[1]].crypto;
