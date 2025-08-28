@@ -25,28 +25,12 @@
 * the use of this software.
 * ===================================================================== */
 
-import playSound from 'play-sound';
-import { logToFile } from './LogToFile';
+import playSound from "play-sound";
 
-export const play = (file: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    try {
-      if (process.env.PLAY_AUDIO !== "false") {
-        const player = playSound({});
-        player.play(file, { mplayer: ['-volume', 100] }, (error: any) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    } catch (error) {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(JSON.stringify(error, null, 4));
-      reject();
-    }
-  });
-}
+export const play = async (file: string) => {
+  if (process.env.PLAY_AUDIO === "false") return;
+
+  const player = playSound({});
+  player.play(file, { mplayer: ["-volume", 100] }, () => {});
+  
+};
