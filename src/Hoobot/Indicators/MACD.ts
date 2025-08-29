@@ -153,15 +153,17 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         var isHistogramNegative = currentHistogram < 0;
         const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
         const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
-        var isMacdLineAboveHistogram = currentMacdLine > currentHistogram;
-        var isMacdLineBelowHistogram = currentMacdLine < currentHistogram;
+        var isMacdLinePositive = currentMacdLine > 0;
+        var isMacdLineNegative = currentMacdLine < 0;
+        const isSignalLinePositive = currentSignalLine > 0;
+        const isSignalLineNegative = currentSignalLine < 0;
         if (symbolOptions.indicators.macd.weight == undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
-        if (isMacdLineBelowHistogram && isMacdLineAboveSignalLine && isHistogramPositive) {
+        if (isMacdLineNegative && isSignalLineNegative && isMacdLineAboveSignalLine && isHistogramPositive) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "BUY";
-        } else if (isMacdLineAboveHistogram && isMacdLineBelowSignalLine && isHistogramNegative) {
+        } else if (isMacdLinePositive && isSignalLinePositive && isMacdLineBelowSignalLine && isHistogramNegative) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         }

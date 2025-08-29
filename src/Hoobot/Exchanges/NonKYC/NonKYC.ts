@@ -967,7 +967,7 @@ export class NonKYC extends EventEmitter {
 
   private apiCall = async (route: string, method: string, body: object, params: urlParams): Promise<any> => {
     let uri = `${this.ApiURL}${route}`;
-    const maxRetries = 3;
+    const maxRetries = 6;
     const retryDelay = 1000; // 1 second delay between retries
 
     if (params && Object.keys(params).length > 0) {
@@ -995,7 +995,6 @@ export class NonKYC extends EventEmitter {
           // logToFile("./logs/apicalls-NonKYC.log", `API CALL ${method}: ${url} ${JSON.stringify(body)}`);
           if (!response.ok) {
             logToFile("./logs/error.log", JSON.stringify(response.status));
-            throw new Error(`API call failed with status ${response.status}`);
           }
           return await response.json();
         } catch (error) {

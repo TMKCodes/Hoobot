@@ -555,9 +555,10 @@ const webServer = async () => {
       stopHoobot();
     }
     const optionsFilename = "./settings/hoobot-options.json";
-    fs.writeFileSync(optionsFilename, JSON.stringify(req.body, null, 2));
-    options = req.body;
-    options.running = running;
+    var newOptions = req.body;
+    newOptions.running = options.running;
+    fs.writeFileSync(optionsFilename, JSON.stringify(newOptions, null, 2));
+    options = newOptions;
     if (options.running == true) {
       hoobot();
     }
@@ -575,4 +576,8 @@ const webServer = async () => {
   return app;
 };
 
-webServer();
+if (process.env.NOWEBUI === "true") {
+  hoobot();
+} else {
+  webServer();
+}
