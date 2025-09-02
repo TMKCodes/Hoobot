@@ -474,7 +474,7 @@ const stopHoobot = () => {
       options.exchanges[i].symbols.length,
       options.exchanges[i].name
     );
-    if (options.exchanges[i].name == "nonkyc" || options.exchanges[i].name == "xeggex") {
+    if (options.exchanges[i].name == "nonkyc") {
       for (var x = 0; x < options.exchanges[i].symbols.length; x++) {
         for (var y = 0; y < options.exchanges[i].symbols[x].timeframes.length; y++) {
           (options.exchanges[i].socket as NonKYC).unsubscribeCandles(
@@ -497,6 +497,8 @@ const stopHoobot = () => {
 const webServer = async () => {
   const app = express();
   const PORT = process.env.PORT || 5656;
+
+  const optionsFilename = "./settings/hoobot-options.json";
 
   app.use(express.json());
 
@@ -521,6 +523,9 @@ const webServer = async () => {
   app.get("/run", (_, res) => {
     if (options.running != true) {
       options.running = true;
+        const optionsInFile = parseArgs();
+        optionsInFile.running = true;
+        fs.writeFileSync(optionsFilename, JSON.stringify(optionsInFile, null, 2));
       hoobot();
       res.json({ message: "Hoobot started" });
     } else {
@@ -532,6 +537,9 @@ const webServer = async () => {
     console.log("Got command to stop hoobot");
     if (options.running == true) {
       options.running = false;
+      const optionsInFile = parseArgs();
+      optionsInFile.running = false;
+      fs.writeFileSync(optionsFilename, JSON.stringify(optionsInFile, null, 2));
       stopHoobot();
       res.json({ message: "Hoobot stopping" });
     } else {
@@ -540,11 +548,8 @@ const webServer = async () => {
   });
 
   app.get("/settings", (_, res) => {
-    const optionsFilename = "./settings/hoobot-options.json";
     if (fs.existsSync(optionsFilename)) {
-      const optionsFile = fs.readFileSync(optionsFilename);
-      var optionsInFile = JSON.parse(optionsFile.toString("utf-8"));
-      optionsInFile.running = options.running;
+      const optionsInFile = parseArgs();
       res.json(optionsInFile);
     }
   });
@@ -579,5 +584,8 @@ const webServer = async () => {
 if (process.env.NOWEBUI === "true") {
   hoobot();
 } else {
+  if (options.running) {
+    hoobot();
+  }
   webServer();
 }
