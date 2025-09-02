@@ -69,7 +69,7 @@ export async function getLastCandlesticks(
         symbol.split("/").join(""),
         interval,
         (_error: any, ticks: any, symbol: string, interval: string) => {
-          if (ticks === undefined) {
+          if (ticks === undefined && !Array.isArray(ticks)) {
             resolve([]);
           }
           const parsedData: Candlestick[] = ticks.map((candle: string[]) => ({
