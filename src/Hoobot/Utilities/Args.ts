@@ -197,6 +197,18 @@ export interface SymbolOptions {
       length: number;
       weight?: number;
     };
+    adx?: {
+      enabled: boolean;
+      dilength: number;
+      adxSmoothing: number;
+      weight?: number;
+      plusDI?: {
+        length: number;
+      }
+      minusDI?: {
+        length: number;
+      }
+    };
     renko?: {
       enabled: boolean;
       weight: number;

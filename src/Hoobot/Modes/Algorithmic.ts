@@ -63,6 +63,7 @@ import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
 import { getOpenOrders, handleOpenOrder, handleOpenOrders } from "../Exchanges/Orders";
+import { adx, calculateADX, checkADXSignals, logADXSignals } from "../Indicators/ADX";
 
 export interface Indicators {
   trend: Trend;
@@ -74,6 +75,9 @@ export interface Indicators {
   };
   ema: {
     [time: string]: ema;
+  };
+  adx: {
+    [time: string]: adx;
   };
   macd: {
     [time: string]: macd;
@@ -189,6 +193,7 @@ export const tradeDirection = async (
       SMA: checkSMASignals(indicators.sma[timeframes[timeframeIndex]], symbolOptions),
       Renko: checkRenkoSignals(indicators.renko[timeframes[timeframeIndex]], symbolOptions),
       EMA: checkEMASignals(indicators.ema[timeframes[timeframeIndex]], symbolOptions),
+      ADX: checkADXSignals(indicators.adx[timeframes[timeframeIndex]], symbolOptions),
       MACD: checkMACDSignals(indicators.macd[timeframes[timeframeIndex]], symbolOptions),
       RSI: checkRSISignals(indicators.rsi[timeframes[timeframeIndex]], symbolOptions),
       StochasticOscillator: checkStochasticOscillatorSignals(
@@ -427,6 +432,14 @@ const subCalculateIndicators = (
       );
       logRSISignals(consoleLogger, indicators.rsi[timeframe]);
     }
+    if (symbolOptions.indicators.adx?.enabled) {
+      indicators.adx[timeframe] = calculateADX(
+        candlesticks,
+        symbolOptions.indicators.adx.dilength,
+        symbolOptions.indicators.adx.adxSmoothing
+      )
+      logADXSignals(consoleLogger, indicators.adx[timeframe]);
+    }
     if (symbolOptions.indicators.macd?.enabled) {
       indicators.macd[timeframe] = calculateMACD(
         candlesticks,
@@ -502,6 +515,7 @@ export const calculateIndicators = (
     avg: {},
     sma: {},
     ema: {},
+    adx: {},
     macd: {},
     rsi: {},
     atr: {},
