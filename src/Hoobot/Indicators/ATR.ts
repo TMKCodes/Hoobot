@@ -33,6 +33,9 @@ export const calculateATR = (candles: Candlestick[], period: number = 14, source
   if (period == 0) {
     period = 14;
   }
+  if (!candles || candles.length < period){
+    return []
+  }
   const atrValues: number[] = [];
   // Start at period to ensure i - 1 is within bounds
   for (let i = period - 1; i < candles.length; i++) {

@@ -7,7 +7,7 @@ if not "%NVM_HOME%"=="" (
 )
 
 REM Define the source URL
-set "sourceUrl=https://github.com/coreybutler/nvm-windows/releases/download/1.1.11/nvm-setup.exe"
+set "sourceUrl=https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe"
 
 REM Define the destination path to save the file using the USERPROFILE environment variable
 set "destinationPath=%USERPROFILE%\Downloads\nvm-setup.exe"
