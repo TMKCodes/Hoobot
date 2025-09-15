@@ -254,7 +254,7 @@ export const tradeDirection = async (
     directions[next] >= symbolOptions.agreement / 0.75
   ) {
     direction = next;
-  } else if (directions.HOLD >= symbolOptions.agreement) {
+  } else {
     direction = "HOLD";
   }
 
