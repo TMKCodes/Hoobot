@@ -36,15 +36,28 @@ export interface adx {
 }
 
 function wilderSmoothing(values: number[], period: number): number[] {
-  const smoothed: number[] = [];
+  if (values.length === 0 || period <= 0) return [];
+
+  const smoothed: number[] = new Array(values.length).fill(0);
+  if (values.length < period) {
+    // For short arrays, use simple average of available values
+    const initialSum = values.reduce((sum, val) => sum + val, 0);
+    smoothed[values.length - 1] = initialSum / values.length;
+    return smoothed;
+  }
+
+  // Calculate the initial sum for the first period
   let initialSum = 0;
   for (let i = 0; i < period; i++) {
     initialSum += values[i];
   }
-  smoothed[period - 1] = initialSum;
+  smoothed[period - 1] = initialSum / period;
+
+  // Apply Wilder's smoothing for subsequent values
   for (let i = period; i < values.length; i++) {
-    smoothed[i] = smoothed[i - 1] - smoothed[i - 1] / period + values[i];
+    smoothed[i] = (smoothed[i - 1] * (period - 1) + values[i]) / period;
   }
+
   return smoothed;
 }
 
@@ -52,13 +65,26 @@ export const calculateADX = (
   candles: Candlestick[],
   diLength = 14,
   adxSmoothing = 14
-): adx | undefined => {
-  if (candles.length <= diLength) return;
+): adx => {
+  if (diLength == 0) {
+    diLength = 14;
+  }
+  if (adxSmoothing == 0) {
+    adxSmoothing = 14;
+  }
+  if (!candles || candles.length < 2) {
+    return {
+      adx: [],
+      plusDI: [],
+      minusDI: [],
+    };
+  }
 
   const tr: number[] = [];
   const plusDM: number[] = [];
   const minusDM: number[] = [];
 
+  // Calculate True Range and Directional Movements
   for (let i = 1; i < candles.length; i++) {
     const highDiff = candles[i].high - candles[i - 1].high;
     const lowDiff = candles[i - 1].low - candles[i].low;
@@ -76,32 +102,54 @@ export const calculateADX = (
     minusDM.push(lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0);
   }
 
+  // Apply Wilder's smoothing
   const smoothedTR = wilderSmoothing(tr, diLength);
   const smoothedPlusDM = wilderSmoothing(plusDM, diLength);
   const smoothedMinusDM = wilderSmoothing(minusDM, diLength);
 
-  const plusDI: number[] = [];
-  const minusDI: number[] = [];
-  const dx: number[] = [];
+  if (smoothedTR.length === 0) {
+    return {
+      adx: [],
+      plusDI: [],
+      minusDI: [],
+    };
+  }
 
-  for (let i = diLength - 1; i < tr.length; i++) {
+  const plusDI: number[] = new Array(smoothedTR.length).fill(0);
+  const minusDI: number[] = new Array(smoothedTR.length).fill(0);
+  const dx: number[] = new Array(smoothedTR.length).fill(0);
+
+  // Calculate +DI, -DI, and DX
+  for (let i = 0; i < smoothedTR.length; i++) {
+    if (smoothedTR[i] === 0) {
+      plusDI[i] = 0;
+      minusDI[i] = 0;
+      dx[i] = 0;
+      continue;
+    }
+
     const pDI = (smoothedPlusDM[i] / smoothedTR[i]) * 100;
     const mDI = (smoothedMinusDM[i] / smoothedTR[i]) * 100;
-    plusDI.push(pDI);
-    minusDI.push(mDI);
-    dx.push((Math.abs(pDI - mDI) / (pDI + mDI)) * 100);
+
+    plusDI[i] = isNaN(pDI) ? 0 : pDI;
+    minusDI[i] = isNaN(mDI) ? 0 : mDI;
+    dx[i] = pDI + mDI === 0 ? 0 : (Math.abs(pDI - mDI) / (pDI + mDI)) * 100;
   }
 
-  // --- ADX smoothing (separate parameter) ---
-  const adx: number[] = [];
-  let firstADX = 0;
-  for (let i = 0; i < adxSmoothing; i++) {
-    firstADX += dx[i];
-  }
-  adx[adxSmoothing - 1] = firstADX / adxSmoothing;
+  // Calculate ADX
+  const adx: number[] = new Array(dx.length).fill(0);
+  if (dx.length >= 1) {
+    // Use available dx values for initial ADX
+    const initialLength = Math.min(dx.length, adxSmoothing);
+    let initialADX = 0;
+    for (let i = 0; i < initialLength; i++) {
+      initialADX += dx[i];
+    }
+    adx[initialLength - 1] = initialLength > 0 ? initialADX / initialLength : 0;
 
-  for (let i = adxSmoothing; i < dx.length; i++) {
-    adx[i] = (adx[i - 1] * (adxSmoothing - 1) + dx[i]) / adxSmoothing;
+    for (let i = initialLength; i < dx.length; i++) {
+      adx[i] = (adx[i - 1] * (adxSmoothing - 1) + dx[i]) / adxSmoothing;
+    }
   }
 
   return {
@@ -111,7 +159,12 @@ export const calculateADX = (
   };
 };
 
-export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx) => {
+export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx | undefined) => {
+  if (!adx || adx.adx.length < 2 || adx.plusDI.length < 2 || adx.minusDI.length < 2) {
+    consoleLogger.push("ADX", { error: "Insufficient data for ADX signals" });
+    return;
+  }
+
   const lastADX = adx.adx[adx.adx.length - 1];
   const lastPlusDI = adx.plusDI[adx.plusDI.length - 1];
   const lastMinusDI = adx.minusDI[adx.minusDI.length - 1];
@@ -134,30 +187,30 @@ export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx) => {
   }
 
   consoleLogger.push("ADX", {
-    adx: lastADX.toFixed(7),
-    plusDI: lastPlusDI.toFixed(7),
-    minusDI: lastMinusDI.toFixed(7),
-    signal: signal,
+    adx: lastADX,
+    plusDI: lastPlusDI,
+    minusDI: lastMinusDI,
+    signal,
   });
 };
 
-export const checkADXSignals = (adx: adx, symbolOptions: SymbolOptions) => {
-  let check = "SKIP";
-  if (symbolOptions.indicators?.adx?.enabled) {
-    check = "HOLD";
-    const lastADX = adx.adx[adx.adx.length - 1];
-    const lastPlusDI = adx.plusDI[adx.plusDI.length - 1];
-    const lastMinusDI = adx.minusDI[adx.minusDI.length - 1];
-
-    if (symbolOptions.indicators.adx.weight === undefined) {
-      symbolOptions.indicators.adx.weight = 1;
-    }
-
-    if (lastPlusDI > lastMinusDI && lastADX > 25) {
-      check = "BUY";
-    } else if (lastMinusDI > lastPlusDI && lastADX > 25) {
-      check = "SELL";
-    }
+export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptions): string => {
+  if (!adx || adx.adx.length < 1 || adx.plusDI.length < 1 || adx.minusDI.length < 1 || !symbolOptions.indicators?.adx?.enabled) {
+    return "SKIP";
   }
-  return check;
+
+  const lastADX = adx.adx[adx.adx.length - 1];
+  const lastPlusDI = adx.plusDI[adx.plusDI.length - 1];
+  const lastMinusDI = adx.minusDI[adx.minusDI.length - 1];
+
+  if (symbolOptions.indicators.adx.weight === undefined) {
+    symbolOptions.indicators.adx.weight = 1;
+  }
+
+  if (lastPlusDI > lastMinusDI && lastADX > 25) {
+    return "BUY";
+  } else if (lastMinusDI > lastPlusDI && lastADX > 25) {
+    return "SELL";
+  }
+  return "HOLD";
 };

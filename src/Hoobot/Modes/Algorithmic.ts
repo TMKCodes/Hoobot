@@ -177,6 +177,7 @@ export const tradeDirection = async (
   const weights: Weights = {
     SMAWeight: symbolOptions.indicators.sma?.weight!,
     EMAWeight: symbolOptions.indicators.ema?.weight!,
+    ADXWeight: symbolOptions.indicators.adx?.weight!,
     MACDWeight: symbolOptions.indicators.macd?.weight!,
     RSIWeight: symbolOptions.indicators.rsi?.weight!,
     StochasticOscillatorWeight: symbolOptions.indicators.so?.weight!,
@@ -217,7 +218,7 @@ export const tradeDirection = async (
     const keys = Object.keys(checks).filter((check) => checks[check] !== "SKIP");
     // console.log(`Keys: ${JSON.stringify(keys)}`);
     const keysLength = keys.length;
-    consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
+    // consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
     for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
       let weightedSum = 0;
       let totalWeight = 0;
@@ -242,9 +243,6 @@ export const tradeDirection = async (
       }
     }
   }
-  directions.BUY = Number(directions.BUY.toFixed(2));
-  directions.SELL = Number(directions.SELL.toFixed(2));
-  directions.HOLD = Number(directions.HOLD.toFixed(2));
   consoleLogger.push("Directions", directions);
   actions = actions.filter((action) => directions[action] !== undefined);
   if (directions[next] >= symbolOptions.agreement) {
@@ -408,11 +406,11 @@ export const placeTrade = async (
 
 const subCalculateIndicators = (
   candlesticks: Candlestick[],
-  indicators: any,
+  indicators: Indicators,
   timeframe: string,
   symbolOptions: SymbolOptions,
   consoleLogger: ConsoleLogger
-) => {
+) : Indicators => {
   if (symbolOptions.indicators !== undefined) {
     indicators.sma[timeframe] = calculateSMA(
       candlesticks,
@@ -501,6 +499,24 @@ const subCalculateIndicators = (
       logDMISignals(consoleLogger, indicators.dmi[timeframe]);
     }
     return indicators;
+  } else {
+    return {
+      trend: indicators.trend,
+      avg: {},
+      renko: {},
+      ema: {},
+      adx: {},
+      macd: {},
+      sma: {},
+      rsi: {},
+      atr: {},
+      obv: {},
+      cmf: {},
+      stochasticOscillator: {},
+      stochasticRSI: {},
+      bollingerBands: {},
+      dmi: {}
+    };
   }
 };
 

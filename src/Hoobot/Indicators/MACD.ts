@@ -97,9 +97,13 @@ export const calculateMACD = (
   longEMA: number,
   signalLength = 9,
   source: string
-) => {
+): macd => {
   if (candles.length < longEMA) {
-    return;
+    return {
+      macdLine: [],
+      signalLine: [],
+      histogram: []
+    };
   }
   let shortEMAs = calculateEMA(candles, shortEMA, source);
   let longEMAs = calculateEMA(candles, longEMA, source);
