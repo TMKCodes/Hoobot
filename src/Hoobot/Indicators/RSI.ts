@@ -137,11 +137,11 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
       const overboughtTreshold =
         symbolOptions.indicators.rsi.tresholds.overbought !== undefined
           ? symbolOptions.indicators.rsi.tresholds.overbought
-          : 80;
+          : 70;
       const oversoldTreshold =
         symbolOptions.indicators.rsi.tresholds.oversold !== undefined
           ? symbolOptions.indicators.rsi.tresholds.oversold
-          : 20;
+          : 30;
       for (let i = rsiValues.length - 1; i >= 0; i--) {
         const prevRsi = rsiValues[i];
         if (prevRsi > overboughtTreshold) {
