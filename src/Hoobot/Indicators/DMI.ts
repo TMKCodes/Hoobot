@@ -40,6 +40,13 @@ export const calculateDMI = (
   dmiLength: number = 14,     // Length for calculating +DI and -DI
   adxSmoothing: number = 14  // Period for smoothing the ADX
 ): DMI => {
+  if (!Array.isArray(candles) || candles?.length <= 0) {
+    return {
+      plusDI: [],
+      minusDI: [],
+      adx: []
+    }
+  }
   let plusDM: number[] = [];
   let minusDM: number[] = [];
   let tr: number[] = [];
@@ -129,9 +136,9 @@ export const logDMISignals = (
   }
 
   consoleLogger.push("DMI", {
-    plusDI: lastPlusDI.toFixed(2),
-    minusDI: lastMinusDI.toFixed(2),
-    adx: lastADX.toFixed(2),
+    plusDI: lastPlusDI,
+    minusDI: lastMinusDI,
+    adx: lastADX,
     signal: signal,
   });
 };

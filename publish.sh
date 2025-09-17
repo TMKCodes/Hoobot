@@ -2,8 +2,8 @@
 # Remove dependancies and make sure the publish directory and zip does not exist.
 rm -rf ../hoobot-latest/
 rm -rf ../hoobot-latest.zip
-rm -rf package-lock.json 
-rm -rf node_modules/
+# rm -rf package-lock.json 
+# rm -rf node_modules/
 # Install and build the project.
 npm install
 npm run build

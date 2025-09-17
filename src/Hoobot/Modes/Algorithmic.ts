@@ -148,13 +148,17 @@ export const tradeDirection = async (
   };
   let actions = ["BUY", "SELL", "HOLD"];
   let profit = "SKIP";
+  if (candlesticks[symbol.split("/").join("")][timeframes[0]] === undefined) {
+    console.log(`Cant find candles for symbol  ${symbol}`)
+    return ["HOLD", "HOLD"];
+  }
   const closePrice =
     candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1
+      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1
     ].close;
   const closeTime =
     candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]].length - 1
+      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1
     ].time;
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
@@ -360,7 +364,10 @@ export const placeTrade = async (
     symbolOptions,
     filter
   );
-  const handledOpenOrders = await handleOpenOrders(discord, exchange, symbol, orderBook, processOptions, symbolOptions);
+  var handledOpenOrders = true;
+  if (symbolOptions.currentOrder !== undefined) {
+    handledOpenOrders = await handleOpenOrders(discord, exchange, symbol, orderBook, processOptions, symbolOptions);
+  }
   // console.log(handledOpenOrders);
   if (handledOpenOrders) {
     if (direction === "SELL" && (profit === "SELL" || profit === "SKIP")) {
@@ -621,7 +628,9 @@ export const algorithmic = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ) => {
-  exchangeOptions.balances = await getCurrentBalances(exchange);
+  if (exchangeOptions.balances == undefined || exchangeOptions.balances[symbol.split("/").join("")] == undefined)  {
+    exchangeOptions.balances = await getCurrentBalances(exchange);
+  } 
   const startTime = Date.now();
   const filter = symbolFilters[symbol.split("/").join("")];
   if (candlesticks[symbol.split("/").join("")] === undefined) {
@@ -642,6 +651,9 @@ export const algorithmic = async (
   }
   if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
     consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
+    return false;
+  }
+  if (!Array.isArray(timeframe) || timeframe?.length === 0)  {
     return false;
   }
   const latestCandle =

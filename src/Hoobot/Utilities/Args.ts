@@ -125,6 +125,7 @@ export interface GridLevel {
 }
 
 export interface SymbolOptions {
+  currentOrder: Order | undefined;
   noPreviousTradeCheck: boolean;
   minimumTimeSinceLastTrade: number;
   name: string;

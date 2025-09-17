@@ -57,6 +57,9 @@ export const calculateRSI = (
   smoothing: number = 1,
   source: string = "close"
 ): number[] => {
+  if (!Array.isArray(candles) || candles?.length <= 0) {
+    return []
+  }
   if (length == 0) {
     length = 9;
   }

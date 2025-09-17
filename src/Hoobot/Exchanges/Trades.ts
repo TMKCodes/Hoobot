@@ -541,6 +541,7 @@ export const sell = async (
       msg += `Profit if trade fulfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += "```";
+      symbolOptions.currentOrder = order;
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       if (order.orderId !== undefined) {
         await delay(30000);
@@ -729,6 +730,8 @@ export const buy = async (
       msg += `Profit if trade fulfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += "```";
+
+      symbolOptions.currentOrder = order;
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
       if (order.orderId !== undefined) {
         await delay(30000);

@@ -36,12 +36,15 @@ export interface sma {
 }
 
 export const calculateSMA = (candles: Candlestick[], period: number = 9, source: string = "close"): number[] => {
+  if (candles?.length == 0) {
+    return [];
+  }
   if (period == 0) {
     period = 9;
   }
   const smaValues: number[] = [];
   let sum = 0;
-  for (let i = 0; i < candles.length; i++) {
+  for (let i = 0; i < candles?.length; i++) {
     sum += candles[i][source] as number;
     if (i >= period - 1) {
       const sma = sum / period;

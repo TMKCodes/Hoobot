@@ -98,7 +98,7 @@ export const calculateMACD = (
   signalLength = 9,
   source: string
 ): macd => {
-  if (candles.length < longEMA) {
+  if (candles?.length < longEMA) {
     return {
       macdLine: [],
       signalLine: [],

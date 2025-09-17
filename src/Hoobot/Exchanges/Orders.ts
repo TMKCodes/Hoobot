@@ -224,6 +224,7 @@ export const handleOpenOrders = async (
 ) => {
   var openOrders = await getOpenOrders(exchange, symbol);
   if (openOrders.length == 0) {
+    symbolOptions.currentOrder = undefined;
     return true;
   }
   for (var i = 0; i < openOrders.length; i++) {
@@ -239,6 +240,7 @@ export const handleOpenOrders = async (
         .split("/")
         .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
       sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+      symbolOptions.currentOrder = undefined;
       return true;
     } else {
       let unrealizedPNL = 0;
@@ -270,6 +272,7 @@ export const handleOpenOrders = async (
           .split("/")
           .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
         sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        symbolOptions.currentOrder = undefined;
         return true;
       }
     }
