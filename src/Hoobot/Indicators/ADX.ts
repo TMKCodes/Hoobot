@@ -207,9 +207,12 @@ export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptio
     symbolOptions.indicators.adx.weight = 1;
   }
 
-  if (lastPlusDI > lastMinusDI && lastADX > 25) {
+  if (lastADX > 25) {
+    return "BOTH";
+  }
+  if (lastPlusDI > lastMinusDI && lastADX > 20) {
     return "BUY";
-  } else if (lastMinusDI > lastPlusDI && lastADX > 25) {
+  } else if (lastMinusDI > lastPlusDI && lastADX > 20) {
     return "SELL";
   }
   return "HOLD";

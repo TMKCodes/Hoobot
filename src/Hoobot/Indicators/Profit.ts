@@ -168,9 +168,9 @@ export const calculateProfitSignals = async (
       check = "SELL";
     } else if (next === "BUY" && unrealizedPNL >= minProfitBuy) {
       check = "BUY";
-    } else if (next === "SELL" && minProfitSell == 0) {
+    } else if (next === "SELL" && symbolOptions.profit?.minimumSell == 0) {
       check = "SELL";
-    } else if (next === "BUY" && minProfitBuy == 0) {
+    } else if (next === "BUY" && symbolOptions.profit?.minimumBuy == 0) {
       check = "BUY"
     }
   }

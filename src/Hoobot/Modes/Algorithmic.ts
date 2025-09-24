@@ -222,7 +222,7 @@ export const tradeDirection = async (
     const keys = Object.keys(checks).filter((check) => checks[check] !== "SKIP");
     // console.log(`Keys: ${JSON.stringify(keys)}`);
     const keysLength = keys.length;
-    // consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
+    consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
     for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
       let weightedSum = 0;
       let totalWeight = 0;
@@ -233,6 +233,8 @@ export const tradeDirection = async (
         // console.log(`weights[${`${keys[keysIndex]}Weight`}] = ${weight}`);
         const signal = checks[keys[keysIndex]];
         if (signal === actions[actionsIndex]) {
+          weightedSum += weight;
+        } else if (signal === "BOTH" && (actions[actionsIndex] === "SELL"  || actions[actionsIndex] === "BUY")) {
           weightedSum += weight;
         }
         totalWeight += weight;
