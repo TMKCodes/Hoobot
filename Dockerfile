@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:24-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Install build dependencies for node-gyp (required for zlib-sync)
 RUN apk add --no-cache python3 make g++ py3-pip
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build:production
 
 # Stage 2: Create the runtime image
-FROM node:24-alpine
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
