@@ -1723,7 +1723,7 @@
           });
           console.log(JSON.stringify(config, null, 2));
           $.ajax({
-            url: "http://localhost:5656/settings",
+            url: "/settings",
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify(config, null, 2),
@@ -1740,7 +1740,7 @@
 
         $("#run").on("click", () => {
           $.ajax({
-            url: "http://localhost:5656/run",
+            url: "/run",
             method: "GET",
             dataType: "json",
             success: function (response) {
@@ -1759,7 +1759,7 @@
 
         $("#stop").on("click", () => {
           $.ajax({
-            url: "http://localhost:5656/stop",
+            url: "/stop",
             method: "GET",
             dataType: "json",
             success: function (response) {
@@ -1779,7 +1779,7 @@
         // Function to load settings from server
         $("document").ready(() => {
           $.ajax({
-            url: "http://localhost:5656/settings",
+            url: "/settings",
             method: "GET",
             dataType: "json",
             success: function (settings) {
