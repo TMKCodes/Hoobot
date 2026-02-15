@@ -410,9 +410,9 @@ export class NonKYC extends EventEmitter {
         clearTimeout(this.pingTimeout);
         clearTimeout(this.keepAlive);
         console.log(`WebSocket closed with code ${code}.`);
-        if (code === 1006) {
-          console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
-          delay(1000);
+        if (code === 1006 || code === 1001 || code === 1008 || code === 1011) {
+          console.log(`WebSocket closed with code ${code}. Attempting to reconnect...`);
+          await delay(1000);
           this.emit("try-to-reconnect");
         }
       } else {
@@ -484,7 +484,7 @@ export class NonKYC extends EventEmitter {
   private onMessage = (event: WebSocket.MessageEvent): void => {
     if (!this.ws) {
       console.error("WebSocket connection not established");
-      throw new Error("WebSocket connection not established");
+      return;
     }
     const response: NonKYCResponse = JSON.parse(event.data.toString("utf-8"));
     if (response.error) {
@@ -494,18 +494,20 @@ export class NonKYC extends EventEmitter {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
       let callbacks = this.symbolCallbacks.filter(
-        (scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join(""),
+        (scb) => scb.symbol.split("/").join("") === response.params?.symbol?.split("/").join(""),
       )[0];
-      if (response.method === "ticker") {
-        this.callbackMap.call(callbacks.tickerCallbackId, response);
-      } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
-        this.callbackMap.call(callbacks.orderbookCallbackId, response);
-      } else if (response.method === "snapshotTrades" || response.method === "updateTrades") {
-        this.callbackMap.call(callbacks.tradesCallbackId, response);
-      } else if (response.method === "snapshotCandles" || response.method === "updateCandles") {
-        this.callbackMap.call(callbacks.candlesCallbackId, response);
-      } else {
-        this.callbackMap.call(this.reportsCallbackId, response);
+      if (callbacks) {
+        if (response.method === "ticker") {
+          this.callbackMap.call(callbacks.tickerCallbackId, response);
+        } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
+          this.callbackMap.call(callbacks.orderbookCallbackId, response);
+        } else if (response.method === "snapshotTrades" || response.method === "updateTrades") {
+          this.callbackMap.call(callbacks.tradesCallbackId, response);
+        } else if (response.method === "snapshotCandles" || response.method === "updateCandles") {
+          this.callbackMap.call(callbacks.candlesCallbackId, response);
+        } else {
+          this.callbackMap.call(this.reportsCallbackId, response);
+        }
       }
     }
   };
