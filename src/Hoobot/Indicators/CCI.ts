@@ -104,12 +104,16 @@ export const checkCCISignals = (cci: number[], symbolOptions: SymbolOptions): st
       // BUY: CCI crosses above oversold threshold from below, or CCI < oversold and rising
       // SELL: CCI crosses below overbought threshold from above, or CCI > overbought and falling
 
-      if ((currentCCI > oversoldThreshold && previousCCI <= oversoldThreshold) ||
-          (currentCCI < oversoldThreshold && currentCCI > previousCCI)) {
+      if (
+        (currentCCI > oversoldThreshold && previousCCI <= oversoldThreshold) ||
+        (currentCCI < oversoldThreshold && currentCCI > previousCCI)
+      ) {
         symbolOptions.indicators.cci.weight = 1;
         check = "BUY";
-      } else if ((currentCCI < overboughtThreshold && previousCCI >= overboughtThreshold) ||
-                 (currentCCI > overboughtThreshold && currentCCI < previousCCI)) {
+      } else if (
+        (currentCCI < overboughtThreshold && previousCCI >= overboughtThreshold) ||
+        (currentCCI > overboughtThreshold && currentCCI < previousCCI)
+      ) {
         symbolOptions.indicators.cci.weight = 1;
         check = "SELL";
       }

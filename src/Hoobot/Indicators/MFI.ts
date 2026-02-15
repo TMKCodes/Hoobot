@@ -65,14 +65,14 @@ export const calculateMFI = (candles: Candlestick[], period: number = 14): numbe
   for (let i = period - 1; i < moneyFlows.length; i++) {
     const slice = moneyFlows.slice(i - period + 1, i + 1);
 
-    const positiveFlow = slice.filter(flow => flow > 0).reduce((sum, flow) => sum + flow, 0);
-    const negativeFlow = Math.abs(slice.filter(flow => flow < 0).reduce((sum, flow) => sum + flow, 0));
+    const positiveFlow = slice.filter((flow) => flow > 0).reduce((sum, flow) => sum + flow, 0);
+    const negativeFlow = Math.abs(slice.filter((flow) => flow < 0).reduce((sum, flow) => sum + flow, 0));
 
     if (negativeFlow === 0) {
       mfi.push(100); // All positive flow
     } else {
       const moneyFlowRatio = positiveFlow / negativeFlow;
-      const mfiValue = 100 - (100 / (1 + moneyFlowRatio));
+      const mfiValue = 100 - 100 / (1 + moneyFlowRatio);
       mfi.push(mfiValue);
     }
   }
@@ -118,12 +118,16 @@ export const checkMFISignals = (mfi: number[], symbolOptions: SymbolOptions): st
       // BUY: MFI crosses above oversold threshold from below, or MFI < oversold and rising
       // SELL: MFI crosses below overbought threshold from above, or MFI > overbought and falling
 
-      if ((currentMFI > oversoldThreshold && previousMFI <= oversoldThreshold) ||
-          (currentMFI < oversoldThreshold && currentMFI > previousMFI)) {
+      if (
+        (currentMFI > oversoldThreshold && previousMFI <= oversoldThreshold) ||
+        (currentMFI < oversoldThreshold && currentMFI > previousMFI)
+      ) {
         symbolOptions.indicators.mfi.weight = 1;
         check = "BUY";
-      } else if ((currentMFI < overboughtThreshold && previousMFI >= overboughtThreshold) ||
-                 (currentMFI > overboughtThreshold && currentMFI < previousMFI)) {
+      } else if (
+        (currentMFI < overboughtThreshold && previousMFI >= overboughtThreshold) ||
+        (currentMFI > overboughtThreshold && currentMFI < previousMFI)
+      ) {
         symbolOptions.indicators.mfi.weight = 1;
         check = "SELL";
       }

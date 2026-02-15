@@ -64,6 +64,16 @@ import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
 import { getOpenOrders, handleOpenOrder, handleOpenOrders } from "../Exchanges/Orders";
 import { adx, calculateADX, checkADXSignals, logADXSignals } from "../Indicators/ADX";
+import { calculateWilliamsR, checkWilliamsRSignals, logWilliamsRSignals } from "../Indicators/WilliamsR";
+import { calculateCCI, checkCCISignals, logCCISignals } from "../Indicators/CCI";
+import { calculateMFI, checkMFISignals, logMFISignals } from "../Indicators/MFI";
+import {
+  calculateChaikinOscillator,
+  checkChaikinOscillatorSignals,
+  logChaikinOscillatorSignals,
+} from "../Indicators/ChaikinOscillator";
+import { calculateAroon, checkAroonSignals, logAroonSignals, AroonResult } from "../Indicators/Aroon";
+import { calculateForceIndex, checkForceIndexSignals, logForceIndexSignals } from "../Indicators/ForceIndex";
 
 export interface Indicators {
   trend: Trend;
@@ -108,6 +118,24 @@ export interface Indicators {
   };
   dmi: {
     [time: string]: DMI;
+  };
+  williamsR: {
+    [time: string]: number[];
+  };
+  cci: {
+    [time: string]: number[];
+  };
+  mfi: {
+    [time: string]: number[];
+  };
+  chaikinOscillator: {
+    [time: string]: number[];
+  };
+  aroon: {
+    [time: string]: AroonResult;
+  };
+  forceIndex: {
+    [time: string]: number[];
   };
   [key: string]: {};
 }
@@ -191,6 +219,12 @@ export const tradeDirection = async (
     CMFWeight: symbolOptions.indicators.cmf?.weight!,
     RenkoWeight: symbolOptions.indicators.renko?.weight!,
     DMIWeight: symbolOptions.indicators.dmi?.weight!,
+    WilliamsRWeight: symbolOptions.indicators.williamsR?.weight!,
+    CCIWeight: symbolOptions.indicators.cci?.weight!,
+    MFIWeight: symbolOptions.indicators.mfi?.weight!,
+    ChaikinOscillatorWeight: symbolOptions.indicators.chaikin?.weight!,
+    AroonWeight: symbolOptions.indicators.aroon?.weight!,
+    ForceIndexWeight: symbolOptions.indicators.forceIndex?.weight!,
   };
   // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
@@ -218,6 +252,15 @@ export const tradeDirection = async (
       ),
       CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], symbolOptions),
       DMI: checkDMISignals(indicators.dmi[timeframes[timeframeIndex]], symbolOptions),
+      WilliamsR: checkWilliamsRSignals(indicators.williamsR[timeframes[timeframeIndex]], symbolOptions),
+      CCI: checkCCISignals(indicators.cci[timeframes[timeframeIndex]], symbolOptions),
+      MFI: checkMFISignals(indicators.mfi[timeframes[timeframeIndex]], symbolOptions),
+      ChaikinOscillator: checkChaikinOscillatorSignals(
+        indicators.chaikinOscillator[timeframes[timeframeIndex]],
+        symbolOptions,
+      ),
+      Aroon: checkAroonSignals(indicators.aroon[timeframes[timeframeIndex]], symbolOptions),
+      ForceIndex: checkForceIndexSignals(indicators.forceIndex[timeframes[timeframeIndex]], symbolOptions),
     };
     const keys = Object.keys(checks).filter((check) => checks[check] !== "SKIP");
     // console.log(`Keys: ${JSON.stringify(keys)}`);
@@ -507,6 +550,34 @@ const subCalculateIndicators = (
       );
       logDMISignals(consoleLogger, indicators.dmi[timeframe]);
     }
+    if (symbolOptions.indicators.williamsR?.enabled) {
+      indicators.williamsR[timeframe] = calculateWilliamsR(candlesticks, symbolOptions.indicators.williamsR.period);
+      logWilliamsRSignals(consoleLogger, indicators.williamsR[timeframe]);
+    }
+    if (symbolOptions.indicators.cci?.enabled) {
+      indicators.cci[timeframe] = calculateCCI(candlesticks, symbolOptions.indicators.cci.period);
+      logCCISignals(consoleLogger, indicators.cci[timeframe]);
+    }
+    if (symbolOptions.indicators.mfi?.enabled) {
+      indicators.mfi[timeframe] = calculateMFI(candlesticks, symbolOptions.indicators.mfi.period);
+      logMFISignals(consoleLogger, indicators.mfi[timeframe]);
+    }
+    if (symbolOptions.indicators.chaikin?.enabled) {
+      indicators.chaikinOscillator[timeframe] = calculateChaikinOscillator(
+        candlesticks,
+        symbolOptions.indicators.chaikin.fastPeriod,
+        symbolOptions.indicators.chaikin.slowPeriod,
+      );
+      logChaikinOscillatorSignals(consoleLogger, indicators.chaikinOscillator[timeframe]);
+    }
+    if (symbolOptions.indicators.aroon?.enabled) {
+      indicators.aroon[timeframe] = calculateAroon(candlesticks, symbolOptions.indicators.aroon.period);
+      logAroonSignals(consoleLogger, indicators.aroon[timeframe]);
+    }
+    if (symbolOptions.indicators.forceIndex?.enabled) {
+      indicators.forceIndex[timeframe] = calculateForceIndex(candlesticks, symbolOptions.indicators.forceIndex.period);
+      logForceIndexSignals(consoleLogger, indicators.forceIndex[timeframe]);
+    }
     return indicators;
   } else {
     return {
@@ -525,6 +596,12 @@ const subCalculateIndicators = (
       stochasticRSI: {},
       bollingerBands: {},
       dmi: {},
+      williamsR: {},
+      cci: {},
+      mfi: {},
+      chaikinOscillator: {},
+      aroon: {},
+      forceIndex: {},
     };
   }
 };
@@ -551,6 +628,12 @@ export const calculateIndicators = (
     cmf: {},
     dmi: {},
     renko: {},
+    williamsR: {},
+    cci: {},
+    mfi: {},
+    chaikinOscillator: {},
+    aroon: {},
+    forceIndex: {},
   };
   if (
     symbolOptions.trend?.enabled &&

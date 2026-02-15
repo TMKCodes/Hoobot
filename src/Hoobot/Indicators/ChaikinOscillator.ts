@@ -30,7 +30,11 @@ import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateEMA } from "./EMA";
 
-export const calculateChaikinOscillator = (candles: Candlestick[], fastPeriod: number = 3, slowPeriod: number = 10): number[] => {
+export const calculateChaikinOscillator = (
+  candles: Candlestick[],
+  fastPeriod: number = 3,
+  slowPeriod: number = 10,
+): number[] => {
   if (fastPeriod === 0) {
     fastPeriod = 3;
   }
@@ -54,7 +58,7 @@ export const calculateChaikinOscillator = (candles: Candlestick[], fastPeriod: n
       continue;
     }
 
-    const moneyFlowMultiplier = ((candle.close - candle.low) - (candle.high - candle.close)) / range;
+    const moneyFlowMultiplier = (candle.close - candle.low - (candle.high - candle.close)) / range;
     const moneyFlowVolume = moneyFlowMultiplier * candle.volume;
 
     cumulativeADL += moneyFlowVolume;
@@ -63,15 +67,15 @@ export const calculateChaikinOscillator = (candles: Candlestick[], fastPeriod: n
 
   // Calculate EMAs of ADL
   const fastEMA = calculateEMA(
-    adl.map(value => ({ close: value }) as Candlestick),
+    adl.map((value) => ({ close: value }) as Candlestick),
     fastPeriod,
-    "close"
+    "close",
   );
 
   const slowEMA = calculateEMA(
-    adl.map(value => ({ close: value }) as Candlestick),
+    adl.map((value) => ({ close: value }) as Candlestick),
     slowPeriod,
-    "close"
+    "close",
   );
 
   // Calculate Chaikin Oscillator (fast EMA - slow EMA)

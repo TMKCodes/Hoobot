@@ -43,7 +43,7 @@ export const calculateAroon = (candles: Candlestick[], period: number = 14): Aro
     return {
       aroonUp: [],
       aroonDown: [],
-      aroonOscillator: []
+      aroonOscillator: [],
     };
   }
 
@@ -86,7 +86,7 @@ export const calculateAroon = (candles: Candlestick[], period: number = 14): Aro
   return {
     aroonUp,
     aroonDown,
-    aroonOscillator
+    aroonOscillator,
   };
 };
 

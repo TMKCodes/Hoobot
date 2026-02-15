@@ -41,8 +41,8 @@ export const calculateWilliamsR = (candles: Candlestick[], period: number = 14):
 
   for (let i = period - 1; i < candles.length; i++) {
     const slice = candles.slice(i - period + 1, i + 1);
-    const highestHigh = Math.max(...slice.map(candle => candle.high));
-    const lowestLow = Math.min(...slice.map(candle => candle.low));
+    const highestHigh = Math.max(...slice.map((candle) => candle.high));
+    const lowestLow = Math.min(...slice.map((candle) => candle.low));
     const currentClose = candles[i].close;
 
     if (highestHigh === lowestLow) {
@@ -94,12 +94,16 @@ export const checkWilliamsRSignals = (williamsR: number[], symbolOptions: Symbol
       // BUY: %R crosses above oversold threshold from below, or %R < oversold and rising
       // SELL: %R crosses below overbought threshold from above, or %R > overbought and falling
 
-      if ((currentWR > oversoldThreshold && previousWR <= oversoldThreshold) ||
-          (currentWR < oversoldThreshold && currentWR > previousWR)) {
+      if (
+        (currentWR > oversoldThreshold && previousWR <= oversoldThreshold) ||
+        (currentWR < oversoldThreshold && currentWR > previousWR)
+      ) {
         symbolOptions.indicators.williamsR.weight = 1;
         check = "BUY";
-      } else if ((currentWR < overboughtThreshold && previousWR >= overboughtThreshold) ||
-                 (currentWR > overboughtThreshold && currentWR < previousWR)) {
+      } else if (
+        (currentWR < overboughtThreshold && previousWR >= overboughtThreshold) ||
+        (currentWR > overboughtThreshold && currentWR < previousWR)
+      ) {
         symbolOptions.indicators.williamsR.weight = 1;
         check = "SELL";
       }

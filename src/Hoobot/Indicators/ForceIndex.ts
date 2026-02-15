@@ -49,9 +49,9 @@ export const calculateForceIndex = (candles: Candlestick[], period: number = 13)
 
   // Apply EMA smoothing
   const smoothedForceIndex = calculateEMA(
-    forceIndex.map(value => ({ close: value }) as Candlestick),
+    forceIndex.map((value) => ({ close: value }) as Candlestick),
     period,
-    "close"
+    "close",
   );
 
   return smoothedForceIndex;
