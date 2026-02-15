@@ -485,7 +485,7 @@ export const sell = async (
     consoleLogger.push("error", "Too low quantity to sell. Minimum 1.1 Quote.");
     return false;
   }
-  if (process.env.DEBUG == "true") {
+  if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
       `TRADEDATA SELL ${orderBookAsks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
@@ -674,7 +674,7 @@ export const buy = async (
     consoleLogger.push("error", "Too low quantity to buy. Minimum 1.1 Quote.");
     return false;
   }
-  if (process.env.DEBUG == "true") {
+  if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
       `TRADEDATA BUY ${orderBookBids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,

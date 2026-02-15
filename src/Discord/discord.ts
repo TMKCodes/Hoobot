@@ -103,7 +103,7 @@ export const loginDiscord = async (exchanges: Exchange[], options: ConfigOptions
         try {
           if (interaction.isChatInputCommand()) {
             commands.forEach(async (command) => {
-              if (command.name == interaction.commandName) {
+              if (command.name === interaction.commandName) {
                 return await command.execute(interaction, exchanges, options);
               }
             });
@@ -126,7 +126,7 @@ export const loginDiscord = async (exchanges: Exchange[], options: ConfigOptions
 
 // Function to send a message to a channel by its ID
 export const sendMessageToChannel = async (client: Client, channelId: string, message: string) => {
-  if (client == undefined) {
+  if (client === undefined) {
     console.error(`Error sending message to channel with ID ${channelId}, discord client was undefined.`);
     return;
   }

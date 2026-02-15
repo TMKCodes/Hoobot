@@ -443,7 +443,7 @@
                                       </div>
                                       <button type="button" class="btn btn-danger btn-sm mt-2 remove-symbol">Remove Symbol</button>
                                     </div>`);
-          if (exchangeMode == "algorithmic") {
+          if (exchangeMode === "algorithmic") {
             const $modeSymbolOptions = $(`
                             <div class="mb-3">
                                 <label class="form-label">Timeframes (comma-separated)</label>
@@ -1362,7 +1362,7 @@
                             </div>
                     `);
             $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
-          } else if (exchangeMode == "grid") {
+          } else if (exchangeMode === "grid") {
             $modeSymbolOptions = $(`
                             <div class="mb-3">
                                 <label class="form-label">Timeframes (comma-separated)</label>
@@ -1428,7 +1428,7 @@
                               </table>
                             </div>`);
             $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
-          } else if (exchangeMode == "hilow") {
+          } else if (exchangeMode === "hilow") {
             $modeSymbolOptions = $(`
                             <div class="mb-3">
                               <h5>Take Profit</h5>
@@ -1496,7 +1496,7 @@
                               </table>
                             </div>`);
             $symbolDiv.find(".symbol-mode-options").append($modeSymbolOptions);
-          } else if (exchangeMode == "periodic") {
+          } else if (exchangeMode === "periodic") {
             $modeSymbolOptions = $(`
                             <div class="mb-3">
                                 <label class="form-label">Direction</label>

@@ -177,7 +177,7 @@ const rebalanceGrid = async (
     return;
   }
 
-  if (symbolOptions.gridRebalance == false) {
+  if (symbolOptions.gridRebalance === false) {
     return;
   }
   // If we reach here, rebalancing is necessary
@@ -209,7 +209,7 @@ const manageGridOrders = async (
 ): Promise<boolean> => {
   let orderExecuted = false;
   for (var i = 0; i < grid.length; i++) {
-    if (grid[i].orderId.length > 0 && grid[i].executed == false) {
+    if (grid[i].orderId.length > 0 && grid[i].executed === false) {
       const orderExists = openOrders.some((order) => order.orderId === grid[i].orderId);
       if (!orderExists) {
         await delay(150);
@@ -330,7 +330,7 @@ export const gridTrading = async (
 
   const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
   if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
-    console.error(`${symbol}: timeframes[0] length == undefined`);
+    console.error(`${symbol}: timeframes[0] === undefined`);
     return false;
   }
 
