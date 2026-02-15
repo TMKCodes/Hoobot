@@ -105,7 +105,7 @@ export const placeOrder = async (
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
-      return {} as Order;
+      throw new Error("Failed to place buy order");
     }
   }
   return {} as Order;
