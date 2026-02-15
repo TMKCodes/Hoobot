@@ -37,10 +37,20 @@ export interface macd {
 }
 
 export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
+  if (macd.macdLine.length === 0 || macd.signalLine.length === 0 || macd.histogram.length === 0) return;
   const macdLine = macd.macdLine[macd.macdLine.length - 1];
   const signalLine = macd.signalLine[macd.signalLine.length - 1];
   const histogram = macd.histogram[macd.histogram.length - 1];
   if (macdLine !== undefined && signalLine !== undefined && histogram !== undefined) {
+    if (macd.macdLine.length < 2) {
+      consoleLogger.push("MACD", {
+        line: macdLine.toFixed(7),
+        signal: signalLine.toFixed(7),
+        histogram: histogram.toFixed(7),
+        signalText: "Neutral",
+      });
+      return;
+    }
     const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
     const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
     const prevHistogram = macd.histogram[macd.histogram.length - 2];

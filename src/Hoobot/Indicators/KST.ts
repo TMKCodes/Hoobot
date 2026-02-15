@@ -38,7 +38,7 @@ export const calculateROC = (candles: Candlestick[], period: number, source: str
       return ((value - prevValue) / prevValue) * 100;
     })
     .slice(period)
-    .map((roc) => ({ close: roc } as Candlestick));
+    .map((roc) => ({ close: roc }) as Candlestick);
 };
 
 export const calculateKST = (
@@ -52,7 +52,7 @@ export const calculateKST = (
   SmaLen3: number,
   SmaLen4: number,
   SigLen: number,
-  source: string = "close"
+  source: string = "close",
 ): { kst: number[]; signalLine: number[] } => {
   const smaRoc1 = calculateSMA(calculateROC(candles, RocLen1, source), SmaLen1, "close");
   const smaRoc2 = calculateSMA(calculateROC(candles, RocLen2, source), SmaLen2, "close");
@@ -66,7 +66,7 @@ export const calculateKST = (
   const signalLine = calculateSMA(
     [{ close: kst[0] } as Candlestick, ...(kst.map((k) => ({ close: k })) as Candlestick[])],
     SigLen,
-    "close"
+    "close",
   ).slice(1);
   return { kst, signalLine };
 };

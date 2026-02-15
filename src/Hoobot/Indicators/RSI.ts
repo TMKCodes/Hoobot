@@ -30,6 +30,7 @@ import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 
 export const logRSISignals = (consoleLogger: ConsoleLogger, rsi: number[]) => {
+  if (rsi.length === 0) return;
   let signal = "Neutral";
   if (rsi[rsi.length - 1] > 80) {
     signal = `Extremely Overbought`;

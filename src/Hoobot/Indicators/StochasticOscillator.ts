@@ -134,6 +134,7 @@ export const logStochasticOscillatorSignals = (
   consoleLogger: ConsoleLogger,
   stochasticOscillator: [number[], number[]],
 ) => {
+  if (stochasticOscillator[0].length === 0 || stochasticOscillator[1].length === 0) return;
   const lastKValue = stochasticOscillator[0][stochasticOscillator[0].length - 1];
   const lastDValue = stochasticOscillator[1][stochasticOscillator[1].length - 1];
   let signal = "Neutral";

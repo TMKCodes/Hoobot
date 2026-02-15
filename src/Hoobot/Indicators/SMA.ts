@@ -57,7 +57,15 @@ export const calculateSMA = (candles: Candlestick[], period: number = 9, source:
 };
 
 export const logSMASignals = (consoleLogger: ConsoleLogger, sma: number[]) => {
+  if (sma.length === 0) return;
   const currentSMA = sma[sma.length - 1];
+  if (sma.length < 2) {
+    consoleLogger.push("SMA", {
+      value: currentSMA.toFixed(7),
+      signal: "Neutral",
+    });
+    return;
+  }
   const prevSMA = sma[sma.length - 2];
   consoleLogger.push(`SMA Value`, currentSMA.toFixed(7));
   let signal = "Neutral";

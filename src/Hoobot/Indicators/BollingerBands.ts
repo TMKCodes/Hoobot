@@ -71,6 +71,7 @@ export const logBollingerBandsSignals = (
   candlesticks: Candlestick[],
   bollingerBands: [number[], number[], number[]],
 ) => {
+  if (candlesticks.length === 0 || bollingerBands[0].length === 0 || bollingerBands[1].length === 0 || bollingerBands[2].length === 0) return;
   const currentLow = candlesticks[candlesticks.length - 1].low;
   const currentHigh = candlesticks[candlesticks.length - 1].high;
   const currentUpperBand = bollingerBands[1][bollingerBands[1].length - 1];

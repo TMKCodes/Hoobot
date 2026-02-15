@@ -168,7 +168,7 @@ const rebalanceGrid = async (
 ): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
-  if (openOrders.length < symbolOptions.gridOrderSize * 2) {
+  if (openOrders.length < symbolOptions.gridLevels * 2) {
     return;
   }
   const existingGrid = buildGridFromExistingOrders(openOrders);
