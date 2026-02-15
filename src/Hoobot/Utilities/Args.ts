@@ -304,6 +304,49 @@ export interface SymbolOptions {
       adxSmoothing: number;
       weight?: number;
     };
+    williamsR?: {
+      enabled: boolean;
+      period: number;
+      thresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    cci?: {
+      enabled: boolean;
+      period: number;
+      thresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    mfi?: {
+      enabled: boolean;
+      period: number;
+      thresholds: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    chaikin?: {
+      enabled: boolean;
+      fastPeriod: number;
+      slowPeriod: number;
+      weight?: number;
+    };
+    aroon?: {
+      enabled: boolean;
+      period: number;
+      weight?: number;
+    };
+    forceIndex?: {
+      enabled: boolean;
+      period: number;
+      weight?: number;
+    };
     OpenAI?: {
       enabled: boolean;
       key: string;
