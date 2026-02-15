@@ -193,9 +193,9 @@ export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx | undefined
 export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptions): string => {
   if (
     !adx ||
-    adx.adx.length < 1 ||
-    adx.plusDI.length < 1 ||
-    adx.minusDI.length < 1 ||
+    adx.adx.length < 2 ||
+    adx.plusDI.length < 2 ||
+    adx.minusDI.length < 2 ||
     !symbolOptions.indicators?.adx?.enabled
   ) {
     return "SKIP";
@@ -204,18 +204,24 @@ export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptio
   const lastADX = adx.adx[adx.adx.length - 1];
   const lastPlusDI = adx.plusDI[adx.plusDI.length - 1];
   const lastMinusDI = adx.minusDI[adx.minusDI.length - 1];
+  const prevPlusDI = adx.plusDI[adx.plusDI.length - 2];
+  const prevMinusDI = adx.minusDI[adx.minusDI.length - 2];
 
-  if (symbolOptions.indicators.adx.weight === undefined) {
+  // ADX signals:
+  // BUY: +DI crosses above -DI and ADX > 20 (bullish trend start)
+  // SELL: -DI crosses above +DI and ADX > 20 (bearish trend start)
+  // HOLD: ADX < 20 (weak trend) or no crossover
+
+  const bullishCrossover = lastPlusDI > lastMinusDI && prevPlusDI <= prevMinusDI;
+  const bearishCrossover = lastMinusDI > lastPlusDI && prevMinusDI <= prevPlusDI;
+
+  if (bullishCrossover && lastADX > 20) {
     symbolOptions.indicators.adx.weight = 1;
-  }
-
-  if (lastADX > 25) {
-    return "BOTH";
-  }
-  if (lastPlusDI > lastMinusDI && lastADX > 20) {
     return "BUY";
-  } else if (lastMinusDI > lastPlusDI && lastADX > 20) {
+  } else if (bearishCrossover && lastADX > 20) {
+    symbolOptions.indicators.adx.weight = 1;
     return "SELL";
   }
+
   return "HOLD";
 };
