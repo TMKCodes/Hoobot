@@ -145,6 +145,9 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.macd && symbolOptions.indicators.macd.enabled) {
       check = "HOLD";
+      if (macd.histogram.length < 2 || macd.macdLine.length < 2 || macd.signalLine.length < 2) {
+        return check;
+      }
       const currentHistogram = macd.histogram[macd.histogram.length - 1];
       const prevHistogram = macd.histogram[macd.histogram.length - 2];
       const currentMacdLine = macd.macdLine[macd.macdLine.length - 1];

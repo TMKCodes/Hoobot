@@ -194,6 +194,9 @@ export const checkStochasticOscillatorSignals = (
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.so && symbolOptions.indicators.so.enabled) {
       check = "HOLD";
+      if (stochasticOscillator[0].length < 2 || stochasticOscillator[1].length < 2) {
+        return check;
+      }
       const K = stochasticOscillator[0][stochasticOscillator[0].length - 1];
       const prevK = stochasticOscillator[0][stochasticOscillator[0].length - 2];
       const D = stochasticOscillator[1][stochasticOscillator[1].length - 1];
@@ -235,6 +238,9 @@ export const checkStochasticRSISignals = (stochasticRSI: [number[], number[]], s
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.srsi && symbolOptions.indicators.srsi.enabled) {
       check = "HOLD";
+      if (stochasticRSI[0].length < 2 || stochasticRSI[1].length < 2) {
+        return check;
+      }
       const K = stochasticRSI[0][stochasticRSI[0].length - 1];
       const prevK = stochasticRSI[0][stochasticRSI[0].length - 2];
       const D = stochasticRSI[1][stochasticRSI[1].length - 1];

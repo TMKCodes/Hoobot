@@ -117,12 +117,15 @@ export const calculateRSI = (
         rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
       }
     } else if (smoothingType === "WMA" && smoothing > 1) {
-      for (let i = smoothing; i < rsArray.length; i++) {
+      for (let i = smoothing - 1; i < rsArray.length; i++) {
         let sum = 0;
+        let weightSum = 0;
         for (let j = 0; j < smoothing; j++) {
-          sum += rsArray[i - j];
+          const weight = j + 1; // weights: 1 for oldest, 2 for next, ..., smoothing for newest
+          sum += rsArray[i - j] * weight;
+          weightSum += weight;
         }
-        const weightedAverage = sum / ((smoothing * (smoothing + 1)) / 2);
+        const weightedAverage = sum / weightSum;
         rsArray[i] = weightedAverage;
       }
     }
