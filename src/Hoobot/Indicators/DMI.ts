@@ -97,13 +97,16 @@ export const calculateDMI = (
     const smoothedMinusDM = sumMinusDM;
 
     // +DI and -DI
-    plusDI.push((smoothedPlusDM / smoothedTR) * 100);
-    minusDI.push((smoothedMinusDM / smoothedTR) * 100);
+    const plusDIValue = smoothedTR === 0 ? 0 : (smoothedPlusDM / smoothedTR) * 100;
+    const minusDIValue = smoothedTR === 0 ? 0 : (smoothedMinusDM / smoothedTR) * 100;
+    plusDI.push(plusDIValue);
+    minusDI.push(minusDIValue);
   }
 
   // Calculate ADX (Average Directional Index)
   for (let i = dmiLength; i < plusDI.length; i++) {
-    const dx = (Math.abs(plusDI[i] - minusDI[i]) / (plusDI[i] + minusDI[i])) * 100;
+    const sumDI = plusDI[i] + minusDI[i];
+    const dx = sumDI === 0 ? 0 : (Math.abs(plusDI[i] - minusDI[i]) / sumDI) * 100;
     adx.push(dx);
   }
 
@@ -121,6 +124,10 @@ export const calculateDMI = (
 };
 
 export const logDMISignals = (consoleLogger: ConsoleLogger, dmi: DMI) => {
+  if (dmi.plusDI.length === 0 || dmi.minusDI.length === 0 || dmi.adx.length === 0) {
+    consoleLogger.push("DMI", { error: "Insufficient data for DMI signals" });
+    return;
+  }
   const lastPlusDI = dmi.plusDI[dmi.plusDI.length - 1];
   const lastMinusDI = dmi.minusDI[dmi.minusDI.length - 1];
   const lastADX = dmi.adx[dmi.adx.length - 1];
@@ -144,6 +151,9 @@ export const checkDMISignals = (dmi: DMI, symbolOptions: SymbolOptions): string 
   let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.dmi && symbolOptions.indicators.dmi.enabled) {
+      if (dmi.plusDI.length === 0 || dmi.minusDI.length === 0 || dmi.adx.length === 0) {
+        return check;
+      }
       const lastPlusDI = dmi.plusDI[dmi.plusDI.length - 1];
       const lastMinusDI = dmi.minusDI[dmi.minusDI.length - 1];
       const lastADX = dmi.adx[dmi.adx.length - 1];

@@ -54,6 +54,9 @@ export const calculateBrickSize = (atr: number[], symbolOptions: SymbolOptions) 
 };
 
 export const calculateRenko = (candlesticks: Candlestick[], brickSize: number): RenkoBrick[] => {
+  if (!candlesticks || candlesticks.length === 0) {
+    return [];
+  }
   const renko: RenkoBrick[] = [];
   let currentPrice = candlesticks[0].close;
   let currentOpen = candlesticks[0].open;
@@ -120,13 +123,17 @@ export const logRenkoSignals = (
   renkoData: RenkoBrick[],
   symbolOptions: SymbolOptions
 ) => {
+  if (renkoData.length === 0) {
+    consoleLogger.push("Renko", { error: "No Renko data available" });
+    return;
+  }
   const lastBrick = renkoData[renkoData.length - 1];
-  const prevBrick = renkoData[renkoData.length - 2];
+  const prevBrick = renkoData.length > 1 ? renkoData[renkoData.length - 2] : null;
   let signal = "";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.renko !== undefined) {
       if (symbolOptions.indicators.renko.enabled) {
-        if (prevBrick !== undefined) {
+        if (prevBrick !== null) {
           const isBullishCrossover = lastBrick?.color === "green" && prevBrick.color === "red";
           const isBearishCrossover = lastBrick?.color === "red" && prevBrick.color === "green";
           const isUpwardDirection = lastBrick.close > prevBrick.close;
@@ -163,6 +170,9 @@ export const checkRenkoSignals = (renkoData: RenkoBrick[], symbolOptions: Symbol
     if (symbolOptions.indicators.renko !== undefined) {
       if (symbolOptions.indicators.renko.enabled) {
         check = "HOLD";
+        if (renkoData.length < 2) {
+          return check;
+        }
         const lastBrick = renkoData[renkoData.length - 1];
         const prevBrick = renkoData[renkoData.length - 2];
         const isBullishCrossover = lastBrick?.color === "green" && prevBrick?.color === "red";

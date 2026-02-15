@@ -58,15 +58,16 @@ export const calculateKST = (
   const smaRoc2 = calculateSMA(calculateROC(candles, RocLen2, source), SmaLen2, "close");
   const smaRoc3 = calculateSMA(calculateROC(candles, RocLen3, source), SmaLen3, "close");
   const smaRoc4 = calculateSMA(calculateROC(candles, RocLen4, source), SmaLen4, "close");
+  const minLength = Math.min(smaRoc1.length, smaRoc2.length, smaRoc3.length, smaRoc4.length);
   let kst: number[] = [];
-  for (let i = 0; i < smaRoc1.length; i++) {
+  for (let i = 0; i < minLength; i++) {
     const kstValue = smaRoc1[i] * 1 + smaRoc2[i] * 2 + smaRoc3[i] * 3 + smaRoc4[i] * 4;
     kst.push(kstValue);
   }
   const signalLine = calculateSMA(
-    [{ close: kst[0] } as Candlestick, ...(kst.map((k) => ({ close: k })) as Candlestick[])],
+    kst.map((k) => ({ close: k }) as Candlestick),
     SigLen,
     "close",
-  ).slice(1);
+  );
   return { kst, signalLine };
 };

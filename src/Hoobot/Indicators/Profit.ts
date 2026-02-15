@@ -224,7 +224,7 @@ export const checkProfitSignals = async (
     }
     if (lastTrade.isBuyer) {
       // selling
-      const orderBookAsks = Object.keys(orderBook.asks)
+      const orderBookAsks = Object.keys(orderBook.asks || {})
         .map((price) => parseFloat(price))
         .sort((a, b) => a - b);
       const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(lastTrade.price);
@@ -235,7 +235,7 @@ export const checkProfitSignals = async (
       );
     } else if (!lastTrade.isBuyer) {
       // buying
-      const orderBookBids = Object.keys(orderBook.bids)
+      const orderBookBids = Object.keys(orderBook.bids || {})
         .map((price) => parseFloat(price))
         .sort((a, b) => b - a);
       const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(lastTrade.price);
