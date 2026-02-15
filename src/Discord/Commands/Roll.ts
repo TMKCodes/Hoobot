@@ -51,13 +51,22 @@ export default {
     let amount = interaction.options.getNumber('amount')
     const min = interaction.options.getNumber('min')
     const max = interaction.options.getNumber('max')
-    if(amount === 0) {
-      amount = 1
+    if (amount <= 0 || !Number.isInteger(amount)) {
+      await interaction.reply("Amount must be a positive integer.");
+      return;
+    }
+    if (min >= max || !Number.isInteger(min) || !Number.isInteger(max)) {
+      await interaction.reply("Min must be less than max, and both must be integers.");
+      return;
+    }
+    if (amount > 100) { // Prevent spam
+      await interaction.reply("Amount cannot exceed 100.");
+      return;
     }
     const rolls: number[] = [];
     for(let x = 0; x < amount; x++) {
       rolls.push(getRandomNumber(min, max))
     }
-    await interaction.reply(`You rolled: ${rolls.toString()}`);
+    await interaction.reply(`You rolled: ${rolls.join(', ')}`);
   }
 }

@@ -33,7 +33,7 @@ import { Exchange, getExchangeByName } from "../../Hoobot/Exchanges/Exchange";
 export default {
   builder: new SlashCommandBuilder()
     .setName("trades")
-    .setDescription("Replis with last 10 trades on symbol.")
+    .setDescription("Replies with last 10 trades on symbol.")
     .addStringOption((option) =>
       option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
     )

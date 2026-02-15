@@ -33,8 +33,8 @@ export const calculateATR = (candles: Candlestick[], period: number = 14, source
   if (period === 0) {
     period = 14;
   }
-  if (!candles || candles.length < period){
-    return []
+  if (!candles || candles.length < period) {
+    return [];
   }
   const atrValues: number[] = [];
   // Start at period to ensure i - 1 is within bounds
@@ -47,9 +47,9 @@ export const calculateATR = (candles: Candlestick[], period: number = 14, source
     atrValues.push(trueRange);
   }
   const atrSMA = calculateSMA(
-    atrValues.map((atr) => ({ close: atr } as Candlestick)),
+    atrValues.map((atr) => ({ close: atr }) as Candlestick),
     period,
-    source
+    source,
   );
   return atrSMA;
 };

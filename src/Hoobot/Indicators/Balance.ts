@@ -35,7 +35,7 @@ export const checkBalanceSignals = (
   symbol: string,
   closePrice: number,
   exchangeOptions: ExchangeOptions,
-  filter: Filter
+  filter: Filter,
 ) => {
   let check = "HOLD";
   if (exchangeOptions.balances !== undefined) {

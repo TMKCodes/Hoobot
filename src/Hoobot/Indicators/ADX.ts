@@ -61,11 +61,7 @@ function wilderSmoothing(values: number[], period: number): number[] {
   return smoothed;
 }
 
-export const calculateADX = (
-  candles: Candlestick[],
-  diLength = 14,
-  adxSmoothing = 14
-): adx => {
+export const calculateADX = (candles: Candlestick[], diLength = 14, adxSmoothing = 14): adx => {
   if (diLength === 0) {
     diLength = 14;
   }
@@ -93,7 +89,7 @@ export const calculateADX = (
     const currentTR = Math.max(
       candles[i].high - candles[i].low,
       Math.abs(candles[i].high - candles[i - 1].close),
-      Math.abs(candles[i].low - candles[i - 1].close)
+      Math.abs(candles[i].low - candles[i - 1].close),
     );
     tr.push(currentTR);
 
@@ -195,7 +191,13 @@ export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx | undefined
 };
 
 export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptions): string => {
-  if (!adx || adx.adx.length < 1 || adx.plusDI.length < 1 || adx.minusDI.length < 1 || !symbolOptions.indicators?.adx?.enabled) {
+  if (
+    !adx ||
+    adx.adx.length < 1 ||
+    adx.plusDI.length < 1 ||
+    adx.minusDI.length < 1 ||
+    !symbolOptions.indicators?.adx?.enabled
+  ) {
     return "SKIP";
   }
 

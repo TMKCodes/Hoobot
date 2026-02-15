@@ -1,29 +1,29 @@
 /* =====================================================================
-* Hoobot - Proprietary License
-* Copyright (c) 2023 Hoosat Oy. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are not permitted without prior written permission
-* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
-* software, in whole or in part, is strictly prohibited. All 
-* modifications in source or binary must be submitted to Hoosat Oy in source format.
-*
-* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-* The user of this software uses it at their own risk. Hoosat Oy shall
-* not be liable for any losses, damages, or liabilities arising from
-* the use of this software.
-* ===================================================================== */
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { SymbolOptions } from "../Utilities/Args";
@@ -36,16 +36,16 @@ export interface DMI {
 }
 
 export const calculateDMI = (
-  candles: Candlestick[], 
-  dmiLength: number = 14,     // Length for calculating +DI and -DI
-  adxSmoothing: number = 14  // Period for smoothing the ADX
+  candles: Candlestick[],
+  dmiLength: number = 14, // Length for calculating +DI and -DI
+  adxSmoothing: number = 14, // Period for smoothing the ADX
 ): DMI => {
   if (!Array.isArray(candles) || candles?.length <= 0) {
     return {
       plusDI: [],
       minusDI: [],
-      adx: []
-    }
+      adx: [],
+    };
   }
   let plusDM: number[] = [];
   let minusDM: number[] = [];
@@ -66,7 +66,7 @@ export const calculateDMI = (
     const trValue = Math.max(
       currCandle.high - currCandle.low,
       Math.abs(currCandle.high - prevCandle.close),
-      Math.abs(currCandle.low - prevCandle.close)
+      Math.abs(currCandle.low - prevCandle.close),
     );
     tr.push(trValue);
 
@@ -103,7 +103,7 @@ export const calculateDMI = (
 
   // Calculate ADX (Average Directional Index)
   for (let i = dmiLength; i < plusDI.length; i++) {
-    const dx = Math.abs(plusDI[i] - minusDI[i]) / (plusDI[i] + minusDI[i]) * 100;
+    const dx = (Math.abs(plusDI[i] - minusDI[i]) / (plusDI[i] + minusDI[i])) * 100;
     adx.push(dx);
   }
 
@@ -120,19 +120,16 @@ export const calculateDMI = (
   };
 };
 
-export const logDMISignals = (
-  consoleLogger: ConsoleLogger,
-  dmi: DMI
-) => {
+export const logDMISignals = (consoleLogger: ConsoleLogger, dmi: DMI) => {
   const lastPlusDI = dmi.plusDI[dmi.plusDI.length - 1];
   const lastMinusDI = dmi.minusDI[dmi.minusDI.length - 1];
   const lastADX = dmi.adx[dmi.adx.length - 1];
 
-  let signal = 'Neutral';
+  let signal = "Neutral";
   if (lastPlusDI > lastMinusDI) {
-    signal = 'Bullish';
+    signal = "Bullish";
   } else if (lastMinusDI > lastPlusDI) {
-    signal = 'Bearish';
+    signal = "Bearish";
   }
 
   consoleLogger.push("DMI", {
@@ -143,24 +140,21 @@ export const logDMISignals = (
   });
 };
 
-export const checkDMISignals = (
-  dmi: DMI,
-  symbolOptions: SymbolOptions
-): string => {
-  let check = 'SKIP';
+export const checkDMISignals = (dmi: DMI, symbolOptions: SymbolOptions): string => {
+  let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.dmi && symbolOptions.indicators.dmi.enabled) {
       const lastPlusDI = dmi.plusDI[dmi.plusDI.length - 1];
       const lastMinusDI = dmi.minusDI[dmi.minusDI.length - 1];
       const lastADX = dmi.adx[dmi.adx.length - 1];
       if (lastADX < 20) {
-        check = 'HOLD';
+        check = "HOLD";
       } else if (lastPlusDI > lastMinusDI) {
-        check = 'BUY';
+        check = "BUY";
       } else if (lastMinusDI > lastPlusDI) {
-        check = 'SELL';
+        check = "SELL";
       } else {
-        check = 'HOLD';
+        check = "HOLD";
       }
     }
   }

@@ -13,18 +13,18 @@ export default {
     .setName("pnl")
     .setDescription("Calculate PNL for a trade")
     .addStringOption((option) =>
-      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
+      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true),
     )
     .addStringOption((option) =>
-      option.setName("symbol").setDescription("The symbol to calculate PNL for").setRequired(true)
+      option.setName("symbol").setDescription("The symbol to calculate PNL for").setRequired(true),
     )
     .addStringOption((option) =>
-      option.setName("duration").setDescription("The duration for PNL (1D, 1W, 1M)").setRequired(true)
+      option.setName("duration").setDescription("The duration for PNL (1D, 1W, 1M)").setRequired(true),
     ),
   execute: async (
     interaction: { options: { getString: (arg0: string) => string }; reply: (arg0: string) => any },
     exchanges: Exchange[],
-    options: ConfigOptions
+    options: ConfigOptions,
   ) => {
     const exchangeName = interaction.options.getString("exchange");
     if (exchangeName !== null) {
@@ -84,7 +84,7 @@ export default {
 export const getHistoricalDataForDuration = async (
   exchange: Exchange,
   symbol: string,
-  duration: string
+  duration: string,
 ): Promise<Trade[]> => {
   const tradeHistory: Trade[] = await getTradeHistory(exchange, symbol);
   const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());

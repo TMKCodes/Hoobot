@@ -37,6 +37,9 @@ export default {
     reply: (arg0: string) => any; 
   }) => {
 		const member = interaction.options.getMember('target');
+		if (!member) {
+			return interaction.reply("Please specify a valid member to fake kick.");
+		}
 		return interaction.reply(`You wanted to kick: ${member.user.username}`);
   }
 }

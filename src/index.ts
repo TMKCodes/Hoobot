@@ -389,7 +389,7 @@ const simulate = async () => {
         crypto: symbolOptions.growingMax?.buy!,
         usdt: 0,
       };
-      startingBalance += symbolOptions.growingMax?.buy! * symbols.length;
+      startingBalance += symbolOptions.growingMax?.buy!;
       const filter = await getFilters(exchange, symbolOptions.name);
       symbolFilters[symbolOptions.name.split("/").join("")] = filter;
       const sanitizedStartTime = options.startTime.replace(/:/g, "-");
@@ -557,7 +557,7 @@ const webServer = async () => {
     }
     const optionsFilename = "./settings/hoobot-options.json";
     var newOptions = req.body;
-    newOptions.running = options.running;
+    newOptions.running = running;
     fs.writeFileSync(optionsFilename, JSON.stringify(newOptions, null, 2));
     options = newOptions;
     if (options.running === true) {

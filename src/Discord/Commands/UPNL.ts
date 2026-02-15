@@ -54,18 +54,28 @@ export default {
     if (exchangeName !== null) {
       const exchangeByName = getExchangeByName(exchangeName, exchanges, options);
       if (exchangeByName !== undefined) {
-        const symbol = interaction.options.getString("symbol").toUpperCase();
-        if (!symbol) {
+        const symbolStr = interaction.options.getString("symbol");
+        if (!symbolStr) {
           await interaction.reply("Please provide a valid symbol to check.");
           return;
         }
+        const symbol = symbolStr.toUpperCase();
         try {
           const tradeHistory: Trade[] = await getTradeHistory(exchangeByName, symbol);
+          if (tradeHistory.length === 0) {
+            await interaction.reply("No trade history found for this symbol.");
+            return;
+          }
           const exchangeOption = getExchangeOption(exchangeByName, options);
           const orderBook: Orderbook = exchangeOption.orderbooks[symbol.split("/").join("")];
           const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
           if (lastTrade.isBuyer === true) {
-            const currentHighestBidPrice = parseFloat(Object.keys(orderBook.bids).shift()!);
+            const bidKeys = Object.keys(orderBook.bids);
+            if (bidKeys.length === 0) {
+              await interaction.reply("No bid data available in orderbook.");
+              return;
+            }
+            const currentHighestBidPrice = parseFloat(bidKeys[0]);
             const pnl = calculateUnrealizedPNLPercentageForLong(
               parseFloat(lastTrade.qty),
               parseFloat(lastTrade.price),
@@ -74,13 +84,18 @@ export default {
             let msg = "```";
             msg += `Symbol ${lastTrade.symbol}.\r\n`;
             msg += `Previous BUY order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;
-            msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("FI-fi")}\r\n`;
+            msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("fi-FI")}\r\n`;
             msg += `The order amount in quote asset was ${lastTrade.qty}\r\n`;
             msg += `Unrealized PNL% at ${currentHighestBidPrice} price: ${pnl.toFixed(2)}%\r\n`;
             msg += "```";
             await interaction.reply(msg);
           } else {
-            const currentLowestAskPrice = parseFloat(Object.keys(orderBook.asks).shift()!);
+            const askKeys = Object.keys(orderBook.asks);
+            if (askKeys.length === 0) {
+              await interaction.reply("No ask data available in orderbook.");
+              return;
+            }
+            const currentLowestAskPrice = parseFloat(askKeys[0]);
             const pnl = calculateUnrealizedPNLPercentageForShort(
               parseFloat(lastTrade.qty),
               parseFloat(lastTrade.price),
@@ -89,9 +104,9 @@ export default {
             let msg = "```";
             msg += `Symbol ${lastTrade.symbol}.\r\n`;
             msg += `Previous SELL order at ${parseFloat(lastTrade.price).toFixed(2)} price\r\n`;
-            msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("FI-fi")}\r\n`;
+            msg += `The trade date was ${new Date(lastTrade.time).toLocaleString("fi-FI")}\r\n`;
             msg += `The order amount in quote asset was ${lastTrade.qty}\r\n`;
-            msg += `Unrealized PNL% at ${currentLowestAskPrice} price: ${pnl.toFixed(2)}%`;
+            msg += `Unrealized PNL% at ${currentLowestAskPrice} price: ${pnl.toFixed(2)}%\r\n`;
             msg += "```";
             await interaction.reply(msg);
           }

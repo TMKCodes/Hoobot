@@ -56,7 +56,7 @@ export const deployCommands = async (commands: RESTPostAPIChatInputApplicationCo
       Routes.applicationGuildCommands(options.discord.applicationId, options.discord.serverId),
       { body: commands }
     );
-    console.log(`Succesfully reloaded application (/) commands.`);
+    console.log(`Successfully reloaded application (/) commands.`);
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
     console.error(error);
