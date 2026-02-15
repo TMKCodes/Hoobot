@@ -160,12 +160,16 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
       // BUY: RSI crosses above oversold threshold from below, or RSI < oversold and rising
       // SELL: RSI crosses below overbought threshold from above, or RSI > overbought and falling
 
-      if ((currentRSI > oversoldThreshold && previousRSI <= oversoldThreshold) ||
-          (currentRSI < oversoldThreshold && currentRSI > previousRSI)) {
+      if (
+        (currentRSI > oversoldThreshold && previousRSI <= oversoldThreshold) ||
+        (currentRSI < oversoldThreshold && currentRSI > previousRSI)
+      ) {
         symbolOptions.indicators.rsi.weight = 1;
         check = "BUY";
-      } else if ((currentRSI < overboughtThreshold && previousRSI >= overboughtThreshold) ||
-                 (currentRSI > overboughtThreshold && currentRSI < previousRSI)) {
+      } else if (
+        (currentRSI < overboughtThreshold && previousRSI >= overboughtThreshold) ||
+        (currentRSI > overboughtThreshold && currentRSI < previousRSI)
+      ) {
         symbolOptions.indicators.rsi.weight = 1;
         check = "SELL";
       }

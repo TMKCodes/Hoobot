@@ -130,8 +130,12 @@ export const checkBollingerBandsSignals = (
     if (symbolOptions.indicators.bb !== undefined) {
       if (symbolOptions.indicators.bb.enabled) {
         check = "HOLD";
-        if (candlesticks.length < 2 || bollingerBands[0].length < 2 ||
-            bollingerBands[1].length < 2 || bollingerBands[2].length < 2) {
+        if (
+          candlesticks.length < 2 ||
+          bollingerBands[0].length < 2 ||
+          bollingerBands[1].length < 2 ||
+          bollingerBands[2].length < 2
+        ) {
           return check;
         }
 
