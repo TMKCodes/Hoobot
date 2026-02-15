@@ -405,17 +405,19 @@ export const getPreviousTrades = (
   for (let i = trades.length - 1; i >= 0; i--) {
     if (direction === "SELL" && trades[i].isBuyer) {
       previousTrade = trades[i];
-      for (let x = i; x >= 0; x--) {
+      for (let x = i - 1; x >= 0; x--) {
         if (!trades[x].isBuyer) {
           olderTrade = trades[x];
+          break;
         }
       }
       break;
     } else if (direction === "BUY" && !trades[i].isBuyer) {
       previousTrade = trades[i];
-      for (let x = i; x >= 0; x--) {
+      for (let x = i - 1; x >= 0; x--) {
         if (trades[x].isBuyer) {
           olderTrade = trades[x];
+          break;
         }
       }
       break;
@@ -574,7 +576,7 @@ const maxBuyAmount = (quoteQuantity: number, symbolOptions: SymbolOptions) => {
     if (symbolOptions.growingMax.buy === undefined) {
       return quoteQuantity;
     } else if (symbolOptions.growingMax.buy > 0) {
-      return (quoteQuantity = Math.min(quoteQuantity, symbolOptions.growingMax.buy));
+      return Math.min(quoteQuantity, symbolOptions.growingMax.buy);
     } else {
       return quoteQuantity;
     }
@@ -596,7 +598,7 @@ const maxSellAmount = (baseQuantity: number, symbolOptions: SymbolOptions) => {
     if (symbolOptions.growingMax.sell === undefined) {
       return baseQuantity;
     } else if (symbolOptions.growingMax.sell > 0) {
-      return (baseQuantity = Math.min(baseQuantity, symbolOptions.growingMax.sell));
+      return Math.min(baseQuantity, symbolOptions.growingMax.sell);
     } else {
       return baseQuantity;
     }
