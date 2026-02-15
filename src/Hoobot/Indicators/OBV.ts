@@ -101,31 +101,43 @@ export const checkOBVSignals = (candlesticks: Candlestick[], obv: number[], symb
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.obv && symbolOptions.indicators.obv.enabled) {
       check = "HOLD";
+      if (obv.length < 2 || candlesticks.length < 2) {
+        return check;
+      }
+
+      const obvPeriod = symbolOptions.indicators.obv.length || 20;
       const obvSMA = calculateSMA(
         obv.map((value) => ({ close: value }) as Candlestick),
-        50,
+        obvPeriod,
         "close",
       );
-      for (let i = 1; i < symbolOptions.indicators.obv.length + 1; i++) {
-        const currentOBV = obv[obv.length - i];
-        const prevOBV = obv[obv.length - (i + 1)];
-        const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
-        const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
-        const isBullishDivergence =
-          currentOBV > prevOBV &&
-          candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;
-        const isBearishDivergence =
-          currentOBV < prevOBV &&
-          candlesticks[candlesticks.length - i].close > candlesticks[candlesticks.length - (i + 1)].close;
-        if (isBullishCrossover) {
-          check = "BUY";
-        } else if (isBearishCrossover) {
-          check = "SELL";
-        } else if (isBullishDivergence) {
-          check = "BUY";
-        } else if (isBearishDivergence) {
-          check = "SELL";
-        }
+
+      if (obvSMA.length < 2) {
+        return check;
+      }
+
+      const currentOBV = obv[obv.length - 1];
+      const prevOBV = obv[obv.length - 2];
+      const currentSMA = obvSMA[obvSMA.length - 1];
+      const prevSMA = obvSMA[obvSMA.length - 2];
+      const currentPrice = candlesticks[candlesticks.length - 1].close;
+      const prevPrice = candlesticks[candlesticks.length - 2].close;
+
+      // OBV signals:
+      // BUY: OBV crosses above SMA (bullish momentum) or bullish divergence
+      // SELL: OBV crosses below SMA (bearish momentum) or bearish divergence
+
+      const bullishCrossover = currentOBV > currentSMA && prevOBV <= prevSMA;
+      const bearishCrossover = currentOBV < currentSMA && prevOBV >= prevSMA;
+      const bullishDivergence = currentOBV > prevOBV && currentPrice < prevPrice;
+      const bearishDivergence = currentOBV < prevOBV && currentPrice > prevPrice;
+
+      if (bullishCrossover || bullishDivergence) {
+        symbolOptions.indicators.obv.weight = 1;
+        check = "BUY";
+      } else if (bearishCrossover || bearishDivergence) {
+        symbolOptions.indicators.obv.weight = 1;
+        check = "SELL";
       }
     }
   }
