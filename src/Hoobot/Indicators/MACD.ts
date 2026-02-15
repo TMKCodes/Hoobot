@@ -160,21 +160,23 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         currentMacdLine !== undefined &&
         currentSignalLine !== undefined
       ) {
-        var isHistogramPositive = currentHistogram > 0;
-        var isHistogramNegative = currentHistogram < 0;
-        const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
-        const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
-        var isMacdLinePositive = currentMacdLine > 0;
-        var isMacdLineNegative = currentMacdLine < 0;
-        const isSignalLinePositive = currentSignalLine > 0;
-        const isSignalLineNegative = currentSignalLine < 0;
+        // Check for histogram momentum changes
+        const histogramRising = currentHistogram > prevHistogram;
+        const histogramFalling = currentHistogram < prevHistogram;
+        const histogramPositive = currentHistogram > 0;
+        const histogramNegative = currentHistogram < 0;
+
         if (symbolOptions.indicators.macd.weight === undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
-        if (isMacdLineNegative && isSignalLineNegative && isMacdLineAboveSignalLine && isHistogramPositive) {
+
+        // BUY when histogram is negative but starting to rise (bullish momentum)
+        if (histogramNegative && histogramRising) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "BUY";
-        } else if (isMacdLinePositive && isSignalLinePositive && isMacdLineBelowSignalLine && isHistogramNegative) {
+        }
+        // SELL when histogram is positive but starting to fall (bearish momentum)
+        else if (histogramPositive && histogramFalling) {
           symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         }
