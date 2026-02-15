@@ -55,7 +55,15 @@ export const calculateATR = (candles: Candlestick[], period: number = 14, source
 };
 
 export const logATRSignals = (consoleLogger: ConsoleLogger, atr: number[]) => {
+  if (atr.length === 0) return;
   const currentATR = atr[atr.length - 1];
+  if (atr.length < 2) {
+    consoleLogger.push("ATR", {
+      value: currentATR.toFixed(7),
+      signal: "Neutral",
+    });
+    return;
+  }
   const prevATR = atr[atr.length - 2];
   let signal = "Neutral";
   if (currentATR > prevATR) {

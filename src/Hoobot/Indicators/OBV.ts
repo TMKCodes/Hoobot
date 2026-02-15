@@ -45,15 +45,26 @@ export const calculateOBV = (candlesticks: Candlestick[]): number[] => {
 };
 
 export const logOBVSignals = (consoleLogger: ConsoleLogger, candlesticks: Candlestick[], obv: number[]) => {
+  if (obv.length === 0 || candlesticks.length === 0) return;
   const currentOBV = obv[obv.length - 1];
-  const prevOBV = obv[obv.length - 2];
   const obvSMA = calculateSMA(
     obv.map((value) => ({ close: value }) as Candlestick),
     50,
     "close",
   );
   consoleLogger.push(`OBV Value`, currentOBV.toFixed(7));
-  consoleLogger.push(`OBV Smoothed`, obvSMA[obvSMA.length - 1].toFixed(7));
+  if (obvSMA.length > 0) {
+    consoleLogger.push(`OBV Smoothed`, obvSMA[obvSMA.length - 1].toFixed(7));
+  }
+  if (obv.length < 2 || candlesticks.length < 2) {
+    consoleLogger.push("OBV", {
+      value: currentOBV.toFixed(7),
+      smoothed: obvSMA.length > 0 ? obvSMA[obvSMA.length - 1].toFixed(7) : "N/A",
+      signal: "Neutral",
+    });
+    return;
+  }
+  const prevOBV = obv[obv.length - 2];
   const isBullish = currentOBV > prevOBV;
   const isBearish = currentOBV < prevOBV;
   const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - 1] && prevOBV < obvSMA[obvSMA.length - 1];

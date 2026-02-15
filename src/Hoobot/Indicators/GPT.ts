@@ -99,20 +99,24 @@ export const checkGPTSignals = async (
       const openai = new OpenAI({
         apiKey: symbolOptions.indicators.OpenAI.key,
       });
-      const chatCompletion = await openai.chat.completions.create({
-        messages: [{ role: "user", content: message }],
-        model: symbolOptions.indicators.OpenAI.model,
-      });
-      for (let i = 0; i < chatCompletion.choices.length; i++) {
-        if (chatCompletion.choices[i].message.role === "assistant") {
-          if (chatCompletion.choices[i].finish_reason === "stop") {
-            const content = chatCompletion.choices[i].message.content;
-            if (content === "HOLD" || content === "SELL" || content === "BUY") {
-              check = content;
-              break;
+      try {
+        const chatCompletion = await openai.chat.completions.create({
+          messages: [{ role: "user", content: message }],
+          model: symbolOptions.indicators.OpenAI.model,
+        });
+        for (let i = 0; i < chatCompletion.choices.length; i++) {
+          if (chatCompletion.choices[i].message.role === "assistant") {
+            if (chatCompletion.choices[i].finish_reason === "stop") {
+              const content = chatCompletion.choices[i].message.content;
+              if (content === "HOLD" || content === "SELL" || content === "BUY") {
+                check = content;
+                break;
+              }
             }
           }
         }
+      } catch (error) {
+        consoleLogger.push("GPT Error", `Failed to get response: ${error.message}`);
       }
       consoleLogger.push("GPT Check", check);
     }
