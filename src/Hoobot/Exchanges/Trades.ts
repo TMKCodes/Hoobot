@@ -68,7 +68,7 @@ export interface TradeHistory {
 export const listenForTrades = async (
   exchange: Exchange,
   symbol: string,
-  callback: (trades: Trade) => Promise<void>
+  callback: (trades: Trade) => Promise<void>,
 ): Promise<void> => {
   if (isNonKYC(exchange)) {
     exchange.subscribeTrades(symbol, async (response: NonKYCResponse) => {
@@ -142,7 +142,7 @@ export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: nu
 export const calculateUnrealizedPNLPercentageForLong = (
   entryQty: number,
   entryPrice: number,
-  highestBidPrice: number
+  highestBidPrice: number,
 ): number => {
   return (((highestBidPrice - entryPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
@@ -150,7 +150,7 @@ export const calculateUnrealizedPNLPercentageForLong = (
 export const calculateUnrealizedPNLPercentageForShort = (
   entryQty: number,
   entryPrice: number,
-  lowestAskPrice: number
+  lowestAskPrice: number,
 ): number => {
   return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
@@ -187,7 +187,7 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string) => {
         isBuyer: trade.side === "buy" ? true : false,
         isMaker: true,
         isBestMatch: true,
-      })
+      }),
     );
     return tradeHistory;
   }
@@ -272,7 +272,7 @@ export const placeSellOrder = async (
   symbol: string,
   quantityInBase: number,
   price: number,
-  maxRetries: number = 5
+  maxRetries: number = 5,
 ): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
@@ -286,13 +286,13 @@ export const placeSellOrder = async (
       if (isBinance(exchange)) {
         logToFile(
           "./logs/trades-binance.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`,
         );
         return await exchange.sell(symbol.split("/").join(""), quantityInBase, price);
       } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
-          `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`,
         );
         const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityInBase, price);
         if (xeggexOrder) {
@@ -318,7 +318,7 @@ export const placeSellOrder = async (
       console.error(`Error happened in placing SELL order ${error}, retrying (${retries}/${maxRetries})`);
       if (error.code === 20001 || error.code === -2021 || error.code === -2010) {
         console.error(
-          `Insufficient funds for SELL order creation in ${symbol}, decreasing quantity for next try by 1%`
+          `Insufficient funds for SELL order creation in ${symbol}, decreasing quantity for next try by 1%`,
         );
         quantityInBase = quantityInBase * 0.99;
         exchangeOptions.balances = await getCurrentBalances(exchange);
@@ -337,7 +337,7 @@ export const placeBuyOrder = async (
   symbol: string,
   quantityInBase: number,
   price: number,
-  maxRetries: number = 5
+  maxRetries: number = 5,
 ): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
@@ -351,13 +351,13 @@ export const placeBuyOrder = async (
       if (isBinance(exchange)) {
         logToFile(
           "./logs/trades-binance.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
         );
         return await exchange.buy(symbol.split("/").join(""), quantityInBase, price);
       } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
         );
         const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityInBase, price);
         const order = {
@@ -397,7 +397,7 @@ export const placeBuyOrder = async (
 export const getPreviousTrades = (
   direction: string,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   const trades = ExchangeOptions.tradeHistory[symbolOptions.name.split("/").join("")];
   let previousTrade = null;
@@ -437,7 +437,7 @@ export const sell = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
   if (orderBook === undefined || orderBook.asks === undefined) {
@@ -488,7 +488,7 @@ export const sell = async (
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA SELL ${orderBookAsks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      `TRADEDATA SELL ${orderBookAsks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -503,7 +503,7 @@ export const sell = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice // Use discounted ask price for PNL calculation
+            roundedPrice, // Use discounted ask price for PNL calculation
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumSell === 0) {
             symbolOptions.profit.minimumSell = Number.MIN_SAFE_INTEGER;
@@ -626,7 +626,7 @@ export const buy = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
   if (orderBook === undefined || orderBook.bids === undefined) {
@@ -677,7 +677,7 @@ export const buy = async (
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA BUY ${orderBookBids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      `TRADEDATA BUY ${orderBookBids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -692,7 +692,7 @@ export const buy = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice // Use incremented bid price for PNL calculation
+            roundedPrice, // Use incremented bid price for PNL calculation
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
             symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
@@ -791,7 +791,7 @@ export const simulateSell = async (
   symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
-  logger: ConsoleLogger
+  logger: ConsoleLogger,
 ) => {
   // console.log(time);
   if (price === null || quantity === 0) {
@@ -887,8 +887,8 @@ export const simulateSell = async (
           tradeHistory: exchangeOptions.tradeHistory,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());
@@ -912,7 +912,7 @@ export const simulateBuy = async (
   symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
-  logger: ConsoleLogger
+  logger: ConsoleLogger,
 ): Promise<Boolean> => {
   // console.log(time);
   if (price === null || quantity === 0) {
@@ -1005,8 +1005,8 @@ export const simulateBuy = async (
           tradeHistory: options.tradeHistory,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());

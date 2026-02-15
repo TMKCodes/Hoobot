@@ -80,7 +80,7 @@ export const placeOrder = async (
   direction: string,
   price: number,
   quantityInBase: number,
-  exchangeOptions: ExchangeOptions
+  exchangeOptions: ExchangeOptions,
 ): Promise<Order> => {
   if (direction === "sell") {
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
@@ -92,7 +92,7 @@ export const placeOrder = async (
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
-      return {} as Order;
+      throw new Error("Failed to place sell order");
     }
   } else if (direction === "buy") {
     let order = await placeBuyOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
@@ -117,7 +117,7 @@ const placeGridOrders = async (
   grid: GridLevel[],
   _filter: Filter,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ): Promise<void> => {
   const placedOrders = [];
   for (var i = 0; i < grid.length; i++) {
@@ -129,7 +129,7 @@ const placeGridOrders = async (
           grid[i].type,
           grid[i].price,
           parseFloat(grid[i].size),
-          exchangeOptions
+          exchangeOptions,
         );
         grid[i].orderId = order.orderId;
         grid[i].size = order.qty;
@@ -142,7 +142,7 @@ const placeGridOrders = async (
       } catch (error) {
         consoleLogger.push(
           `Failed to place order`,
-          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`
+          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`,
         );
       }
     }
@@ -163,7 +163,7 @@ const rebalanceGrid = async (
   currentPrice: number,
   filter: Filter,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
@@ -205,7 +205,7 @@ const manageGridOrders = async (
   _filter: Filter,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ): Promise<boolean> => {
   let orderExecuted = false;
   for (var i = 0; i < grid.length; i++) {
@@ -232,7 +232,7 @@ const manageGridOrders = async (
           sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
           consoleLogger.push(
             `Order executed`,
-            `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`
+            `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`,
           );
 
           // Calculate new order details
@@ -254,7 +254,7 @@ const manageGridOrders = async (
               newDirection,
               newOrderPrice,
               symbolOptions.gridOrderSize,
-              exchangeOptions
+              exchangeOptions,
             );
 
             // Update the grid level with new order details
@@ -275,12 +275,12 @@ const manageGridOrders = async (
 
             consoleLogger.push(
               `Placed new ${newDirection} order`,
-              `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`
+              `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`,
             );
           } else {
             consoleLogger.push(
               `Skipped unprofitable ${newDirection} order`,
-              `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`
+              `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`,
             );
           }
         }
@@ -316,7 +316,7 @@ export const gridTrading = async (
   candlesticks: Candlesticks,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   exchangeOptions.balances = await getCurrentBalances(exchange);
   const startTime = Date.now();
@@ -388,7 +388,7 @@ export const gridTrading = async (
     filter,
     processOptions,
     exchangeOptions,
-    symbolOptions
+    symbolOptions,
   );
 
   consoleLogger.push(
@@ -400,7 +400,7 @@ export const gridTrading = async (
         side: order.isBuyer ? "buy" : "sell",
         qty: order.qty,
       };
-    })
+    }),
   );
   consoleLogger.push("Grid Status", summarizeGrid(openOrders, symbolOptions.grid));
 
