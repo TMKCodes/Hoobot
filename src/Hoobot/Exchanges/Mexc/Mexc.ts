@@ -103,19 +103,6 @@ const delay = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-var MexcBlocked: boolean = false;
-
-const waitToBlock = async () => {
-  while (MexcBlocked === true) {
-    await delay(5);
-  }
-  MexcBlocked = true;
-};
-
-const unBlock = async () => {
-  MexcBlocked = false;
-};
-
 class CallbackMap {
   private callbacks: Map<number, Function>;
 
@@ -171,6 +158,7 @@ export class Mexc {
   private emitter: EventEmitter;
   private forceStopOnDisconnect: boolean;
   private maxReconnectionAttempts: number = 5;
+  private blocked: boolean = false;
 
   constructor(options: MexcOptions) {
     this.WebSocketURL = options.wssHost || "wss://wbs-api.mexc.com/ws";
@@ -206,6 +194,17 @@ export class Mexc {
     }, 20000);
   };
 
+  private waitToBlock = async () => {
+    while (this.blocked === true) {
+      await delay(5);
+    }
+    this.blocked = true;
+  };
+
+  private unBlock = async () => {
+    this.blocked = false;
+  };
+
   public waitConnect = () => {
     return new Promise((resolve) => {
       this.emitter.on("connected", () => {
@@ -227,8 +226,8 @@ export class Mexc {
       clearTimeout(this.pingTimeout);
       clearTimeout(this.keepAlive);
       console.log(`MEXC WebSocket closed with code ${code}.`);
-      if (!this.forceStopOnDisconnect && code === 1006) {
-        console.log("WebSocket closed abnormally (1006). Attempting to reconnect...");
+      if (!this.forceStopOnDisconnect && (code === 1006 || code === 1001 || code === 1008 || code === 1011)) {
+        console.log(`WebSocket closed with code ${code}. Attempting to reconnect...`);
         await delay(1000);
         this.connect();
       }
@@ -277,7 +276,7 @@ export class Mexc {
   private onMessage = (event: WebSocket.MessageEvent): void => {
     if (!this.ws) {
       console.error("MEXC WebSocket connection not established");
-      throw new Error("MEXC WebSocket connection not established");
+      return;
     }
     const response: MexcResponse = JSON.parse(event.data.toString("utf-8"));
     if (response.code !== undefined && response.code !== 0) {
@@ -300,7 +299,7 @@ export class Mexc {
     interval: "10ms" | "100ms",
     callback: (response: MexcResponse) => void
   ) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.deals.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -310,7 +309,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -323,7 +322,7 @@ export class Mexc {
   };
 
   public unsubscribeTrades = async (symbol: string, interval: "10ms" | "100ms") => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.deals.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -333,7 +332,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -346,7 +345,7 @@ export class Mexc {
   };
 
   public subscribeKlines = async (symbol: string, interval: string, callback: (response: MexcResponse) => void) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.kline.v3.api.pb@${symbol.toUpperCase()}@${interval}`;
     const messageId = this.messageId++;
     this.send({
@@ -356,7 +355,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -369,7 +368,7 @@ export class Mexc {
   };
 
   public unsubscribeKlines = async (symbol: string, interval: string) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.kline.v3.api.pb@${symbol.toUpperCase()}@${interval}`;
     const messageId = this.messageId++;
     this.send({
@@ -379,7 +378,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -396,7 +395,7 @@ export class Mexc {
     interval: "10ms" | "100ms",
     callback: (response: MexcResponse) => void
   ) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.depth.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -406,7 +405,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -419,7 +418,7 @@ export class Mexc {
   };
 
   public unsubscribeDepth = async (symbol: string, interval: "10ms" | "100ms") => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.depth.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -429,7 +428,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -446,7 +445,7 @@ export class Mexc {
     level: 5 | 10 | 20,
     callback: (response: MexcResponse) => void
   ) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.limit.depth.v3.api.pb@${symbol.toUpperCase()}@${level}`;
     const messageId = this.messageId++;
     this.send({
@@ -456,7 +455,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -469,7 +468,7 @@ export class Mexc {
   };
 
   public unsubscribeLimitDepth = async (symbol: string, level: 5 | 10 | 20) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.limit.depth.v3.api.pb@${symbol.toUpperCase()}@${level}`;
     const messageId = this.messageId++;
     this.send({
@@ -479,7 +478,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -496,7 +495,7 @@ export class Mexc {
     interval: "10ms" | "100ms",
     callback: (response: MexcResponse) => void
   ) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.bookTicker.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -506,7 +505,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -519,7 +518,7 @@ export class Mexc {
   };
 
   public unsubscribeBookTicker = async (symbol: string, interval: "10ms" | "100ms") => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.aggre.bookTicker.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -529,7 +528,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -542,7 +541,7 @@ export class Mexc {
   };
 
   public subscribeBookTickerBatch = async (symbol: string, callback: (response: MexcResponse) => void) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.bookTicker.batch.v3.api.pb@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -552,7 +551,7 @@ export class Mexc {
     });
     this.subscriptions.push({ symbol, channel, callback });
     this.callbackMap.add(messageId, callback);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -565,7 +564,7 @@ export class Mexc {
   };
 
   public unsubscribeBookTickerBatch = async (symbol: string) => {
-    await waitToBlock();
+    await this.waitToBlock();
     const channel = `spot@public.bookTicker.batch.v3.api.pb@${symbol.toUpperCase()}`;
     const messageId = this.messageId++;
     this.send({
@@ -575,7 +574,7 @@ export class Mexc {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.channel !== channel);
     this.callbackMap.remove(messageId);
-    await unBlock();
+    await this.unBlock();
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: MexcResponse) => {
         if (response.code === 0) {
@@ -621,7 +620,7 @@ export class Mexc {
         }
         const signature = crypto
           .createHmac("sha256", this.secret)
-          .update(`${this.key}${timestamp}${route}${signaturePayload ? `?${signaturePayload}` : ""}`)
+          .update(signaturePayload)
           .digest("hex");
         headers["X-MEXC-SIGNATURE"] = signature;
       }
