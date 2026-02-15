@@ -71,7 +71,7 @@ export const hilow = async (
     .sort((a, b) => b - a);
   let unrealizedPNL: number = 0;
   if (lastTrade === undefined) {
-    console.log(`Do a manual trade on symbol ${symbol}`);
+    consoleLogger.push("Manual trade required", `No trade history for symbol ${symbol}`);
     return false;
   }
   if (lastTrade.isBuyer === true) {

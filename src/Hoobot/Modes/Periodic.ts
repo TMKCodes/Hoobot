@@ -48,6 +48,10 @@ export const periodic = async (
   const intervalMilliseconds = symbolOptions.periodicInterval * 1000;
   if (timeSinceLastTrade >= intervalMilliseconds) {
     symbolOptions.periodicTime = currentTime;
+    if (symbolOptions.periodicQuantity <= 0) {
+      consoleLogger.push("Periodic trade skipped", "Invalid quantity");
+      return true;
+    }
     const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
     const filter = symbolFilters[symbol.split("/").join("")];
     if (symbolOptions.periodicDirection) {
