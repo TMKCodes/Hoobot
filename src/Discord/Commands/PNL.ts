@@ -89,8 +89,8 @@ export const getHistoricalDataForDuration = async (
   const tradeHistory: Trade[] = await getTradeHistory(exchange, symbol);
   const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());
   const tradesInDuration: Trade[] = tradeHistory.filter((trade) => trade.time / 1000 >= targetTimestamp);
-  const slicedTradeHistory: Trade[] = tradesInDuration.slice(0, tradesInDuration.length - tradesInDuration.length);
-  let previousTradeBeforeDuration = slicedTradeHistory[slicedTradeHistory.length - 1];
+  const tradesBeforeDuration: Trade[] = tradeHistory.filter((trade) => trade.time / 1000 < targetTimestamp);
+  const previousTradeBeforeDuration = tradesBeforeDuration[tradesBeforeDuration.length - 1];
   if (previousTradeBeforeDuration === undefined) {
     return tradesInDuration;
   } else {

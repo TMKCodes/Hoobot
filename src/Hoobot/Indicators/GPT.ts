@@ -69,9 +69,9 @@ export const checkGPTSignals = async (
           const macdline = indicators.macd[timeframes[i]]?.macdLine?.slice(-slice);
           message += `${timeframes[i]} MACD line: ${JSON.stringify(macdline, null, 2)}\n`;
           const macdsignal = indicators.macd[timeframes[i]]?.signalLine.slice(-slice);
-          message += `${timeframes[i]} MACD line: ${JSON.stringify(macdsignal, null, 2)}\n`;
+          message += `${timeframes[i]} MACD signal: ${JSON.stringify(macdsignal, null, 2)}\n`;
           const macdhistogram = indicators.macd[timeframes[i]]?.histogram.slice(-slice);
-          message += `${timeframes[i]} MACD line: ${JSON.stringify(macdhistogram, null, 2)}\n`;
+          message += `${timeframes[i]} MACD histogram: ${JSON.stringify(macdhistogram, null, 2)}\n`;
         }
         if (symbolOptions.indicators.atr?.enabled) {
           const atr = indicators.atr[timeframes[i]].slice(-slice);

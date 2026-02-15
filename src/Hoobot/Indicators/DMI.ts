@@ -155,13 +155,12 @@ export const checkDMISignals = (
       const lastADX = dmi.adx[dmi.adx.length - 1];
       if (lastADX < 20) {
         check = 'HOLD';
-      }
-      if (lastPlusDI > lastMinusDI) {
-        check = 'Bullish';
+      } else if (lastPlusDI > lastMinusDI) {
+        check = 'BUY';
       } else if (lastMinusDI > lastPlusDI) {
-        check = 'Bearish';
+        check = 'SELL';
       } else {
-        check = 'Neutral';
+        check = 'HOLD';
       }
     }
   }

@@ -96,10 +96,10 @@ export const checkOBVSignals = (
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.obv && symbolOptions.indicators.obv.enabled) {
       check = 'HOLD';
+      const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
       for(let i = 1; i < (symbolOptions.indicators.obv.length + 1); i++) {
         const currentOBV = obv[obv.length - i];
         const prevOBV = obv[obv.length - (i + 1)];
-        const obvSMA = calculateSMA(obv.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
         const isBullishCrossover = currentOBV > obvSMA[obvSMA.length - i] && prevOBV < obvSMA[obvSMA.length - i];
         const isBearishCrossover = currentOBV < obvSMA[obvSMA.length - i] && prevOBV > obvSMA[obvSMA.length - i];
         const isBullishDivergence = currentOBV > prevOBV && candlesticks[candlesticks.length - i].close < candlesticks[candlesticks.length - (i + 1)].close;

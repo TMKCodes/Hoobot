@@ -39,13 +39,13 @@ export const checkBalanceSignals = (
 ) => {
   let check = "HOLD";
   if (exchangeOptions.balances !== undefined) {
-    if (exchangeOptions.balances[symbol.split("/")[0]] == undefined) {
+    if (exchangeOptions.balances[symbol.split("/")[0]] === undefined) {
       exchangeOptions.balances[symbol.split("/")[0]] = {
         crypto: 0,
         usdt: 0,
       };
     }
-    if (exchangeOptions.balances[symbol.split("/")[1]] == undefined) {
+    if (exchangeOptions.balances[symbol.split("/")[1]] === undefined) {
       exchangeOptions.balances[symbol.split("/")[1]] = {
         crypto: 0,
         usdt: 0,

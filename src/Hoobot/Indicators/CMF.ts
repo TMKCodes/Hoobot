@@ -1,51 +1,48 @@
 /* =====================================================================
-* Hoobot - Proprietary License
-* Copyright (c) 2023 Hoosat Oy. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are not permitted without prior written permission
-* from Hoosat Oy. Unauthorized reproduction, copying, or use of this
-* software, in whole or in part, is strictly prohibited. All 
-* modifications in source or binary must be submitted to Hoosat Oy in source format.
-*
-* THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-* The user of this software uses it at their own risk. Hoosat Oy shall
-* not be liable for any losses, damages, or liabilities arising from
-* the use of this software.
-* ===================================================================== */
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
 
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateSMA } from "./SMA";
 
-export const calculateCMF = (
-  candlesticks: Candlestick[], 
-  period: number
-): number[] => {
+export const calculateCMF = (candlesticks: Candlestick[], period: number): number[] => {
   const cmfValues: number[] = [];
   for (let i = period - 1; i < candlesticks.length; i++) {
     const subset = candlesticks.slice(Math.max(0, i - period + 1), i + 1);
     const sumMFVolume = subset.reduce((sum, candle) => {
       const range = candle.high - candle.low;
-      if (range === 0) return sum; 
-      const mfMultiplier = ((candle.close - candle.low) - (candle.high - candle.close)) / range;
-      return sum + (mfMultiplier * candle.volume);
+      if (range === 0) return sum;
+      const mfMultiplier = (candle.close - candle.low - (candle.high - candle.close)) / range;
+      return sum + mfMultiplier * candle.volume;
     }, 0);
     const sumVolume = subset.reduce((sum, candle) => sum + candle.volume, 0);
     if (sumVolume === 0) {
-      cmfValues.push(0); 
+      cmfValues.push(0);
     } else {
       const cmf = sumMFVolume / sumVolume;
       cmfValues.push(cmf);
@@ -54,16 +51,15 @@ export const calculateCMF = (
   return cmfValues;
 };
 
-
-export const logCMFSignals = (
-  consoleLogger: ConsoleLogger,
-  cmfValues: number[],
-  symbolOptions: SymbolOptions,
-) => {
+export const logCMFSignals = (consoleLogger: ConsoleLogger, cmfValues: number[], symbolOptions: SymbolOptions) => {
   const currentCMF = cmfValues[cmfValues.length - 1];
   if (currentCMF !== undefined) {
     const prevCMF = cmfValues[cmfValues.length - 2];
-    const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
+    const cmfSMA = calculateSMA(
+      cmfValues.map((value) => ({ close: value }) as Candlestick),
+      50,
+      "close",
+    );
     const isBullishCrossover = currentCMF > cmfSMA[cmfSMA.length - 1] && prevCMF < cmfSMA[cmfSMA.length - 1];
     const isBearishCrossover = currentCMF < cmfSMA[cmfSMA.length - 1] && prevCMF > cmfSMA[cmfSMA.length - 1];
     const isOverbought = currentCMF > symbolOptions.indicators?.cmf?.thresholds.overbought!;
@@ -79,32 +75,33 @@ export const logCMFSignals = (
       signal = `Oversold`;
     } else {
       signal = `Neutral`;
-    } 
+    }
     consoleLogger.push("CMF", {
       value: currentCMF.toFixed(7),
       smoothed: cmfSMA[cmfSMA.length - 1],
-      signal: signal
+      signal: signal,
     });
   } else {
     consoleLogger.push("CMF", {
       value: "N/A",
       smoothed: "N/A",
-      signal: "N/A"
+      signal: "N/A",
     });
   }
 };
 
-export const checkCMFSignals = (
-  cmfValues: number[],
-  symbolOptions: SymbolOptions,
-) => {
-  let check = 'SKIP';
+export const checkCMFSignals = (cmfValues: number[], symbolOptions: SymbolOptions) => {
+  let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
-    if(symbolOptions.indicators.cmf !== undefined) {
+    if (symbolOptions.indicators.cmf !== undefined) {
       if (symbolOptions.indicators.cmf.enabled) {
-        check = 'HOLD';
+        check = "HOLD";
         cmfValues = cmfValues.slice(-symbolOptions.indicators.cmf.history);
-        const cmfSMA = calculateSMA(cmfValues.map((value) => ({ close: value } as Candlestick)), 50, 'close'); 
+        const cmfSMA = calculateSMA(
+          cmfValues.map((value) => ({ close: value }) as Candlestick),
+          50,
+          "close",
+        );
         for (let i = cmfValues.length; i > 0; i--) {
           const currentCMF = cmfValues[i];
           const prevCMF = cmfValues[i - 1];
@@ -113,22 +110,22 @@ export const checkCMFSignals = (
           const isOverbought = currentCMF > symbolOptions.indicators.cmf.thresholds.overbought;
           const isOversold = currentCMF < symbolOptions.indicators.cmf.thresholds.oversold;
           if (isBullishCrossover) {
-            check = 'BUY';
+            check = "BUY";
             break;
           } else if (isBearishCrossover) {
-            check = 'SELL';
+            check = "SELL";
             break;
           } else if (isOverbought) {
-            check = 'SELL'; 
+            check = "SELL";
             break;
           } else if (isOversold) {
-            check = 'BUY'; 
+            check = "BUY";
             break;
           }
         }
       }
     }
   }
-  
+
   return check;
-}
+};

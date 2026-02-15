@@ -30,7 +30,7 @@ import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateSMA } from "./SMA";
 
 export const calculateATR = (candles: Candlestick[], period: number = 14, source: string = "close"): number[] => {
-  if (period == 0) {
+  if (period === 0) {
     period = 14;
   }
   if (!candles || candles.length < period){

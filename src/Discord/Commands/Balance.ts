@@ -44,7 +44,7 @@ export interface result {
 export default {
   builder: new SlashCommandBuilder()
     .setName("balances")
-    .setDescription("Replices with exchange balances!")
+    .setDescription("Replies with exchange balances!")
     .addStringOption(option =>
       option.setName('exchange')
         .setDescription('The name of exchange to check')
@@ -56,7 +56,7 @@ export default {
       if(exchangeByName !== undefined) {
         const sortedBalances = await getCurrentBalances(exchangeByName);
         const resultBalances = Object.entries(sortedBalances).map(([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.usdt.toFixed(2)} USDT`);
-        await interaction.reply(`${exchangeName} balances: \r\n${JSON.stringify(resultBalances, null, 4)}`);
+        await interaction.reply(`${exchangeName} balances: \r\n${resultBalances.join('\n')}`);
       } else {
         await interaction.reply(`Sorry exchange does not exist or has not been implemented.`);
       }

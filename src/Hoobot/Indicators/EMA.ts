@@ -67,7 +67,7 @@ export const calculateEMA = (candles: Candlestick[], length: number = 7, source:
     console.log(`Not enough data: prices.length (${prices.length}) is zero.`);
     return [];
   }
-  if (prices.some((price) => price == null || isNaN(price))) {
+  if (prices.some((price) => price === null || isNaN(price))) {
     console.log("Found NaN or null in prices.");
     return [];
   }

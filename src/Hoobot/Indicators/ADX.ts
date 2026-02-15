@@ -66,10 +66,10 @@ export const calculateADX = (
   diLength = 14,
   adxSmoothing = 14
 ): adx => {
-  if (diLength == 0) {
+  if (diLength === 0) {
     diLength = 14;
   }
-  if (adxSmoothing == 0) {
+  if (adxSmoothing === 0) {
     adxSmoothing = 14;
   }
   if (!candles || candles.length < 2) {
