@@ -63,7 +63,7 @@
                 "length": 12
               },
               "history": 5,
-              "tresholds": {
+              "thresholds": {
                 "overbought": 70,
                 "oversold": 30
               },

@@ -36,10 +36,10 @@ export interface sma {
 }
 
 export const calculateSMA = (candles: Candlestick[], period: number = 9, source: string = "close"): number[] => {
-  if (candles?.length == 0) {
+  if (candles?.length === 0) {
     return [];
   }
-  if (period == 0) {
+  if (period === 0) {
     period = 9;
   }
   const smaValues: number[] = [];
@@ -90,7 +90,7 @@ export const checkSMASignals = (sma: number[], symbolOptions: SymbolOptions) => 
       const prevSMA = sma[sma.length - 2];
       const isBullishCrossover = currentSMA > prevSMA;
       const isBearishCrossover = currentSMA < prevSMA;
-      const isFlatDirection = currentSMA == prevSMA;
+      const isFlatDirection = currentSMA === prevSMA;
       if (isBullishCrossover) {
         check = "BUY";
       } else if (isBearishCrossover) {

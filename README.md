@@ -164,7 +164,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
       - **type**: (string) Type of smoothing (EMA or SMA).
       - **length**: (number) Length of the smoothing period.
     - **history**: (number) History length for RSI.
-    - **tresholds**: (object) Thresholds for overbought and oversold levels.
+    - **thresholds**: (object) Thresholds for overbought and oversold levels.
       - **overbought**: (number) Overbought threshold.
       - **oversold**: (number) Oversold threshold.
     - **weight**: (number) Weight of the RSI in trading decisions.
@@ -179,7 +179,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
     - **enabled**: (boolean) Enables or disables CMF.
     - **length**: (number) Length of the CMF period.
     - **history**: (number) History length for CMF.
-    - **tresholds**: (object) Thresholds for overbought and oversold levels.
+    - **thresholds**: (object) Thresholds for overbought and oversold levels.
       - **overbought**: (number) Overbought threshold.
       - **oversold**: (number) Oversold threshold.
     - **weight**: (number) Weight of the CMF in trading decisions.
@@ -195,7 +195,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
     - **kPeriod**: (number) K period.
     - **dPeriod**: (number) D period.
     - **smoothing**: (number) Smoothing period.
-    - **tresholds**: (object) Thresholds for overbought and oversold levels.
+    - **thresholds**: (object) Thresholds for overbought and oversold levels.
       - **overbought**: (number) Overbought threshold.
       - **oversold**: (number) Oversold threshold.
     - **weight**: (number) Weight of the Stochastic Oscillator in trading decisions.
@@ -208,7 +208,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
     - **smoothK**: (number) Smoothing period for K.
     - **smoothD**: (number) Smoothing period for D.
     - **history**: (number) History length for Stochastic RSI.
-    - **tresholds**: (object) Thresholds for overbought and oversold levels.
+    - **thresholds**: (object) Thresholds for overbought and oversold levels.
       - **overbought**: (number) Overbought threshold.
       - **oversold**: (number) Oversold threshold.
     - **weight**: (number) Weight of the Stochastic RSI in trading decisions.
@@ -385,7 +385,7 @@ There is also `settigns/hoobot-options-simulation.json.example` which used for s
               "smoothK": 3,
               "smoothD": 3,
               "history": 5,
-              "tresholds": {
+              "thresholds": {
                 "overbought": 80,
                 "oversold": 20
               },

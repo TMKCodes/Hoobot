@@ -205,10 +205,10 @@ export interface SymbolOptions {
       weight?: number;
       plusDI?: {
         length: number;
-      }
+      };
       minusDI?: {
         length: number;
-      }
+      };
     };
     renko?: {
       enabled: boolean;
@@ -238,7 +238,7 @@ export interface SymbolOptions {
         length: number;
       };
       history: number;
-      tresholds: {
+      thresholds: {
         overbought: number;
         oversold: number;
       };
@@ -258,7 +258,7 @@ export interface SymbolOptions {
       enabled: boolean;
       length: number;
       history: number;
-      tresholds: {
+      thresholds: {
         overbought: number;
         oversold: number;
       };
@@ -277,7 +277,7 @@ export interface SymbolOptions {
       kPeriod: number;
       dPeriod: number;
       smoothing: number;
-      tresholds: {
+      thresholds: {
         overbought: number;
         oversold: number;
       };
@@ -292,7 +292,7 @@ export interface SymbolOptions {
       smoothK: number;
       smoothD: number;
       history: number;
-      tresholds: {
+      thresholds: {
         overbought: number;
         oversold: number;
       };

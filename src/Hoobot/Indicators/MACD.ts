@@ -50,8 +50,6 @@ export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
     const isBearishDivergence = macdLine < prevMacdLine && histogram < prevHistogram;
     const isBullishZeroLineCrossover = macdLine > 0 && prevMacdLine <= 0;
     const isBearishZeroLineCrossover = macdLine < 0 && prevMacdLine >= 0;
-    const isBullishCenterlineCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
-    const isBearishCenterlineCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
     const isStrongBullishTrend = macdLine > 100 && prevMacdLine <= 100;
     const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
     const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
@@ -69,10 +67,6 @@ export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
       signal = "Bullish Zero Line Crossover";
     } else if (isBearishZeroLineCrossover) {
       signal = "Bearish Zero Line Crossover";
-    } else if (isBullishCenterlineCrossover) {
-      signal = "Bullish Centerline Crossover";
-    } else if (isBearishCenterlineCrossover) {
-      signal = "Bearish Centerline Crossover";
     } else if (isStrongBullishTrend) {
       signal = "Strong Bullish Trend";
     } else if (isStrongBearishTrend) {
@@ -96,13 +90,13 @@ export const calculateMACD = (
   shortEMA: number,
   longEMA: number,
   signalLength = 9,
-  source: string
+  source: string,
 ): macd => {
   if (candles?.length < longEMA) {
     return {
       macdLine: [],
       signalLine: [],
-      histogram: []
+      histogram: [],
     };
   }
   let shortEMAs = calculateEMA(candles, shortEMA, source);
@@ -117,7 +111,7 @@ export const calculateMACD = (
   for (let i = 0; i < shortEMAs.length; i++) {
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
-  var signalCandles = macdLine.map((value) => ({ close: value } as Candlestick));
+  var signalCandles = macdLine.map((value) => ({ close: value }) as Candlestick);
   let signalLine = calculateEMA(signalCandles, signalLength, source);
   if (signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
@@ -161,7 +155,7 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         var isMacdLineNegative = currentMacdLine < 0;
         const isSignalLinePositive = currentSignalLine > 0;
         const isSignalLineNegative = currentSignalLine < 0;
-        if (symbolOptions.indicators.macd.weight == undefined) {
+        if (symbolOptions.indicators.macd.weight === undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
         if (isMacdLineNegative && isSignalLineNegative && isMacdLineAboveSignalLine && isHistogramPositive) {

@@ -55,12 +55,12 @@ export const calculateRSI = (
   length: number = 9,
   smoothingType: string = "SMA",
   smoothing: number = 1,
-  source: string = "close"
+  source: string = "close",
 ): number[] => {
   if (!Array.isArray(candles) || candles?.length <= 0) {
-    return []
+    return [];
   }
-  if (length == 0) {
+  if (length === 0) {
     length = 9;
   }
   let closePrices: number[] = [];
@@ -101,7 +101,7 @@ export const calculateRSI = (
 
       rsArray.push(rsi);
     }
-    if (smoothingType == "SMA" && smoothing > 1) {
+    if (smoothingType === "SMA" && smoothing > 1) {
       for (let i = smoothing - 1; i < rsArray.length; i++) {
         let sum = 0;
         for (let j = 0; j < smoothing; j++) {
@@ -110,12 +110,12 @@ export const calculateRSI = (
         const smoothedRS = sum / smoothing;
         rsArray[i] = smoothedRS;
       }
-    } else if (smoothingType == "EMA" && smoothing > 1) {
+    } else if (smoothingType === "EMA" && smoothing > 1) {
       for (let i = smoothing; i < rsArray.length; i++) {
         const alpha = 2 / (smoothing + 1);
         rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
       }
-    } else if (smoothingType == "WMA" && smoothing > 1) {
+    } else if (smoothingType === "WMA" && smoothing > 1) {
       for (let i = smoothing; i < rsArray.length; i++) {
         let sum = 0;
         for (let j = 0; j < smoothing; j++) {
@@ -137,17 +137,17 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
     if (symbolOptions.indicators.rsi && symbolOptions.indicators.rsi.enabled) {
       check = "HOLD";
       const rsiValues = rsi.slice(-symbolOptions.indicators.rsi?.history);
-      const overboughtTreshold =
-        symbolOptions.indicators.rsi.tresholds.overbought !== undefined
-          ? symbolOptions.indicators.rsi.tresholds.overbought
+      const overboughtThreshold =
+        symbolOptions.indicators.rsi.thresholds.overbought !== undefined
+          ? symbolOptions.indicators.rsi.thresholds.overbought
           : 70;
-      const oversoldTreshold =
-        symbolOptions.indicators.rsi.tresholds.oversold !== undefined
-          ? symbolOptions.indicators.rsi.tresholds.oversold
+      const oversoldThreshold =
+        symbolOptions.indicators.rsi.thresholds.oversold !== undefined
+          ? symbolOptions.indicators.rsi.thresholds.oversold
           : 30;
       for (let i = rsiValues.length - 1; i >= 0; i--) {
         const prevRsi = rsiValues[i];
-        if (prevRsi > overboughtTreshold) {
+        if (prevRsi > overboughtThreshold) {
           check = "SELL";
           break;
         }
@@ -155,7 +155,7 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
       if (check === "HOLD") {
         for (let i = rsiValues.length - 1; i >= 0; i--) {
           const prevRsi = rsiValues[i];
-          if (prevRsi < oversoldTreshold) {
+          if (prevRsi < oversoldThreshold) {
             check = "BUY";
             break;
           }

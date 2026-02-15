@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -176,7 +176,9 @@
         background: var(--main-bg);
         min-height: 100vh;
         padding: 20px;
-        transition: margin-left var(--transition), width var(--transition);
+        transition:
+          margin-left var(--transition),
+          width var(--transition);
       }
 
       .collapsed ~ .main-content {
@@ -949,7 +951,7 @@
                                         <td><label class="form-label">Threshold overbought</label></td>
                                         <td>
                                           <input type="number" class="form-control rsi-treshold-overbought" placeholder="e.g., 1" value="${
-                                            symbolData.indicators?.rsi?.tresholds?.overbought || ""
+                                            symbolData.indicators?.rsi?.thresholds?.overbought || ""
                                           }">
                                         </td>
                                       </tr>
@@ -957,7 +959,7 @@
                                         <td><label class="form-label">Threshold oversold</label></td>
                                         <td>
                                           <input type="number" class="form-control rsi-treshold-oversold" placeholder="e.g., 1" value="${
-                                            symbolData.indicators?.rsi?.tresholds?.oversold || ""
+                                            symbolData.indicators?.rsi?.thresholds?.oversold || ""
                                           }">
                                         </td>
                                       </tr>
@@ -1646,7 +1648,7 @@
                       length: parseInt($symbol.find(".rsi-smoothing-length").val()) || 0,
                     },
                     history: parseInt($symbol.find(".rsi-history").val()) || 0,
-                    tresholds: {
+                    thresholds: {
                       overbought: parseInt($symbol.find(".rsi-smoothing-overbought").val()) || 0,
                       oversold: parseInt($symbol.find(".rsi-smoothing-oversold").val()) || 0,
                     },
@@ -1666,7 +1668,7 @@
                     enabled: $symbol.find(".cmf-enabled").is(":checked"),
                     length: parseInt($symbol.find(".cmf-length").val()) || 0,
                     history: parseInt($symbol.find(".cmf-history").val()) || 0,
-                    tresholds: {
+                    thresholds: {
                       overbought: parseInt($symbol.find(".cmf-smoothing-overbought").val()) || 0,
                       oversold: parseInt($symbol.find(".cmf-smoothing-oversold").val()) || 0,
                     },
@@ -1685,7 +1687,7 @@
                     kPeriod: parseInt($symbol.find(".so-k-period").val()) || 0,
                     dPeriod: parseInt($symbol.find(".so-d-period").val()) || 0,
                     smoothing: parseInt($symbol.find(".so-smoothing").val()) || 0,
-                    tresholds: {
+                    thresholds: {
                       overbought: parseInt($symbol.find(".so-smoothing-overbought").val()) || 0,
                       oversold: parseInt($symbol.find(".so-smoothing-oversold").val()) || 0,
                     },
@@ -1700,7 +1702,7 @@
                     smoothk: parseInt($symbol.find(".srsi-smooth-k").val()) || 0,
                     smoothD: parseInt($symbol.find(".srsi-smooth-d").val()) || 0,
                     history: parseInt($symbol.find(".srsi-history").val()) || 0,
-                    tresholds: {
+                    thresholds: {
                       overbought: parseInt($symbol.find(".srsi-smoothing-overbought").val()) || 0,
                       oversold: parseInt($symbol.find(".srsi-smoothing-oversold").val()) || 0,
                     },
