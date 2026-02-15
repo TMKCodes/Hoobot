@@ -149,7 +149,7 @@ export const tradeDirection = async (
   let actions = ["BUY", "SELL", "HOLD"];
   let profit = "SKIP";
   if (candlesticks[symbol.split("/").join("")][timeframes[0]] === undefined) {
-    console.log(`Cant find candles for symbol  ${symbol}`);
+    consoleLogger.push("error", `Cant find candles for symbol ${symbol}`);
     return ["HOLD", "HOLD"];
   }
   const closePrice =
@@ -648,7 +648,7 @@ export const algorithmic = async (
   exchangeOptions.tradeHistory = exchangeOptions.tradeHistory || {};
   exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    console.error(`${symbol}: could not retrieve trade history`);
+    consoleLogger.push("error", `${symbol}: could not retrieve trade history`);
     return false;
   }
   if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
