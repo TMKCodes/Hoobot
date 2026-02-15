@@ -54,10 +54,24 @@ export default {
           );
         } else {
           const storedBalances = JSON.parse(fs.readFileSync(`./logs/balances-${exchangeName}.json`, "utf-8") || "[]");
+          if (!storedBalances || storedBalances.length === 0) {
+            await interaction.reply(`Stored balances file exists but is empty or invalid.`);
+            return;
+          }
+          const firstEntry = storedBalances[0];
+          const firstEntryKey = Object.keys(firstEntry)[0];
+          if (!firstEntryKey || !firstEntry[firstEntryKey]) {
+            await interaction.reply(`Invalid stored balances format.`);
+            return;
+          }
           const totalCurrentFiat = Object.values(currentBalances).reduce((acc, cur) => acc + cur.usdt, 0);
           const totalFirstFiat = Object.values(
-            storedBalances[0][Object.keys(storedBalances[0])[0]] as Record<string, { crypto: number; usdt: number }>
+            firstEntry[firstEntryKey] as Record<string, { crypto: number; usdt: number }>
           ).reduce((acc, cur) => acc + cur.usdt, 0);
+          if (totalFirstFiat === 0) {
+            await interaction.reply(`Initial balance is zero, cannot calculate ROI.`);
+            return;
+          }
           const diff = totalCurrentFiat - totalFirstFiat;
           const roi = ((totalCurrentFiat - totalFirstFiat) / totalFirstFiat) * 100;
           const totalFiatBalances = storedBalances.map((entry: any) => {
@@ -65,8 +79,12 @@ export default {
             return Object.values(balances).reduce((acc, balance) => acc + balance.usdt, 0);
           });
           const validFiatBalances = totalFiatBalances.filter(
-            (balance: number) => typeof balance === "number" && !isNaN(balance)
+            (balance: number) => typeof balance === "number" && !isNaN(balance) && balance > 0
           );
+          if (validFiatBalances.length === 0) {
+            await interaction.reply(`No valid balance data found for ROI calculation.`);
+            return;
+          }
           const maxFiat = Math.max(...validFiatBalances);
           const maxDiff = maxFiat - totalFirstFiat;
           const maxRoi = ((maxFiat - totalFirstFiat) / totalFirstFiat) * 100;

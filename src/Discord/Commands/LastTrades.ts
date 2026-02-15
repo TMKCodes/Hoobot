@@ -47,11 +47,12 @@ export default {
     if (exchangeName !== null) {
       const exchangeByName = getExchangeByName(exchangeName, exchanges, options);
       if (exchangeByName !== undefined) {
-        const symbol: string = interaction.options.getString("symbol").toUpperCase();
-        if (!symbol) {
+        const symbolOption = interaction.options.getString("symbol");
+        if (!symbolOption) {
           await interaction.reply("Please provide a valid symbol to check.");
           return;
         }
+        const symbol: string = symbolOption.toUpperCase();
         const tradeHistory: Trade[] = await getTradeHistory(exchangeByName, symbol);
         const trades = tradeHistory.map((trade) => {
           return {
