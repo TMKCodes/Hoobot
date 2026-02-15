@@ -47,7 +47,7 @@ export const hilow = async (
   symbol: string,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   const filter = symbolFilters[symbol.split("/").join("")];
   if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
@@ -75,16 +75,18 @@ export const hilow = async (
     return false;
   }
   if (lastTrade.isBuyer === true) {
+    const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(lastTrade.price);
     unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
       parseFloat(lastTrade.qty),
       parseFloat(lastTrade.price),
-      orderBookBids[0]
+      currentPrice,
     );
   } else {
+    const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(lastTrade.price);
     unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
       parseFloat(lastTrade.qty),
       parseFloat(lastTrade.price),
-      orderBookAsks[0]
+      currentPrice,
     );
   }
   if (symbolOptions.takeProfit !== undefined && symbolOptions.takeProfit.enabled === true) {
@@ -111,7 +113,7 @@ export const hilow = async (
               processOptions,
               exchangeOptions,
               symbolOptions,
-              undefined
+              undefined,
             );
             symbolOptions.takeProfit.current = 0;
           }
@@ -128,7 +130,7 @@ export const hilow = async (
               processOptions,
               exchangeOptions,
               symbolOptions,
-              undefined
+              undefined,
             );
             symbolOptions.takeProfit.current = 0;
           }

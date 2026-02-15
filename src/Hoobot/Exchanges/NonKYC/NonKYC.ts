@@ -494,7 +494,7 @@ export class NonKYC extends EventEmitter {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
       let callbacks = this.symbolCallbacks.filter(
-        (scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join("")
+        (scb) => scb.symbol.split("/").join("") === response.params?.symbol.split("/").join(""),
       )[0];
       if (response.method === "ticker") {
         this.callbackMap.call(callbacks.tickerCallbackId, response);
@@ -547,7 +547,7 @@ export class NonKYC extends EventEmitter {
     quantity: number,
     price: number = 0,
     useProvidedId: string | null = null,
-    strictValidate: boolean = false
+    strictValidate: boolean = false,
   ): Promise<NonKYCOrder> => {
     let messageId = this.messageId++;
     this.send({
@@ -751,7 +751,7 @@ export class NonKYC extends EventEmitter {
     offset: number = 0,
     sort: string | null = null,
     from: string | null = null,
-    till: string | null = null
+    till: string | null = null,
   ) => {
     let messageId = this.messageId++;
     this.send({
@@ -915,7 +915,7 @@ export class NonKYC extends EventEmitter {
     symbol: string,
     period: number,
     callback: (response: NonKYCResponse) => void,
-    limit: number = 100
+    limit: number = 100,
   ) => {
     console.log("Subscribing Candles");
     await waitToBlock();
@@ -1117,7 +1117,7 @@ export class NonKYC extends EventEmitter {
     to: number | null,
     resolution: number,
     countBack: number,
-    firstDataRequest: number
+    firstDataRequest: number,
   ) => {
     if (from === null && to === null) {
       return this.apiCall(
@@ -1129,7 +1129,7 @@ export class NonKYC extends EventEmitter {
           resolution: resolution?.toString()!,
           countBack: countBack?.toString()!,
           firstDataRequest: firstDataRequest?.toString()!,
-        }
+        },
       );
     } else {
       return this.apiCall(
@@ -1143,7 +1143,7 @@ export class NonKYC extends EventEmitter {
           resolution: resolution?.toString()!,
           countBack: countBack?.toString()!,
           firstDataRequest: firstDataRequest?.toString()!,
-        }
+        },
       );
     }
   };
@@ -1181,7 +1181,7 @@ export class NonKYC extends EventEmitter {
       {},
       {
         type: type,
-      }
+      },
     );
   };
 
@@ -1196,7 +1196,7 @@ export class NonKYC extends EventEmitter {
       {},
       {
         market: market,
-      }
+      },
     );
   };
 
@@ -1220,7 +1220,7 @@ export class NonKYC extends EventEmitter {
       {
         ticker_id: ticker,
         depth: depth,
-      }
+      },
     );
   };
 
@@ -1232,7 +1232,7 @@ export class NonKYC extends EventEmitter {
       {
         ticker_id: ticker,
         limit: limit,
-      }
+      },
     );
   };
 
@@ -1244,7 +1244,7 @@ export class NonKYC extends EventEmitter {
       {
         ticker_id: ticker,
         limit: limit,
-      }
+      },
     );
   };
 
@@ -1269,7 +1269,7 @@ export class NonKYC extends EventEmitter {
         quantity: quantity,
         price: price,
       },
-      {}
+      {},
     );
   };
 
@@ -1280,7 +1280,7 @@ export class NonKYC extends EventEmitter {
       {
         id: id,
       },
-      {}
+      {},
     );
   };
 
@@ -1292,7 +1292,7 @@ export class NonKYC extends EventEmitter {
         symbol: symbol,
         side: side,
       },
-      {}
+      {},
     );
   };
 
@@ -1306,7 +1306,7 @@ export class NonKYC extends EventEmitter {
         address: address,
         paymentid: paymentid,
       },
-      {}
+      {},
     );
   };
 
@@ -1319,7 +1319,7 @@ export class NonKYC extends EventEmitter {
         ticker_id: ticker,
         limit: limit,
         skip: skip,
-      }
+      },
     );
   };
 
@@ -1332,7 +1332,7 @@ export class NonKYC extends EventEmitter {
         ticker_id: ticker,
         limit: limit,
         skip: skip,
-      }
+      },
     );
   };
 
@@ -1350,7 +1350,7 @@ export class NonKYC extends EventEmitter {
         status: status,
         limit: limit.toString(),
         skip: skip.toString(),
-      }
+      },
     );
   };
 
@@ -1363,7 +1363,7 @@ export class NonKYC extends EventEmitter {
         symbol: symbol,
         limit: limit.toString(),
         skip: skip.toString(),
-      }
+      },
     );
   };
 
@@ -1377,7 +1377,7 @@ export class NonKYC extends EventEmitter {
         since: since,
         limit: limit.toString(),
         skip: skip.toString(),
-      }
+      },
     );
   };
 
@@ -1390,7 +1390,7 @@ export class NonKYC extends EventEmitter {
         symbol: symbol,
         limit: limit.toString(),
         skip: skip.toString(),
-      }
+      },
     );
   };
 
@@ -1404,7 +1404,7 @@ export class NonKYC extends EventEmitter {
         since: since,
         limit: limit.toString(),
         skip: skip.toString(),
-      }
+      },
     );
   };
 }

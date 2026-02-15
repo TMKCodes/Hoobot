@@ -77,7 +77,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       for (const symbolOptions of exchangeOptions.symbols) {
         exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
           exchange,
-          symbolOptions.name
+          symbolOptions.name,
         );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
@@ -113,9 +113,9 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
               candlesticks,
               options,
               exchangeOptions,
-              symbolOptions
+              symbolOptions,
             );
-          }
+          },
         );
       }
     }
@@ -124,7 +124,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     for (const symbolOptions of exchangeOptions.symbols) {
       exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
         exchange,
-        symbolOptions.name
+        symbolOptions.name,
       );
       symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
@@ -150,7 +150,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     for (const symbolOptions of exchangeOptions.symbols) {
       exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
         exchange,
-        symbolOptions.name
+        symbolOptions.name,
       );
       symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
@@ -177,7 +177,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
       for (const symbolOptions of exchangeOptions.symbols) {
         exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
           exchange,
-          symbolOptions.name
+          symbolOptions.name,
         );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
@@ -222,9 +222,9 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
               candlesticks,
               options,
               exchangeOptions,
-              symbolOptions
+              symbolOptions,
             );
-          }
+          },
         );
       }
     }
@@ -273,7 +273,7 @@ const hoobot = async () => {
       console.log("License key is valid. Enjoy the trading with Hoobot!");
     } else {
       console.log(
-        "Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check."
+        "Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.",
       );
     }
     var discord: any = undefined;
@@ -350,7 +350,7 @@ const calculateBalance = (options: ExchangeOptions): number => {
 const simulate = async () => {
   const exchange = new Binance();
   const exchangeOptions: ExchangeOptions = options.exchanges.filter(
-    (exchangeOption) => exchangeOption.name === "binance"
+    (exchangeOption) => exchangeOption.name === "binance",
   )[0];
   exchange.options({
     APIKEY: exchangeOptions.key,
@@ -422,13 +422,13 @@ const simulate = async () => {
               exchangeOptions,
               symbolOptions,
               exchangeOptions.balances!,
-              symbolFilters[symbol.split("/").join("")]
+              symbolFilters[symbol.split("/").join("")],
             );
           } catch (error) {
             logToFile("./logs/error.log", JSON.stringify(error, null, 4));
             console.error(error);
           }
-        }
+        },
       );
     }
     let balance = calculateBalance(exchangeOptions);
@@ -441,20 +441,20 @@ const simulate = async () => {
       Logger.push(
         `${symbol.name} stop losses`,
         exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "STOP_LOSS")
-          .length
+          .length,
       );
       Logger.push(
         `${symbol.name} take profits`,
         exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "TAKE_PROFIT")
-          .length
+          .length,
       );
       Logger.push(
         `${symbol.name} sells`,
-        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "SELL").length
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "SELL").length,
       );
       Logger.push(
         `${symbol.name} buys`,
-        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "BUY").length
+        exchangeOptions.tradeHistory[symbol.name.split("/").join("")].filter((trade) => trade.profit === "BUY").length,
       );
     }
     Logger.print();
@@ -468,14 +468,14 @@ const stopHoobot = () => {
     console.log(
       "Symbols to to shut down %d in the exchange %s",
       options.exchanges[i].symbols.length,
-      options.exchanges[i].name
+      options.exchanges[i].name,
     );
     if (options.exchanges[i].name === "nonkyc") {
       for (var x = 0; x < options.exchanges[i].symbols.length; x++) {
         for (var y = 0; y < options.exchanges[i].symbols[x].timeframes.length; y++) {
           (options.exchanges[i].socket as NonKYC).unsubscribeCandles(
             options.exchanges[i].symbols[x].name,
-            getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y])
+            getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y]),
           );
         }
         (options.exchanges[i].socket as NonKYC).unsubscribeOrderbook(options.exchanges[i].symbols[x].name);
@@ -519,9 +519,9 @@ const webServer = async () => {
   app.get("/run", (_, res) => {
     if (options.running !== true) {
       options.running = true;
-        const optionsInFile = parseArgs();
-        optionsInFile.running = true;
-        fs.writeFileSync(optionsFilename, JSON.stringify(optionsInFile, null, 2));
+      const optionsInFile = parseArgs();
+      optionsInFile.running = true;
+      fs.writeFileSync(optionsFilename, JSON.stringify(optionsInFile, null, 2));
       hoobot();
       res.json({ message: "Hoobot started" });
     } else {

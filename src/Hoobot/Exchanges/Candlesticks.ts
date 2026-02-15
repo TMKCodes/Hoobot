@@ -61,7 +61,7 @@ export async function getLastCandlesticks(
   exchange: Exchange,
   symbol: string,
   interval: CandlestickInterval,
-  limit: number = 500
+  limit: number = 500,
 ): Promise<Candlestick[]> {
   return new Promise<Candlestick[]>(async (resolve, _reject) => {
     if (isBinance(exchange)) {
@@ -90,7 +90,7 @@ export async function getLastCandlesticks(
           }));
           resolve(parsedData);
         },
-        { limit: limit }
+        { limit: limit },
       );
     } else if (isNonKYC(exchange)) {
       const candlesticks = await exchange.getCandles(symbol, null, null, getMinutesFromInterval(interval), limit, 1);
@@ -110,7 +110,7 @@ export async function getLastCandlesticks(
           buyVolume: 0,
           quoteBuyVolume: 0,
           isFinal: true,
-        })
+        }),
       );
       resolve(parsedData);
     }
@@ -124,7 +124,7 @@ export const listenForCandlesticks = async (
   candleStore: Candlesticks,
   historyLength: number,
   symbolOptions: SymbolOptions,
-  callback: (candlesticks: Candlesticks) => Promise<void>
+  callback: (candlesticks: Candlesticks) => Promise<void>,
 ): Promise<void> => {
   console.log("Start listening for Candlesticks");
   const maxCandlesticks = 10000;
@@ -260,9 +260,8 @@ export const listenForCandlesticks = async (
               ] = newCandlestick;
             }
             if (candleStore[symbol.split("/").join("")][timeframes[i]].length > maxCandlesticks) {
-              candleStore[symbol.split("/").join("")][timeframes[i]] = candleStore[symbol.split("/").join("")][
-                timeframes[i]
-              ].slice(-maxCandlesticks);
+              candleStore[symbol.split("/").join("")][timeframes[i]] =
+                candleStore[symbol.split("/").join("")][timeframes[i]].slice(-maxCandlesticks);
             }
             if (!(symbolOptions.stopLoss?.hit === true && symbolOptions.stopLoss?.stopTrading === true)) {
               await callback(candleStore);
@@ -272,7 +271,7 @@ export const listenForCandlesticks = async (
             }
           }
         },
-        10
+        10,
       );
     }
   }
@@ -356,7 +355,7 @@ function shellSortCandlesticksByTime(nums: Candlestick[]): Candlestick[] {
 
 export const downloadHistoricalCandlesticks = async (
   symbols: string[],
-  intervals: string[]
+  intervals: string[],
 ): Promise<Candlestick[]> => {
   let allCandlesticks: Candlestick[] = [];
   for (let symbolIndex = 0; symbolIndex < symbols?.length; symbolIndex++) {
@@ -431,7 +430,7 @@ export const simulateListenForCandlesticks = async (
   candlesticks: Candlestick[],
   candleStore: Candlesticks,
   options: ConfigOptions,
-  callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>
+  callback: (symbol: string, interval: string, candlesticks: Candlesticks) => Promise<void>,
 ) => {
   const maxCandlesticks = 2000;
   for (let candleIndex = 0; candleIndex < candlesticks.length; candleIndex++) {

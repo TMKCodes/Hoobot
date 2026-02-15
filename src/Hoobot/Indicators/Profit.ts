@@ -50,7 +50,7 @@ export const calculateProfitSignals = async (
   _lastPNL: number,
   unrealizedPNL: number,
   closeTime: number,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = "HOLD";
 
@@ -171,7 +171,7 @@ export const calculateProfitSignals = async (
     } else if (next === "SELL" && symbolOptions.profit?.minimumSell === 0) {
       check = "SELL";
     } else if (next === "BUY" && symbolOptions.profit?.minimumBuy === 0) {
-      check = "BUY"
+      check = "BUY";
     }
   }
 
@@ -198,7 +198,7 @@ export const checkProfitSignals = async (
   orderBook: Orderbook,
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = "HOLD";
   let lastPNL: number = 0;
@@ -227,20 +227,22 @@ export const checkProfitSignals = async (
       const orderBookAsks = Object.keys(orderBook.asks)
         .map((price) => parseFloat(price))
         .sort((a, b) => a - b);
+      const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(lastTrade.price);
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        orderBookAsks[0]
+        currentPrice,
       );
     } else if (!lastTrade.isBuyer) {
       // buying
       const orderBookBids = Object.keys(orderBook.bids)
         .map((price) => parseFloat(price))
         .sort((a, b) => b - a);
+      const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(lastTrade.price);
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        orderBookBids[0]
+        currentPrice,
       );
     }
     if (lastTrade.isBuyer && next === "BUY") {
@@ -263,7 +265,7 @@ export const checkProfitSignals = async (
       lastPNL,
       unrealizedPNL,
       closeTime,
-      symbolOptions
+      symbolOptions,
     );
     check = signals.check;
     consoleLogger.push("PNL%", {
@@ -299,7 +301,7 @@ export const checkProfitSignalsFromCandlesticks = async (
   candlesticks: Candlestick[],
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = "HOLD";
   let lastPNL: number = 0;
@@ -328,13 +330,13 @@ export const checkProfitSignalsFromCandlesticks = async (
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        close
+        close,
       );
     } else {
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        close
+        close,
       );
     }
     if (lastTrade.isBuyer && next === "BUY") {
@@ -357,7 +359,7 @@ export const checkProfitSignalsFromCandlesticks = async (
       lastPNL,
       unrealizedPNL,
       closeTime,
-      symbolOptions
+      symbolOptions,
     );
     check = signals.check;
     consoleLogger.push("PNL%", {

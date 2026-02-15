@@ -61,7 +61,7 @@ export const getExchangeOption = (exchange: Exchange, options: ConfigOptions): E
 export const getExchangeByName = (
   name: string,
   exchanges: Exchange[],
-  options: ConfigOptions
+  options: ConfigOptions,
 ): Exchange | undefined => {
   for (const exchange of exchanges) {
     const exchangeOption = getExchangeOption(exchange, options);

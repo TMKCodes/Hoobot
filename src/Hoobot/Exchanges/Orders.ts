@@ -93,7 +93,7 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        } as Order)
+        }) as Order,
     );
   }
   return [] as Order[];
@@ -123,7 +123,7 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        } as Order)
+        }) as Order,
     );
   }
   return [] as Order[];
@@ -220,7 +220,7 @@ export const handleOpenOrders = async (
   symbol: string,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   var openOrders = await getOpenOrders(exchange, symbol);
   if (openOrders.length === 0) {
@@ -249,20 +249,22 @@ export const handleOpenOrders = async (
         const orderBookBids = Object.keys(orderBook.bids)
           .map((price) => parseFloat(price))
           .sort((a, b) => b - a);
+        const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(openOrders[i].price);
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
           parseFloat(openOrders[i].quoteQty),
           parseFloat(openOrders[i].price),
-          orderBookBids[0]
+          currentPrice,
         );
       } else {
         // console.log("Checking asks");
         const orderBookAsks = Object.keys(orderBook.asks)
           .map((price) => parseFloat(price))
           .sort((a, b) => a - b);
+        const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(openOrders[i].price);
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
           parseFloat(openOrders[i].quoteQty),
           parseFloat(openOrders[i].price),
-          orderBookAsks[0]
+          currentPrice,
         );
       }
       // console.log(unrealizedPNL);
@@ -287,7 +289,7 @@ export const handleOpenOrder = async (
   order: Order,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ): Promise<string> => {
   if (isBinance(exchange)) {
     let partiallyFilledSent = false;
@@ -357,19 +359,21 @@ export const handleOpenOrder = async (
             const orderBookBids = Object.keys(orderBook.bids)
               .map((price) => parseFloat(price))
               .sort((a, b) => b - a);
+            const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(order.price);
             unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
               parseFloat(order.quoteQty),
               parseFloat(order.price),
-              orderBookBids[0]
+              currentPrice,
             );
           } else {
             const orderBookAsks = Object.keys(orderBook.asks)
               .map((price) => parseFloat(price))
               .sort((a, b) => a - b);
+            const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(order.price);
             unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
               parseFloat(order.quoteQty),
               parseFloat(order.price),
-              orderBookAsks[0]
+              currentPrice,
             );
           }
           if (unrealizedPNL > symbolOptions.closePercentage!) {
@@ -414,19 +418,21 @@ export const handleOpenOrder = async (
                 const orderBookBids = Object.keys(orderBook.bids)
                   .map((price) => parseFloat(price))
                   .sort((a, b) => b - a);
+                const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(order.price);
                 unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
                   parseFloat(order.quoteQty),
                   parseFloat(order.price),
-                  orderBookBids[0]
+                  currentPrice,
                 );
               } else {
                 const orderBookAsks = Object.keys(orderBook.asks)
                   .map((price) => parseFloat(price))
                   .sort((a, b) => a - b);
+                const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(order.price);
                 unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
                   parseFloat(order.quoteQty),
                   parseFloat(order.price),
-                  orderBookAsks[0]
+                  currentPrice,
                 );
               }
               if (unrealizedPNL > symbolOptions.closePercentage!) {
