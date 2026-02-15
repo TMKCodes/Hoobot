@@ -133,10 +133,12 @@ export const calculatePercentageDifference = (oldNumber: number, newNumber: numb
 };
 
 export const calculatePNLPercentageForLong = (entryPrice: number, exitPrice: number): number => {
+  if (entryPrice === 0) return 0;
   return ((exitPrice - entryPrice) / entryPrice) * 100;
 };
 
 export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: number): number => {
+  if (entryPrice === 0) return 0;
   return ((entryPrice - exitPrice) / entryPrice) * 100;
 };
 
@@ -260,6 +262,7 @@ export const removeBlock = async (symbol: string) => {
 };
 
 const roundStep = (price: number, size: number): number => {
+  if (size === 0) return price;
   const tickSizePrecision = Math.floor(Math.log10(Math.abs(size))) * -1;
   const roundedPrice = Math.round(price / size) * size;
   if (tickSizePrecision > 0 && tickSizePrecision < 100) {
@@ -671,6 +674,10 @@ export const buy = async (
     return false;
   }
   const quantityInBase = (quantityInQuote / bidPriceIncremented) * 0.98; // Use incremented price
+  if (!isFinite(quantityInBase)) {
+    consoleLogger.push("error", "Invalid quantity calculation due to zero or invalid price.");
+    return false;
+  }
   const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
   if (roundedQuantityInQuote < 1.1) {
@@ -918,7 +925,7 @@ export const simulateBuy = async (
   logger: ConsoleLogger,
 ): Promise<Boolean> => {
   // console.log(time);
-  if (price === null || quantity === 0) {
+  if (price === null || quantity === 0 || price === 0) {
     return false;
   }
   let quoteQuantity = quantity;

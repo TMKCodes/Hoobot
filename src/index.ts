@@ -434,7 +434,7 @@ const simulate = async () => {
     let balance = calculateBalance(exchangeOptions);
     Logger.push("Starting balance", startingBalance.toFixed(2));
     Logger.push("Final Balance", balance.toFixed(2));
-    Logger.push("ROI", ((balance - startingBalance) / startingBalance).toFixed(2));
+    Logger.push("ROI", startingBalance === 0 ? "0.00" : ((balance - startingBalance) / startingBalance).toFixed(2));
     for (const symbol of exchangeOptions.symbols) {
       Logger.push(`${symbol.name} max trade`, symbol.growingMax);
       Logger.push(`${symbol.name} trades`, exchangeOptions.tradeHistory[symbol.name.split("/").join("")].length);

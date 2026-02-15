@@ -34,6 +34,7 @@ export const calculateROC = (candles: Candlestick[], period: number, source: str
     .map((value, index, arr) => {
       if (index < period) return 0; // Not enough data to calculate ROC
       const prevValue = arr[index - period];
+      if (prevValue === 0) return 0; // Avoid division by zero
       return ((value - prevValue) / prevValue) * 100;
     })
     .slice(period)
