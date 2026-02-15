@@ -213,18 +213,15 @@ export const checkStochasticOscillatorSignals = (
         symbolOptions.indicators.so.thresholds.oversold !== undefined
           ? symbolOptions.indicators.so.thresholds.oversold
           : 20;
-      const rising = K > prevK && D > prevD;
-      const dropping = K < prevK && D > prevD;
-      if (D < oversoldThreshold && rising && KDHigher) {
-        symbolOptions.indicators.so.weight = 1.1;
-        check = "BUY";
-      } else if (D > overboughtThreshold && dropping && DKHigher) {
-        symbolOptions.indicators.so.weight = 1.1;
-        check = "SELL";
-      } else if (D < oversoldThreshold && KDCrossover) {
+
+      // Standard Stochastic Oscillator signals:
+      // BUY: %K crosses above %D in oversold territory, or both lines rising below oversold
+      // SELL: %K crosses below %D in overbought territory, or both lines falling above overbought
+
+      if ((KDCrossover && D < oversoldThreshold) || (K > prevK && D > prevD && D < oversoldThreshold)) {
         symbolOptions.indicators.so.weight = 1;
         check = "BUY";
-      } else if (D > overboughtThreshold && DKCrossover) {
+      } else if ((DKCrossover && D > overboughtThreshold) || (K < prevK && D < prevD && D > overboughtThreshold)) {
         symbolOptions.indicators.so.weight = 1;
         check = "SELL";
       }
@@ -257,19 +254,16 @@ export const checkStochasticRSISignals = (stochasticRSI: [number[], number[]], s
         symbolOptions.indicators.srsi.thresholds.oversold !== undefined
           ? symbolOptions.indicators.srsi.thresholds.oversold
           : 20;
-      const rising = K > prevK && D > prevD;
-      const dropping = K < prevK && D > prevD;
-      if (rising && KDHigher) {
+
+      // Stochastic RSI signals:
+      // BUY: %K crosses above %D in oversold territory, or both lines rising below oversold
+      // SELL: %K crosses below %D in overbought territory, or both lines falling above overbought
+
+      if ((KDCrossover && D < oversoldThreshold) || (K > prevK && D > prevD && D < oversoldThreshold)) {
         symbolOptions.indicators.srsi.weight = 1;
         check = "BUY";
-      } else if (dropping && DKHigher) {
+      } else if ((DKCrossover && D > overboughtThreshold) || (K < prevK && D < prevD && D > overboughtThreshold)) {
         symbolOptions.indicators.srsi.weight = 1;
-        check = "SELL";
-      } else if (D < oversoldThreshold && KDCrossover) {
-        symbolOptions.indicators.srsi.weight = 1.5;
-        check = "BUY";
-      } else if (D > overboughtThreshold && DKCrossover) {
-        symbolOptions.indicators.srsi.weight = 1.5;
         check = "SELL";
       }
     }
