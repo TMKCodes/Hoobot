@@ -31,8 +31,17 @@ import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateEMA } from "./EMA";
 import { calculateSMA } from "./SMA";
 
+/**
+ * Calculates Bollinger Bands for the given candlestick data.
+ * @param candles Array of candlestick data
+ * @param average Type of moving average to use ("SMA" or "EMA")
+ * @param period Period for the moving average
+ * @param multiplier Standard deviation multiplier for bands
+ * @param source Price source ("close", "open", "high", "low")
+ * @returns Tuple of [values, upperBands, lowerBands]
+ */
 export const calculateBollingerBands = (
-  candles: any[],
+  candles: Candlestick[],
   average: string = "SMA",
   period: number,
   multiplier: number = 2,
@@ -47,13 +56,13 @@ export const calculateBollingerBands = (
   const standardDeviations: number[] = [];
   let prices: number[] = [];
   if (source === "close") {
-    prices = candles.map((candle) => parseFloat(candle.close));
+    prices = candles.map((candle) => candle.close);
   } else if (source === "open") {
-    prices = candles.map((candle) => parseFloat(candle.open));
+    prices = candles.map((candle) => candle.open);
   } else if (source === "high") {
-    prices = candles.map((candle) => parseFloat(candle.high));
+    prices = candles.map((candle) => candle.high);
   } else if (source === "low") {
-    prices = candles.map((candle) => parseFloat(candle.low));
+    prices = candles.map((candle) => candle.low);
   }
   for (let i = period - 1; i < prices.length; i++) {
     const slice = prices.slice(i - period + 1, i + 1);
@@ -66,6 +75,12 @@ export const calculateBollingerBands = (
   return [values, upperBands, lowerBands];
 };
 
+/**
+ * Logs Bollinger Bands signals to the console logger.
+ * @param consoleLogger Logger instance
+ * @param candlesticks Array of candlestick data
+ * @param bollingerBands Tuple of [values, upperBands, lowerBands]
+ */
 export const logBollingerBandsSignals = (
   consoleLogger: ConsoleLogger,
   candlesticks: Candlestick[],
