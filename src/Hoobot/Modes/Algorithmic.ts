@@ -74,6 +74,14 @@ import {
 } from "../Indicators/ChaikinOscillator";
 import { calculateAroon, checkAroonSignals, logAroonSignals, AroonResult } from "../Indicators/Aroon";
 import { calculateForceIndex, checkForceIndexSignals, logForceIndexSignals } from "../Indicators/ForceIndex";
+import { calculateIchimoku, checkIchimokuSignals, logIchimokuSignals, IchimokuResult } from "../Indicators/Ichimoku";
+import {
+  calculateParabolicSAR,
+  checkParabolicSARSingals,
+  logParabolicSARSingals,
+  ParabolicSARResult,
+} from "../Indicators/ParabolicSAR";
+import { calculateVWAP, checkVWAPSignals, logVWAPSignals, VWAPResult } from "../Indicators/VWAP";
 
 export interface Indicators {
   trend: Trend;
@@ -136,6 +144,15 @@ export interface Indicators {
   };
   forceIndex: {
     [time: string]: number[];
+  };
+  ichimoku: {
+    [time: string]: IchimokuResult;
+  };
+  parabolicSAR: {
+    [time: string]: ParabolicSARResult;
+  };
+  vwap: {
+    [time: string]: VWAPResult;
   };
   [key: string]: {};
 }
@@ -225,6 +242,9 @@ export const tradeDirection = async (
     ChaikinOscillatorWeight: symbolOptions.indicators.chaikin?.weight!,
     AroonWeight: symbolOptions.indicators.aroon?.weight!,
     ForceIndexWeight: symbolOptions.indicators.forceIndex?.weight!,
+    IchimokuWeight: symbolOptions.indicators.ichimoku?.weight!,
+    ParabolicSARWeight: symbolOptions.indicators.parabolicSAR?.weight!,
+    VWAPWeight: symbolOptions.indicators.vwap?.weight!,
   };
   // console.log(timeframes.length);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
@@ -261,6 +281,9 @@ export const tradeDirection = async (
       ),
       Aroon: checkAroonSignals(indicators.aroon[timeframes[timeframeIndex]], symbolOptions),
       ForceIndex: checkForceIndexSignals(indicators.forceIndex[timeframes[timeframeIndex]], symbolOptions),
+      Ichimoku: checkIchimokuSignals(indicators.ichimoku[timeframes[timeframeIndex]], symbolOptions),
+      ParabolicSAR: checkParabolicSARSingals(indicators.parabolicSAR[timeframes[timeframeIndex]], symbolOptions),
+      VWAP: checkVWAPSignals(indicators.vwap[timeframes[timeframeIndex]], symbolOptions),
     };
     const keys = Object.keys(checks).filter((check) => checks[check] !== "SKIP");
     // console.log(`Keys: ${JSON.stringify(keys)}`);
@@ -578,6 +601,32 @@ const subCalculateIndicators = (
       indicators.forceIndex[timeframe] = calculateForceIndex(candlesticks, symbolOptions.indicators.forceIndex.period);
       logForceIndexSignals(consoleLogger, indicators.forceIndex[timeframe]);
     }
+    if (symbolOptions.indicators.ichimoku?.enabled) {
+      indicators.ichimoku[timeframe] = calculateIchimoku(
+        candlesticks,
+        symbolOptions.indicators.ichimoku.tenkanPeriod,
+        symbolOptions.indicators.ichimoku.kijunPeriod,
+        symbolOptions.indicators.ichimoku.senkouPeriod,
+        symbolOptions.indicators.ichimoku.displacement,
+      );
+      logIchimokuSignals(consoleLogger, indicators.ichimoku[timeframe]);
+    }
+    if (symbolOptions.indicators.parabolicSAR?.enabled) {
+      indicators.parabolicSAR[timeframe] = calculateParabolicSAR(
+        candlesticks,
+        symbolOptions.indicators.parabolicSAR.accelerationFactor,
+        symbolOptions.indicators.parabolicSAR.maxAcceleration,
+      );
+      logParabolicSARSingals(consoleLogger, indicators.parabolicSAR[timeframe]);
+    }
+    if (symbolOptions.indicators.vwap?.enabled) {
+      indicators.vwap[timeframe] = calculateVWAP(
+        candlesticks,
+        symbolOptions.indicators.vwap.stdDevMultiplier,
+        symbolOptions.indicators.vwap.resetPeriod,
+      );
+      logVWAPSignals(consoleLogger, indicators.vwap[timeframe]);
+    }
     return indicators;
   } else {
     return {
@@ -602,6 +651,9 @@ const subCalculateIndicators = (
       chaikinOscillator: {},
       aroon: {},
       forceIndex: {},
+      ichimoku: {},
+      parabolicSAR: {},
+      vwap: {},
     };
   }
 };
@@ -634,6 +686,9 @@ export const calculateIndicators = (
     chaikinOscillator: {},
     aroon: {},
     forceIndex: {},
+    ichimoku: {},
+    parabolicSAR: {},
+    vwap: {},
   };
   if (
     symbolOptions.trend?.enabled &&

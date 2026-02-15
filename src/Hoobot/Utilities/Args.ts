@@ -347,6 +347,26 @@ export interface SymbolOptions {
       period: number;
       weight?: number;
     };
+    ichimoku?: {
+      enabled: boolean;
+      tenkanPeriod: number;
+      kijunPeriod: number;
+      senkouPeriod: number;
+      displacement: number;
+      weight?: number;
+    };
+    parabolicSAR?: {
+      enabled: boolean;
+      accelerationFactor: number;
+      maxAcceleration: number;
+      weight?: number;
+    };
+    vwap?: {
+      enabled: boolean;
+      stdDevMultiplier: number;
+      resetPeriod: string;
+      weight?: number;
+    };
     OpenAI?: {
       enabled: boolean;
       key: string;
