@@ -67,7 +67,7 @@ export const getOrderbook = async (exchange: Exchange, symbol: string): Promise<
 export const listenForOrderbooks = async (
   exchange: Exchange,
   symbol: string,
-  returnCallback: (symbol: string, orderbook: Orderbook) => void
+  returnCallback: (symbol: string, orderbook: Orderbook) => void,
 ) => {
   if (isBinance(exchange)) {
     exchange.websockets.depthCache(symbol.split("/").join(""), (symbol: any, depth: any) => {

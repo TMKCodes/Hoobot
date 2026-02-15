@@ -121,7 +121,7 @@ export const calculateRenko = (candlesticks: Candlestick[], brickSize: number): 
 export const logRenkoSignals = (
   consoleLogger: ConsoleLogger,
   renkoData: RenkoBrick[],
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   if (renkoData.length === 0) {
     consoleLogger.push("Renko", { error: "No Renko data available" });

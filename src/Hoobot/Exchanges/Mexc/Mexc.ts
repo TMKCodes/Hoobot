@@ -297,7 +297,7 @@ export class Mexc {
   public subscribeTrades = async (
     symbol: string,
     interval: "10ms" | "100ms",
-    callback: (response: MexcResponse) => void
+    callback: (response: MexcResponse) => void,
   ) => {
     await this.waitToBlock();
     const channel = `spot@public.aggre.deals.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
@@ -393,7 +393,7 @@ export class Mexc {
   public subscribeDepth = async (
     symbol: string,
     interval: "10ms" | "100ms",
-    callback: (response: MexcResponse) => void
+    callback: (response: MexcResponse) => void,
   ) => {
     await this.waitToBlock();
     const channel = `spot@public.aggre.depth.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
@@ -443,7 +443,7 @@ export class Mexc {
   public subscribeLimitDepth = async (
     symbol: string,
     level: 5 | 10 | 20,
-    callback: (response: MexcResponse) => void
+    callback: (response: MexcResponse) => void,
   ) => {
     await this.waitToBlock();
     const channel = `spot@public.limit.depth.v3.api.pb@${symbol.toUpperCase()}@${level}`;
@@ -493,7 +493,7 @@ export class Mexc {
   public subscribeBookTicker = async (
     symbol: string,
     interval: "10ms" | "100ms",
-    callback: (response: MexcResponse) => void
+    callback: (response: MexcResponse) => void,
   ) => {
     await this.waitToBlock();
     const channel = `spot@public.aggre.bookTicker.v3.api.pb@${interval}@${symbol.toUpperCase()}`;
@@ -618,10 +618,7 @@ export class Mexc {
         } else {
           signaturePayload = queryStringForSign;
         }
-        const signature = crypto
-          .createHmac("sha256", this.secret)
-          .update(signaturePayload)
-          .digest("hex");
+        const signature = crypto.createHmac("sha256", this.secret).update(signaturePayload).digest("hex");
         headers["X-MEXC-SIGNATURE"] = signature;
       }
       const response = await fetch(url, {
@@ -677,7 +674,7 @@ export class Mexc {
     fromId?: string,
     startTime?: number,
     endTime?: number,
-    limit: number = 500
+    limit: number = 500,
   ) => {
     const params: urlParams = { symbol: symbol.toUpperCase(), limit: limit.toString() };
     if (fromId) params.fromId = fromId;
@@ -691,7 +688,7 @@ export class Mexc {
     interval: string,
     startTime?: number,
     endTime?: number,
-    limit: number = 500
+    limit: number = 500,
   ) => {
     const params: urlParams = { symbol: symbol.toUpperCase(), interval, limit: limit.toString() };
     if (startTime) params.startTime = startTime.toString();
@@ -738,7 +735,7 @@ export class Mexc {
     quantity: string,
     price?: string,
     newClientOrderId?: string,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: any = { symbol: symbol.toUpperCase(), side, type, quantity, recvWindow: recvWindow.toString() };
     if (price) params.price = price;
@@ -750,7 +747,7 @@ export class Mexc {
     symbol: string,
     orderId?: string,
     origClientOrderId?: string,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = { symbol: symbol.toUpperCase(), recvWindow: recvWindow.toString() };
     if (orderId) params.orderId = orderId;
@@ -763,7 +760,7 @@ export class Mexc {
       "/openOrders",
       "DELETE",
       {},
-      { symbol: symbol.toUpperCase(), recvWindow: recvWindow.toString() }
+      { symbol: symbol.toUpperCase(), recvWindow: recvWindow.toString() },
     );
   };
 
@@ -773,7 +770,7 @@ export class Mexc {
     startTime?: number,
     endTime?: number,
     limit: number = 500,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = {
       symbol: symbol.toUpperCase(),
@@ -792,7 +789,7 @@ export class Mexc {
     startTime?: number,
     endTime?: number,
     limit: number = 500,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = {
       symbol: symbol.toUpperCase(),
@@ -818,7 +815,7 @@ export class Mexc {
     endTime?: number,
     fromId?: string,
     limit: number = 500,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = {
       symbol: symbol.toUpperCase(),
@@ -844,7 +841,7 @@ export class Mexc {
     network?: string,
     memo?: string,
     remark?: string,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: any = { coin, address, amount, recvWindow: recvWindow.toString() };
     if (network) params.network = network;
@@ -863,7 +860,7 @@ export class Mexc {
     startTime?: number,
     endTime?: number,
     limit: number = 100,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = { limit: limit.toString(), recvWindow: recvWindow.toString() };
     if (coin) params.coin = coin;
@@ -879,7 +876,7 @@ export class Mexc {
     startTime?: number,
     endTime?: number,
     limit: number = 100,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = { limit: limit.toString(), recvWindow: recvWindow.toString() };
     if (coin) params.coin = coin;
@@ -897,7 +894,7 @@ export class Mexc {
     startTime?: number,
     endTime?: number,
     limit: number = 100,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     const params: urlParams = { limit: limit.toString(), recvWindow: recvWindow.toString() };
     if (startTime) params.startTime = startTime.toString();
@@ -910,7 +907,7 @@ export class Mexc {
     toAccountType: string,
     asset: string,
     amount: string,
-    recvWindow: number = 5000
+    recvWindow: number = 5000,
   ) => {
     return this.apiCall(
       "/capital/transfer",
@@ -922,7 +919,7 @@ export class Mexc {
         amount,
         recvWindow: recvWindow.toString(),
       },
-      {}
+      {},
     );
   };
 

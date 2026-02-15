@@ -50,21 +50,18 @@ export const getFilters = async (exchange: Exchange, pair: string): Promise<Filt
   if (isBinance(exchange)) {
     const exchangeInfo = await exchange.exchangeInfo();
     const symbolInfo = exchangeInfo.symbols.find(
-      (symbol: { symbol: string }) => symbol.symbol === pair.split("/").join("")
+      (symbol: { symbol: string }) => symbol.symbol === pair.split("/").join(""),
     );
     if (symbolInfo) {
-      const priceFilter = symbolInfo.filters.find(
-        (filter: { filterType: string }) => filter.filterType === "PRICE_FILTER"
-      ) || {};
-      const lotSizeFilter = symbolInfo.filters.find(
-        (filter: { filterType: string }) => filter.filterType === "LOT_SIZE"
-      ) || {};
-      const notionalFilter = symbolInfo.filters.find(
-        (filter: { filterType: string }) => filter.filterType === "NOTIONAL"
-      ) || {};
-      const percentPriceFilter = symbolInfo.filters.find(
-        (filter: { filterType: string }) => filter.filterType === "PERCENT_PRICE_BY_SIDE"
-      ) || {};
+      const priceFilter =
+        symbolInfo.filters.find((filter: { filterType: string }) => filter.filterType === "PRICE_FILTER") || {};
+      const lotSizeFilter =
+        symbolInfo.filters.find((filter: { filterType: string }) => filter.filterType === "LOT_SIZE") || {};
+      const notionalFilter =
+        symbolInfo.filters.find((filter: { filterType: string }) => filter.filterType === "NOTIONAL") || {};
+      const percentPriceFilter =
+        symbolInfo.filters.find((filter: { filterType: string }) => filter.filterType === "PERCENT_PRICE_BY_SIDE") ||
+        {};
       return {
         minPrice: parseFloat(priceFilter.minPrice || "0"),
         maxPrice: parseFloat(priceFilter.maxPrice || "100000000000000"),

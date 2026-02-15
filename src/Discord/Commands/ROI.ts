@@ -36,12 +36,12 @@ export default {
     .setName("roi")
     .setDescription("Calculates ROI since first recorded balance.")
     .addStringOption((option) =>
-      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
+      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true),
     ),
   execute: async (
     interaction: { options: any; reply: (arg0: string) => any },
     exchanges: Exchange[],
-    options: ConfigOptions
+    options: ConfigOptions,
   ) => {
     const exchangeName = interaction.options.getString("exchange");
     if (exchangeName !== null) {
@@ -50,7 +50,7 @@ export default {
         const currentBalances = await getCurrentBalances(exchangeByName);
         if (!fs.existsSync(`./logs/balances-${exchangeName}.json`)) {
           await interaction.reply(
-            `There are no stored balances in /logs/balances-${exchangeName}.json file yet. Investigate!`
+            `There are no stored balances in /logs/balances-${exchangeName}.json file yet. Investigate!`,
           );
         } else {
           const storedBalances = JSON.parse(fs.readFileSync(`./logs/balances-${exchangeName}.json`, "utf-8") || "[]");
@@ -66,7 +66,7 @@ export default {
           }
           const totalCurrentFiat = Object.values(currentBalances).reduce((acc, cur) => acc + cur.usdt, 0);
           const totalFirstFiat = Object.values(
-            firstEntry[firstEntryKey] as Record<string, { crypto: number; usdt: number }>
+            firstEntry[firstEntryKey] as Record<string, { crypto: number; usdt: number }>,
           ).reduce((acc, cur) => acc + cur.usdt, 0);
           if (totalFirstFiat === 0) {
             await interaction.reply(`Initial balance is zero, cannot calculate ROI.`);
@@ -79,7 +79,7 @@ export default {
             return Object.values(balances).reduce((acc, balance) => acc + balance.usdt, 0);
           });
           const validFiatBalances = totalFiatBalances.filter(
-            (balance: number) => typeof balance === "number" && !isNaN(balance) && balance > 0
+            (balance: number) => typeof balance === "number" && !isNaN(balance) && balance > 0,
           );
           if (validFiatBalances.length === 0) {
             await interaction.reply(`No valid balance data found for ROI calculation.`);
@@ -92,10 +92,10 @@ export default {
           let msg = "```";
           msg += `Initial Balance: ${totalFirstFiat.toFixed(2)} USDT\r\n\r\n`;
           msg += `Current Balance: ${totalCurrentFiat.toFixed(2)} USDT\r\nCurrent Difference: ${diff.toFixed(
-            2
+            2,
           )} USDT\r\nCurrent ROI: ${roi.toFixed(2)} %\r\n\r\n`;
           msg += `Max Balance: ${maxFiat.toFixed(2)} USDT\r\nMax Difference: ${maxDiff.toFixed(
-            2
+            2,
           )} USDT\r\nMax ROI: ${maxRoi.toFixed(2)} %\r\n\r\n`;
           msg += "```";
           await interaction.reply(msg);
