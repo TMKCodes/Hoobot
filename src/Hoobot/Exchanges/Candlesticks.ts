@@ -199,7 +199,6 @@ export const listenForCandlesticks = async (
         symbol,
         getMinutesFromInterval(timeframes[i]),
         async (response: NonKYCResponse) => {
-          console.log("Subscribe Candles callback called!");
           if (response.method === "updateCandles") {
             const candles = (response.params as NonKYCCandles).data;
             if (candles.length < 1) {
