@@ -130,20 +130,33 @@ export const checkBollingerBandsSignals = (
     if (symbolOptions.indicators.bb !== undefined) {
       if (symbolOptions.indicators.bb.enabled) {
         check = "HOLD";
-        for (let i = 1; i < symbolOptions.indicators.bb.length + 1; i++) {
-          const currentLow = candlesticks[candlesticks.length - i].low;
-          const currentHigh = candlesticks[candlesticks.length - i].high;
-          const currentUpperBand = bollingerBands[1][bollingerBands[1].length - i];
-          const currentLowerBand = bollingerBands[0][bollingerBands[0].length - i];
-          const isAboveUpperBand = currentHigh > currentUpperBand;
-          const isBelowLowerBand = currentLow < currentLowerBand;
-          if (isAboveUpperBand) {
-            check = "SELL";
-            break;
-          } else if (isBelowLowerBand) {
-            check = "BUY";
-            break;
-          }
+        if (candlesticks.length < 2 || bollingerBands[0].length < 2 ||
+            bollingerBands[1].length < 2 || bollingerBands[2].length < 2) {
+          return check;
+        }
+
+        const currentCandle = candlesticks[candlesticks.length - 1];
+        const previousCandle = candlesticks[candlesticks.length - 2];
+        const currentUpperBand = bollingerBands[1][bollingerBands[1].length - 1];
+        const currentLowerBand = bollingerBands[2][bollingerBands[2].length - 1];
+        const previousUpperBand = bollingerBands[1][bollingerBands[1].length - 2];
+        const previousLowerBand = bollingerBands[2][bollingerBands[2].length - 2];
+
+        // Bollinger Bands signals:
+        // BUY: Price touches lower band and starts moving up (bullish bounce)
+        // SELL: Price touches upper band and starts moving down (bearish rejection)
+
+        const touchedLowerBand = currentCandle.low <= currentLowerBand || previousCandle.low <= previousLowerBand;
+        const touchedUpperBand = currentCandle.high >= currentUpperBand || previousCandle.high >= previousUpperBand;
+        const priceRising = currentCandle.close > previousCandle.close;
+        const priceFalling = currentCandle.close < previousCandle.close;
+
+        if (touchedLowerBand && priceRising) {
+          symbolOptions.indicators.bb.weight = 1;
+          check = "BUY";
+        } else if (touchedUpperBand && priceFalling) {
+          symbolOptions.indicators.bb.weight = 1;
+          check = "SELL";
         }
       }
     }
