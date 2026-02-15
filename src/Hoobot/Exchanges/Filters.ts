@@ -55,29 +55,29 @@ export const getFilters = async (exchange: Exchange, pair: string): Promise<Filt
     if (symbolInfo) {
       const priceFilter = symbolInfo.filters.find(
         (filter: { filterType: string }) => filter.filterType === "PRICE_FILTER"
-      );
+      ) || {};
       const lotSizeFilter = symbolInfo.filters.find(
         (filter: { filterType: string }) => filter.filterType === "LOT_SIZE"
-      );
+      ) || {};
       const notionalFilter = symbolInfo.filters.find(
         (filter: { filterType: string }) => filter.filterType === "NOTIONAL"
-      );
+      ) || {};
       const percentPriceFilter = symbolInfo.filters.find(
         (filter: { filterType: string }) => filter.filterType === "PERCENT_PRICE_BY_SIDE"
-      );
+      ) || {};
       return {
-        minPrice: parseFloat(priceFilter.minPrice),
-        maxPrice: parseFloat(priceFilter.maxPrice),
-        tickSize: parseFloat(priceFilter.tickSize),
-        minQty: parseFloat(lotSizeFilter.minQty),
-        maxQty: parseFloat(lotSizeFilter.maxQty),
-        stepSize: parseFloat(lotSizeFilter.stepSize),
-        minNotional: parseFloat(notionalFilter.minNotional),
-        maxNotional: parseFloat(notionalFilter.maxNotional),
-        bidMultiplierUp: parseFloat(percentPriceFilter.bidMultiplierUp),
-        bidMultiplierDown: parseFloat(percentPriceFilter.bidMultiplierDown),
-        askMultiplierUp: parseFloat(percentPriceFilter.askMultiplierUp),
-        askMultiplierDown: parseFloat(percentPriceFilter.askMultiplierDown),
+        minPrice: parseFloat(priceFilter.minPrice || "0"),
+        maxPrice: parseFloat(priceFilter.maxPrice || "100000000000000"),
+        tickSize: parseFloat(priceFilter.tickSize || "0.000000000001"),
+        minQty: parseFloat(lotSizeFilter.minQty || "0.000000000001"),
+        maxQty: parseFloat(lotSizeFilter.maxQty || "100000000000000"),
+        stepSize: parseFloat(lotSizeFilter.stepSize || "0.000000000001"),
+        minNotional: parseFloat(notionalFilter.minNotional || "0.000000001"),
+        maxNotional: parseFloat(notionalFilter.maxNotional || "100000000000000"),
+        bidMultiplierUp: parseFloat(percentPriceFilter.bidMultiplierUp || "0.000000000001"),
+        bidMultiplierDown: parseFloat(percentPriceFilter.bidMultiplierDown || "0.000000000001"),
+        askMultiplierUp: parseFloat(percentPriceFilter.askMultiplierUp || "0.000000000001"),
+        askMultiplierDown: parseFloat(percentPriceFilter.askMultiplierDown || "0.000000000001"),
       };
     } else {
       throw new Error("Trading pair not found in exchange info");

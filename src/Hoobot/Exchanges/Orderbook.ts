@@ -92,14 +92,14 @@ export const listenForOrderbooks = async (
           if (book.asks[ask.price] !== undefined) {
             book.asks[ask.price] = typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
           } else {
-            book.asks[ask.price] += typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
+            book.asks[ask.price] = typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
           }
         }
         for (const bid of bids) {
           if (book.bids[bid.price] !== undefined) {
             book.bids[bid.price] = typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
           } else {
-            book.bids[bid.price] += typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
+            book.bids[bid.price] = typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
           }
         }
         returnCallback(symbol, book);
@@ -113,7 +113,7 @@ export const listenForOrderbooks = async (
             if (book.asks[ask.price] !== undefined) {
               book.asks[ask.price] = typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
             } else {
-              book.asks[ask.price] += typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
+              book.asks[ask.price] = typeof ask.quantity !== "string" ? ask.quantity : parseFloat(ask.quantity);
             }
           }
         }
@@ -124,7 +124,7 @@ export const listenForOrderbooks = async (
             if (book.bids[bid.price] !== undefined) {
               book.bids[bid.price] = typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
             } else {
-              book.bids[bid.price] += typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
+              book.bids[bid.price] = typeof bid.quantity !== "string" ? bid.quantity : parseFloat(bid.quantity);
             }
           }
         }

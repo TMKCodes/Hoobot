@@ -41,6 +41,10 @@ export const calculateAverage = (candlesticks: Candlestick[]): number => {
 };
 
 export const logAverageSignals = (consoleLogger: ConsoleLogger, candlesticks: Candlestick[], average: number) => {
+  if (candlesticks.length === 0) {
+    consoleLogger.push("Average", { error: "No candlestick data available" });
+    return;
+  }
   let signal = "Neutral";
   if (candlesticks[candlesticks.length - 1].high < average) {
     signal = "Buy";
