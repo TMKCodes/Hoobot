@@ -67,10 +67,14 @@ export default {
             return;
           }
           const exchangeOption = getExchangeOption(exchangeByName, options);
+          if (!exchangeOption.orderbooks || !exchangeOption.orderbooks[symbol.split("/").join("")]) {
+            await interaction.reply("Orderbook data not available for this symbol.");
+            return;
+          }
           const orderBook: Orderbook = exchangeOption.orderbooks[symbol.split("/").join("")];
           const lastTrade: Trade = tradeHistory[tradeHistory.length - 1];
           if (lastTrade.isBuyer === true) {
-            const bidKeys = Object.keys(orderBook.bids);
+            const bidKeys = Object.keys(orderBook.bids).sort((a, b) => parseFloat(b) - parseFloat(a)); // highest first
             if (bidKeys.length === 0) {
               await interaction.reply("No bid data available in orderbook.");
               return;
@@ -90,7 +94,7 @@ export default {
             msg += "```";
             await interaction.reply(msg);
           } else {
-            const askKeys = Object.keys(orderBook.asks);
+            const askKeys = Object.keys(orderBook.asks).sort((a, b) => parseFloat(a) - parseFloat(b)); // lowest first
             if (askKeys.length === 0) {
               await interaction.reply("No ask data available in orderbook.");
               return;

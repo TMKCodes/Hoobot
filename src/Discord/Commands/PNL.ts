@@ -30,8 +30,13 @@ export default {
     if (exchangeName !== null) {
       const exchangeByName = getExchangeByName(exchangeName, exchanges, options);
       if (exchangeByName !== undefined) {
-        const symbol: string = interaction.options.getString("symbol").toUpperCase();
-        const duration: string = interaction.options.getString("duration").toLowerCase();
+        const symbolStr = interaction.options.getString("symbol");
+        const durationStr = interaction.options.getString("duration");
+        if (!symbolStr || !durationStr) {
+          return await interaction.reply("Please provide valid symbol and duration.");
+        }
+        const symbol: string = symbolStr.toUpperCase();
+        const duration: string = durationStr.toLowerCase();
         if (
           duration.toUpperCase() !== "1D" &&
           duration.toUpperCase() !== "1W" &&
@@ -108,7 +113,7 @@ export const getTargetTimestamp = (duration: string): number => {
     case "1M":
       return now - 30 * 24 * 60 * 60;
     case "1Y":
-      return now - 30 * 24 * 60 * 60 * 12;
+      return now - 365 * 24 * 60 * 60;
     default:
       throw new Error("Invalid duration");
   }
