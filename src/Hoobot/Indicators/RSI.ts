@@ -140,7 +140,13 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.rsi && symbolOptions.indicators.rsi.enabled) {
       check = "HOLD";
-      const rsiValues = rsi.slice(-symbolOptions.indicators.rsi?.history);
+      if (rsi.length < 2) {
+        return check;
+      }
+
+      const currentRSI = rsi[rsi.length - 1];
+      const previousRSI = rsi[rsi.length - 2];
+
       const overboughtThreshold =
         symbolOptions.indicators.rsi.thresholds.overbought !== undefined
           ? symbolOptions.indicators.rsi.thresholds.overbought
@@ -149,21 +155,19 @@ export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): st
         symbolOptions.indicators.rsi.thresholds.oversold !== undefined
           ? symbolOptions.indicators.rsi.thresholds.oversold
           : 30;
-      for (let i = rsiValues.length - 1; i >= 0; i--) {
-        const prevRsi = rsiValues[i];
-        if (prevRsi > overboughtThreshold) {
-          check = "SELL";
-          break;
-        }
-      }
-      if (check === "HOLD") {
-        for (let i = rsiValues.length - 1; i >= 0; i--) {
-          const prevRsi = rsiValues[i];
-          if (prevRsi < oversoldThreshold) {
-            check = "BUY";
-            break;
-          }
-        }
+
+      // RSI momentum signals:
+      // BUY: RSI crosses above oversold threshold from below, or RSI < oversold and rising
+      // SELL: RSI crosses below overbought threshold from above, or RSI > overbought and falling
+
+      if ((currentRSI > oversoldThreshold && previousRSI <= oversoldThreshold) ||
+          (currentRSI < oversoldThreshold && currentRSI > previousRSI)) {
+        symbolOptions.indicators.rsi.weight = 1;
+        check = "BUY";
+      } else if ((currentRSI < overboughtThreshold && previousRSI >= overboughtThreshold) ||
+                 (currentRSI > overboughtThreshold && currentRSI < previousRSI)) {
+        symbolOptions.indicators.rsi.weight = 1;
+        check = "SELL";
       }
     }
   }
