@@ -157,7 +157,7 @@ export const storeBalances = async (exchange: Exchange, balances: Balances) => {
   } else {
     fs.writeFileSync(filePath, JSON.stringify([], null, 4));
   }
-  if (balancesInFile.length == 0) {
+  if (balancesInFile.length === 0) {
     balancesInFile.push({ [currentDate]: balances });
     fs.writeFileSync(filePath, JSON.stringify(balancesInFile, null, 4));
   }

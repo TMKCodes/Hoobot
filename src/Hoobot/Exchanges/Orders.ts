@@ -223,7 +223,7 @@ export const handleOpenOrders = async (
   symbolOptions: SymbolOptions
 ) => {
   var openOrders = await getOpenOrders(exchange, symbol);
-  if (openOrders.length == 0) {
+  if (openOrders.length === 0) {
     symbolOptions.currentOrder = undefined;
     return true;
   }
@@ -446,7 +446,7 @@ export const handleOpenOrder = async (
             found = true;
           }
         }
-        if (found == false) {
+        if (found === false) {
           if (cancelledOrders !== undefined) {
             for (const cancelledOrder of cancelledOrders) {
               if (String(cancelledOrder.id) === order.orderId) {

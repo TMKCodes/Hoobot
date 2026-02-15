@@ -168,9 +168,9 @@ export const calculateProfitSignals = async (
       check = "SELL";
     } else if (next === "BUY" && unrealizedPNL >= minProfitBuy) {
       check = "BUY";
-    } else if (next === "SELL" && symbolOptions.profit?.minimumSell == 0) {
+    } else if (next === "SELL" && symbolOptions.profit?.minimumSell === 0) {
       check = "SELL";
-    } else if (next === "BUY" && symbolOptions.profit?.minimumBuy == 0) {
+    } else if (next === "BUY" && symbolOptions.profit?.minimumBuy === 0) {
       check = "BUY"
     }
   }
@@ -250,10 +250,7 @@ export const checkProfitSignals = async (
     }
     if (symbolOptions.takeProfit !== undefined) {
       if (symbolOptions.takeProfit?.current === undefined) {
-        if (unrealizedPNL > 0) {
-          symbolOptions.takeProfit.current = unrealizedPNL;
-        }
-        symbolOptions.takeProfit.current = 0;
+        symbolOptions.takeProfit.current = unrealizedPNL > 0 ? unrealizedPNL : 0;
       }
       if (unrealizedPNL > symbolOptions.takeProfit?.current) {
         symbolOptions.takeProfit.current = unrealizedPNL;
@@ -347,10 +344,7 @@ export const checkProfitSignalsFromCandlesticks = async (
     }
     if (symbolOptions.takeProfit !== undefined) {
       if (symbolOptions.takeProfit?.current === undefined) {
-        if (unrealizedPNL > 0) {
-          symbolOptions.takeProfit.current = unrealizedPNL;
-        }
-        symbolOptions.takeProfit.current = 0;
+        symbolOptions.takeProfit.current = unrealizedPNL > 0 ? unrealizedPNL : 0;
       }
       if (unrealizedPNL > symbolOptions.takeProfit?.current) {
         symbolOptions.takeProfit.current = unrealizedPNL;

@@ -46,13 +46,13 @@ export const calculateBollingerBands = (
   }
   const standardDeviations: number[] = [];
   let prices: number[] = [];
-  if(source == 'close') {
+  if(source === 'close') {
     prices = candles.map((candle) => parseFloat(candle.close));
-  } else if(source == 'open') {
+  } else if(source === 'open') {
     prices = candles.map((candle) => parseFloat(candle.open));
-  } else if(source == 'high') {
+  } else if(source === 'high') {
     prices = candles.map((candle) => parseFloat(candle.high));
-  } else if(source == 'low') {
+  } else if(source === 'low') {
     prices = candles.map((candle) => parseFloat(candle.low));
   }
   for (let i = period - 1; i < prices.length; i++) {

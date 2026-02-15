@@ -531,7 +531,7 @@ export class NonKYC extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
         const result = response.result as boolean;
-        if (result == true) {
+        if (result === true) {
           resolve(result);
         } else {
           reject(response.error);

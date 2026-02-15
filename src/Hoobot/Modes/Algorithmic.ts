@@ -630,7 +630,7 @@ export const algorithmic = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions
 ) => {
-  if (exchangeOptions.balances == undefined || exchangeOptions.balances[symbol.split("/").join("")] == undefined)  {
+  if (exchangeOptions.balances === undefined || exchangeOptions.balances[symbol.split("/").join("")] === undefined)  {
     exchangeOptions.balances = await getCurrentBalances(exchange);
   } 
   const startTime = Date.now();

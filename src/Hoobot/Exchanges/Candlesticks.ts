@@ -451,7 +451,7 @@ export const simulateListenForCandlesticks = async (
     if (candleStore[symbol][interval]?.length > 250) {
       let splittedSymbol = "";
       for (let symbolsIndex = 0; symbolsIndex < symbols.length; symbolsIndex++) {
-        if (symbol == symbols[symbolsIndex].split("/").join("")) {
+        if (symbol === symbols[symbolsIndex].split("/").join("")) {
           splittedSymbol = symbols[symbolsIndex];
           break;
         }

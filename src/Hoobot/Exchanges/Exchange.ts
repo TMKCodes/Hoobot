@@ -36,7 +36,7 @@ export const isBinance = (exchange: any): exchange is Binance => {
   return exchange !== undefined && "candlesticks" in exchange;
 };
 export const isNonKYC = (exchange: any): exchange is NonKYC => {
-  if (exchange.name == "NonKYC") {
+  if (exchange.name === "NonKYC") {
     return true;
   }
   return exchange !== undefined && "NonKYC" in exchange;

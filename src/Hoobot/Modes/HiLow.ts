@@ -87,7 +87,7 @@ export const hilow = async (
       orderBookAsks[0]
     );
   }
-  if (symbolOptions.takeProfit !== undefined && symbolOptions.takeProfit.enabled == true) {
+  if (symbolOptions.takeProfit !== undefined && symbolOptions.takeProfit.enabled === true) {
     const maxProfit = symbolOptions.takeProfit?.current === undefined ? 0 : symbolOptions.takeProfit.current;
     const minMaxProfitDrop = maxProfit - symbolOptions.takeProfit?.drop!;
     consoleLogger.push("PANIC Current MAX PNL%", maxProfit);

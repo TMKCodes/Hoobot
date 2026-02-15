@@ -179,10 +179,6 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           exchange,
           symbolOptions.name
         );
-        exchangeOptions.orderbooks[symbolOptions.name.split("/").join("")] = await getOrderbook(
-          exchange,
-          symbolOptions.name
-        );
         symbolFilters[symbolOptions.name.split("/").join("")] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if (exchangeOptions.orderbooks === undefined) {
@@ -414,7 +410,7 @@ const simulate = async () => {
         async (symbol: string, interval: string, candlesticks: Candlesticks) => {
           try {
             if (
-              candlesticks[symbol.split("/").join("")][interval] == undefined ||
+              candlesticks[symbol.split("/").join("")][interval] === undefined ||
               candlesticks[symbol.split("/").join("")][interval].length === 0
             ) {
               return;
@@ -474,7 +470,7 @@ const stopHoobot = () => {
       options.exchanges[i].symbols.length,
       options.exchanges[i].name
     );
-    if (options.exchanges[i].name == "nonkyc") {
+    if (options.exchanges[i].name === "nonkyc") {
       for (var x = 0; x < options.exchanges[i].symbols.length; x++) {
         for (var y = 0; y < options.exchanges[i].symbols[x].timeframes.length; y++) {
           (options.exchanges[i].socket as NonKYC).unsubscribeCandles(
@@ -488,7 +484,7 @@ const stopHoobot = () => {
         (options.exchanges[i].socket as NonKYC).unsubscribeReports();
       }
       (options.exchanges[i].socket as NonKYC).disconnect();
-    } else if (options.exchanges[i].name == "binance") {
+    } else if (options.exchanges[i].name === "binance") {
       (options.exchanges[i].socket as Binance).websockets.terminate();
     }
   }
@@ -521,7 +517,7 @@ const webServer = async () => {
   });
 
   app.get("/run", (_, res) => {
-    if (options.running != true) {
+    if (options.running !== true) {
       options.running = true;
         const optionsInFile = parseArgs();
         optionsInFile.running = true;
@@ -535,7 +531,7 @@ const webServer = async () => {
 
   app.get("/stop", (_, res) => {
     console.log("Got command to stop hoobot");
-    if (options.running == true) {
+    if (options.running === true) {
       options.running = false;
       const optionsInFile = parseArgs();
       optionsInFile.running = false;
@@ -556,7 +552,7 @@ const webServer = async () => {
 
   app.post("/settings", (req, res) => {
     var running = options.running;
-    if (running == true) {
+    if (running === true) {
       stopHoobot();
     }
     const optionsFilename = "./settings/hoobot-options.json";
@@ -564,7 +560,7 @@ const webServer = async () => {
     newOptions.running = options.running;
     fs.writeFileSync(optionsFilename, JSON.stringify(newOptions, null, 2));
     options = newOptions;
-    if (options.running == true) {
+    if (options.running === true) {
       hoobot();
     }
     res.json({ message: "Options updated successfully", options });
