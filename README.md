@@ -15,9 +15,9 @@ in crypto trading.
 sell, and trade various cryptocurrencies. It provides a wide range of services, including spot trading, futures trading, staking,
 savings accounts, and more.
 
-### Xeggex
+### NonKYC
 
-[Xeggex.com](https://xeggex.com) strives to provide its users with the best trading experience and give small and medium market cap assets a reliable trading hub. Our goal is to maintain a fast and user friendly system while also concentrating on security to keep users, data, and assets safe. Security of our users' data & assets is always our top priority and we are focused on building an easy to use digital asset trading platform for everyone to enjoy.
+[NonKyC](https://nonkyc.io) strives to provide its users with the best trading experience and give small and medium market cap assets a reliable trading hub. Our goal is to maintain a fast and user friendly system while also concentrating on security to keep users, data, and assets safe. Security of our users' data & assets is always our top priority and we are focused on building an easy to use digital asset trading platform for everyone to enjoy.
 
 ## How to use Hoobot
 
