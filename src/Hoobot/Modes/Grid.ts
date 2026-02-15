@@ -40,6 +40,7 @@ import { sendMessageToChannel } from "../../Discord/discord";
 
 const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] => {
   const grid: GridLevel[] = [];
+  if (options.gridLevels <= 0) return grid;
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
   const step = (upper - lower) / options.gridLevels;

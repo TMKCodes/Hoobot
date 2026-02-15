@@ -126,6 +126,7 @@ export const calculateROI = (tradeHistory: Trade[]) => {
 };
 
 export const calculatePercentageDifference = (oldNumber: number, newNumber: number): number => {
+  if (oldNumber === 0) return newNumber > 0 ? 100 : newNumber < 0 ? -100 : 0;
   const difference = newNumber - oldNumber;
   const percentageDifference = (difference / Math.abs(oldNumber)) * 100;
   return percentageDifference;
@@ -144,6 +145,7 @@ export const calculateUnrealizedPNLPercentageForLong = (
   entryPrice: number,
   highestBidPrice: number,
 ): number => {
+  if (entryPrice === 0 || entryQty === 0) return 0;
   return (((highestBidPrice - entryPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
 
@@ -152,6 +154,7 @@ export const calculateUnrealizedPNLPercentageForShort = (
   entryPrice: number,
   lowestAskPrice: number,
 ): number => {
+  if (entryPrice === 0 || entryQty === 0) return 0;
   return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
 

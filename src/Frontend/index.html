@@ -428,7 +428,6 @@
 
         // Function to add a new symbol entry
         function addSymbol($symbolsList, symbolData = {}) {
-          console.log(symbolData);
           const $exchangeEntry = $symbolsList.closest(".exchange-entry");
           const exchangeName = $exchangeEntry.find(".exchange-name").val();
           const exchangeMode = $exchangeEntry.find(".exchange-mode").val();
@@ -1723,14 +1722,12 @@
 
             if (exchange.name || exchange.symbols.length > 0) config.exchanges.push(exchange);
           });
-          console.log(JSON.stringify(config, null, 2));
           $.ajax({
             url: "/settings",
             method: "POST",
             contentType: "application/json",
             data: JSON.stringify(config, null, 2),
             success: function (response) {
-              console.log("Server response:", response);
               alert("Configuration sent successfully!");
             },
             error: function (xhr, status, error) {
@@ -1749,7 +1746,6 @@
               $("#run").hide();
               $("#simulate").hide();
               $("#stop").show();
-              console.log("Server response:", response);
               alert("Hoobot launched!");
             },
             error: function (xhr, status, error) {
@@ -1768,7 +1764,6 @@
               $("#run").show();
               $("#simulate").show();
               $("#stop").hide();
-              console.log("Server response:", response);
               alert("Hoobot stopped!");
             },
             error: function (xhr, status, error) {

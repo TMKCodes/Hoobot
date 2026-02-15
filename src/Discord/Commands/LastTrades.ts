@@ -35,13 +35,13 @@ export default {
     .setName("trades")
     .setDescription("Replies with last 10 trades on symbol.")
     .addStringOption((option) =>
-      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
+      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true),
     )
     .addStringOption((option) => option.setName("symbol").setDescription("The symbol to check").setRequired(true)),
   execute: async (
     interaction: { options: any; reply: (arg0: string) => any },
     exchanges: Exchange[],
-    options: ConfigOptions
+    options: ConfigOptions,
   ) => {
     const exchangeName = interaction.options.getString("exchange");
     if (exchangeName !== null) {

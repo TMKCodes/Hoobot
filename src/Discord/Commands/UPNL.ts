@@ -42,13 +42,13 @@ export default {
     .setName("upnl")
     .setDescription("Calculates current possible PNL% for next trade.")
     .addStringOption((option) =>
-      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
+      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true),
     )
     .addStringOption((option) => option.setName("symbol").setDescription("The symbol to check").setRequired(true)),
   execute: async (
     interaction: { options: any; reply: (arg0: string) => any },
     exchanges: Exchange[],
-    options: ConfigOptions
+    options: ConfigOptions,
   ) => {
     const exchangeName = interaction.options.getString("exchange");
     if (exchangeName !== null) {
@@ -79,7 +79,7 @@ export default {
             const pnl = calculateUnrealizedPNLPercentageForLong(
               parseFloat(lastTrade.qty),
               parseFloat(lastTrade.price),
-              currentHighestBidPrice
+              currentHighestBidPrice,
             );
             let msg = "```";
             msg += `Symbol ${lastTrade.symbol}.\r\n`;
@@ -99,7 +99,7 @@ export default {
             const pnl = calculateUnrealizedPNLPercentageForShort(
               parseFloat(lastTrade.qty),
               parseFloat(lastTrade.price),
-              currentLowestAskPrice
+              currentLowestAskPrice,
             );
             let msg = "```";
             msg += `Symbol ${lastTrade.symbol}.\r\n`;
