@@ -98,37 +98,31 @@ export const checkCMFSignals = (cmfValues: number[], symbolOptions: SymbolOption
     if (symbolOptions.indicators.cmf !== undefined) {
       if (symbolOptions.indicators.cmf.enabled) {
         check = "HOLD";
-        cmfValues = cmfValues.slice(-symbolOptions.indicators.cmf.history);
-        if (cmfValues.length === 0) {
+        if (cmfValues.length < 2) {
           return check;
         }
-        const cmfSMA = calculateSMA(
-          cmfValues.map((value) => ({ close: value }) as Candlestick),
-          50,
-          "close",
-        );
-        for (let i = cmfValues.length - 1; i > 0; i--) {
-          const currentCMF = cmfValues[i];
-          const prevCMF = cmfValues[i - 1];
-          const currentSMA = cmfSMA[i] || 0;
-          const prevSMA = cmfSMA[i - 1] || 0;
-          const isBullishCrossover = currentCMF > currentSMA && prevCMF < prevSMA;
-          const isBearishCrossover = currentCMF < currentSMA && prevCMF > prevSMA;
-          const isOverbought = currentCMF > (symbolOptions.indicators.cmf.thresholds.overbought || 0.25);
-          const isOversold = currentCMF < (symbolOptions.indicators.cmf.thresholds.oversold || -0.25);
-          if (isBullishCrossover) {
-            check = "BUY";
-            break;
-          } else if (isBearishCrossover) {
-            check = "SELL";
-            break;
-          } else if (isOverbought) {
-            check = "SELL";
-            break;
-          } else if (isOversold) {
-            check = "BUY";
-            break;
-          }
+
+        const currentCMF = cmfValues[cmfValues.length - 1];
+        const prevCMF = cmfValues[cmfValues.length - 2];
+
+        const overboughtThreshold = symbolOptions.indicators.cmf.thresholds.overbought || 0.25;
+        const oversoldThreshold = symbolOptions.indicators.cmf.thresholds.oversold || -0.25;
+
+        // CMF signals:
+        // BUY: CMF crosses above 0 (bullish momentum) or enters oversold territory
+        // SELL: CMF crosses below 0 (bearish momentum) or enters overbought territory
+
+        const bullishZeroCrossover = currentCMF > 0 && prevCMF <= 0;
+        const bearishZeroCrossover = currentCMF < 0 && prevCMF >= 0;
+        const isOversold = currentCMF < oversoldThreshold;
+        const isOverbought = currentCMF > overboughtThreshold;
+
+        if (bullishZeroCrossover || isOversold) {
+          symbolOptions.indicators.cmf.weight = 1;
+          check = "BUY";
+        } else if (bearishZeroCrossover || isOverbought) {
+          symbolOptions.indicators.cmf.weight = 1;
+          check = "SELL";
         }
       }
     }
