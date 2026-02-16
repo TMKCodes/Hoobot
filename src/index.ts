@@ -53,8 +53,12 @@ import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
 import { fileURLToPath } from "url";
 import express from "express";
+import { WebSocketServer } from "ws";
+import { createServer } from "http";
 
 export var symbolFilters: Filters = {};
+// runtimeStatus holds lightweight runtime data for the dashboard (populated from Algorithmic runtime)
+export var runtimeStatus: { [exchange: string]: { [symbol: string]: any } } = {};
 
 // Get configuration options from command-line arguments and dotenv.
 dotenv.config();
@@ -490,8 +494,11 @@ const stopHoobot = () => {
   }
 };
 
+const logger = consoleLogger();
 const webServer = async () => {
   const app = express();
+  const server = createServer(app);
+  const wss = new WebSocketServer({ server });
   const PORT = process.env.PORT || 5656;
 
   const optionsFilename = "./settings/hoobot-options.json";
@@ -566,9 +573,25 @@ const webServer = async () => {
     res.json({ message: "Options updated successfully", options });
   });
 
+  // Broadcast lightweight status periodically to connected WS clients
+  const broadcastStatus = () => {
+    try {
+      const payload = JSON.stringify(options);
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(payload);
+        }
+      });
+    } catch (e) {
+      // ignore broadcasting errors
+    }
+  };
+
+  const statusInterval = setInterval(broadcastStatus, 30000);
+
   // Start the server and return the Express app instance
   await new Promise<void>((resolve) => {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Open Hoobot at http://localhost:${PORT}`);
       resolve();
     });
