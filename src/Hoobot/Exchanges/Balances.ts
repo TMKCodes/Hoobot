@@ -50,14 +50,8 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
         } else if (symbols.includes(fiat + assets[i])) {
           fiatAmount = amount / prices[fiat + assets[i]];
         } else {
-          const btcPair = "BTC" + assets[i];
-          const assetFiatPair = assets[i] + fiat;
-          if (prices[btcPair] && prices[btcPair] !== 0 && prices[assetFiatPair]) {
-            let tempAmount = amount / prices[btcPair];
-            fiatAmount = prices[assetFiatPair] * tempAmount;
-          } else {
-            fiatAmount = 0;
-          }
+          let tempAmount = amount / prices["BTC" + assets[i]];
+          fiatAmount = prices[assets[i] + fiat] * tempAmount;
         }
         currentBalances[assets[i]] = {
           crypto: amount,
@@ -86,13 +80,8 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
             fiatAmount = amount / parseFloat(price?.lastPrice!);
           } else {
             const tempPrice = prices.find((price) => price.symbol.split("/").join("") === "BTC" + balance.asset);
-            const assetFiatPrice = prices.find((price) => price.symbol.split("/").join("") === balance.asset + fiat);
-            if (tempPrice && assetFiatPrice && parseFloat(tempPrice.lastPrice) !== 0) {
-              let tempAmount = amount / parseFloat(tempPrice.lastPrice);
-              fiatAmount = parseFloat(assetFiatPrice.lastPrice) * tempAmount;
-            } else {
-              fiatAmount = 0;
-            }
+            let tempAmount = amount / parseFloat(tempPrice?.lastPrice!);
+            fiatAmount = parseFloat(price?.lastPrice!) * tempAmount;
           }
           currentBalances[balance.asset] = {
             crypto: amount,
