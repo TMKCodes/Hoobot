@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoobot Trading Bot Configuration</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
       :root {
         --sidebar-width: 280px;
@@ -229,6 +230,86 @@
         display: none;
       }
 
+      /* Settings Page Styling */
+      .settings-container .card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+
+      .settings-container .card-header {
+        background: linear-gradient(135deg, var(--sidebar-bg), var(--accent));
+        color: white;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0 !important;
+      }
+
+      .settings-container .form-label {
+        font-weight: 600;
+        color: var(--text-active);
+        margin-bottom: 0.5rem;
+      }
+
+      .settings-container .form-control {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
+      }
+
+      .settings-container .form-control:focus {
+        border-color: var(--button-primary-bg);
+        box-shadow: 0 0 0 0.2rem rgba(61, 176, 156, 0.25);
+      }
+
+      .settings-container .form-check-input:checked {
+        background-color: var(--button-primary-bg);
+        border-color: var(--button-primary-bg);
+      }
+
+      .settings-container .btn {
+        border-radius: 6px;
+        font-weight: 600;
+        padding: 0.6rem 1.5rem;
+        transition: all 0.2s ease;
+      }
+
+      .settings-container .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .settings-container .exchange-entry {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .settings-container .symbol-entry {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .settings-container .nested-section {
+        margin-left: 1rem;
+        padding-left: 1rem;
+        border-left: 2px solid var(--accent);
+      }
+
+      .settings-container .alert {
+        border-radius: 8px;
+        border: none;
+      }
+
+      .settings-container .text-muted {
+        color: var(--text-muted) !important;
+      }
+
       .nav-bottom-run-buttons > button {
         width: 100%;
         margin-bottom: 5px;
@@ -246,8 +327,31 @@
         display: block; /* Visible by default since dashboard is active */
       }
 
+      .dashboard-container .card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+
+      .dashboard-container .card-header {
+        background: linear-gradient(135deg, var(--sidebar-bg), var(--accent));
+        color: white;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0 !important;
+      }
+
+      .dashboard-container .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+      }
+
       .status-card {
         text-align: center;
+        transition: transform 0.2s ease;
+      }
+
+      .status-card:hover {
+        transform: translateY(-2px);
       }
 
       .status-indicator {
@@ -275,6 +379,28 @@
         font-size: 2rem;
         font-weight: bold;
         color: #007bff;
+      }
+
+      .dashboard-container .table {
+        margin-bottom: 0;
+      }
+
+      .dashboard-container .table th {
+        background-color: var(--accent);
+        color: var(--text-active);
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+      }
+
+      .dashboard-container .table td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f1f3f5;
+      }
+
+      .dashboard-container .table tbody tr:hover {
+        background-color: rgba(17, 100, 102, 0.05);
       }
 
       /* Responsive adjustments */
@@ -333,7 +459,7 @@
 
       <main class="main-content">
         <!-- Dashboard Container -->
-        <div class="dashboard-container">
+        <div class="container-fluid dashboard-container">
           <h1 class="mb-4">Dashboard</h1>
 
           <!-- Status Overview -->
@@ -423,7 +549,7 @@
           </div>
 
           <!-- Performance Chart Placeholder -->
-          <div class="card">
+          <div class="card mb-4">
             <div class="card-header">
               <h5>Portfolio Performance</h5>
             </div>
@@ -436,57 +562,82 @@
         <div class="container-fluid settings-container">
           <h1 class="mb-4">Settings</h1>
 
-          <!-- General Settings -->
-          <div class="config-section">
-            <h3>General Settings</h3>
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="debug" />
-              <label class="form-check-label" for="debug">Debug</label>
+          <!-- Discord Settings Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Discord Settings</h5>
             </div>
-            <div class="mb-3">
-              <label for="license" class="form-label">License</label>
-              <input type="text" class="form-control" id="license" placeholder="Enter license key" />
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="discordEnabled" />
+                    <label class="form-check-label" for="discordEnabled">Enable Discord Integration</label>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="discordToken" class="form-label">Bot Token</label>
+                    <input type="text" class="form-control" id="discordToken" placeholder="Enter Discord bot token" />
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="applicationId" class="form-label">Application ID</label>
+                    <input type="text" class="form-control" id="applicationId" placeholder="Enter Application ID" />
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="serverId" class="form-label">Server ID</label>
+                    <input type="text" class="form-control" id="serverId" placeholder="Enter Server ID" />
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="channelId" class="form-label">Channel ID</label>
+                    <input type="text" class="form-control" id="channelId" placeholder="Enter Channel ID" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Discord Settings -->
-          <div class="config-section">
-            <h3>Discord Settings</h3>
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="discordEnabled" />
-              <label class="form-check-label" for="discordEnabled">Enabled</label>
+          <!-- Exchanges Card -->
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Exchange Configurations</h5>
+              <button type="button" class="btn btn-primary btn-sm" id="addExchangeButton">
+                <i class="fas fa-plus me-1"></i>Add Exchange
+              </button>
             </div>
-            <div class="mb-3">
-              <label for="discordToken" class="form-label">Token</label>
-              <input type="text" class="form-control" id="discordToken" placeholder="Enter Discord token" />
+            <div class="card-body">
+              <div id="exchangesList"></div>
             </div>
-            <div class="mb-3">
-              <label for="applicationId" class="form-label">Application ID</label>
-              <input type="text" class="form-control" id="applicationId" placeholder="Enter Application ID" />
-            </div>
-            <div class="mb-3">
-              <label for="serverId" class="form-label">Server ID</label>
-              <input type="text" class="form-control" id="serverId" placeholder="Enter Server ID" />
-            </div>
-            <div class="mb-3">
-              <label for="channelId" class="form-label">Channel ID</label>
-              <input type="text" class="form-control" id="channelId" placeholder="Enter Channel ID" />
-            </div>
-          </div>
-
-          <!-- Exchanges -->
-          <div class="config-section">
-            <h3>Exchanges</h3>
-            <div id="exchangesList"></div>
-            <button type="button" class="btn btn-primary mt-2" id="addExchangeButton">Add Exchange</button>
           </div>
 
           <!-- Error Message -->
-          <div id="errorMessage" class="error-message mt-3"></div>
+          <div id="errorMessage" class="alert alert-danger mt-3" style="display: none"></div>
 
           <!-- Action Buttons -->
-          <div class="mt-4 mb-4">
-            <button type="button" class="btn btn-success me-2" id="generateConfigButton">Save Configuration</button>
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <button type="button" class="btn btn-success me-2" id="generateConfigButton">
+                    <i class="fas fa-save me-1"></i>Save Configuration
+                  </button>
+                  <button type="button" class="btn btn-secondary" id="resetConfigButton">
+                    <i class="fas fa-undo me-1"></i>Reset to Defaults
+                  </button>
+                </div>
+                <div class="text-muted small">Changes will take effect after restarting the bot</div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -522,8 +673,14 @@
         });
         // Function to display error messages
         function showError(message) {
-          $("#errorMessage").text(message).show();
-          setTimeout(() => $("#errorMessage").hide(), 5000);
+          $("#errorMessage").removeClass("alert-success").addClass("alert-danger").text(message).show();
+          setTimeout(() => $("#errorMessage").fadeOut(), 5000);
+        }
+
+        // Function to display success messages
+        function showSuccess(message) {
+          $("#errorMessage").removeClass("alert-danger").addClass("alert-success").text(message).show();
+          setTimeout(() => $("#errorMessage").fadeOut(), 3000);
         }
 
         // Function to add a new exchange entry
@@ -1887,11 +2044,11 @@
             contentType: "application/json",
             data: JSON.stringify(config, null, 2),
             success: function (response) {
-              alert("Configuration sent successfully!");
+              showSuccess("Configuration saved successfully!");
             },
             error: function (xhr, status, error) {
               console.error("Error sending configuration:", error);
-              alert("Failed to send configuration.");
+              showError("Failed to save configuration. Please try again.");
             },
           });
         });
@@ -1905,11 +2062,11 @@
               $("#run").hide();
               $("#simulate").hide();
               $("#stop").show();
-              alert("Hoobot launched!");
+              showSuccess("Hoobot started successfully!");
             },
             error: function (xhr, status, error) {
               console.error("Error running hoobot:", error);
-              alert("Failed to run hoobot.");
+              showError("Failed to start Hoobot. Please check your configuration.");
             },
           });
         });
@@ -1923,11 +2080,11 @@
               $("#run").show();
               $("#simulate").show();
               $("#stop").hide();
-              alert("Hoobot stopped!");
+              showSuccess("Hoobot stopped successfully!");
             },
             error: function (xhr, status, error) {
               console.error("Error stopping hoobot:", error);
-              alert("Failed to stop hoobot.");
+              showError("Failed to stop Hoobot. Please try again.");
             },
           });
         });
