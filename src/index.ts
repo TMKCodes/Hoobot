@@ -524,10 +524,34 @@ const webServer = async () => {
   });
 
   app.get("/settings", (_, res) => {
+    // Return serializable dashboard data instead of full options
     if (fs.existsSync(optionsFilename)) {
       const optionsInFile = parseArgs();
       res.json(optionsInFile);
     }
+  });
+
+  app.get("/runtime-settings", (_, res) => {
+    // Return serializable runtime data (exclude sockets and circular references)
+    console.log("Runtime settings requested");
+    console.log(
+      "Options exchanges:",
+      options.exchanges?.map((ex) => ({
+        name: ex.name,
+        hasBalances: !!ex.balances,
+        balancesKeys: ex.balances ? Object.keys(ex.balances) : [],
+        balances: ex.balances,
+      })),
+    );
+    const serializableOptions = {
+      ...options,
+      exchanges:
+        options.exchanges?.map((exchange) => ({
+          ...exchange,
+          socket: undefined, // Remove non-serializable socket
+        })) || [],
+    };
+    res.json(serializableOptions);
   });
 
   app.post("/settings", (req, res) => {
@@ -549,7 +573,15 @@ const webServer = async () => {
   // Broadcast lightweight status periodically to connected WS clients
   const broadcastStatus = () => {
     try {
-      const payload = JSON.stringify(options);
+      const serializableOptions = {
+        ...options,
+        exchanges:
+          options.exchanges?.map((exchange) => ({
+            ...exchange,
+            socket: undefined, // Remove non-serializable socket
+          })) || [],
+      };
+      const payload = JSON.stringify(serializableOptions);
       wss.clients.forEach((client) => {
         if (client.readyState === 1) {
           client.send(payload);

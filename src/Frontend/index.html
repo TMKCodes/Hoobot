@@ -240,6 +240,55 @@
       #stop {
         display: none;
       }
+
+      /* Dashboard Styles */
+      .dashboard-container {
+        display: block; /* Visible by default since dashboard is active */
+      }
+
+      .status-card {
+        text-align: center;
+      }
+
+      .status-indicator {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545; /* Red for stopped */
+      }
+
+      .status-indicator.active {
+        color: #28a745; /* Green for running */
+      }
+
+      .balance-amount,
+      .pnl-amount {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #28a745;
+      }
+
+      .pnl-amount.negative {
+        color: #dc3545;
+      }
+
+      .trade-count {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .status-card .card-title {
+          font-size: 0.9rem;
+        }
+
+        .balance-amount,
+        .pnl-amount,
+        .trade-count {
+          font-size: 1.2rem;
+        }
+      }
     </style>
   </head>
   <body>
@@ -283,6 +332,107 @@
       </nav>
 
       <main class="main-content">
+        <!-- Dashboard Container -->
+        <div class="dashboard-container">
+          <h1 class="mb-4">Dashboard</h1>
+
+          <!-- Status Overview -->
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="card status-card">
+                <div class="card-body">
+                  <h5 class="card-title">Bot Status</h5>
+                  <div class="status-indicator" id="bot-status">Stopped</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card status-card">
+                <div class="card-body">
+                  <h5 class="card-title">Total Balance</h5>
+                  <div class="balance-amount" id="total-balance">$0.00</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card status-card">
+                <div class="card-body">
+                  <h5 class="card-title">24h P&L</h5>
+                  <div class="pnl-amount" id="daily-pnl">$0.00</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card status-card">
+                <div class="card-body">
+                  <h5 class="card-title">Active Trades</h5>
+                  <div class="trade-count" id="active-trades">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Balances Table -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5>Current Balances</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped" id="balances-table">
+                  <thead>
+                    <tr>
+                      <th>Asset</th>
+                      <th>Amount</th>
+                      <th>USD Value</th>
+                      <th>% of Portfolio</th>
+                    </tr>
+                  </thead>
+                  <tbody id="balances-body">
+                    <!-- Dynamic content -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Trades -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5>Recent Trades</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped" id="trades-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Symbol</th>
+                      <th>Side</th>
+                      <th>Price</th>
+                      <th>Quantity</th>
+                      <th>P&L</th>
+                    </tr>
+                  </thead>
+                  <tbody id="trades-body">
+                    <!-- Dynamic content -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Chart Placeholder -->
+          <div class="card">
+            <div class="card-header">
+              <h5>Portfolio Performance</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="performance-chart" width="400" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+
         <div class="container-fluid settings-container">
           <h1 class="mb-4">Settings</h1>
 
@@ -343,6 +493,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
       function toggleSidebar() {
         const sidebar = document.querySelector(".sidebar");
@@ -353,14 +504,22 @@
         $(".sidebar-settings-button").addClass("active");
         $(".sidebar-dashboard-button").removeClass("active");
         $(".settings-container").show();
+        $(".dashboard-container").hide();
       });
       $(".sidebar-dashboard-button").on("click", () => {
         $(".sidebar-dashboard-button").addClass("active");
         $(".sidebar-settings-button").removeClass("active");
+        $(".dashboard-container").show();
         $(".settings-container").hide();
       });
 
       $(document).ready(function () {
+        console.log("Document ready, dashboard elements:", {
+          dashboardContainer: $(".dashboard-container").length,
+          settingsContainer: $(".settings-container").length,
+          dashboardButton: $(".sidebar-dashboard-button").hasClass("active"),
+          botStatus: $("#bot-status").length,
+        });
         // Function to display error messages
         function showError(message) {
           $("#errorMessage").text(message).show();
@@ -1776,7 +1935,7 @@
         // Function to load settings from server
         $("document").ready(() => {
           $.ajax({
-            url: "/settings",
+            url: "/runtime-settings",
             method: "GET",
             dataType: "json",
             success: function (settings) {
@@ -1807,6 +1966,285 @@
             },
           });
         });
+
+        // Dashboard functionality
+        let ws;
+        let currentOptions = {};
+
+        function connectWebSocket() {
+          console.log("Attempting to connect to WebSocket...");
+          ws = new WebSocket("ws://localhost:5656");
+
+          ws.onopen = () => {
+            console.log("WebSocket connected successfully");
+          };
+
+          ws.onmessage = (event) => {
+            console.log("WebSocket message received:", event.data);
+            try {
+              currentOptions = JSON.parse(event.data);
+              console.log("Parsed options:", currentOptions);
+              updateDashboard(currentOptions);
+            } catch (error) {
+              console.error("Error parsing WebSocket data:", error);
+            }
+          };
+
+          ws.onclose = (event) => {
+            console.log("WebSocket connection closed. Reconnecting...");
+            setTimeout(connectWebSocket, 5000);
+          };
+
+          ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+          };
+        }
+
+        // Initialize WebSocket connection
+        connectWebSocket();
+
+        // Dashboard update functions
+        function updateDashboard(options) {
+          console.log("Updating dashboard with options:", options);
+          updateBotStatus(options.running);
+          updateBalances(options.exchanges);
+          updateTrades(options.exchanges);
+          updatePerformance(options);
+        }
+
+        function updateBotStatus(running) {
+          const statusEl = document.getElementById("bot-status");
+          if (running) {
+            statusEl.textContent = "Running";
+            statusEl.classList.add("active");
+          } else {
+            statusEl.textContent = "Stopped";
+            statusEl.classList.remove("active");
+          }
+        }
+
+        function updateBalances(exchanges) {
+          console.log("Updating balances with exchanges:", exchanges);
+          console.log("Exchanges array:", exchanges);
+          if (exchanges) {
+            exchanges.forEach((exchange, index) => {
+              console.log(`Exchange ${index} (${exchange.name}):`, exchange);
+              console.log(`Exchange ${index} balances:`, exchange.balances);
+            });
+          }
+          let totalBalance = 0;
+          const balances = {};
+
+          // Aggregate balances across all exchanges
+          if (exchanges) {
+            exchanges.forEach((exchange) => {
+              if (exchange.balances) {
+                Object.entries(exchange.balances).forEach(([asset, balance]) => {
+                  if (!balances[asset]) {
+                    balances[asset] = { crypto: 0, usdt: 0 };
+                  }
+                  balances[asset].crypto += balance.crypto || 0;
+                  balances[asset].usdt += balance.usdt || 0;
+                  totalBalance += balance.usdt || 0;
+                });
+              }
+            });
+          }
+
+          // Update total balance display
+          document.getElementById("total-balance").textContent = `$${totalBalance.toFixed(2)}`;
+
+          // Update balances table
+          const tbody = document.getElementById("balances-body");
+          tbody.innerHTML = "";
+
+          Object.entries(balances)
+            .filter(([_, balance]) => balance.usdt > 0.01) // Filter out dust
+            .sort((a, b) => b[1].usdt - a[1].usdt) // Sort by USD value
+            .forEach(([asset, balance]) => {
+              const percentage = totalBalance > 0 ? ((balance.usdt / totalBalance) * 100).toFixed(2) : "0.00";
+              const row = `
+                <tr>
+                  <td>${asset}</td>
+                  <td>${balance.crypto.toFixed(6)}</td>
+                  <td>$${balance.usdt.toFixed(2)}</td>
+                  <td>${percentage}%</td>
+                </tr>
+              `;
+              tbody.insertAdjacentHTML("beforeend", row);
+            });
+        }
+
+        function updateTrades(exchanges) {
+          console.log("updateTrades called with exchanges:", exchanges);
+          const trades = [];
+
+          // Collect recent trades from all exchanges
+          if (exchanges) {
+            exchanges.forEach((exchange) => {
+              console.log("Processing exchange:", exchange.name, "tradeHistory:", exchange.tradeHistory);
+              if (exchange.tradeHistory) {
+                Object.values(exchange.tradeHistory).forEach((symbolTrades) => {
+                  console.log("Symbol trades:", symbolTrades);
+                  if (Array.isArray(symbolTrades)) {
+                    trades.push(...symbolTrades);
+                  }
+                });
+              }
+            });
+          }
+
+          console.log("Total trades collected:", trades.length);
+
+          // Sort by timestamp (most recent first) and take last 10
+          const recentTrades = trades.sort((a, b) => (b.time || 0) - (a.time || 0)).slice(0, 10);
+
+          // Update active trades count
+          document.getElementById("active-trades").textContent = trades.filter((t) => t.status === "open").length;
+
+          // Update trades table
+          const tbody = document.getElementById("trades-body");
+          tbody.innerHTML = "";
+
+          recentTrades.forEach((trade) => {
+            const time = trade.time ? new Date(trade.time).toLocaleString() : "-";
+            const side = trade.isBuyer ? "BUY" : "SELL";
+            const pnl = trade.profit ? `$${parseFloat(trade.profit).toFixed(2)}` : "-";
+            const pnlClass = trade.profit > 0 ? "text-success" : trade.profit < 0 ? "text-danger" : "";
+
+            const row = `
+              <tr>
+                <td>${time}</td>
+                <td>${trade.symbol || "-"}</td>
+                <td>${side}</td>
+                <td>${trade.price ? `$${parseFloat(trade.price).toFixed(4)}` : "-"}</td>
+                <td>${trade.qty || "-"}</td>
+                <td class="${pnlClass}">${pnl}</td>
+              </tr>
+            `;
+            tbody.insertAdjacentHTML("beforeend", row);
+          });
+        }
+
+        function updatePerformance(options) {
+          // Calculate daily P&L (simplified - compare current balance to starting balance)
+          // This would need more sophisticated calculation based on actual trade history
+          const startTime = options.startTime;
+          if (startTime) {
+            // Placeholder - implement actual P&L calculation
+            document.getElementById("daily-pnl").textContent = "$0.00";
+          }
+
+          // Initialize chart if not already done
+          if (!window.performanceChart) {
+            console.log("Creating performance chart...");
+            try {
+              const ctx = document.getElementById("performance-chart").getContext("2d");
+              if (!ctx) {
+                console.error("Could not get chart context");
+                return;
+              }
+              window.performanceChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                  labels: [],
+                  datasets: [
+                    {
+                      label: "Portfolio Value",
+                      data: [],
+                      borderColor: "#007bff",
+                      backgroundColor: "rgba(0, 123, 255, 0.1)",
+                      fill: true,
+                      tension: 0.4,
+                    },
+                  ],
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    x: {
+                      display: true,
+                      title: {
+                        display: true,
+                        text: "Time",
+                      },
+                    },
+                    y: {
+                      display: true,
+                      title: {
+                        display: true,
+                        text: "USD Value",
+                      },
+                    },
+                  },
+                },
+              });
+            } catch (error) {
+              console.error("Error creating chart:", error);
+            }
+          }
+
+          // Update chart with current data (placeholder - would need historical data)
+          // For now, just show current total balance as a single point
+          let totalBalance = 0;
+          if (options.exchanges) {
+            options.exchanges.forEach((exchange) => {
+              if (exchange.balances) {
+                Object.values(exchange.balances).forEach((balance) => {
+                  totalBalance += balance.usdt || 0;
+                });
+              }
+            });
+          }
+
+          const now = new Date().toLocaleTimeString();
+          window.performanceChart.data.labels = [now];
+          window.performanceChart.data.datasets[0].data = [totalBalance];
+          console.log("Updating chart with balance:", totalBalance);
+          window.performanceChart.update();
+        }
+
+        // Fetch initial settings for dashboard
+        $.get("/runtime-settings", (data) => {
+          console.log("Loaded dashboard data from API:", data);
+          currentOptions = data;
+          updateDashboard(data);
+        }).fail((xhr, status, error) => {
+          console.error("Failed to load dashboard data:", status, error);
+          // Load test data if API fails
+          console.log("Loading test data...");
+          const testData = {
+            running: false,
+            exchanges: [
+              {
+                name: "test",
+                balances: {
+                  BTC: { crypto: 0.001, usdt: 65000 },
+                  ETH: { crypto: 0.1, usdt: 3500 },
+                  USDT: { crypto: 1000, usdt: 1000 },
+                },
+                tradeHistory: {
+                  BTCUSDT: [
+                    {
+                      timestamp: new Date().toISOString(),
+                      symbol: "BTC/USDT",
+                      side: "BUY",
+                      price: "65000",
+                      quantity: "0.001",
+                      profit: "0",
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+          updateDashboard(testData);
+        });
+
+        // Initialize dashboard visibility based on active button
+        // Dashboard is now visible by default, settings is hidden by default
+        console.log("Dashboard should be visible by default");
       });
     </script>
   </body>
