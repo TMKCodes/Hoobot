@@ -2,7 +2,7 @@ import { Client } from "discord.js";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/Args";
 import { Filter } from "./Filters";
-import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
+import { cancelOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { play } from "../Utilities/PlaySound";
@@ -245,6 +245,302 @@ const roundStep = (price: number, size: number): number => {
   }
 };
 
+type SweepDirection = "BUY" | "SELL";
+
+interface BookLevel {
+  price: number;
+  quantity: number;
+}
+
+interface SweepOrderResult {
+  executedBase: number;
+  executedQuote: number;
+  finalStatus: string;
+  orderId: string;
+}
+
+interface SweepExecutionSummary {
+  executedBase: number;
+  executedQuote: number;
+  averagePrice: number;
+  levelCount: number;
+  fullyFilled: boolean;
+  stoppedByPriceGuard?: boolean;
+  lastOrder?: Order;
+}
+
+interface SweepPriceEstimate {
+  averagePrice: number;
+  executableBase: number;
+  worstPrice: number;
+}
+
+interface SweepPriceGuard {
+  ceiling?: number;
+  floor?: number;
+}
+
+const normalizeOrderStatus = (status: string | undefined): string => {
+  const normalized = (status ?? "").toUpperCase();
+  if (normalized === "CANCELLED") {
+    return "CANCELED";
+  }
+  if (normalized === "ACTIVE") {
+    return "NEW";
+  }
+  return normalized;
+};
+
+const getBestBookLevel = (orderBook: Orderbook, direction: SweepDirection): BookLevel | undefined => {
+  const depth = direction === "SELL" ? orderBook.bids : orderBook.asks;
+  const levels = Object.keys(depth)
+    .map((price) => ({
+      price: parseFloat(price),
+      quantity: Number(depth[price]),
+    }))
+    .filter((level) => Number.isFinite(level.price) && level.price > 0 && Number.isFinite(level.quantity) && level.quantity > 0)
+    .sort((left, right) => (direction === "SELL" ? right.price - left.price : left.price - right.price));
+
+  return levels[0];
+};
+
+const estimateSweepPrice = (
+  direction: SweepDirection,
+  orderBook: Orderbook,
+  desiredBaseQuantity: number,
+  quoteBudget?: number,
+): SweepPriceEstimate => {
+  const depth = direction === "SELL" ? orderBook.bids : orderBook.asks;
+  const levels = Object.keys(depth)
+    .map((price) => ({
+      price: parseFloat(price),
+      quantity: Number(depth[price]),
+    }))
+    .filter((level) => Number.isFinite(level.price) && level.price > 0 && Number.isFinite(level.quantity) && level.quantity > 0)
+    .sort((left, right) => (direction === "SELL" ? right.price - left.price : left.price - right.price));
+
+  let remainingBase = desiredBaseQuantity;
+  let remainingQuoteBudget = quoteBudget ?? Number.POSITIVE_INFINITY;
+  let totalBase = 0;
+  let totalQuote = 0;
+  let worstPrice = 0;
+
+  for (const level of levels) {
+    if (remainingBase <= 0 || remainingQuoteBudget <= 0) {
+      break;
+    }
+
+    let executableBase = Math.min(remainingBase, level.quantity);
+    if (direction === "BUY") {
+      executableBase = Math.min(executableBase, remainingQuoteBudget / level.price);
+    }
+
+    if (!Number.isFinite(executableBase) || executableBase <= 0) {
+      continue;
+    }
+
+    totalBase += executableBase;
+    totalQuote += executableBase * level.price;
+    worstPrice = level.price;
+    remainingBase -= executableBase;
+    if (direction === "BUY") {
+      remainingQuoteBudget -= executableBase * level.price;
+    }
+  }
+
+  return {
+    averagePrice: totalBase > 0 ? totalQuote / totalBase : 0,
+    executableBase: totalBase,
+    worstPrice,
+  };
+};
+
+const isPriceWithinGuard = (direction: SweepDirection, price: number, guard?: SweepPriceGuard) => {
+  if (guard === undefined) {
+    return true;
+  }
+  if (direction === "BUY" && guard.ceiling !== undefined) {
+    return price <= guard.ceiling;
+  }
+  if (direction === "SELL" && guard.floor !== undefined) {
+    return price >= guard.floor;
+  }
+  return true;
+};
+
+const getExecutedBaseForOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
+  if (isBinance(exchange)) {
+    const status = await exchange.orderStatus(symbol.split("/").join(""), orderId);
+    return {
+      status: normalizeOrderStatus(status?.status),
+      executedBase: parseFloat(status?.executedQty ?? "0"),
+    };
+  }
+
+  if (isNonKYC(exchange)) {
+    const status = await exchange.getOrderByID(orderId);
+    return {
+      status: normalizeOrderStatus(status?.status),
+      executedBase: parseFloat(status?.executedQuantity ?? "0"),
+    };
+  }
+
+  return {
+    status: "UNKNOWN",
+    executedBase: 0,
+  };
+};
+
+const executeImmediateLimitChunk = async (
+  exchange: Exchange,
+  symbol: string,
+  direction: SweepDirection,
+  price: number,
+  quantityInBase: number,
+  exchangeOptions: ExchangeOptions,
+): Promise<SweepOrderResult> => {
+  const placedOrder =
+    direction === "SELL"
+      ? await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price)
+      : await placeBuyOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
+
+  if (placedOrder === undefined) {
+    return {
+      executedBase: 0,
+      executedQuote: 0,
+      finalStatus: "FAILED",
+      orderId: "",
+    };
+  }
+
+  let executedBase = 0;
+  let finalStatus = normalizeOrderStatus(placedOrder.orderStatus);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await delay(250);
+    const execution = await getExecutedBaseForOrder(exchange, symbol, placedOrder.orderId);
+    executedBase = execution.executedBase;
+    finalStatus = execution.status;
+    if (["FILLED", "CANCELED", "EXPIRED", "REJECTED"].includes(finalStatus)) {
+      break;
+    }
+  }
+
+  if (executedBase < quantityInBase && !["CANCELED", "EXPIRED", "REJECTED"].includes(finalStatus)) {
+    try {
+      await cancelOrder(exchange, symbol.split("/").join(""), placedOrder.orderId);
+    } catch (_error) {}
+    await delay(250);
+    const execution = await getExecutedBaseForOrder(exchange, symbol, placedOrder.orderId);
+    executedBase = execution.executedBase;
+    finalStatus = execution.status;
+  }
+
+  return {
+    executedBase,
+    executedQuote: executedBase * price,
+    finalStatus,
+    orderId: placedOrder.orderId,
+  };
+};
+
+const executeSweep = async (
+  exchange: Exchange,
+  exchangeOptions: ExchangeOptions,
+  symbol: string,
+  direction: SweepDirection,
+  filter: Filter,
+  targetBaseQuantity: number,
+  quoteBudget?: number,
+  priceGuard?: SweepPriceGuard,
+): Promise<SweepExecutionSummary> => {
+  let remainingBase = targetBaseQuantity;
+  let remainingQuoteBudget = quoteBudget ?? Number.POSITIVE_INFINITY;
+  let executedBase = 0;
+  let executedQuote = 0;
+  let levelCount = 0;
+  let lastOrder: Order | undefined = undefined;
+  let idleAttempts = 0;
+  let stoppedByPriceGuard = false;
+
+  while (remainingBase > 0 && remainingQuoteBudget > 0 && levelCount < 100) {
+    const liveOrderBook = await getOrderbook(exchange, symbol);
+    const bestLevel = getBestBookLevel(liveOrderBook, direction);
+    if (bestLevel === undefined) {
+      break;
+    }
+
+    if (!isPriceWithinGuard(direction, bestLevel.price, priceGuard)) {
+      stoppedByPriceGuard = true;
+      break;
+    }
+
+    const roundedPrice = roundStep(bestLevel.price, filter.tickSize);
+    let desiredBaseAtLevel = Math.min(remainingBase, bestLevel.quantity);
+    if (direction === "BUY") {
+      desiredBaseAtLevel = Math.min(desiredBaseAtLevel, remainingQuoteBudget / roundedPrice);
+    }
+    const roundedBaseQuantity = roundStep(desiredBaseAtLevel, filter.stepSize);
+
+    if (!Number.isFinite(roundedBaseQuantity) || roundedBaseQuantity <= 0) {
+      break;
+    }
+
+    if (!checkBeforePlacingOrder(roundedBaseQuantity, roundedPrice, filter)) {
+      break;
+    }
+
+    const chunk = await executeImmediateLimitChunk(
+      exchange,
+      symbol,
+      direction,
+      roundedPrice,
+      roundedBaseQuantity,
+      exchangeOptions,
+    );
+
+    if (chunk.executedBase <= 0) {
+      idleAttempts += 1;
+      if (idleAttempts >= 3) {
+        break;
+      }
+      continue;
+    }
+
+    idleAttempts = 0;
+    levelCount += 1;
+    executedBase += chunk.executedBase;
+    executedQuote += chunk.executedQuote;
+    remainingBase = Math.max(0, remainingBase - chunk.executedBase);
+    remainingQuoteBudget = Math.max(0, remainingQuoteBudget - chunk.executedQuote);
+    lastOrder = {
+      symbol: symbol.split("/").join(""),
+      orderId: chunk.orderId,
+      price: roundedPrice.toString(),
+      qty: chunk.executedBase.toString(),
+      quoteQty: chunk.executedQuote.toString(),
+      commission: "",
+      commissionAsset: "",
+      time: Date.now(),
+      isBuyer: direction === "BUY",
+      isMaker: true,
+      isBestMatch: true,
+      orderStatus: chunk.finalStatus,
+      tradeId: chunk.orderId === "" ? 0 : parseFloat(chunk.orderId),
+    };
+  }
+
+  return {
+    executedBase,
+    executedQuote,
+    averagePrice: executedBase > 0 ? executedQuote / executedBase : 0,
+    levelCount,
+    fullyFilled: remainingBase <= 0,
+    stoppedByPriceGuard,
+    lastOrder,
+  };
+};
+
 export const placeSellOrder = async (
   exchange: Exchange,
   exchangeOptions: ExchangeOptions,
@@ -422,25 +718,23 @@ export const sell = async (
   if (orderBook === undefined || orderBook.bids === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
-  const orderBookBids = Object.keys(orderBook.bids)
-    .map((price) => parseFloat(price))
-    .sort((a, b) => b - a); // Sort bids in descending order to get highest bid
-  let bidPrice = orderBookBids[0]; // Get highest bid price
-  if (!bidPrice) {
+  const bestBidLevel = getBestBookLevel(orderBook, "SELL");
+  if (bestBidLevel === undefined) {
     return false;
   }
-  // Use a marketable limit by pricing slightly through the best bid.
-  const sellPriceMarketable = bidPrice * 0.999;
-  let bidQuantity = orderBook.bids[bidPrice.toString()];
   let quantityInBase = baseBalance * 0.98;
   quantityInBase = maxSellAmount(quantityInBase, symbolOptions);
-  if (!isNaN(bidQuantity) && quantityInBase > bidQuantity) {
-    quantityInBase = bidQuantity;
-  }
   if (forceQuantityInBase !== undefined) {
     quantityInBase = forceQuantityInBase;
   }
-  const roundedPrice = roundStep(sellPriceMarketable, filter.tickSize); // Round marketable price
+  const estimatedExecution = estimateSweepPrice("SELL", orderBook, quantityInBase);
+  const strictSellFloor = Math.max(
+    estimatedExecution.worstPrice > 0 ? estimatedExecution.worstPrice : 0,
+    symbolOptions.price?.enabled === true && symbolOptions.price?.minimumSell !== undefined
+      ? symbolOptions.price.minimumSell
+      : 0,
+  );
+  const roundedPrice = roundStep(estimatedExecution.averagePrice > 0 ? estimatedExecution.averagePrice : bestBidLevel.price, filter.tickSize);
   if (
     symbolOptions.price?.enabled === true &&
     symbolOptions.price?.maximumSell !== undefined &&
@@ -457,9 +751,9 @@ export const sell = async (
     consoleLogger.push("error", "Too low price to sell.");
     return false;
   }
-  const quantityInQuote = quantityInBase * sellPriceMarketable * 0.98; // Use marketable price
   const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
-  const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
+  const estimatedQuote = estimatedExecution.averagePrice * roundedQuantityInBase;
+  const roundedQuantityInQuote = roundStep(estimatedQuote, filter.stepSize);
   if (roundedQuantityInQuote < 1.1) {
     consoleLogger.push("error", "Too low quantity to sell. Minimum 1.1 Quote.");
     return false;
@@ -467,7 +761,7 @@ export const sell = async (
   if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA SELL ${orderBookBids[0]} ${bidPrice} ${sellPriceMarketable} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
+      `TRADEDATA SELL SWEEP ${bestBidLevel.price} ${roundedPrice} ${filter.tickSize} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -482,7 +776,7 @@ export const sell = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice, // Use marketable bid-side price for PNL calculation
+            roundedPrice,
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumSell === 0) {
             symbolOptions.profit.minimumSell = Number.MIN_SAFE_INTEGER;
@@ -509,26 +803,38 @@ export const sell = async (
       return false;
     }
     createBlock(symbol);
-    let order = await placeSellOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
-    // console.log(order);
-    if (order !== undefined) {
+    const execution = await executeSweep(
+      exchange,
+      exchangeOptions,
+      symbol,
+      "SELL",
+      filter,
+      roundedQuantityInBase,
+      undefined,
+      {
+        floor: strictSellFloor > 0 ? strictSellFloor : undefined,
+      },
+    );
+    if (execution.executedBase > 0) {
       play(soundFile);
+      const averageExecutionPrice = execution.averagePrice > 0 ? execution.averagePrice : roundedPrice;
+      const executedQuote = execution.executedQuote;
       let msg = "```";
-      msg += `SELL ID: ${order.orderId}\r\n`;
+      msg += `SELL SWEEP: ${execution.levelCount} levels\r\n`;
       msg += `Symbol: ${symbol}\r\n`;
-      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
-      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
-      msg += `Price: ${roundedPrice}\r\n`;
+      msg += `Base quantity: ${execution.executedBase.toFixed(8)}\r\n`;
+      msg += `Quote quantity: ${executedQuote.toFixed(8)}\r\n`;
+      msg += `Average price: ${averageExecutionPrice.toFixed(8)}\r\n`;
+      msg += `Filled: ${execution.fullyFilled ? "YES" : "PARTIAL"}\r\n`;
+      if (execution.stoppedByPriceGuard === true) {
+        msg += `Guard: STOPPED_AT_PRICE_FLOOR ${strictSellFloor.toFixed(8)}\r\n`;
+      }
       msg += `Profit if trade fulfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += "```";
-      symbolOptions.currentOrder = order;
+      symbolOptions.currentOrder = undefined;
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-      if (order.orderId !== undefined) {
-        await delay(30000);
-        handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
-      }
-      updateBuyAmount(roundedQuantityInQuote, symbolOptions);
+      updateBuyAmount(executedQuote, symbolOptions);
       if (symbolOptions.takeProfit !== undefined) {
         symbolOptions.takeProfit.current = 0;
       }
@@ -539,7 +845,7 @@ export const sell = async (
       }
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       removeBlock(symbol);
-      return order;
+      return execution.lastOrder ?? true;
     } else {
       removeBlock(symbol);
       return false;
@@ -611,28 +917,29 @@ export const buy = async (
   if (orderBook === undefined || orderBook.asks === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
-  const orderBookAsks = Object.keys(orderBook.asks)
-    .map((price) => parseFloat(price))
-    .sort((a, b) => a - b); // Sort asks in ascending order to get lowest ask
-  let askPrice = orderBookAsks[0]; // Get lowest ask price
-  if (!askPrice) {
+  const bestAskLevel = getBestBookLevel(orderBook, "BUY");
+  if (bestAskLevel === undefined) {
     return false;
   }
-  // Use a marketable limit by pricing slightly through the best ask.
-  const buyPriceMarketable = askPrice * 1.001;
-  let askQuantity = orderBook.asks[askPrice.toString()];
-  let quantityInQuote = quoteBalance;
-  quantityInQuote = maxBuyAmount(quantityInQuote, symbolOptions);
-  if (!isNaN(askQuantity) && askPrice > 0) {
-    const askQuantityInQuote = askQuantity * buyPriceMarketable;
-    if (quantityInQuote > askQuantityInQuote) {
-      quantityInQuote = askQuantityInQuote;
-    }
-  }
+  let quantityInQuote = maxBuyAmount(quoteBalance, symbolOptions);
+  let targetBaseQuantity = quantityInQuote / bestAskLevel.price;
   if (forceQuantityInBase !== undefined) {
-    quantityInQuote = forceQuantityInBase * buyPriceMarketable; // Use marketable price
+    targetBaseQuantity = forceQuantityInBase;
   }
-  const roundedPrice = roundStep(buyPriceMarketable, filter.tickSize); // Round marketable price
+  const estimatedExecution = estimateSweepPrice("BUY", orderBook, targetBaseQuantity, quantityInQuote);
+  if (estimatedExecution.executableBase <= 0) {
+    return false;
+  }
+  const configuredBuyCeiling =
+    symbolOptions.price?.enabled === true && symbolOptions.price?.maximumBuy !== undefined
+      ? symbolOptions.price.maximumBuy
+      : Number.POSITIVE_INFINITY;
+  const visibleBuyCeiling = estimatedExecution.worstPrice > 0 ? estimatedExecution.worstPrice : configuredBuyCeiling;
+  const strictBuyCeiling = Math.min(configuredBuyCeiling, visibleBuyCeiling);
+  const roundedPrice = roundStep(
+    estimatedExecution.averagePrice > 0 ? estimatedExecution.averagePrice : bestAskLevel.price,
+    filter.tickSize,
+  );
   if (
     symbolOptions.price?.enabled === true &&
     symbolOptions.price?.maximumBuy !== undefined &&
@@ -649,7 +956,7 @@ export const buy = async (
     consoleLogger.push("error", "Too low price to buy.");
     return false;
   }
-  const quantityInBase = (quantityInQuote / buyPriceMarketable) * 0.98; // Use marketable price
+  const quantityInBase = Math.min(targetBaseQuantity, estimatedExecution.executableBase) * 0.98;
   if (!isFinite(quantityInBase)) {
     consoleLogger.push("error", "Invalid quantity calculation due to zero or invalid price.");
     return false;
@@ -663,7 +970,7 @@ export const buy = async (
   if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA BUY ${orderBookAsks[0]} ${askPrice} ${buyPriceMarketable} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
+      `TRADEDATA BUY SWEEP ${bestAskLevel.price} ${roundedPrice} ${filter.tickSize} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -678,7 +985,7 @@ export const buy = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice, // Use marketable ask-side price for PNL calculation
+            roundedPrice,
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
             symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;
@@ -705,27 +1012,38 @@ export const buy = async (
       return false;
     }
     createBlock(symbol);
-    let order = await placeBuyOrder(exchange, exchangeOptions, symbol, roundedQuantityInBase, roundedPrice);
-    // console.log(order);
-    if (order !== undefined) {
+    const execution = await executeSweep(
+      exchange,
+      exchangeOptions,
+      symbol,
+      "BUY",
+      filter,
+      roundedQuantityInBase,
+      quantityInQuote,
+      {
+        ceiling: Number.isFinite(strictBuyCeiling) ? strictBuyCeiling : undefined,
+      },
+    );
+    if (execution.executedBase > 0) {
       play(soundFile);
+      const averageExecutionPrice = execution.averagePrice > 0 ? execution.averagePrice : roundedPrice;
       let msg = "```";
-      msg += `BUY ID: ${order.orderId}\r\n`;
+      msg += `BUY SWEEP: ${execution.levelCount} levels\r\n`;
       msg += `Symbol: ${symbol}\r\n`;
-      msg += `Base quantity: ${roundedQuantityInBase}\r\n`;
-      msg += `Quote quantity: ${roundedQuantityInQuote}\r\n`;
-      msg += `Price: ${roundedPrice}\r\n`;
+      msg += `Base quantity: ${execution.executedBase.toFixed(8)}\r\n`;
+      msg += `Quote quantity: ${execution.executedQuote.toFixed(8)}\r\n`;
+      msg += `Average price: ${averageExecutionPrice.toFixed(8)}\r\n`;
+      msg += `Filled: ${execution.fullyFilled ? "YES" : "PARTIAL"}\r\n`;
+      if (execution.stoppedByPriceGuard === true && Number.isFinite(strictBuyCeiling)) {
+        msg += `Guard: STOPPED_AT_PRICE_CEILING ${strictBuyCeiling.toFixed(8)}\r\n`;
+      }
       msg += `Profit if trade fulfills: ${unrealizedPNL.toFixed(2)}%\r\n`;
       msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
       msg += "```";
 
-      symbolOptions.currentOrder = order;
+      symbolOptions.currentOrder = undefined;
       sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
-      if (order.orderId !== undefined) {
-        await delay(30000);
-        handleOpenOrder(discord, exchange, symbol, order, orderBook, processOptions, symbolOptions);
-      }
-      updateSellAmount(roundedQuantityInBase, symbolOptions);
+      updateSellAmount(execution.executedBase, symbolOptions);
       if (symbolOptions.takeProfit !== undefined) {
         symbolOptions.takeProfit.current = 0;
       }
@@ -736,7 +1054,7 @@ export const buy = async (
       }
       exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
       removeBlock(symbol);
-      return order;
+      return execution.lastOrder ?? true;
     } else {
       removeBlock(symbol);
       return false;
