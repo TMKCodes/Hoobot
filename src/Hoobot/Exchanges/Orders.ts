@@ -150,10 +150,11 @@ export const checkBeforePlacingOrder = (baseQuantity: number, price: number, tra
     }
     return true;
   };
+  const notionalValue = baseQuantity * price;
   if (
     !isValid(tradingPairFilters.minPrice, tradingPairFilters.maxPrice, price) ||
     !isValid(tradingPairFilters.minQty, tradingPairFilters.maxQty, baseQuantity) ||
-    !isValid(tradingPairFilters.minNotional, tradingPairFilters.maxNotional, price)
+    !isValid(tradingPairFilters.minNotional, tradingPairFilters.maxNotional, notionalValue)
   ) {
     return false;
   }
@@ -188,6 +189,33 @@ export const checkOpenOrders = (symbol: string, exchangeOptions: ExchangeOptions
   }
 };
 
+const calculateAdverseMovePercentage = (order: Order, orderBook: Orderbook): number => {
+  const orderPrice = parseFloat(order.price);
+  if (!Number.isFinite(orderPrice) || orderPrice <= 0) {
+    return 0;
+  }
+
+  if (order.isBuyer === true) {
+    const bestAsk = Object.keys(orderBook.asks || {})
+      .map((price) => parseFloat(price))
+      .sort((a, b) => a - b)[0];
+    const currentPrice = Number.isFinite(bestAsk) ? bestAsk : orderPrice;
+    if (currentPrice <= orderPrice) {
+      return 0;
+    }
+    return ((currentPrice - orderPrice) / orderPrice) * 100;
+  }
+
+  const bestBid = Object.keys(orderBook.bids || {})
+    .map((price) => parseFloat(price))
+    .sort((a, b) => b - a)[0];
+  const currentPrice = Number.isFinite(bestBid) ? bestBid : orderPrice;
+  if (currentPrice >= orderPrice) {
+    return 0;
+  }
+  return ((orderPrice - currentPrice) / orderPrice) * 100;
+};
+
 export const handleOpenOrders = async (
   discord: Client,
   exchange: Exchange,
@@ -217,32 +245,8 @@ export const handleOpenOrders = async (
       symbolOptions.currentOrder = undefined;
       return true;
     } else {
-      let unrealizedPNL = 0;
-      if (openOrders[i].isBuyer === true) {
-        // console.log("Checking bids");
-        const orderBookBids = Object.keys(orderBook.bids)
-          .map((price) => parseFloat(price))
-          .sort((a, b) => b - a);
-        const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(openOrders[i].price);
-        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
-          parseFloat(openOrders[i].quoteQty),
-          parseFloat(openOrders[i].price),
-          currentPrice,
-        );
-      } else {
-        // console.log("Checking asks");
-        const orderBookAsks = Object.keys(orderBook.asks)
-          .map((price) => parseFloat(price))
-          .sort((a, b) => a - b);
-        const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(openOrders[i].price);
-        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
-          parseFloat(openOrders[i].quoteQty),
-          parseFloat(openOrders[i].price),
-          currentPrice,
-        );
-      }
-      // console.log(unrealizedPNL);
-      if (unrealizedPNL > symbolOptions.closePercentage!) {
+      const adverseMove = calculateAdverseMovePercentage(openOrders[i], orderBook);
+      if (adverseMove >= symbolOptions.closePercentage!) {
         await cancelOrder(exchange, symbol.split("/").join(""), openOrders[i].orderId);
         const orderMsg = `>>> Order ID **${openOrders[i].orderId}**\nSymbol **${symbol
           .split("/")
@@ -268,15 +272,15 @@ export const handleOpenOrder = async (
   if (isBinance(exchange)) {
     let partiallyFilledSent = false;
     const logger = consoleLogger();
-    delay(1500);
+    await delay(1500);
     let orderStatus;
     orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
     if (orderStatus === undefined) {
       return "DOES_NOT_EXIST";
     }
-    delay(1500);
+    await delay(1500);
     do {
-      delay(1500);
+      await delay(1500);
       const currentTime = Date.now();
       const orderAgeSeconds = Math.floor((currentTime - orderStatus.time) / 1000);
       logger.push("Order ID: ", order.orderId);
@@ -328,29 +332,8 @@ export const handleOpenOrder = async (
           sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
           return "CANCELED";
         } else {
-          let unrealizedPNL = 0;
-          if (order.isBuyer === true) {
-            const orderBookBids = Object.keys(orderBook.bids)
-              .map((price) => parseFloat(price))
-              .sort((a, b) => b - a);
-            const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(order.price);
-            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
-              parseFloat(order.quoteQty),
-              parseFloat(order.price),
-              currentPrice,
-            );
-          } else {
-            const orderBookAsks = Object.keys(orderBook.asks)
-              .map((price) => parseFloat(price))
-              .sort((a, b) => a - b);
-            const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(order.price);
-            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
-              parseFloat(order.quoteQty),
-              parseFloat(order.price),
-              currentPrice,
-            );
-          }
-          if (unrealizedPNL > symbolOptions.closePercentage!) {
+          const adverseMove = calculateAdverseMovePercentage(order, orderBook);
+          if (adverseMove >= symbolOptions.closePercentage!) {
             await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
               .split("/")
@@ -363,7 +346,7 @@ export const handleOpenOrder = async (
       logger.print();
       logger.flush();
       orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
-      delay(1500);
+      await delay(1500);
     } while (true);
   } else if (isNonKYC(exchange)) {
     do {
@@ -373,7 +356,7 @@ export const handleOpenOrder = async (
       const cancelledOrders = await exchange.getAllOrders(symbol, "cancelled", 500, 0);
       if (activeOrders !== undefined) {
         for (const activeOrder of activeOrders) {
-          if (String(activeOrders.id) === order.orderId) {
+          if (String(activeOrder.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
             var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
             // console.log(orderAgeSeconds);
@@ -387,29 +370,8 @@ export const handleOpenOrder = async (
               sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
               return "CANCELED";
             } else {
-              let unrealizedPNL = 0;
-              if (order.isBuyer === true) {
-                const orderBookBids = Object.keys(orderBook.bids)
-                  .map((price) => parseFloat(price))
-                  .sort((a, b) => b - a);
-                const currentPrice = orderBookBids.length > 0 ? orderBookBids[0] : parseFloat(order.price);
-                unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
-                  parseFloat(order.quoteQty),
-                  parseFloat(order.price),
-                  currentPrice,
-                );
-              } else {
-                const orderBookAsks = Object.keys(orderBook.asks)
-                  .map((price) => parseFloat(price))
-                  .sort((a, b) => a - b);
-                const currentPrice = orderBookAsks.length > 0 ? orderBookAsks[0] : parseFloat(order.price);
-                unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
-                  parseFloat(order.quoteQty),
-                  parseFloat(order.price),
-                  currentPrice,
-                );
-              }
-              if (unrealizedPNL > symbolOptions.closePercentage!) {
+              const adverseMove = calculateAdverseMovePercentage(order, orderBook);
+              if (adverseMove >= symbolOptions.closePercentage!) {
                 await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                   .split("/")
@@ -447,7 +409,7 @@ export const handleOpenOrder = async (
       } else {
         return "DOES NOT EXIST";
       }
-      delay(30000);
+      await delay(30000);
     } while (true);
   }
   return "";

@@ -419,28 +419,28 @@ export const sell = async (
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
-  if (orderBook === undefined || orderBook.asks === undefined) {
+  if (orderBook === undefined || orderBook.bids === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
-  const orderBookAsks = Object.keys(orderBook.asks)
+  const orderBookBids = Object.keys(orderBook.bids)
     .map((price) => parseFloat(price))
-    .sort((a, b) => a - b); // Sort asks in ascending order to get lowest ask
-  let askPrice = orderBookAsks[0]; // Get lowest ask price
-  if (!askPrice) {
+    .sort((a, b) => b - a); // Sort bids in descending order to get highest bid
+  let bidPrice = orderBookBids[0]; // Get highest bid price
+  if (!bidPrice) {
     return false;
   }
-  // Apply a small discount to ask price to increase fill likelihood (0.1% reduction)
-  const askPriceDiscounted = askPrice * 0.999;
-  let askQuantity = orderBook.asks[askPrice.toString()];
+  // Use a marketable limit by pricing slightly through the best bid.
+  const sellPriceMarketable = bidPrice * 0.999;
+  let bidQuantity = orderBook.bids[bidPrice.toString()];
   let quantityInBase = baseBalance * 0.98;
   quantityInBase = maxSellAmount(quantityInBase, symbolOptions);
-  if (!isNaN(askQuantity) && quantityInBase > askQuantity) {
-    quantityInBase = askQuantity;
+  if (!isNaN(bidQuantity) && quantityInBase > bidQuantity) {
+    quantityInBase = bidQuantity;
   }
   if (forceQuantityInBase !== undefined) {
     quantityInBase = forceQuantityInBase;
   }
-  const roundedPrice = roundStep(askPriceDiscounted, filter.tickSize); // Round discounted price
+  const roundedPrice = roundStep(sellPriceMarketable, filter.tickSize); // Round marketable price
   if (
     symbolOptions.price?.enabled === true &&
     symbolOptions.price?.maximumSell !== undefined &&
@@ -457,7 +457,7 @@ export const sell = async (
     consoleLogger.push("error", "Too low price to sell.");
     return false;
   }
-  const quantityInQuote = quantityInBase * askPriceDiscounted * 0.98; // Use discounted price
+  const quantityInQuote = quantityInBase * sellPriceMarketable * 0.98; // Use marketable price
   const roundedQuantityInBase = roundStep(quantityInBase, filter.stepSize);
   const roundedQuantityInQuote = roundStep(quantityInQuote, filter.stepSize);
   if (roundedQuantityInQuote < 1.1) {
@@ -467,7 +467,7 @@ export const sell = async (
   if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA SELL ${orderBookAsks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
+      `TRADEDATA SELL ${orderBookBids[0]} ${bidPrice} ${sellPriceMarketable} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -482,7 +482,7 @@ export const sell = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice, // Use discounted ask price for PNL calculation
+            roundedPrice, // Use marketable bid-side price for PNL calculation
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumSell === 0) {
             symbolOptions.profit.minimumSell = Number.MIN_SAFE_INTEGER;
@@ -608,28 +608,31 @@ export const buy = async (
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
-  if (orderBook === undefined || orderBook.bids === undefined) {
+  if (orderBook === undefined || orderBook.asks === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
-  const orderBookBids = Object.keys(orderBook.bids)
+  const orderBookAsks = Object.keys(orderBook.asks)
     .map((price) => parseFloat(price))
-    .sort((a, b) => b - a); // Sort bids in descending order to get highest bid
-  let bidPrice = orderBookBids[0]; // Get highest bid price
-  if (!bidPrice) {
+    .sort((a, b) => a - b); // Sort asks in ascending order to get lowest ask
+  let askPrice = orderBookAsks[0]; // Get lowest ask price
+  if (!askPrice) {
     return false;
   }
-  // Apply a small increment to bid price to increase fill likelihood (0.1% premium)
-  const bidPriceIncremented = bidPrice * 1.001;
-  let bidQuantity = orderBook.bids[bidPrice.toString()];
+  // Use a marketable limit by pricing slightly through the best ask.
+  const buyPriceMarketable = askPrice * 1.001;
+  let askQuantity = orderBook.asks[askPrice.toString()];
   let quantityInQuote = quoteBalance;
   quantityInQuote = maxBuyAmount(quantityInQuote, symbolOptions);
-  if (!isNaN(bidQuantity) && quantityInQuote > bidQuantity) {
-    quantityInQuote = bidQuantity;
+  if (!isNaN(askQuantity) && askPrice > 0) {
+    const askQuantityInQuote = askQuantity * buyPriceMarketable;
+    if (quantityInQuote > askQuantityInQuote) {
+      quantityInQuote = askQuantityInQuote;
+    }
   }
   if (forceQuantityInBase !== undefined) {
-    quantityInQuote = forceQuantityInBase * bidPriceIncremented; // Use incremented price
+    quantityInQuote = forceQuantityInBase * buyPriceMarketable; // Use marketable price
   }
-  const roundedPrice = roundStep(bidPriceIncremented, filter.tickSize); // Round incremented price
+  const roundedPrice = roundStep(buyPriceMarketable, filter.tickSize); // Round marketable price
   if (
     symbolOptions.price?.enabled === true &&
     symbolOptions.price?.maximumBuy !== undefined &&
@@ -646,7 +649,7 @@ export const buy = async (
     consoleLogger.push("error", "Too low price to buy.");
     return false;
   }
-  const quantityInBase = (quantityInQuote / bidPriceIncremented) * 0.98; // Use incremented price
+  const quantityInBase = (quantityInQuote / buyPriceMarketable) * 0.98; // Use marketable price
   if (!isFinite(quantityInBase)) {
     consoleLogger.push("error", "Invalid quantity calculation due to zero or invalid price.");
     return false;
@@ -660,7 +663,7 @@ export const buy = async (
   if (process.env.DEBUG === "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA BUY ${orderBookBids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
+      `TRADEDATA BUY ${orderBookAsks[0]} ${askPrice} ${buyPriceMarketable} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
@@ -675,7 +678,7 @@ export const buy = async (
           unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice, // Use incremented bid price for PNL calculation
+            roundedPrice, // Use marketable ask-side price for PNL calculation
           );
           if (symbolOptions.profit !== undefined && symbolOptions.profit.minimumBuy === 0) {
             symbolOptions.profit.minimumBuy = Number.MIN_SAFE_INTEGER;

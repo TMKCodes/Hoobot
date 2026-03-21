@@ -27,7 +27,7 @@ export const periodic = async (
     }
     const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
     const filter = symbolFilters[symbol.split("/").join("")];
-    if (symbolOptions.periodicDirection) {
+    if (symbolOptions.periodicDirection === "BUY") {
       consoleLogger.push("Performing periodic BUY", `Buying ${symbolOptions.periodicQuantity} of ${symbol}`);
       await buy(
         discord,
@@ -42,7 +42,7 @@ export const periodic = async (
         symbolOptions,
         symbolOptions.periodicQuantity,
       );
-    } else {
+    } else if (symbolOptions.periodicDirection === "SELL") {
       consoleLogger.push("Performing periodic SELL", `Selling ${symbolOptions.periodicQuantity} of ${symbol}`);
       await sell(
         discord,
@@ -57,6 +57,9 @@ export const periodic = async (
         symbolOptions,
         symbolOptions.periodicQuantity,
       );
+    } else {
+      consoleLogger.push("Periodic trade skipped", "Invalid direction");
+      return true;
     }
     consoleLogger.print();
     consoleLogger.flush();
