@@ -1,3 +1,30 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import {
   Client,
   GatewayIntentBits,
@@ -6,9 +33,10 @@ import {
   TextChannel,
   Interaction,
   CacheType,
+  MessageFlags,
 } from "discord.js";
 import { deployCommands } from "./Commands/deploy";
-import { ConfigOptions } from "../Hoobot/Utilities/Args";
+import { ConfigOptions, DiscordOptions } from "../Hoobot/Utilities/Args";
 import { Exchange } from "../Hoobot/Exchanges/Exchange";
 import { logToFile } from "../Hoobot/Utilities/LogToFile";
 
@@ -62,56 +90,90 @@ import fkick from "./Commands/fkick";
 deployable.push(fkick.builder.toJSON());
 commands.push({ name: fkick.builder.name, execute: fkick.execute });
 
-export const loginDiscord = async (exchanges: Exchange[], options: ConfigOptions): Promise<Client> => {
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-  if (options.discord.token === undefined) {
-    console.log("Discord bot token has not been set.");
-  } else {
-    await deployCommands(deployable, options);
-    client.once(Events.ClientReady, (c) => {
-      console.log(`Logged in as ${c.user.tag}`);
-    });
-    client.on(Events.InteractionCreate, (interaction: Interaction<CacheType>) => {
-      const handleInteraction = async (interaction: Interaction<CacheType>) => {
-        try {
-          if (interaction.isChatInputCommand()) {
-            commands.forEach(async (command) => {
-              if (command.name === interaction.commandName) {
-                return await command.execute(interaction, exchanges, options);
-              }
-            });
-          }
-        } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-          console.error(error);
-        }
-      };
-      return handleInteraction(interaction);
-    });
-    client.on(Events.Error, (error: Error) => {
-      console.log(JSON.stringify(error, null, 4));
-    });
-    client.login(options.discord.token);
-    return client;
+const createDiscordClient = async (
+  label: string,
+  exchanges: Exchange[],
+  options: ConfigOptions,
+  discordConfig: DiscordOptions | undefined
+): Promise<Client | undefined> => {
+  if (!discordConfig?.token) {
+    console.log(`Discord (${label}): token not set, skipping login.`);
+    return undefined;
   }
+  if (!discordConfig.applicationId) {
+    console.log(`Discord (${label}): applicationId not set, skipping login.`);
+    return undefined;
+  }
+  if (!discordConfig.serverId) {
+    console.log(`Discord (${label}): serverId not set, skipping login.`);
+    return undefined;
+  }
+
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+  client.once(Events.ClientReady, (c) => {
+    console.log(`Discord (${label}): logged in as ${c.user.tag}`);
+  });
+
+  client.on(Events.InteractionCreate, async (interaction: Interaction<CacheType>) => {
+    try {
+      if (interaction.isChatInputCommand()) {
+        for (const command of commands) {
+          if (command.name === interaction.commandName) {
+            await command.execute(interaction, exchanges, options);
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
+      console.error(`Discord (${label}) command error:`, error);
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: "Komennon suoritus epäonnistui.", flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+    }
+  });
+
+  client.on(Events.Error, (error: Error) => {
+    console.error(`Discord (${label}) client error:`, error);
+  });
+
+  await deployCommands(deployable, discordConfig);
+  await client.login(discordConfig.token);
   return client;
 };
 
+export const loginDiscord = async (exchanges: Exchange[], options: ConfigOptions): Promise<Client | undefined> => {
+  // Primary bot (uses options.discord)
+  const primary = await createDiscordClient("primary", exchanges, options, options.discord);
+
+  // Optional secondary bot (uses options.discordSecondary)
+  if (options.discordSecondary?.enabled) {
+    await createDiscordClient("secondary", exchanges, options, options.discordSecondary);
+  }
+
+  return primary;
+};
+
 // Function to send a message to a channel by its ID
-export const sendMessageToChannel = async (client: Client, channelId: string, message: string) => {
+export const sendMessageToChannel = async (client: Client | undefined, channelId: string | undefined, message: string) => {
   if (client === undefined) {
-    console.error(`Error sending message to channel with ID ${channelId}, discord client was undefined.`);
+    console.error("Discord: client undefined, cannot send message.");
+    return;
+  }
+  if (channelId === undefined || channelId === "") {
+    console.error("Discord: channelId not set, cannot send message.");
     return;
   }
   try {
     const channel = await client.channels.fetch(channelId);
     if (channel instanceof TextChannel) {
-      channel.send(message);
+      await channel.send(message);
     } else {
-      console.log(`Channel with ID ${channelId} not found or is not a text channel.`);
+      console.log(`Discord: channel ${channelId} not found or is not a text channel.`);
     }
   } catch (error) {
     logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(`Error sending message to channel with ID ${channelId}: ${error}`);
+    console.error(`Discord: error sending message to channel ${channelId}:`, error);
   }
 };

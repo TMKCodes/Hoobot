@@ -1,3 +1,30 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
@@ -10,20 +37,12 @@ export interface macd {
 }
 
 export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
-  if (macd.macdLine.length === 0 || macd.signalLine.length === 0 || macd.histogram.length === 0) return;
+  if (!macd?.macdLine?.length || macd.macdLine.length < 2 ||
+      !macd.signalLine?.length || !macd.histogram?.length) return;
   const macdLine = macd.macdLine[macd.macdLine.length - 1];
   const signalLine = macd.signalLine[macd.signalLine.length - 1];
   const histogram = macd.histogram[macd.histogram.length - 1];
   if (macdLine !== undefined && signalLine !== undefined && histogram !== undefined) {
-    if (macd.macdLine.length < 2) {
-      consoleLogger.push("MACD", {
-        line: macdLine.toFixed(7),
-        signal: signalLine.toFixed(7),
-        histogram: histogram.toFixed(7),
-        signalText: "Neutral",
-      });
-      return;
-    }
     const prevMacdLine = macd.macdLine[macd.macdLine.length - 2];
     const prevSignalLine = macd.signalLine[macd.signalLine.length - 2];
     const prevHistogram = macd.histogram[macd.histogram.length - 2];
@@ -33,6 +52,8 @@ export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
     const isBearishDivergence = macdLine < prevMacdLine && histogram < prevHistogram;
     const isBullishZeroLineCrossover = macdLine > 0 && prevMacdLine <= 0;
     const isBearishZeroLineCrossover = macdLine < 0 && prevMacdLine >= 0;
+    const isBullishCenterlineCrossover = macdLine > signalLine && prevMacdLine <= prevSignalLine;
+    const isBearishCenterlineCrossover = macdLine < signalLine && prevMacdLine >= prevSignalLine;
     const isStrongBullishTrend = macdLine > 100 && prevMacdLine <= 100;
     const isStrongBearishTrend = macdLine < -100 && prevMacdLine >= -100;
     const isPositiveHistogramDivergence = histogram > 0 && prevHistogram < 0;
@@ -50,6 +71,10 @@ export const logMACDSignals = (consoleLogger: ConsoleLogger, macd: macd) => {
       signal = "Bullish Zero Line Crossover";
     } else if (isBearishZeroLineCrossover) {
       signal = "Bearish Zero Line Crossover";
+    } else if (isBullishCenterlineCrossover) {
+      signal = "Bullish Centerline Crossover";
+    } else if (isBearishCenterlineCrossover) {
+      signal = "Bearish Centerline Crossover";
     } else if (isStrongBullishTrend) {
       signal = "Strong Bullish Trend";
     } else if (isStrongBearishTrend) {
@@ -73,15 +98,21 @@ export const calculateMACD = (
   shortEMA: number,
   longEMA: number,
   signalLength = 9,
-  source: string,
+  source: string
 ): macd => {
-  if (candles?.length < longEMA) {
-    return {
-      macdLine: [],
-      signalLine: [],
-      histogram: [],
-    };
+  const empty = { macdLine: [] as number[], signalLine: [] as number[], histogram: [] as number[] };
+  if (!Array.isArray(candles) || candles.length === 0) {
+    return empty;
   }
+  const fast = shortEMA > 0 ? shortEMA : 12;
+  const slow = longEMA > 0 ? longEMA : 26;
+  const signal = signalLength > 0 ? signalLength : 9;
+  if (candles.length < slow) {
+    return empty;
+  }
+  shortEMA = fast;
+  longEMA = slow;
+  signalLength = signal;
   let shortEMAs = calculateEMA(candles, shortEMA, source);
   let longEMAs = calculateEMA(candles, longEMA, source);
   if (longEMAs.length < shortEMAs.length) {
@@ -94,8 +125,8 @@ export const calculateMACD = (
   for (let i = 0; i < shortEMAs.length; i++) {
     macdLine.push(shortEMAs[i] - longEMAs[i]);
   }
-  var signalCandles = macdLine.map((value) => ({ close: value }) as Candlestick);
-  let signalLine = calculateEMA(signalCandles, signalLength, source);
+  const signalCandles = macdLine.map((value) => ({ close: value } as Candlestick));
+  let signalLine = calculateEMA(signalCandles, signalLength, "close");
   if (signalLine.length < macdLine.length) {
     macdLine = macdLine.slice(-signalLine.length);
   }
@@ -113,14 +144,14 @@ export const calculateMACD = (
   };
 };
 
-export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
+export const checkMACDSignals = (macd: macd | undefined, symbolOptions: SymbolOptions) => {
   let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.macd && symbolOptions.indicators.macd.enabled) {
-      check = "HOLD";
-      if (macd.histogram.length < 2 || macd.macdLine.length < 2 || macd.signalLine.length < 2) {
-        return check;
+      if (!macd?.histogram?.length || !macd.macdLine?.length || !macd.signalLine?.length || macd.histogram.length < 2) {
+        return "HOLD";
       }
+      check = "HOLD";
       const currentHistogram = macd.histogram[macd.histogram.length - 1];
       const prevHistogram = macd.histogram[macd.histogram.length - 2];
       const currentMacdLine = macd.macdLine[macd.macdLine.length - 1];
@@ -133,24 +164,22 @@ export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
         currentMacdLine !== undefined &&
         currentSignalLine !== undefined
       ) {
-        // Check for histogram momentum changes
-        const histogramRising = currentHistogram > prevHistogram;
-        const histogramFalling = currentHistogram < prevHistogram;
-        const histogramPositive = currentHistogram > 0;
-        const histogramNegative = currentHistogram < 0;
-
-        if (symbolOptions.indicators.macd.weight === undefined) {
+        var isHistogramPositive = currentHistogram > 0;
+        var isHistogramNegative = currentHistogram < 0;
+        const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
+        const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
+        var isMacdLinePositive = currentMacdLine > 0;
+        var isMacdLineNegative = currentMacdLine < 0;
+        const isSignalLinePositive = currentSignalLine > 0;
+        const isSignalLineNegative = currentSignalLine < 0;
+        if (symbolOptions.indicators.macd.weight == undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
-
-        // BUY when histogram is negative but starting to rise (bullish momentum)
-        if (histogramNegative && histogramRising) {
-          symbolOptions.indicators.macd.weight *= 1;
+        const bullishCross = currentMacdLine > currentSignalLine && prevMacdLine <= prevSignalLine;
+        const bearishCross = currentMacdLine < currentSignalLine && prevMacdLine >= prevSignalLine;
+        if (bullishCross) {
           check = "BUY";
-        }
-        // SELL when histogram is positive but starting to fall (bearish momentum)
-        else if (histogramPositive && histogramFalling) {
-          symbolOptions.indicators.macd.weight *= 1;
+        } else if (bearishCross) {
           check = "SELL";
         }
       }

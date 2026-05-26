@@ -1,6 +1,33 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
-import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval } from "../Utilities/Args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval, toSymbolKey } from "../Utilities/Args";
 import { ConsoleLogger, consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateEMA, ema, checkEMASignals, checkTrendSignal, Trend } from "../Indicators/EMA";
 import { calculateRSI, checkRSISignals, logRSISignals } from "../Indicators/RSI";
@@ -21,11 +48,19 @@ import {
   logStochasticOscillatorSignals,
   logStochasticRSISignals,
 } from "../Indicators/StochasticOscillator";
+import { mayExecuteAlgorithmicTrade } from "../Trading/tradeGates";
+import { simPriceFromCandle, simSellBaseQuantity } from "../Trading/executionSizing";
+import {
+  throttleKeyTradeHistory,
+  throttleKeyBalances,
+  shouldFetchData,
+  markDataFetched,
+} from "../Utilities/DataFetchThrottle";
 import { buy, getTradeHistory, sell, simulateBuy, simulateSell } from "../Exchanges/Trades";
 import { calculateOBV, checkOBVSignals, logOBVSignals } from "../Indicators/OBV";
 import { calculateCMF, checkCMFSignals, logCMFSignals } from "../Indicators/CMF";
 import { calculateAverage } from "../Indicators/Average";
-import { symbolFilters } from "../..";
+import { symbolFilters } from "../symbolFiltersStore";
 import { checkGPTSignals } from "../Indicators/GPT";
 import { Orderbook } from "../Exchanges/Orderbook";
 import { checkProfitSignals, checkProfitSignalsFromCandlesticks } from "../Indicators/Profit";
@@ -37,24 +72,15 @@ import { logToFile } from "../Utilities/LogToFile";
 import { calculateDMI, checkDMISignals, DMI, logDMISignals } from "../Indicators/DMI";
 import { getOpenOrders, handleOpenOrder, handleOpenOrders } from "../Exchanges/Orders";
 import { adx, calculateADX, checkADXSignals, logADXSignals } from "../Indicators/ADX";
-import { calculateWilliamsR, checkWilliamsRSignals, logWilliamsRSignals } from "../Indicators/WilliamsR";
-import { calculateCCI, checkCCISignals, logCCISignals } from "../Indicators/CCI";
-import { calculateMFI, checkMFISignals, logMFISignals } from "../Indicators/MFI";
 import {
-  calculateChaikinOscillator,
-  checkChaikinOscillatorSignals,
-  logChaikinOscillatorSignals,
-} from "../Indicators/ChaikinOscillator";
-import { calculateAroon, checkAroonSignals, logAroonSignals, AroonResult } from "../Indicators/Aroon";
-import { calculateForceIndex, checkForceIndexSignals, logForceIndexSignals } from "../Indicators/ForceIndex";
-import { calculateIchimoku, checkIchimokuSignals, logIchimokuSignals, IchimokuResult } from "../Indicators/Ichimoku";
-import {
-  calculateParabolicSAR,
-  checkParabolicSARSingals,
-  logParabolicSARSingals,
-  ParabolicSARResult,
-} from "../Indicators/ParabolicSAR";
-import { calculateVWAP, checkVWAPSignals, logVWAPSignals, VWAPResult } from "../Indicators/VWAP";
+  isProfitDirectionOverride,
+  resolveAlgorithmicAdaptiveConfig,
+  resolveEffectiveAgreement,
+  resolveVolatilityMultiplier,
+  withAdaptiveProfitScaling,
+} from "./algorithmicAdaptive";
+import { resolveMacdParams } from "../Indicators/indicatorParams";
+import { restoreIndicatorWeights, snapshotIndicatorWeights } from "../Indicators/indicatorVoteWeights";
 
 export interface Indicators {
   trend: Trend;
@@ -100,33 +126,6 @@ export interface Indicators {
   dmi: {
     [time: string]: DMI;
   };
-  williamsR: {
-    [time: string]: number[];
-  };
-  cci: {
-    [time: string]: number[];
-  };
-  mfi: {
-    [time: string]: number[];
-  };
-  chaikinOscillator: {
-    [time: string]: number[];
-  };
-  aroon: {
-    [time: string]: AroonResult;
-  };
-  forceIndex: {
-    [time: string]: number[];
-  };
-  ichimoku: {
-    [time: string]: IchimokuResult;
-  };
-  parabolicSAR: {
-    [time: string]: ParabolicSARResult;
-  };
-  vwap: {
-    [time: string]: VWAPResult;
-  };
   [key: string]: {};
 }
 
@@ -155,9 +154,19 @@ export const tradeDirection = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
   filter: Filter,
+  isFinalCandle: boolean = true
 ): Promise<string[]> => {
   const startTime = Date.now();
+  const symbolKey = toSymbolKey(symbol);
+  const storeBySymbol = candlesticks[symbolKey];
+  const timeframeKeys = storeBySymbol != null ? Object.keys(storeBySymbol) : [];
+  const primaryTimeframe =
+    symbolOptions.timeframes?.[0] != null && storeBySymbol?.[symbolOptions.timeframes[0]] != null
+      ? symbolOptions.timeframes[0]
+      : timeframeKeys[0];
+  const series = primaryTimeframe != null ? storeBySymbol?.[primaryTimeframe] : undefined;
   const timeframes = symbolOptions.timeframes;
+
   let direction = "HOLD";
   const directions: Directions = {
     BUY: 0,
@@ -166,61 +175,61 @@ export const tradeDirection = async (
   };
   let actions = ["BUY", "SELL", "HOLD"];
   let profit = "SKIP";
-  if (candlesticks[symbol.split("/").join("")][timeframes[0]] === undefined) {
-    consoleLogger.push("error", `Cant find candles for symbol ${symbol}`);
+
+  if (!Array.isArray(series) || series.length === 0) {
+    if (process.env.DEBUG === "true") {
+      console.log(`Cant find candles for symbol ${symbol} (key=${symbolKey}, timeframes=[${timeframeKeys.join(",")}], primary=${primaryTimeframe ?? "n/a"})`);
+    }
     return ["HOLD", "HOLD"];
   }
-  const closePrice =
-    candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1
-    ].close;
-  const closeTime =
-    candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1
-    ].time;
+
+  const closePrice = series[series.length - 1].close;
+  const closeTime = series[series.length - 1].time;
   const next = checkBalanceSignals(consoleLogger, symbol, closePrice, exchangeOptions, filter);
   const trend = checkTrendSignal(indicators.trend);
+  const adaptiveCfg = resolveAlgorithmicAdaptiveConfig(symbolOptions);
+  const primaryTf = primaryTimeframe ?? timeframes[0];
+  const atrSeries = primaryTf != null ? indicators.atr[primaryTf] : undefined;
+  const volMult =
+    adaptiveCfg.enabled && symbolOptions.indicators !== undefined
+      ? resolveVolatilityMultiplier(series, atrSeries, closePrice, adaptiveCfg)
+      : 1;
+  const profitSymbolOptions =
+    adaptiveCfg.enabled && symbolOptions.indicators !== undefined
+      ? withAdaptiveProfitScaling(symbolOptions, volMult, adaptiveCfg)
+      : symbolOptions;
+  if (adaptiveCfg.enabled && volMult !== 1) {
+    consoleLogger.push("Adaptive volMult", volMult.toFixed(3));
+  }
   if (orderBook !== undefined) {
-    profit = await checkProfitSignals(consoleLogger, next, trend, orderBook, closeTime, exchangeOptions, symbolOptions);
+    profit = await checkProfitSignals(
+      consoleLogger,
+      next,
+      trend,
+      orderBook,
+      closeTime,
+      exchangeOptions,
+      profitSymbolOptions,
+      isFinalCandle
+    );
   } else {
     profit = await checkProfitSignalsFromCandlesticks(
       consoleLogger,
       next,
       trend,
-      candlesticks[symbol.split("/").join("")][timeframes[0]],
+      series,
       closeTime,
       exchangeOptions,
-      symbolOptions,
+      profitSymbolOptions,
+      isFinalCandle
     );
   }
   if (symbolOptions.indicators === undefined) {
     return [profit, "HOLD"];
   }
-  const weights: Weights = {
-    SMAWeight: symbolOptions.indicators.sma?.weight!,
-    EMAWeight: symbolOptions.indicators.ema?.weight!,
-    ADXWeight: symbolOptions.indicators.adx?.weight!,
-    MACDWeight: symbolOptions.indicators.macd?.weight!,
-    RSIWeight: symbolOptions.indicators.rsi?.weight!,
-    StochasticOscillatorWeight: symbolOptions.indicators.so?.weight!,
-    StochasticRSIWeight: symbolOptions.indicators.srsi?.weight!,
-    BollingerBandsWeight: symbolOptions.indicators.bb?.weight!,
-    OBVWeight: symbolOptions.indicators.obv?.weight!,
-    CMFWeight: symbolOptions.indicators.cmf?.weight!,
-    RenkoWeight: symbolOptions.indicators.renko?.weight!,
-    DMIWeight: symbolOptions.indicators.dmi?.weight!,
-    WilliamsRWeight: symbolOptions.indicators.williamsR?.weight!,
-    CCIWeight: symbolOptions.indicators.cci?.weight!,
-    MFIWeight: symbolOptions.indicators.mfi?.weight!,
-    ChaikinOscillatorWeight: symbolOptions.indicators.chaikin?.weight!,
-    AroonWeight: symbolOptions.indicators.aroon?.weight!,
-    ForceIndexWeight: symbolOptions.indicators.forceIndex?.weight!,
-    IchimokuWeight: symbolOptions.indicators.ichimoku?.weight!,
-    ParabolicSARWeight: symbolOptions.indicators.parabolicSAR?.weight!,
-    VWAPWeight: symbolOptions.indicators.vwap?.weight!,
-  };
-  // console.log(timeframes.length);
+  const baseIndicatorWeights = snapshotIndicatorWeights(symbolOptions.indicators);
   for (let timeframeIndex = 0; timeframeIndex < timeframes.length; timeframeIndex++) {
+    restoreIndicatorWeights(symbolOptions.indicators, baseIndicatorWeights);
     const checks: Checks = {
       SMA: checkSMASignals(indicators.sma[timeframes[timeframeIndex]], symbolOptions),
       Renko: checkRenkoSignals(indicators.renko[timeframes[timeframeIndex]], symbolOptions),
@@ -230,37 +239,39 @@ export const tradeDirection = async (
       RSI: checkRSISignals(indicators.rsi[timeframes[timeframeIndex]], symbolOptions),
       StochasticOscillator: checkStochasticOscillatorSignals(
         indicators.stochasticOscillator[timeframes[timeframeIndex]],
-        symbolOptions,
+        symbolOptions
       ),
       StochasticRSI: checkStochasticRSISignals(indicators.stochasticRSI[timeframes[timeframeIndex]], symbolOptions),
       BollingerBands: checkBollingerBandsSignals(
-        candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]],
+        candlesticks[toSymbolKey(symbol)][timeframes[timeframeIndex]],
         indicators.bollingerBands[timeframes[timeframeIndex]],
-        symbolOptions,
+        symbolOptions
       ),
       OBV: checkOBVSignals(
-        candlesticks[symbol.split("/").join("")][timeframes[timeframeIndex]],
+        candlesticks[toSymbolKey(symbol)][timeframes[timeframeIndex]],
         indicators.obv[timeframes[timeframeIndex]],
-        symbolOptions,
+        symbolOptions
       ),
       CMF: checkCMFSignals(indicators.cmf[timeframes[timeframeIndex]], symbolOptions),
       DMI: checkDMISignals(indicators.dmi[timeframes[timeframeIndex]], symbolOptions),
-      WilliamsR: checkWilliamsRSignals(indicators.williamsR[timeframes[timeframeIndex]], symbolOptions),
-      CCI: checkCCISignals(indicators.cci[timeframes[timeframeIndex]], symbolOptions),
-      MFI: checkMFISignals(indicators.mfi[timeframes[timeframeIndex]], symbolOptions),
-      ChaikinOscillator: checkChaikinOscillatorSignals(
-        indicators.chaikinOscillator[timeframes[timeframeIndex]],
-        symbolOptions,
-      ),
-      Aroon: checkAroonSignals(indicators.aroon[timeframes[timeframeIndex]], symbolOptions),
-      ForceIndex: checkForceIndexSignals(indicators.forceIndex[timeframes[timeframeIndex]], symbolOptions),
-      Ichimoku: checkIchimokuSignals(indicators.ichimoku[timeframes[timeframeIndex]], symbolOptions),
-      ParabolicSAR: checkParabolicSARSingals(indicators.parabolicSAR[timeframes[timeframeIndex]], symbolOptions),
-      VWAP: checkVWAPSignals(indicators.vwap[timeframes[timeframeIndex]], symbolOptions),
     };
     const keys = Object.keys(checks).filter((check) => checks[check] !== "SKIP");
     // console.log(`Keys: ${JSON.stringify(keys)}`);
     const keysLength = keys.length;
+    const weights: Weights = {
+      SMAWeight: symbolOptions.indicators.sma?.weight ?? 0,
+      EMAWeight: symbolOptions.indicators.ema?.weight ?? 0,
+      ADXWeight: symbolOptions.indicators.adx?.weight ?? 0,
+      MACDWeight: symbolOptions.indicators.macd?.weight ?? 0,
+      RSIWeight: symbolOptions.indicators.rsi?.weight ?? 0,
+      StochasticOscillatorWeight: symbolOptions.indicators.so?.weight ?? 0,
+      StochasticRSIWeight: symbolOptions.indicators.srsi?.weight ?? 0,
+      BollingerBandsWeight: symbolOptions.indicators.bb?.weight ?? 0,
+      OBVWeight: symbolOptions.indicators.obv?.weight ?? 0,
+      CMFWeight: symbolOptions.indicators.cmf?.weight ?? 0,
+      RenkoWeight: symbolOptions.indicators.renko?.weight ?? 0,
+      DMIWeight: symbolOptions.indicators.dmi?.weight ?? 0,
+    };
     consoleLogger.push(`Indicator checks ${timeframes[timeframeIndex]}`, checks);
     for (let actionsIndex = 0; actionsIndex < actions.length; actionsIndex++) {
       let weightedSum = 0;
@@ -273,7 +284,7 @@ export const tradeDirection = async (
         const signal = checks[keys[keysIndex]];
         if (signal === actions[actionsIndex]) {
           weightedSum += weight;
-        } else if (signal === "BOTH" && (actions[actionsIndex] === "SELL" || actions[actionsIndex] === "BUY")) {
+        } else if (signal === "BOTH" && (actions[actionsIndex] === "SELL"  || actions[actionsIndex] === "BUY")) {
           weightedSum += weight;
         }
         totalWeight += weight;
@@ -290,18 +301,39 @@ export const tradeDirection = async (
   }
   consoleLogger.push("Directions", directions);
   actions = actions.filter((action) => directions[action] !== undefined);
-  if (directions[next] >= symbolOptions.agreement) {
+  const profitOverride = isProfitDirectionOverride(profit);
+  const agreementMeta = resolveEffectiveAgreement({
+    baseAgreement: symbolOptions.agreement,
+    volMult,
+    cfg: adaptiveCfg,
+    next,
+    trend,
+    directions,
+    closeTime,
+    symbolOptions,
+    exchangeOptions,
+  });
+  if (adaptiveCfg.enabled) {
+    consoleLogger.push("Adaptive agreement", {
+      base: symbolOptions.agreement,
+      effective: agreementMeta.effective,
+      conflict: agreementMeta.conflict,
+      volDelta: agreementMeta.volDelta,
+      trendDelta: agreementMeta.trendDelta,
+      ease: agreementMeta.ease,
+    });
+  }
+  if (agreementMeta.conflict && !profitOverride) {
+    direction = "HOLD";
+  } else if (directions[next] >= agreementMeta.effective) {
     direction = next;
-  } else if (
-    (profit === "TAKE_PROFIT" || profit === "STOP_LOSS") &&
-    directions[next] >= symbolOptions.agreement / 0.75
-  ) {
+  } else if (profitOverride) {
     direction = next;
   } else {
     direction = "HOLD";
   }
 
-  if (symbolOptions.indicators.OpenAI !== undefined && symbolOptions.indicators.OpenAI.enabled) {
+  if (symbolOptions.indicators?.OpenAI !== undefined && symbolOptions.indicators.OpenAI.enabled) {
     const checkGPT = await checkGPTSignals(consoleLogger, symbol, candlesticks, indicators, symbolOptions);
     if (symbolOptions.indicators.OpenAI.overwrite === true) {
       direction = checkGPT;
@@ -392,8 +424,9 @@ export const placeTrade = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
+  isFinalCandle: boolean = true
 ) => {
-  const orderBook = exchangeOptions.orderbooks[symbol.split("/").join("")];
+  const orderBook = exchangeOptions.orderbooks[toSymbolKey(symbol)];
   const indicators = calculateIndicators(symbol, candlesticks, symbolOptions, consoleLogger);
   const [profit, direction] = await tradeDirection(
     consoleLogger,
@@ -404,6 +437,7 @@ export const placeTrade = async (
     exchangeOptions,
     symbolOptions,
     filter,
+    isFinalCandle
   );
   var handledOpenOrders = true;
   if (symbolOptions.currentOrder !== undefined) {
@@ -411,10 +445,13 @@ export const placeTrade = async (
   }
   // console.log(handledOpenOrders);
   if (handledOpenOrders) {
-    if (direction === "SELL" && (profit === "SELL" || profit === "SKIP")) {
+    const symbolKey = toSymbolKey(symbol);
+    const hasTradeHistory = (exchangeOptions.tradeHistory?.[symbolKey]?.length ?? 0) > 0;
+    const tradeGateOpts = { hasTradeHistory };
+    if (mayExecuteAlgorithmicTrade(profit, direction, tradeGateOpts) && direction === "SELL") {
       logToFile(
         "./logs/debug.log",
-        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`,
+        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
       );
       return sell(
         discord,
@@ -427,12 +464,12 @@ export const placeTrade = async (
         processOptions,
         exchangeOptions,
         symbolOptions,
-        undefined,
+        undefined
       );
-    } else if (direction === "BUY" && (profit === "BUY" || profit === "SKIP")) {
+    } else if (mayExecuteAlgorithmicTrade(profit, direction, tradeGateOpts) && direction === "BUY") {
       logToFile(
         "./logs/debug.log",
-        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`,
+        `const [${profit}, ${direction}] = await tradeDirection(consoleLogger, ${symbol}, orderBook, candlesticks, indicators, exchangeOptions, symbolOptions, filter);`
       );
       return buy(
         discord,
@@ -445,11 +482,33 @@ export const placeTrade = async (
         processOptions,
         exchangeOptions,
         symbolOptions,
-        undefined,
+        undefined
       );
     }
   }
   return false;
+};
+
+const seedEmptyIndicatorSeries = (
+  indicators: Indicators,
+  timeframe: string,
+  symbolOptions: SymbolOptions
+): void => {
+  const ind = symbolOptions.indicators;
+  if (!ind) return;
+  if (ind.macd?.enabled) {
+    indicators.macd[timeframe] = { macdLine: [], signalLine: [], histogram: [] };
+  }
+  if (ind.rsi?.enabled) indicators.rsi[timeframe] = [];
+  if (ind.adx?.enabled) indicators.adx[timeframe] = { adx: [], plusDI: [], minusDI: [] };
+  if (ind.sma?.enabled) indicators.sma[timeframe] = [];
+  if (ind.cmf?.enabled) indicators.cmf[timeframe] = [];
+  if (ind.bb?.enabled) indicators.bollingerBands[timeframe] = [[], [], []];
+  if (ind.obv?.enabled) indicators.obv[timeframe] = [];
+  if (ind.so?.enabled) indicators.stochasticOscillator[timeframe] = [[], []];
+  if (ind.srsi?.enabled) indicators.stochasticRSI[timeframe] = [[], []];
+  if (ind.dmi?.enabled) indicators.dmi[timeframe] = { adx: [], plusDI: [], minusDI: [] };
+  if (ind.ema?.enabled) indicators.ema[timeframe] = { short: [], long: [] };
 };
 
 const subCalculateIndicators = (
@@ -457,13 +516,17 @@ const subCalculateIndicators = (
   indicators: Indicators,
   timeframe: string,
   symbolOptions: SymbolOptions,
-  consoleLogger: ConsoleLogger,
-): Indicators => {
+  consoleLogger: ConsoleLogger
+) : Indicators => {
   if (symbolOptions.indicators !== undefined) {
+    if (!Array.isArray(candlesticks) || candlesticks.length === 0) {
+      seedEmptyIndicatorSeries(indicators, timeframe, symbolOptions);
+      return indicators;
+    }
     indicators.sma[timeframe] = calculateSMA(
       candlesticks,
       symbolOptions.indicators?.sma?.length!,
-      symbolOptions.source,
+      symbolOptions.source
     );
     if (symbolOptions.indicators.sma?.enabled) {
       logSMASignals(consoleLogger, indicators.sma[timeframe]);
@@ -474,7 +537,7 @@ const subCalculateIndicators = (
         symbolOptions.indicators.rsi.length,
         symbolOptions.indicators.rsi.smoothing?.type,
         symbolOptions.indicators.rsi.smoothing?.length,
-        symbolOptions.source,
+        symbolOptions.source
       );
       logRSISignals(consoleLogger, indicators.rsi[timeframe]);
     }
@@ -482,17 +545,18 @@ const subCalculateIndicators = (
       indicators.adx[timeframe] = calculateADX(
         candlesticks,
         symbolOptions.indicators.adx.dilength,
-        symbolOptions.indicators.adx.adxSmoothing,
+        symbolOptions.indicators.adx.adxSmoothing
       );
       logADXSignals(consoleLogger, indicators.adx[timeframe]);
     }
     if (symbolOptions.indicators.macd?.enabled) {
+      const macdParams = resolveMacdParams(symbolOptions);
       indicators.macd[timeframe] = calculateMACD(
         candlesticks,
-        symbolOptions.indicators.macd.fast,
-        symbolOptions.indicators.macd.slow,
-        symbolOptions.indicators.macd.signal,
-        symbolOptions.source,
+        macdParams.fast,
+        macdParams.slow,
+        macdParams.signal,
+        symbolOptions.source
       );
       logMACDSignals(consoleLogger, indicators.macd[timeframe]);
     }
@@ -500,12 +564,14 @@ const subCalculateIndicators = (
       logATRSignals(consoleLogger, indicators.atr[timeframe]);
     }
     if (symbolOptions.indicators.bb?.enabled) {
+      const bbAvg =
+        symbolOptions.indicators.bb.average === "EMA" ? "EMA" : "SMA";
       indicators.bollingerBands[timeframe] = calculateBollingerBands(
         candlesticks,
-        symbolOptions.indicators.bb.average,
+        bbAvg,
         symbolOptions.indicators.bb.length,
         symbolOptions.indicators.bb.multiplier,
-        symbolOptions.source,
+        symbolOptions.source
       );
       logBollingerBandsSignals(consoleLogger, candlesticks, indicators.bollingerBands[timeframe]);
     }
@@ -514,7 +580,7 @@ const subCalculateIndicators = (
         candlesticks,
         symbolOptions.indicators.so.kPeriod,
         symbolOptions.indicators.so.dPeriod,
-        symbolOptions.indicators.so.smoothing,
+        symbolOptions.indicators.so.smoothing
       );
       logStochasticOscillatorSignals(consoleLogger, indicators.stochasticOscillator[timeframe]);
     }
@@ -526,7 +592,7 @@ const subCalculateIndicators = (
         symbolOptions.indicators.srsi.smoothK,
         symbolOptions.indicators.srsi.smoothD,
         symbolOptions.indicators.rsi?.smoothing?.type,
-        symbolOptions.source,
+        symbolOptions.source
       );
       logStochasticRSISignals(consoleLogger, indicators.stochasticRSI[timeframe]);
     }
@@ -542,63 +608,9 @@ const subCalculateIndicators = (
       indicators.dmi[timeframe] = calculateDMI(
         candlesticks,
         symbolOptions.indicators.dmi.dmiLength,
-        symbolOptions.indicators.dmi.adxSmoothing,
+        symbolOptions.indicators.dmi.adxSmoothing
       );
       logDMISignals(consoleLogger, indicators.dmi[timeframe]);
-    }
-    if (symbolOptions.indicators.williamsR?.enabled) {
-      indicators.williamsR[timeframe] = calculateWilliamsR(candlesticks, symbolOptions.indicators.williamsR.period);
-      logWilliamsRSignals(consoleLogger, indicators.williamsR[timeframe]);
-    }
-    if (symbolOptions.indicators.cci?.enabled) {
-      indicators.cci[timeframe] = calculateCCI(candlesticks, symbolOptions.indicators.cci.period);
-      logCCISignals(consoleLogger, indicators.cci[timeframe]);
-    }
-    if (symbolOptions.indicators.mfi?.enabled) {
-      indicators.mfi[timeframe] = calculateMFI(candlesticks, symbolOptions.indicators.mfi.period);
-      logMFISignals(consoleLogger, indicators.mfi[timeframe]);
-    }
-    if (symbolOptions.indicators.chaikin?.enabled) {
-      indicators.chaikinOscillator[timeframe] = calculateChaikinOscillator(
-        candlesticks,
-        symbolOptions.indicators.chaikin.fastPeriod,
-        symbolOptions.indicators.chaikin.slowPeriod,
-      );
-      logChaikinOscillatorSignals(consoleLogger, indicators.chaikinOscillator[timeframe]);
-    }
-    if (symbolOptions.indicators.aroon?.enabled) {
-      indicators.aroon[timeframe] = calculateAroon(candlesticks, symbolOptions.indicators.aroon.period);
-      logAroonSignals(consoleLogger, indicators.aroon[timeframe]);
-    }
-    if (symbolOptions.indicators.forceIndex?.enabled) {
-      indicators.forceIndex[timeframe] = calculateForceIndex(candlesticks, symbolOptions.indicators.forceIndex.period);
-      logForceIndexSignals(consoleLogger, indicators.forceIndex[timeframe]);
-    }
-    if (symbolOptions.indicators.ichimoku?.enabled) {
-      indicators.ichimoku[timeframe] = calculateIchimoku(
-        candlesticks,
-        symbolOptions.indicators.ichimoku.tenkanPeriod,
-        symbolOptions.indicators.ichimoku.kijunPeriod,
-        symbolOptions.indicators.ichimoku.senkouPeriod,
-        symbolOptions.indicators.ichimoku.displacement,
-      );
-      logIchimokuSignals(consoleLogger, indicators.ichimoku[timeframe]);
-    }
-    if (symbolOptions.indicators.parabolicSAR?.enabled) {
-      indicators.parabolicSAR[timeframe] = calculateParabolicSAR(
-        candlesticks,
-        symbolOptions.indicators.parabolicSAR.accelerationFactor,
-        symbolOptions.indicators.parabolicSAR.maxAcceleration,
-      );
-      logParabolicSARSingals(consoleLogger, indicators.parabolicSAR[timeframe]);
-    }
-    if (symbolOptions.indicators.vwap?.enabled) {
-      indicators.vwap[timeframe] = calculateVWAP(
-        candlesticks,
-        symbolOptions.indicators.vwap.stdDevMultiplier,
-        symbolOptions.indicators.vwap.resetPeriod,
-      );
-      logVWAPSignals(consoleLogger, indicators.vwap[timeframe]);
     }
     return indicators;
   } else {
@@ -617,16 +629,7 @@ const subCalculateIndicators = (
       stochasticOscillator: {},
       stochasticRSI: {},
       bollingerBands: {},
-      dmi: {},
-      williamsR: {},
-      cci: {},
-      mfi: {},
-      chaikinOscillator: {},
-      aroon: {},
-      forceIndex: {},
-      ichimoku: {},
-      parabolicSAR: {},
-      vwap: {},
+      dmi: {}
     };
   }
 };
@@ -635,7 +638,7 @@ export const calculateIndicators = (
   symbol: string,
   candlesticks: Candlesticks,
   symbolOptions: SymbolOptions,
-  consoleLogger: ConsoleLogger,
+  consoleLogger: ConsoleLogger
 ): Indicators => {
   let indicators: Indicators = {
     trend: {},
@@ -653,61 +656,56 @@ export const calculateIndicators = (
     cmf: {},
     dmi: {},
     renko: {},
-    williamsR: {},
-    cci: {},
-    mfi: {},
-    chaikinOscillator: {},
-    aroon: {},
-    forceIndex: {},
-    ichimoku: {},
-    parabolicSAR: {},
-    vwap: {},
   };
   if (
     symbolOptions.trend?.enabled &&
-    candlesticks[symbol.split("/").join("")][symbolOptions.trend.timeframe] !== undefined
+    candlesticks[toSymbolKey(symbol)][symbolOptions.trend.timeframe] !== undefined
   ) {
+    const trendShort =
+      symbolOptions.trend?.ema?.short ?? symbolOptions.indicators?.ema?.short ?? 9;
+    const trendLong =
+      symbolOptions.trend?.ema?.long ?? symbolOptions.indicators?.ema?.long ?? 21;
     indicators.trend = {
       short: calculateEMA(
-        candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!],
-        symbolOptions.indicators?.ema?.short!,
-        "close",
+        candlesticks[toSymbolKey(symbol)][symbolOptions.trend?.timeframe!],
+        trendShort,
+        "close"
       ),
       long: calculateEMA(
-        candlesticks[symbol.split("/").join("")][symbolOptions.trend?.timeframe!],
-        symbolOptions.indicators?.ema?.long!,
-        "close",
+        candlesticks[toSymbolKey(symbol)][symbolOptions.trend?.timeframe!],
+        trendLong,
+        "close"
       ),
     };
   }
   const timeframes = symbolOptions.timeframes;
   for (let i = 0; i < timeframes.length; i++) {
     if (symbolOptions.indicators !== undefined) {
-      indicators.avg[timeframes[i]] = calculateAverage(candlesticks[symbol.split("/").join("")][timeframes[i]]);
-      //logAverageSignals(consoleLogger, candlesticks[symbol.split("/").join("")][timeframes[i]], indicators.avg[timeframes[i]]);
+      indicators.avg[timeframes[i]] = calculateAverage(candlesticks[toSymbolKey(symbol)][timeframes[i]]);
+      //logAverageSignals(consoleLogger, candlesticks[toSymbolKey(symbol)][timeframes[i]], indicators.avg[timeframes[i]]);
       indicators.ema[timeframes[i]] = {
         short: calculateEMA(
-          candlesticks[symbol.split("/").join("")][timeframes[i]],
+          candlesticks[toSymbolKey(symbol)][timeframes[i]],
           symbolOptions.indicators?.ema?.short!,
-          symbolOptions.source,
+          symbolOptions.source
         ),
         long: calculateEMA(
-          candlesticks[symbol.split("/").join("")][timeframes[i]],
+          candlesticks[toSymbolKey(symbol)][timeframes[i]],
           symbolOptions.indicators?.ema?.long!,
-          symbolOptions.source,
+          symbolOptions.source
         ),
       };
       //logEMASignals(consoleLogger, indicators.ema[timeframes[i]]);
       indicators.atr[timeframes[i]] = calculateATR(
-        candlesticks[symbol.split("/").join("")][timeframes[i]],
+        candlesticks[toSymbolKey(symbol)][timeframes[i]],
         symbolOptions.indicators?.atr?.length,
-        symbolOptions.source,
+        symbolOptions.source
       );
       if (symbolOptions.indicators.renko !== undefined && symbolOptions.indicators.renko.enabled) {
         symbolOptions.indicators.renko.brickSize = calculateBrickSize(indicators.atr[timeframes[i]], symbolOptions);
         indicators.renko[timeframes[i]] = calculateRenko(
-          candlesticks[symbol.split("/").join("")][timeframes[i]],
-          symbolOptions.indicators.renko.brickSize,
+          candlesticks[toSymbolKey(symbol)][timeframes[i]],
+          symbolOptions.indicators.renko.brickSize
         );
         //logRenkoSignals(consoleLogger, indicators.renko[timeframes[i]], options);
         indicators = subCalculateIndicators(
@@ -715,16 +713,21 @@ export const calculateIndicators = (
           indicators,
           timeframes[i],
           symbolOptions,
-          consoleLogger,
+          consoleLogger
         );
       } else {
-        indicators = subCalculateIndicators(
-          candlesticks[symbol.split("/").join("")][timeframes[i]],
-          indicators,
-          timeframes[i],
-          symbolOptions,
-          consoleLogger,
-        );
+        const series = candlesticks[toSymbolKey(symbol)][timeframes[i]];
+        if (Array.isArray(series) && series.length > 0) {
+          indicators = subCalculateIndicators(
+            series,
+            indicators,
+            timeframes[i],
+            symbolOptions,
+            consoleLogger
+          );
+        } else {
+          seedEmptyIndicatorSeries(indicators, timeframes[i], symbolOptions);
+        }
       }
     }
   }
@@ -739,50 +742,64 @@ export const algorithmic = async (
   candlesticks: Candlesticks,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ) => {
-  if (exchangeOptions.balances === undefined || exchangeOptions.balances[symbol.split("/").join("")] === undefined) {
+  if (symbolOptions.enabled === false) return false;
+  const balancesKey = throttleKeyBalances(exchangeOptions.name);
+  if (
+    (exchangeOptions.balances == undefined || exchangeOptions.balances[toSymbolKey(symbol)] == undefined) &&
+    shouldFetchData(balancesKey)
+  ) {
     exchangeOptions.balances = await getCurrentBalances(exchange);
-  }
+    markDataFetched(balancesKey);
+  } 
   const startTime = Date.now();
-  const filter = symbolFilters[symbol.split("/").join("")];
-  if (candlesticks[symbol.split("/").join("")] === undefined) {
+  const filter = symbolFilters[toSymbolKey(symbol)];
+  const symbolKey = toSymbolKey(symbol);
+
+  if (candlesticks[symbolKey] === undefined) {
     return false;
   }
-  const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
+
+  const timeframeKeys = Object.keys(candlesticks[symbolKey]);
+  if (!Array.isArray(timeframeKeys) || timeframeKeys.length === 0) {
     return false;
   }
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+
+  const storeBySymbol = candlesticks[symbolKey];
+  const primaryTimeframe =
+    symbolOptions.timeframes?.[0] != null && storeBySymbol[symbolOptions.timeframes[0]] != null
+      ? symbolOptions.timeframes[0]
+      : timeframeKeys[0];
+  const series = candlesticks[symbolKey][primaryTimeframe];
+
+  if (!Array.isArray(series) || series.length < 2) {
     return false;
   }
   exchangeOptions.tradeHistory = exchangeOptions.tradeHistory || {};
-  exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    consoleLogger.push("error", `${symbol}: could not retrieve trade history`);
+  const tradeHistoryKey = throttleKeyTradeHistory(exchangeOptions.name, symbolKey);
+  if (shouldFetchData(tradeHistoryKey)) {
+    exchangeOptions.tradeHistory[symbolKey] = await getTradeHistory(exchange, symbol);
+    markDataFetched(tradeHistoryKey);
+  }
+  if (exchangeOptions.tradeHistory[symbolKey] === undefined) {
+    console.error(`${symbol}: could not retrieve trade history`);
     return false;
   }
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < symbolOptions.indicators?.ema?.long!) {
+  const emaLong = symbolOptions.indicators?.ema?.long ?? 21;
+  if (series.length < emaLong) {
     consoleLogger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
     return false;
   }
-  if (!Array.isArray(timeframe) || timeframe?.length === 0) {
-    return false;
-  }
-  const latestCandle =
-    candlesticks[symbol.split("/").join("")][timeframe[0]][
-      candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1
-    ];
-  const prevCandle =
-    candlesticks[symbol.split("/").join("")][timeframe[0]][
-      candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 2
-    ];
+
+  const latestCandle = series[series.length - 1];
+  const prevCandle = series[series.length - 2];
   const candleTime = new Date(latestCandle.time).toLocaleString("fi-FI");
-  consoleLogger.push("Symbol", symbol.split("/").join(""));
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")]?.length > 0) {
+  consoleLogger.push("Symbol", toSymbolKey(symbol));
+  if (exchangeOptions.tradeHistory[toSymbolKey(symbol)]?.length > 0) {
     const lastTradeTime =
-      exchangeOptions.tradeHistory[symbol.split("/").join("")][
-        exchangeOptions.tradeHistory[symbol.split("/").join("")].length - 1
+      exchangeOptions.tradeHistory[toSymbolKey(symbol)][
+        exchangeOptions.tradeHistory[toSymbolKey(symbol)].length - 1
       ].time;
     const lastTradeDate = new Date(lastTradeTime);
     consoleLogger.push("Last trade time", lastTradeDate.toLocaleString("fi-FI"));
@@ -801,10 +818,10 @@ export const algorithmic = async (
         latestCandle.close > prevCandle?.close
           ? "Rising"
           : latestCandle.close < prevCandle?.close
-            ? "Dropping"
-            : "Stagnant",
+          ? "Dropping"
+          : "Stagnant",
       final: latestCandle.isFinal,
-      candlesticks: candlesticks[symbol.split("/").join("")][timeframe[0]]?.length,
+      candlesticks: series.length,
     });
   }
   const [baseCurrency, quoteCurrency] = symbol.split("/");
@@ -818,6 +835,7 @@ export const algorithmic = async (
     base: baseBalance,
     quote: quoteBalance,
   });
+  const isFinalCandle = Boolean(latestCandle.isFinal);
   const placedTrade = await placeTrade(
     discord,
     exchange,
@@ -828,50 +846,37 @@ export const algorithmic = async (
     processOptions,
     exchangeOptions,
     symbolOptions,
+    isFinalCandle
   );
   const stopTime = Date.now();
   consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
-  if (latestCandle.isFinal === true) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
+  if (latestCandle.isFinal === true && shouldFetchData(tradeHistoryKey)) {
+    exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
+    markDataFetched(tradeHistoryKey);
   }
-  if (exchangeOptions.name === "binance") {
-    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
-      consoleLogger.print("blue");
+  const updateColor = "blue";
+  const tradeColor = "green";
+  const consoleMode = (exchangeOptions.console ?? "").toString().trim();
+
+  if (exchangeOptions.name === "binance" || exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
+    if (consoleMode === "trade/final" && (placedTrade !== false || isFinalCandle)) {
+      consoleLogger.print(tradeColor);
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
+    } else if (consoleMode === "trade/final" && placedTrade === false && !isFinalCandle) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
-      consoleLogger.print("blue");
+    } else if (consoleMode === "trade" && placedTrade !== false) {
+      consoleLogger.print(tradeColor);
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
+    } else if (consoleMode === "trade" && placedTrade === false) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
-      consoleLogger.print("blue");
+    } else if (consoleMode === "final" && isFinalCandle) {
+      consoleLogger.print(tradeColor);
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
-      consoleLogger.flush();
-    } else {
-      consoleLogger.print("blue");
-      consoleLogger.flush();
-    }
-  } else if (exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
-    if (exchangeOptions.console === "trade/final" && (placedTrade !== false || latestCandle.isFinal)) {
-      consoleLogger.print("green");
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade/final" && placedTrade === false && latestCandle.isFinal === false) {
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === true) {
-      consoleLogger.print("green");
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && placedTrade === false) {
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
-      consoleLogger.print("green");
-      consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+    } else if (consoleMode === "final" && !isFinalCandle) {
       consoleLogger.flush();
     } else {
-      consoleLogger.print("green");
+      // "update" or any other mode: show updates in blue
+      consoleLogger.print(updateColor);
       consoleLogger.flush();
     }
   }
@@ -896,40 +901,47 @@ export const simulateAlgorithmic = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
   balances: Balances,
-  filter: Filter,
+  filter: Filter
 ) => {
+  if (symbolOptions.enabled === false) return false;
   const logger = consoleLogger();
-  if (candlesticks[symbol.split("/").join("")] === undefined) {
+  const symbolKey = toSymbolKey(symbol);
+
+  if (candlesticks[symbolKey] === undefined) {
     return false;
   }
-  const timeframes = Object.keys(candlesticks[symbol.split("/").join("")]);
-  if (candlesticks[symbol.split("/").join("")][timeframes[0]] === undefined) {
+  const timeframeKeys = Object.keys(candlesticks[symbolKey]);
+  if (!Array.isArray(timeframeKeys) || timeframeKeys.length === 0) {
     return false;
   }
-  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < 2) {
+
+  const storeBySymbol = candlesticks[symbolKey];
+  const primaryTimeframe =
+    symbolOptions.timeframes?.[0] != null && storeBySymbol[symbolOptions.timeframes[0]] != null
+      ? symbolOptions.timeframes[0]
+      : timeframeKeys[0];
+  const series = storeBySymbol[primaryTimeframe];
+
+  if (!Array.isArray(series) || series.length < 2) {
     return false;
   }
   if (exchangeOptions.tradeHistory === undefined) {
     exchangeOptions.tradeHistory = {};
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = [];
+    exchangeOptions.tradeHistory[symbolKey] = [];
   }
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = [];
+  if (exchangeOptions.tradeHistory[symbolKey] === undefined) {
+    exchangeOptions.tradeHistory[symbolKey] = [];
   }
-  if (candlesticks[symbol.split("/").join("")][timeframes[0]]?.length < symbolOptions.indicators?.ema?.long!) {
+  const emaLongSim = symbolOptions.indicators?.ema?.long ?? 21;
+  if (series.length < emaLongSim) {
     logger.push(`warning`, `Not enough candlesticks for calculations, please wait.`);
     return false;
   }
-  const latestCandle =
-    candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 1
-    ];
-  const prevCandle =
-    candlesticks[symbol.split("/").join("")][timeframes[0]][
-      candlesticks[symbol.split("/").join("")][timeframes[0]]?.length - 2
-    ];
+
+  const latestCandle = series[series.length - 1];
+  const prevCandle = series[series.length - 2];
   const candleTime = new Date(latestCandle.time).toLocaleString("fi-FI");
-  logger.push("Symbol", symbol.split("/").join(""));
+  logger.push("Symbol", toSymbolKey(symbol));
   // if (latestCandle !== undefined) {
   //   logger.push('Candlestick', {
   //     time: candleTime,
@@ -944,12 +956,13 @@ export const simulateAlgorithmic = async (
   logger.push("Time", candleTime);
   logger.push("Color", latestCandle.close > latestCandle.open ? "Green" : "Red");
   logger.push("Balance", {
-    base: exchangeOptions.balances[symbol.split("/")[0]].crypto.toFixed(7) + " " + symbol.split("/")[0],
-    quote: exchangeOptions.balances[symbol.split("/")[1]].crypto.toFixed(7) + " " + symbol.split("/")[1],
+    base: (exchangeOptions.balances?.[symbol.split("/")[0]]?.crypto ?? 0).toFixed(7) + " " + symbol.split("/")[0],
+    quote: (exchangeOptions.balances?.[symbol.split("/")[1]]?.crypto ?? 0).toFixed(7) + " " + symbol.split("/")[1],
   });
   const emptyLogger = consoleLogger();
   const indicators: Indicators = calculateIndicators(symbol, candlesticks, symbolOptions, logger);
   const orderBook = undefined;
+  const isFinalCandle = Boolean(latestCandle.isFinal);
   const [profit, direction] = await tradeDirection(
     emptyLogger,
     symbol,
@@ -959,14 +972,21 @@ export const simulateAlgorithmic = async (
     exchangeOptions,
     symbolOptions,
     filter,
+    isFinalCandle
   );
-  const sellPrice = getRandomValueBetween(latestCandle.high, latestCandle.close);
-  const buyPrice = getRandomValueBetween(latestCandle.low, latestCandle.close);
+  const hasTradeHistory = (exchangeOptions.tradeHistory?.[symbolKey]?.length ?? 0) > 0;
+  if (!mayExecuteAlgorithmicTrade(profit, direction, { hasTradeHistory })) {
+    logger.push("Sim trade skipped", { profit, direction, hasTradeHistory, reason: "profit gate" });
+    return false;
+  }
+  const sellPrice = simPriceFromCandle(latestCandle);
+  const buyPrice = simPriceFromCandle(latestCandle);
   if (direction === "SELL") {
     const baseSymbol = symbol.split("/")[0];
+    const sellQty = simSellBaseQuantity(balances[baseSymbol].crypto);
     simulateSell(
       symbol,
-      balances[baseSymbol].crypto,
+      sellQty,
       sellPrice,
       balances,
       profit,
@@ -975,7 +995,7 @@ export const simulateAlgorithmic = async (
       symbolOptions,
       latestCandle.time,
       filter,
-      logger,
+      logger
     );
   } else if (direction === "BUY") {
     const quoteSymbol = symbol.split("/")[1];
@@ -990,7 +1010,7 @@ export const simulateAlgorithmic = async (
       symbolOptions,
       latestCandle.time,
       filter,
-      logger,
+      logger
     );
   } else {
     return false;

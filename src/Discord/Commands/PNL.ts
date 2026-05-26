@@ -13,37 +13,40 @@ export default {
     .setName("pnl")
     .setDescription("Calculate PNL for a trade")
     .addStringOption((option) =>
-      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true),
+      option.setName("exchange").setDescription("The name of exchange to check").setRequired(true)
     )
     .addStringOption((option) =>
-      option.setName("symbol").setDescription("The symbol to calculate PNL for").setRequired(true),
+      option.setName("symbol").setDescription("The symbol to calculate PNL for").setRequired(true)
     )
     .addStringOption((option) =>
-      option.setName("duration").setDescription("The duration for PNL (1D, 1W, 1M)").setRequired(true),
+      option.setName("duration").setDescription("The duration for PNL (1D, 1W, 1M)").setRequired(true)
     ),
   execute: async (
-    interaction: { options: { getString: (arg0: string) => string }; reply: (arg0: string) => any },
+    interaction: { options: { getString: (arg0: string) => string }; deferReply: () => Promise<unknown>; editReply: (arg0: string) => Promise<unknown>; reply: (arg0: string) => any },
     exchanges: Exchange[],
-    options: ConfigOptions,
+    options: ConfigOptions
   ) => {
+    await interaction.deferReply();
     const exchangeName = interaction.options.getString("exchange");
     if (exchangeName !== null) {
       const exchangeByName = getExchangeByName(exchangeName, exchanges, options);
       if (exchangeByName !== undefined) {
-        const symbolStr = interaction.options.getString("symbol");
-        const durationStr = interaction.options.getString("duration");
-        if (!symbolStr || !durationStr) {
-          return await interaction.reply("Please provide valid symbol and duration.");
+        const symbolRaw = interaction.options.getString("symbol");
+        const durationRaw = interaction.options.getString("duration");
+        if (symbolRaw === null || durationRaw === null) {
+          await interaction.editReply("Please provide symbol and duration.");
+          return;
         }
-        const symbol: string = symbolStr.toUpperCase();
-        const duration: string = durationStr.toLowerCase();
+        const symbol: string = symbolRaw.toUpperCase();
+        const duration: string = durationRaw.toLowerCase();
         if (
           duration.toUpperCase() !== "1D" &&
           duration.toUpperCase() !== "1W" &&
           duration.toUpperCase() !== "1M" &&
           duration.toUpperCase() !== "1Y"
         ) {
-          return await interaction.reply("Invalid duration. Please use 1D, 1W, 1M or 1Y.");
+          await interaction.editReply("Invalid duration. Please use 1D, 1W, 1M or 1Y.");
+          return;
         }
         let tradesInDuration: Trade[] = await getHistoricalDataForDuration(exchangeByName, symbol, duration);
         let pnlPercentage: number = 0;
@@ -76,12 +79,12 @@ export default {
         let msg = "```";
         msg += `PNL% for ${symbol} over ${duration.toUpperCase()}: ${pnlPercentage.toFixed(2)}%.\r\n`;
         msg += "```";
-        return await interaction.reply(msg);
+        await interaction.editReply(msg);
       } else {
-        await interaction.reply(`Sorry exchange does not exist or has not been implemented.`);
+        await interaction.editReply(`Sorry exchange does not exist or has not been implemented.`);
       }
     } else {
-      await interaction.reply("Please provide a valid exchange name to check.");
+      await interaction.editReply("Please provide a valid exchange name to check.");
     }
   },
 };
@@ -89,7 +92,7 @@ export default {
 export const getHistoricalDataForDuration = async (
   exchange: Exchange,
   symbol: string,
-  duration: string,
+  duration: string
 ): Promise<Trade[]> => {
   const tradeHistory: Trade[] = await getTradeHistory(exchange, symbol);
   const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());
@@ -98,9 +101,8 @@ export const getHistoricalDataForDuration = async (
   const previousTradeBeforeDuration = tradesBeforeDuration[tradesBeforeDuration.length - 1];
   if (previousTradeBeforeDuration === undefined) {
     return tradesInDuration;
-  } else {
-    return [previousTradeBeforeDuration, ...tradesInDuration];
   }
+  return [previousTradeBeforeDuration, ...tradesInDuration];
 };
 
 export const getTargetTimestamp = (duration: string): number => {
@@ -113,7 +115,7 @@ export const getTargetTimestamp = (duration: string): number => {
     case "1M":
       return now - 30 * 24 * 60 * 60;
     case "1Y":
-      return now - 365 * 24 * 60 * 60;
+      return now - 30 * 24 * 60 * 60 * 12;
     default:
       throw new Error("Invalid duration");
   }

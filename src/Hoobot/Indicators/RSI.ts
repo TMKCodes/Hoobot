@@ -1,25 +1,54 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 
 export const logRSISignals = (consoleLogger: ConsoleLogger, rsi: number[]) => {
-  if (rsi.length === 0) return;
+  if (!rsi?.length) return;
+  const last = rsi[rsi.length - 1];
+  if (last == null || typeof last !== "number") return;
   let signal = "Neutral";
-  if (rsi[rsi.length - 1] > 80) {
+  if (last > 80) {
     signal = `Extremely Overbought`;
-  } else if (rsi[rsi.length - 1] < 20) {
+  } else if (last < 20) {
     signal = `Extremely Oversold`;
-  } else if (rsi[rsi.length - 1] > 70) {
+  } else if (last > 70) {
     signal = `Overbought`;
-  } else if (rsi[rsi.length - 1] < 30) {
+  } else if (last < 30) {
     signal = `Oversold`;
-  } else if (rsi[rsi.length - 1] < 50) {
+  } else if (last < 50) {
     signal = `Bullish`;
-  } else if (rsi[rsi.length - 1] > 50) {
+  } else if (last > 50) {
     signal = `Bearish`;
   }
   consoleLogger.push("RSI", {
-    value: rsi[rsi.length - 1].toFixed(7),
+    value: last.toFixed(7),
     signal: signal,
   });
 };
@@ -29,12 +58,12 @@ export const calculateRSI = (
   length: number = 9,
   smoothingType: string = "SMA",
   smoothing: number = 1,
-  source: string = "close",
+  source: string = "close"
 ): number[] => {
   if (!Array.isArray(candles) || candles?.length <= 0) {
-    return [];
+    return []
   }
-  if (length === 0) {
+  if (length == 0) {
     length = 9;
   }
   let closePrices: number[] = [];
@@ -75,7 +104,7 @@ export const calculateRSI = (
 
       rsArray.push(rsi);
     }
-    if (smoothingType === "SMA" && smoothing > 1) {
+    if (smoothingType == "SMA" && smoothing > 1) {
       for (let i = smoothing - 1; i < rsArray.length; i++) {
         let sum = 0;
         for (let j = 0; j < smoothing; j++) {
@@ -84,21 +113,18 @@ export const calculateRSI = (
         const smoothedRS = sum / smoothing;
         rsArray[i] = smoothedRS;
       }
-    } else if (smoothingType === "EMA" && smoothing > 1) {
+    } else if (smoothingType == "EMA" && smoothing > 1) {
       for (let i = smoothing; i < rsArray.length; i++) {
         const alpha = 2 / (smoothing + 1);
         rsArray[i] = alpha * rsArray[i] + (1 - alpha) * rsArray[i - 1];
       }
-    } else if (smoothingType === "WMA" && smoothing > 1) {
-      for (let i = smoothing - 1; i < rsArray.length; i++) {
+    } else if (smoothingType == "WMA" && smoothing > 1) {
+      for (let i = smoothing; i < rsArray.length; i++) {
         let sum = 0;
-        let weightSum = 0;
         for (let j = 0; j < smoothing; j++) {
-          const weight = j + 1; // weights: 1 for oldest, 2 for next, ..., smoothing for newest
-          sum += rsArray[i - j] * weight;
-          weightSum += weight;
+          sum += rsArray[i - j];
         }
-        const weightedAverage = sum / weightSum;
+        const weightedAverage = sum / ((smoothing * (smoothing + 1)) / 2);
         rsArray[i] = weightedAverage;
       }
     }
@@ -108,43 +134,38 @@ export const calculateRSI = (
   }
 };
 
-export const checkRSISignals = (rsi: number[], symbolOptions: SymbolOptions): string => {
+export const checkRSISignals = (rsi: number[] | undefined, symbolOptions: SymbolOptions): string => {
   let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.rsi && symbolOptions.indicators.rsi.enabled) {
-      check = "HOLD";
-      if (rsi.length < 2) {
-        return check;
+      if (!rsi?.length) {
+        return "HOLD";
       }
-
-      const currentRSI = rsi[rsi.length - 1];
-      const previousRSI = rsi[rsi.length - 2];
-
-      const overboughtThreshold =
-        symbolOptions.indicators.rsi.thresholds.overbought !== undefined
-          ? symbolOptions.indicators.rsi.thresholds.overbought
+      check = "HOLD";
+      const rsiValues = rsi.slice(-symbolOptions.indicators.rsi?.history);
+      const overboughtTreshold =
+        symbolOptions.indicators.rsi.tresholds.overbought !== undefined
+          ? symbolOptions.indicators.rsi.tresholds.overbought
           : 70;
-      const oversoldThreshold =
-        symbolOptions.indicators.rsi.thresholds.oversold !== undefined
-          ? symbolOptions.indicators.rsi.thresholds.oversold
+      const oversoldTreshold =
+        symbolOptions.indicators.rsi.tresholds.oversold !== undefined
+          ? symbolOptions.indicators.rsi.tresholds.oversold
           : 30;
-
-      // RSI momentum signals:
-      // BUY: RSI crosses above oversold threshold from below, or RSI < oversold and rising
-      // SELL: RSI crosses below overbought threshold from above, or RSI > overbought and falling
-
-      if (
-        (currentRSI > oversoldThreshold && previousRSI <= oversoldThreshold) ||
-        (currentRSI < oversoldThreshold && currentRSI > previousRSI)
-      ) {
-        symbolOptions.indicators.rsi.weight = 1;
-        check = "BUY";
-      } else if (
-        (currentRSI < overboughtThreshold && previousRSI >= overboughtThreshold) ||
-        (currentRSI > overboughtThreshold && currentRSI < previousRSI)
-      ) {
-        symbolOptions.indicators.rsi.weight = 1;
-        check = "SELL";
+      for (let i = rsiValues.length - 1; i >= 0; i--) {
+        const prevRsi = rsiValues[i];
+        if (prevRsi > overboughtTreshold) {
+          check = "SELL";
+          break;
+        }
+      }
+      if (check === "HOLD") {
+        for (let i = rsiValues.length - 1; i >= 0; i--) {
+          const prevRsi = rsiValues[i];
+          if (prevRsi < oversoldTreshold) {
+            check = "BUY";
+            break;
+          }
+        }
       }
     }
   }

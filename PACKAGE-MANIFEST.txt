@@ -1,0 +1,6 @@
+Hoobot source package 2.4.0
+Generated: 2026-05-26T18:01:36.508Z
+From: Hoobot15 private workspace
+Mode: handoff (no .git)
+
+See HANDOFF.md and CHANGELOG-2.4.0.md

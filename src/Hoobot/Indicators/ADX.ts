@@ -1,3 +1,30 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
@@ -34,11 +61,15 @@ function wilderSmoothing(values: number[], period: number): number[] {
   return smoothed;
 }
 
-export const calculateADX = (candles: Candlestick[], diLength = 14, adxSmoothing = 14): adx => {
-  if (diLength === 0) {
+export const calculateADX = (
+  candles: Candlestick[],
+  diLength = 14,
+  adxSmoothing = 14
+): adx => {
+  if (diLength == 0) {
     diLength = 14;
   }
-  if (adxSmoothing === 0) {
+  if (adxSmoothing == 0) {
     adxSmoothing = 14;
   }
   if (!candles || candles.length < 2) {
@@ -62,7 +93,7 @@ export const calculateADX = (candles: Candlestick[], diLength = 14, adxSmoothing
     const currentTR = Math.max(
       candles[i].high - candles[i].low,
       Math.abs(candles[i].high - candles[i - 1].close),
-      Math.abs(candles[i].low - candles[i - 1].close),
+      Math.abs(candles[i].low - candles[i - 1].close)
     );
     tr.push(currentTR);
 
@@ -164,37 +195,28 @@ export const logADXSignals = (consoleLogger: ConsoleLogger, adx: adx | undefined
 };
 
 export const checkADXSignals = (adx: adx | undefined, symbolOptions: SymbolOptions): string => {
-  if (
-    !adx ||
-    adx.adx.length < 2 ||
-    adx.plusDI.length < 2 ||
-    adx.minusDI.length < 2 ||
-    !symbolOptions.indicators?.adx?.enabled
-  ) {
+  if (!symbolOptions.indicators?.adx?.enabled) {
     return "SKIP";
+  }
+  if (!adx || adx.adx.length < 1 || adx.plusDI.length < 1 || adx.minusDI.length < 1) {
+    return "HOLD";
   }
 
   const lastADX = adx.adx[adx.adx.length - 1];
   const lastPlusDI = adx.plusDI[adx.plusDI.length - 1];
   const lastMinusDI = adx.minusDI[adx.minusDI.length - 1];
-  const prevPlusDI = adx.plusDI[adx.plusDI.length - 2];
-  const prevMinusDI = adx.minusDI[adx.minusDI.length - 2];
 
-  // ADX signals:
-  // BUY: +DI crosses above -DI and ADX > 20 (bullish trend start)
-  // SELL: -DI crosses above +DI and ADX > 20 (bearish trend start)
-  // HOLD: ADX < 20 (weak trend) or no crossover
-
-  const bullishCrossover = lastPlusDI > lastMinusDI && prevPlusDI <= prevMinusDI;
-  const bearishCrossover = lastMinusDI > lastPlusDI && prevMinusDI <= prevPlusDI;
-
-  if (bullishCrossover && lastADX > 20) {
+  if (symbolOptions.indicators.adx.weight === undefined) {
     symbolOptions.indicators.adx.weight = 1;
-    return "BUY";
-  } else if (bearishCrossover && lastADX > 20) {
-    symbolOptions.indicators.adx.weight = 1;
-    return "SELL";
   }
 
+  if (lastADX > 20) {
+    if (lastPlusDI > lastMinusDI) {
+      return "BUY";
+    }
+    if (lastMinusDI > lastPlusDI) {
+      return "SELL";
+    }
+  }
   return "HOLD";
 };

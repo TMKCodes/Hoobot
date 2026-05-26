@@ -1,12 +1,39 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
 import { sendMessageToChannel } from "../../Discord/discord";
 import { Client } from "discord.js";
-import { ConfigOptions, ExchangeOptions, SymbolOptions } from "../Utilities/Args";
+import { ConfigOptions, ExchangeOptions, SymbolOptions, toSymbolKey } from "../Utilities/Args";
 import { consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/LogToFile";
 import { Exchange, isBinance, isNonKYC } from "./Exchange";
 import { Filter } from "./Filters";
+import { isFullOrderFill } from "../Trading/orderFill";
 
 export interface Order {
   symbol: string;
@@ -48,13 +75,13 @@ export interface OrderStatus {
 
 export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
   if (isBinance(exchange)) {
-    return await exchange.openOrders(symbol.split("/").join(""));
+    return await exchange.openOrders(toSymbolKey(symbol));
   } else if (isNonKYC(exchange)) {
     const orders = await exchange.getAllOrders(symbol, "active", 500, 0);
     return orders.map(
       (order: any) =>
         ({
-          symbol: symbol.split("/").join(""),
+          symbol: toSymbolKey(symbol),
           orderId: order.id,
           price: order.price,
           qty: order.quantity,
@@ -67,7 +94,7 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        }) as Order,
+        } as Order)
     );
   }
   return [] as Order[];
@@ -75,7 +102,7 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
 
 export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
   if (isBinance(exchange)) {
-    return await exchange.allOrders(symbol.split("/").join(""));
+    return await exchange.allOrders(toSymbolKey(symbol));
   } else if (isNonKYC(exchange)) {
     const activeOrders = await exchange.getAllOrders(symbol, "active", 500, 0);
     const filledOrders = await exchange.getAllOrders(symbol, "filled", 500, 0);
@@ -84,7 +111,7 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
     return orders.map(
       (order: any) =>
         ({
-          symbol: symbol.split("/").join(""),
+          symbol: toSymbolKey(symbol),
           orderId: order.id,
           price: order.price,
           qty: order.quantity,
@@ -97,7 +124,7 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        }) as Order,
+        } as Order)
     );
   }
   return [] as Order[];
@@ -105,12 +132,12 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
 
 export const getOrder = async (exchange: Exchange, symbol: string, orderId: string) => {
   if (isBinance(exchange)) {
-    const response = await exchange.orderStatus(symbol, orderId);
+    const response = await exchange.orderStatus(toSymbolKey(symbol), orderId);
     return response;
   } else if (isNonKYC(exchange)) {
     const order = await exchange.getOrderByID(orderId);
     return {
-      symbol: symbol.split("/").join(""),
+      symbol: toSymbolKey(symbol),
       orderId: order.id,
       price: order.price,
       qty: order.quantity,
@@ -141,79 +168,44 @@ export const openOrders = async (exchange: Exchange, symbol: string): Promise<bo
   return getOpenOrders(exchange, symbol);
 };
 
+const roundToStep = (value: number, step: number): number => {
+  if (!Number.isFinite(step) || step <= 0) return value;
+  return Math.round(value / step) * step;
+};
+
 export const checkBeforePlacingOrder = (baseQuantity: number, price: number, tradingPairFilters: Filter) => {
   const isValid = (min: number, max: number, value: number) => {
-    if (value < min) {
-      return false;
-    } else if (value > max) {
-      return false;
-    }
+    if (value < min) return false;
+    if (max > 0 && value > max) return false;
     return true;
   };
-  const notionalValue = baseQuantity * price;
-  if (
-    !isValid(tradingPairFilters.minPrice, tradingPairFilters.maxPrice, price) ||
-    !isValid(tradingPairFilters.minQty, tradingPairFilters.maxQty, baseQuantity) ||
-    !isValid(tradingPairFilters.minNotional, tradingPairFilters.maxNotional, notionalValue)
-  ) {
-    return false;
+
+  const roundedPrice = roundToStep(price, tradingPairFilters.tickSize);
+  const roundedQty = roundToStep(baseQuantity, tradingPairFilters.stepSize);
+  const notional = roundedQty * roundedPrice;
+
+  if (process.env.DEBUG === "true") {
+    console.log("checkBeforePlacingOrder", {
+      baseQuantity,
+      roundedQty,
+      price,
+      roundedPrice,
+      notional,
+      filters: tradingPairFilters,
+    });
   }
 
-  return true;
-};
+  const priceOk = isValid(tradingPairFilters.minPrice, tradingPairFilters.maxPrice, roundedPrice);
+  const qtyOk = isValid(tradingPairFilters.minQty, tradingPairFilters.maxQty, roundedQty);
+  const notionalOk = isValid(tradingPairFilters.minNotional, tradingPairFilters.maxNotional, notional);
 
-export const addOpenOrder = (symbol: string, order: Order, exchangeOptions: ExchangeOptions) => {
-  if (exchangeOptions.openOrders[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.openOrders[symbol.split("/").join("")] = [order];
-  } else {
-    exchangeOptions.openOrders[symbol.split("/").join("")].push(order);
-  }
-};
-
-export const openOrderDone = (symbol: string, orderId: string, exchangeOptions: ExchangeOptions) => {
-  if (exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined) {
-    exchangeOptions.openOrders[symbol.split("/").join("")] = exchangeOptions.openOrders[
-      symbol.split("/").join("")
-    ].filter((order) => order.orderId !== orderId);
-  }
-};
-
-export const checkOpenOrders = (symbol: string, exchangeOptions: ExchangeOptions) => {
-  if (
-    exchangeOptions.openOrders[symbol.split("/").join("")] !== undefined &&
-    exchangeOptions.openOrders[symbol.split("/").join("")]?.length > 0
-  ) {
-    return true;
-  } else {
-    return false;
-  }
-};
-
-const calculateAdverseMovePercentage = (order: Order, orderBook: Orderbook): number => {
-  const orderPrice = parseFloat(order.price);
-  if (!Number.isFinite(orderPrice) || orderPrice <= 0) {
-    return 0;
-  }
-
-  if (order.isBuyer === true) {
-    const bestAsk = Object.keys(orderBook.asks || {})
-      .map((price) => parseFloat(price))
-      .sort((a, b) => a - b)[0];
-    const currentPrice = Number.isFinite(bestAsk) ? bestAsk : orderPrice;
-    if (currentPrice <= orderPrice) {
-      return 0;
+  if (!priceOk || !qtyOk || !notionalOk) {
+    if (process.env.DEBUG === "true") {
+      console.log("ORDER BLOCKED BY FILTERS", { priceOk, qtyOk, notionalOk, roundedQty, roundedPrice, notional });
     }
-    return ((currentPrice - orderPrice) / orderPrice) * 100;
+    return false;
   }
-
-  const bestBid = Object.keys(orderBook.bids || {})
-    .map((price) => parseFloat(price))
-    .sort((a, b) => b - a)[0];
-  const currentPrice = Number.isFinite(bestBid) ? bestBid : orderPrice;
-  if (currentPrice >= orderPrice) {
-    return 0;
-  }
-  return ((orderPrice - currentPrice) / orderPrice) * 100;
+  return true;
 };
 
 export const handleOpenOrders = async (
@@ -222,10 +214,10 @@ export const handleOpenOrders = async (
   symbol: string,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ) => {
   var openOrders = await getOpenOrders(exchange, symbol);
-  if (openOrders.length === 0) {
+  if (openOrders.length == 0) {
     symbolOptions.currentOrder = undefined;
     return true;
   }
@@ -237,21 +229,43 @@ export const handleOpenOrders = async (
     // console.log(maxOrderAge);
     // console.log(orderAgeSeconds > maxOrderAge);
     if (orderAgeSeconds > maxOrderAge) {
-      cancelOrder(exchange, symbol, openOrders[i].orderId);
+      await cancelOrder(exchange, toSymbolKey(symbol), openOrders[i].orderId);
       const orderMsg = `>>> Order ID **${openOrders[i].orderId}**\nSymbol **${symbol
         .split("/")
         .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-      sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+      sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
       symbolOptions.currentOrder = undefined;
       return true;
     } else {
-      const adverseMove = calculateAdverseMovePercentage(openOrders[i], orderBook);
-      if (adverseMove >= symbolOptions.closePercentage!) {
-        await cancelOrder(exchange, symbol.split("/").join(""), openOrders[i].orderId);
+      let unrealizedPNL = 0;
+      if (openOrders[i].isBuyer === true) {
+        // console.log("Checking bids");
+        const orderBookBids = Object.keys(orderBook.bids)
+          .map((price) => parseFloat(price))
+          .sort((a, b) => b - a);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+          parseFloat(openOrders[i].qty),
+          parseFloat(openOrders[i].price),
+          orderBookBids[0]
+        );
+      } else {
+        // console.log("Checking asks");
+        const orderBookAsks = Object.keys(orderBook.asks)
+          .map((price) => parseFloat(price))
+          .sort((a, b) => a - b);
+        unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+          parseFloat(openOrders[i].qty),
+          parseFloat(openOrders[i].price),
+          orderBookAsks[0]
+        );
+      }
+      // console.log(unrealizedPNL);
+      if (unrealizedPNL > symbolOptions.closePercentage!) {
+        await cancelOrder(exchange, toSymbolKey(symbol), openOrders[i].orderId);
         const orderMsg = `>>> Order ID **${openOrders[i].orderId}**\nSymbol **${symbol
           .split("/")
           .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
         symbolOptions.currentOrder = undefined;
         return true;
       }
@@ -267,14 +281,14 @@ export const handleOpenOrder = async (
   order: Order,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ): Promise<string> => {
   if (isBinance(exchange)) {
     let partiallyFilledSent = false;
     const logger = consoleLogger();
     await delay(1500);
     let orderStatus;
-    orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
+    orderStatus = await exchange.orderStatus(toSymbolKey(symbol), order.orderId);
     if (orderStatus === undefined) {
       return "DOES_NOT_EXIST";
     }
@@ -291,19 +305,19 @@ export const handleOpenOrder = async (
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
           .split("/")
           .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
         return "CANCELED";
       } else if (orderStatus.status === "EXPIRED") {
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
           .split("/")
           .join("")}**\nOrder Expired.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
         return "EXPIRED";
-      } else if (orderStatus.status === "FILLED") {
+      } else if (isFullOrderFill(orderStatus.status, orderStatus.executedQty, orderStatus.origQty)) {
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
           .split("/")
           .join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
         return "FILLED";
       } else if (orderStatus.status === "NEW") {
         tryToCancel = true;
@@ -312,40 +326,63 @@ export const handleOpenOrder = async (
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
             .split("/")
             .join("")}**\nOrder Partially filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
           partiallyFilledSent = true;
         }
+        tryToCancel = true;
       } else if (orderStatus.status === "REJECTED") {
         const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
           .split("/")
           .join("")}**\nOrder Rejected.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-        sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+        sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
         return "REJECTED";
       }
       if (tryToCancel === true) {
         var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
         if (orderAgeSeconds > maxOrderAge) {
-          await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
+          await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
             .split("/")
             .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
           return "CANCELED";
         } else {
-          const adverseMove = calculateAdverseMovePercentage(order, orderBook);
-          if (adverseMove >= symbolOptions.closePercentage!) {
-            await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
+          let unrealizedPNL = 0;
+          if (order.isBuyer === true) {
+            const orderBookBids = Object.keys(orderBook.bids)
+              .map((price) => parseFloat(price))
+              .sort((a, b) => b - a);
+            unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+              parseFloat(order.qty),
+              parseFloat(order.price),
+              orderBookBids[0]
+            );
+          } else {
+            const orderBookAsks = Object.keys(orderBook.asks)
+              .map((price) => parseFloat(price))
+              .sort((a, b) => a - b);
+            unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+              parseFloat(order.qty),
+              parseFloat(order.price),
+              orderBookAsks[0]
+            );
+          }
+          if (unrealizedPNL > symbolOptions.closePercentage!) {
+            await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
               .split("/")
               .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-            sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+            sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
             return "CANCELED";
           }
         }
       }
       logger.print();
       logger.flush();
-      orderStatus = await exchange.orderStatus(symbol.split("/").join(""), order.orderId);
+      orderStatus = await exchange.orderStatus(toSymbolKey(symbol), order.orderId);
+      if (isFullOrderFill(orderStatus.status, orderStatus.executedQty, orderStatus.origQty)) {
+        return "FILLED";
+      }
       await delay(1500);
     } while (true);
   } else if (isNonKYC(exchange)) {
@@ -356,27 +393,46 @@ export const handleOpenOrder = async (
       const cancelledOrders = await exchange.getAllOrders(symbol, "cancelled", 500, 0);
       if (activeOrders !== undefined) {
         for (const activeOrder of activeOrders) {
-          if (String(activeOrder.id) === order.orderId) {
+          if (String(activeOrders.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
             var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
             // console.log(orderAgeSeconds);
             // console.log(maxOrderAge);
             // console.log(orderAgeSeconds > maxOrderAge);
             if (orderAgeSeconds > maxOrderAge) {
-              await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
+              await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
               const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                 .split("/")
                 .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-              sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+              sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
               return "CANCELED";
             } else {
-              const adverseMove = calculateAdverseMovePercentage(order, orderBook);
-              if (adverseMove >= symbolOptions.closePercentage!) {
-                await cancelOrder(exchange, symbol.split("/").join(""), order.orderId);
+              let unrealizedPNL = 0;
+              if (order.isBuyer === true) {
+                const orderBookBids = Object.keys(orderBook.bids)
+                  .map((price) => parseFloat(price))
+                  .sort((a, b) => b - a);
+                unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+                  parseFloat(order.qty),
+                  parseFloat(order.price),
+                  orderBookBids[0]
+                );
+              } else {
+                const orderBookAsks = Object.keys(orderBook.asks)
+                  .map((price) => parseFloat(price))
+                  .sort((a, b) => a - b);
+                unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+                  parseFloat(order.qty),
+                  parseFloat(order.price),
+                  orderBookAsks[0]
+                );
+              }
+              if (unrealizedPNL > symbolOptions.closePercentage!) {
+                await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                   .split("/")
                   .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-                sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+                sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
                 return "CANCELED";
               }
             }
@@ -388,14 +444,14 @@ export const handleOpenOrder = async (
             found = true;
           }
         }
-        if (found === false) {
+        if (found == false) {
           if (cancelledOrders !== undefined) {
             for (const cancelledOrder of cancelledOrders) {
               if (String(cancelledOrder.id) === order.orderId) {
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                   .split("/")
                   .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-                sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+                sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
                 return "CANCELED";
               }
             }
@@ -403,7 +459,7 @@ export const handleOpenOrder = async (
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
             .split("/")
             .join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
-          sendMessageToChannel(discord, processOptions.discord.channelId!, orderMsg);
+          sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
           return "FILLED";
         }
       } else {

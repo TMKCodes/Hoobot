@@ -1,19 +1,51 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Client } from "discord.js";
 import { Filter } from "../Exchanges/Filters";
-import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions } from "../Utilities/Args";
+import { ConfigOptions, ExchangeOptions, GridLevel, SymbolOptions, toSymbolKey } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { Candlesticks } from "../Exchanges/Candlesticks";
+import {
+  throttleKeyTradeHistory,
+  throttleKeyBalances,
+  shouldFetchData,
+  markDataFetched,
+} from "../Utilities/DataFetchThrottle";
 import { getTradeHistory, placeBuyOrder, placeSellOrder, delay } from "../Exchanges/Trades";
 import { Exchange } from "../Exchanges/Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 import { cancelOrder, getOpenOrders, getOrder, Order } from "../Exchanges/Orders";
 import { getCurrentBalances } from "../Exchanges/Balances";
-import { symbolFilters } from "../..";
+import { symbolFilters } from "../symbolFiltersStore";
 import { sendMessageToChannel } from "../../Discord/discord";
 
 const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] => {
   const grid: GridLevel[] = [];
-  if (options.gridLevels <= 0) return grid;
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
   const step = (upper - lower) / options.gridLevels;
@@ -54,7 +86,7 @@ export const placeOrder = async (
   direction: string,
   price: number,
   quantityInBase: number,
-  exchangeOptions: ExchangeOptions,
+  exchangeOptions: ExchangeOptions
 ): Promise<Order> => {
   if (direction === "sell") {
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
@@ -63,10 +95,10 @@ export const placeOrder = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
+      exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
-      throw new Error("Failed to place sell order");
+      return {} as Order;
     }
   } else if (direction === "buy") {
     let order = await placeBuyOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
@@ -75,10 +107,10 @@ export const placeOrder = async (
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
-      exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
+      exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
       return order;
     } else {
-      throw new Error("Failed to place buy order");
+      return {} as Order;
     }
   }
   return {} as Order;
@@ -91,7 +123,7 @@ const placeGridOrders = async (
   grid: GridLevel[],
   _filter: Filter,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ): Promise<void> => {
   const placedOrders = [];
   for (var i = 0; i < grid.length; i++) {
@@ -103,7 +135,7 @@ const placeGridOrders = async (
           grid[i].type,
           grid[i].price,
           parseFloat(grid[i].size),
-          exchangeOptions,
+          exchangeOptions
         );
         grid[i].orderId = order.orderId;
         grid[i].size = order.qty;
@@ -116,7 +148,7 @@ const placeGridOrders = async (
       } catch (error) {
         consoleLogger.push(
           `Failed to place order`,
-          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`,
+          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`
         );
       }
     }
@@ -137,11 +169,11 @@ const rebalanceGrid = async (
   currentPrice: number,
   filter: Filter,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
-  if (openOrders.length < symbolOptions.gridLevels * 2) {
+  if (openOrders.length < symbolOptions.gridOrderSize * 2) {
     return;
   }
   const existingGrid = buildGridFromExistingOrders(openOrders);
@@ -151,7 +183,7 @@ const rebalanceGrid = async (
     return;
   }
 
-  if (symbolOptions.gridRebalance === false) {
+  if (symbolOptions.gridRebalance == false) {
     return;
   }
   // If we reach here, rebalancing is necessary
@@ -179,11 +211,11 @@ const manageGridOrders = async (
   _filter: Filter,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ): Promise<boolean> => {
   let orderExecuted = false;
   for (var i = 0; i < grid.length; i++) {
-    if (grid[i].orderId.length > 0 && grid[i].executed === false) {
+    if (grid[i].orderId.length > 0 && grid[i].executed == false) {
       const orderExists = openOrders.some((order) => order.orderId === grid[i].orderId);
       if (!orderExists) {
         await delay(150);
@@ -203,10 +235,10 @@ const manageGridOrders = async (
           msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
           msg += "```";
 
-          sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+          sendMessageToChannel(discord, processOptions.discord?.channelId, msg);
           consoleLogger.push(
             `Order executed`,
-            `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`,
+            `Type: ${grid[i].type}, Price: ${grid[i].price}, OrderID: ${grid[i].orderId}`
           );
 
           // Calculate new order details
@@ -228,7 +260,7 @@ const manageGridOrders = async (
               newDirection,
               newOrderPrice,
               symbolOptions.gridOrderSize,
-              exchangeOptions,
+              exchangeOptions
             );
 
             // Update the grid level with new order details
@@ -245,16 +277,16 @@ const manageGridOrders = async (
             // msg += `Qty: ${grid[i].size}\r\n`;
             // msg += `Time now ${new Date().toLocaleString("fi-fi")}\r\n`;
             // msg += "```";
-            // sendMessageToChannel(discord, processOptions.discord.channelId!, msg);
+            // sendMessageToChannel(discord, processOptions.discord?.channelId, msg);
 
             consoleLogger.push(
               `Placed new ${newDirection} order`,
-              `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`,
+              `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`
             );
           } else {
             consoleLogger.push(
               `Skipped unprofitable ${newDirection} order`,
-              `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`,
+              `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`
             );
           }
         }
@@ -290,50 +322,59 @@ export const gridTrading = async (
   candlesticks: Candlesticks,
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions
 ) => {
-  exchangeOptions.balances = await getCurrentBalances(exchange);
+  const balancesKey = throttleKeyBalances(exchangeOptions.name);
+  if (shouldFetchData(balancesKey)) {
+    exchangeOptions.balances = await getCurrentBalances(exchange);
+    markDataFetched(balancesKey);
+  }
   const startTime = Date.now();
   consoleLogger.push("Time", startTime);
-  const filter = symbolFilters[symbol.split("/").join("")];
+  const filter = symbolFilters[toSymbolKey(symbol)];
 
-  if (candlesticks[symbol.split("/").join("")] === undefined) {
+  if (candlesticks[toSymbolKey(symbol)] === undefined) {
     console.error(`${symbol}: candlesticks undefined`);
     return false;
   }
 
-  const timeframe = Object.keys(candlesticks[symbol.split("/").join("")]);
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]] === undefined) {
-    console.error(`${symbol}: timeframes[0] === undefined`);
+  const timeframe = Object.keys(candlesticks[toSymbolKey(symbol)]);
+  if (candlesticks[toSymbolKey(symbol)][timeframe[0]] === undefined) {
+    console.error(`${symbol}: timeframes[0] length == undefined`);
     return false;
   }
 
-  if (candlesticks[symbol.split("/").join("")][timeframe[0]]?.length < 2) {
+  if (candlesticks[toSymbolKey(symbol)][timeframe[0]]?.length < 2) {
     console.error(`${symbol}: timeframes[0] length < 2`);
     return false;
   }
 
+  const symbolKey = toSymbolKey(symbol);
   if (exchangeOptions.tradeHistory === undefined) {
     exchangeOptions.tradeHistory = {};
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
+  }
+  const tradeHistoryKey = throttleKeyTradeHistory(exchangeOptions.name, symbolKey);
+  if (shouldFetchData(tradeHistoryKey)) {
+    exchangeOptions.tradeHistory[symbolKey] = await getTradeHistory(exchange, symbol);
+    markDataFetched(tradeHistoryKey);
+  }
+  if (exchangeOptions.tradeHistory[symbolKey] === undefined) {
+    exchangeOptions.tradeHistory[symbolKey] = await getTradeHistory(exchange, symbol);
+    markDataFetched(tradeHistoryKey);
   }
 
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
-  }
-
-  if (exchangeOptions.tradeHistory[symbol.split("/").join("")] === undefined) {
+  if (exchangeOptions.tradeHistory[toSymbolKey(symbol)] === undefined) {
     console.error(`${symbol}: could not retrieve trade history`);
     return false;
   }
 
   const latestCandle =
-    candlesticks[symbol.split("/").join("")][timeframe[0]][
-      candlesticks[symbol.split("/").join("")][timeframe[0]]?.length - 1
+    candlesticks[toSymbolKey(symbol)][timeframe[0]][
+      candlesticks[toSymbolKey(symbol)][timeframe[0]]?.length - 1
     ];
   const currentPrice = latestCandle.close;
 
-  consoleLogger.push("Symbol", symbol.split("/").join(""));
+  consoleLogger.push("Symbol", toSymbolKey(symbol));
   consoleLogger.push("Current Price", currentPrice.toFixed(8));
   consoleLogger.push("Candle Time", new Date(latestCandle.time).toLocaleString());
 
@@ -362,7 +403,7 @@ export const gridTrading = async (
     filter,
     processOptions,
     exchangeOptions,
-    symbolOptions,
+    symbolOptions
   );
 
   consoleLogger.push(
@@ -374,51 +415,54 @@ export const gridTrading = async (
         side: order.isBuyer ? "buy" : "sell",
         qty: order.qty,
       };
-    }),
+    })
   );
   consoleLogger.push("Grid Status", summarizeGrid(openOrders, symbolOptions.grid));
 
   const stopTime = Date.now();
   consoleLogger.push(`Calculation speed (ms)`, stopTime - startTime);
 
-  if (latestCandle.isFinal === true) {
-    exchangeOptions.tradeHistory[symbol.split("/").join("")] = await getTradeHistory(exchange, symbol);
+  if (latestCandle.isFinal === true && shouldFetchData(tradeHistoryKey)) {
+    exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
+    markDataFetched(tradeHistoryKey);
   }
+  const consoleMode = (exchangeOptions.console ?? "").toString().trim();
+  const isFinalCandle = Boolean(latestCandle.isFinal);
   if (exchangeOptions.name === "binance") {
-    if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
+    if (consoleMode === "trade/final" && (orderExecuted !== false || isFinalCandle)) {
       consoleLogger.print("blue");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+    } else if (consoleMode === "trade/final" && orderExecuted === false && !isFinalCandle) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
+    } else if (consoleMode === "trade" && orderExecuted === true) {
       consoleLogger.print("blue");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && orderExecuted === false) {
+    } else if (consoleMode === "trade" && orderExecuted === false) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+    } else if (consoleMode === "final" && isFinalCandle) {
       consoleLogger.print("blue");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+    } else if (consoleMode === "final" && !isFinalCandle) {
       consoleLogger.flush();
     } else {
       consoleLogger.print("blue");
       consoleLogger.flush();
     }
   } else if (exchangeOptions.name === "xeggex" || exchangeOptions.name === "nonkyc") {
-    if (exchangeOptions.console === "trade/final" && (orderExecuted !== false || latestCandle.isFinal)) {
+    if (consoleMode === "trade/final" && (orderExecuted !== false || isFinalCandle)) {
       consoleLogger.print("green");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade/final" && orderExecuted === false && latestCandle.isFinal === false) {
+    } else if (consoleMode === "trade/final" && orderExecuted === false && !isFinalCandle) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && orderExecuted === true) {
+    } else if (consoleMode === "trade" && orderExecuted === true) {
       consoleLogger.print("green");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "trade" && orderExecuted === false) {
+    } else if (consoleMode === "trade" && orderExecuted === false) {
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === true) {
+    } else if (consoleMode === "final" && isFinalCandle) {
       consoleLogger.print("green");
       consoleLogger.flush();
-    } else if (exchangeOptions.console === "final" && latestCandle.isFinal === false) {
+    } else if (consoleMode === "final" && !isFinalCandle) {
       consoleLogger.flush();
     } else {
       consoleLogger.print("green");

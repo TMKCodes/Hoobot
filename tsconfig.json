@@ -1,6 +1,7 @@
 {
   // Specify the compiler options
   "compilerOptions": {
+	"skipLibCheck": true,
     // Set the output directory to "dist"
     "outDir": "./build-ts",
     // Set the module system to "esnext"
@@ -52,9 +53,10 @@
     "files": true,
     "transpileOnly": true,
     "compilerOptions": {
-      "baseUrl": "./",
-      "module": "ESNext", 
-      "moduleResolution": "node"
+		"skipLibCheck": true,
+		"baseUrl": "./",
+		"module": "ESNext", 
+		"moduleResolution": "node"
     }
   },
   "typedocOptions": {

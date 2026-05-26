@@ -1,3 +1,30 @@
+/* =====================================================================
+ * Hoobot - Proprietary License
+ * Copyright (c) 2023 Hoosat Oy. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are not permitted without prior written permission
+ * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
+ * software, in whole or in part, is strictly prohibited. All
+ * modifications in source or binary must be submitted to Hoosat Oy in source format.
+ *
+ * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The user of this software uses it at their own risk. Hoosat Oy shall
+ * not be liable for any losses, damages, or liabilities arising from
+ * the use of this software.
+ * ===================================================================== */
+
 import { Candlestick } from "../Exchanges/Candlesticks";
 import { ConfigOptions, SymbolOptions } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
@@ -31,16 +58,11 @@ export const calculateEMA = (candles: Candlestick[], length: number = 7, source:
     prices = candles.map((candle) => candle.low);
   }
 
-  // Validate prices
-  if (prices.length < length) {
-    console.log(`Not enough data: prices.length (${prices.length}) is less than length (${length}).`);
+  // Validate prices (return [] silently when not enough data — normal at simulation/stream start)
+  if (prices.length < length || prices.length === 0) {
     return [];
   }
-  if (prices.length === 0) {
-    console.log(`Not enough data: prices.length (${prices.length}) is zero.`);
-    return [];
-  }
-  if (prices.some((price) => price === null || isNaN(price))) {
+  if (prices.some((price) => price == null || isNaN(price))) {
     console.log("Found NaN or null in prices.");
     return [];
   }
@@ -115,11 +137,13 @@ export const logEMASignals = (consoleLogger: ConsoleLogger, ema: ema) => {
   }
 };
 
-export const checkEMASignals = (ema: ema, symbolOptions: SymbolOptions) => {
+export const checkEMASignals = (ema: ema | undefined, symbolOptions: SymbolOptions) => {
   let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.ema && symbolOptions.indicators.ema.enabled) {
-      check = "HOLD";
+      if (!ema?.short?.length || !ema?.long?.length || ema.short.length < 2 || ema.long.length < 2) {
+        return "HOLD";
+      }
       const currentShortEma = ema.short[ema.short.length - 1];
       const currentLongEma = ema.long[ema.long.length - 1];
       const prevShortEma = ema.short[ema.short.length - 2];
@@ -134,25 +158,16 @@ export const checkEMASignals = (ema: ema, symbolOptions: SymbolOptions) => {
       const isLongDownwardDirection = currentLongEma < prevLongEma;
       const isUpwardDirection = isShortUpwardDirection && isLongUpwardDirection;
       const isDownwardDirection = isShortDownwardDirection && isLongDownwardDirection;
-      const isFlatDirection = !isUpwardDirection && !isDownwardDirection;
-      if (isBullishCrossover) {
+      if (isBullishCrossover || (isUpwardDirection && isBullish)) {
         symbolOptions.indicators.ema.weight = 1.1;
-        check = "BUY";
-      } else if (isBearishCrossover) {
+        return "BUY";
+      }
+      if (isBearishCrossover || (isDownwardDirection && isBearish)) {
         symbolOptions.indicators.ema.weight = 1.1;
-        check = "SELL";
-      } else if (isFlatDirection) {
-        symbolOptions.indicators.ema.weight = 1;
-        check = "HOLD";
+        return "SELL";
       }
-      if (isUpwardDirection && isBullish) {
-        check = "BUY";
-      } else if (isDownwardDirection && isBearish) {
-        check = "SELL";
-      } else {
-        symbolOptions.indicators.ema.weight = 1;
-        check = "HOLD";
-      }
+      symbolOptions.indicators.ema.weight = 1;
+      return "HOLD";
     }
   }
   return check;

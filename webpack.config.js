@@ -11,9 +11,12 @@ export default (_env, argv) => {
     devtool: "source-map",
     mode: isDevelopment ? "production" : "development",
     target: "node",
-    entry: "./src/index.ts",
+    entry: {
+      hoobot: "./src/index.ts",
+      runSimGrid: "./src/scripts/runSimGrid.ts",
+    },
     output: {
-      filename: "hoobot.js",
+      filename: "[name].js",
       path: _resolve(`./${buildDir}`),
       module: true,
       chunkFormat: "module",
@@ -73,7 +76,14 @@ export default (_env, argv) => {
       },
       extensions: [".tsx", ".ts", ".js", ".jsx"],
     },
-    ignoreWarnings: [/aws-crt/, /mongodb\/lib\/utils.js/, /mongodb\/lib\/deps.js/],
+    // discord.js (@discordjs/ws) and express use dynamic require(); safe on Node, noisy in webpack.
+    ignoreWarnings: [
+      /aws-crt/,
+      /mongodb\/lib\/utils.js/,
+      /mongodb\/lib\/deps.js/,
+      { module: /@discordjs\/ws/, message: /Critical dependency/ },
+      { module: /express\/lib\/view\.js/, message: /Critical dependency/ },
+    ],
     plugins: [
       new webpack.DefinePlugin({
         "global.GENTLY": false,
