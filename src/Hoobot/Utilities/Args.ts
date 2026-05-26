@@ -303,10 +303,10 @@ export interface SymbolOptions {
       weight?: number;
       plusDI?: {
         length: number;
-      }
+      };
       minusDI?: {
         length: number;
-      }
+      };
     };
     renko?: {
       enabled: boolean;
@@ -400,6 +400,69 @@ export interface SymbolOptions {
       enabled: boolean;
       dmiLength: number;
       adxSmoothing: number;
+      weight?: number;
+    };
+    aroon?: {
+      enabled: boolean;
+      length?: number;
+      weight?: number;
+    };
+    cci?: {
+      enabled: boolean;
+      length?: number;
+      thresholds?: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    chaikin?: {
+      enabled: boolean;
+      fastPeriod?: number;
+      slowPeriod?: number;
+      weight?: number;
+    };
+    forceIndex?: {
+      enabled: boolean;
+      length?: number;
+      weight?: number;
+    };
+    ichimoku?: {
+      enabled: boolean;
+      tenkanPeriod?: number;
+      kijunPeriod?: number;
+      senkouPeriod?: number;
+      displacement?: number;
+      weight?: number;
+    };
+    mfi?: {
+      enabled: boolean;
+      length?: number;
+      thresholds?: {
+        overbought: number;
+        oversold: number;
+      };
+      weight?: number;
+    };
+    parabolicSAR?: {
+      enabled: boolean;
+      accelerationFactor?: number;
+      maxAcceleration?: number;
+      weight?: number;
+    };
+    vwap?: {
+      enabled: boolean;
+      stdDevMultiplier?: number;
+      resetPeriod?: "daily" | "weekly" | "monthly" | "session";
+      weight?: number;
+    };
+    williamsR?: {
+      enabled: boolean;
+      length?: number;
+      thresholds?: {
+        overbought: number;
+        oversold: number;
+      };
       weight?: number;
     };
     OpenAI?: {
@@ -503,7 +566,9 @@ export interface ConfigOptions {
 /** Poistettu TP-kentät — eivät enää vaikuta logiikkaan eivätkä säily mergeissä. */
 const LEGACY_TAKE_PROFIT_KEYS = ["dropMinUnrealized"] as const;
 
-export function stripLegacyTakeProfitFields(tp: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+export function stripLegacyTakeProfitFields(
+  tp: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
   if (!tp || typeof tp !== "object") return tp;
   const out = { ...tp };
   for (const k of LEGACY_TAKE_PROFIT_KEYS) {
@@ -519,11 +584,13 @@ export function sanitizeOptionsDocument(options: ConfigOptions): ConfigOptions {
     for (const sym of ex.symbols ?? []) {
       if (!sym || typeof sym !== "object") continue;
       if (sym.takeProfit) {
-        sym.takeProfit = stripLegacyTakeProfitFields(sym.takeProfit as Record<string, unknown>) as SymbolOptions["takeProfit"];
+        sym.takeProfit = stripLegacyTakeProfitFields(
+          sym.takeProfit as Record<string, unknown>,
+        ) as SymbolOptions["takeProfit"];
       }
       if (sym.takeProfitBuy) {
         sym.takeProfitBuy = stripLegacyTakeProfitFields(
-          sym.takeProfitBuy as Record<string, unknown>
+          sym.takeProfitBuy as Record<string, unknown>,
         ) as SymbolOptions["takeProfitBuy"];
       }
     }
@@ -544,22 +611,19 @@ export const validateOptions = (options: ConfigOptions): ConfigOptions => {
     if (!ex || typeof ex !== "object") continue;
     if (!ex.name) ex.name = "";
     if (!ex.mode) ex.mode = "algorithmic";
-    if (
-      ex.mode === "algorithmic" ||
-      ex.mode === "hilow" ||
-      ex.mode === "extreme" ||
-      ex.mode === "periodic"
-    ) {
+    if (ex.mode === "algorithmic" || ex.mode === "hilow" || ex.mode === "extreme" || ex.mode === "periodic") {
       if (!Array.isArray(ex.symbols)) ex.symbols = [];
       for (let j = 0; j < ex.symbols.length; j++) {
         const sym = ex.symbols[j];
         if (sym && typeof sym === "object" && !sym.name) (sym as SymbolOptions).name = "";
         if (sym?.takeProfit) {
-          sym.takeProfit = stripLegacyTakeProfitFields(sym.takeProfit as Record<string, unknown>) as SymbolOptions["takeProfit"];
+          sym.takeProfit = stripLegacyTakeProfitFields(
+            sym.takeProfit as Record<string, unknown>,
+          ) as SymbolOptions["takeProfit"];
         }
         if (sym?.takeProfitBuy) {
           sym.takeProfitBuy = stripLegacyTakeProfitFields(
-            sym.takeProfitBuy as Record<string, unknown>
+            sym.takeProfitBuy as Record<string, unknown>,
           ) as SymbolOptions["takeProfitBuy"];
         }
         if (sym) {
@@ -701,7 +765,7 @@ const seedSimExchangesFromLive = (liveDoc: Record<string, unknown>): unknown[] =
     const symbols = ex.symbols;
     if (!Array.isArray(symbols)) continue;
     const enabled = symbols.filter(
-      (s) => s != null && typeof s === "object" && (s as { enabled?: boolean }).enabled !== false
+      (s) => s != null && typeof s === "object" && (s as { enabled?: boolean }).enabled !== false,
     );
     if (enabled.length === 0) continue;
     out.push({ ...ex, symbols: [JSON.parse(JSON.stringify(enabled[0]))] });
