@@ -4,7 +4,7 @@ Algorithmic crypto trading bot (Binance, NonKYC, MEXC, dex-trade) with web UI, b
 
 
 ```bash
-npm test
+npm install
 npm run build
 npm run start
 ```
