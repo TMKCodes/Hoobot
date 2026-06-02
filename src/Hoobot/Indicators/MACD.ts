@@ -117,14 +117,14 @@ export const calculateMACD = (
   };
 };
 
-export const checkMACDSignals = (macd: macd | undefined, symbolOptions: SymbolOptions) => {
+export const checkMACDSignals = (macd: macd, symbolOptions: SymbolOptions) => {
   let check = "SKIP";
   if (symbolOptions.indicators !== undefined) {
     if (symbolOptions.indicators.macd && symbolOptions.indicators.macd.enabled) {
-      if (!macd?.histogram?.length || !macd.macdLine?.length || !macd.signalLine?.length || macd.histogram.length < 2) {
-        return "HOLD";
-      }
       check = "HOLD";
+      if (macd.histogram.length < 2 || macd.macdLine.length < 2 || macd.signalLine.length < 2) {
+        return check;
+      }
       const currentHistogram = macd.histogram[macd.histogram.length - 1];
       const prevHistogram = macd.histogram[macd.histogram.length - 2];
       const currentMacdLine = macd.macdLine[macd.macdLine.length - 1];
@@ -137,22 +137,24 @@ export const checkMACDSignals = (macd: macd | undefined, symbolOptions: SymbolOp
         currentMacdLine !== undefined &&
         currentSignalLine !== undefined
       ) {
-        var isHistogramPositive = currentHistogram > 0;
-        var isHistogramNegative = currentHistogram < 0;
-        const isMacdLineAboveSignalLine = currentMacdLine > currentSignalLine;
-        const isMacdLineBelowSignalLine = currentMacdLine < currentSignalLine;
-        var isMacdLinePositive = currentMacdLine > 0;
-        var isMacdLineNegative = currentMacdLine < 0;
-        const isSignalLinePositive = currentSignalLine > 0;
-        const isSignalLineNegative = currentSignalLine < 0;
-        if (symbolOptions.indicators.macd.weight == undefined) {
+        // Check for histogram momentum changes
+        const histogramRising = currentHistogram > prevHistogram;
+        const histogramFalling = currentHistogram < prevHistogram;
+        const histogramPositive = currentHistogram > 0;
+        const histogramNegative = currentHistogram < 0;
+
+        if (symbolOptions.indicators.macd.weight === undefined) {
           symbolOptions.indicators.macd.weight = 1;
         }
-        const bullishCross = currentMacdLine > currentSignalLine && prevMacdLine <= prevSignalLine;
-        const bearishCross = currentMacdLine < currentSignalLine && prevMacdLine >= prevSignalLine;
-        if (bullishCross) {
+
+        // BUY when histogram is negative but starting to rise (bullish momentum)
+        if (histogramNegative && histogramRising) {
+          symbolOptions.indicators.macd.weight *= 1;
           check = "BUY";
-        } else if (bearishCross) {
+        }
+        // SELL when histogram is positive but starting to fall (bearish momentum)
+        else if (histogramPositive && histogramFalling) {
+          symbolOptions.indicators.macd.weight *= 1;
           check = "SELL";
         }
       }
