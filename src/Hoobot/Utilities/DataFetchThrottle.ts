@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 /** Minimum interval between data fetches (e.g. trade history, balances) to avoid API rate limits. */
 export const DATA_FETCH_INTERVAL_MS = 30 * 1000; // 30 seconds
 

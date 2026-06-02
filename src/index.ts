@@ -1,30 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are not permitted without prior written permission
- * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
- * software, in whole or in part, is strictly prohibited. All
- * modifications in source or binary must be submitted to Hoosat Oy in source format.
- *
- * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The user of this software uses it at their own risk. Hoosat Oy shall
- * not be liable for any losses, damages, or liabilities arising from
- * the use of this software.
- * ===================================================================== */
-
 import fs from "fs";
 import Binance from "node-binance-api";
 import { loginDiscord } from "./Discord/discord";
@@ -73,6 +46,7 @@ import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
 import { DexTrade } from "./Hoobot/Exchanges/DexTrade/DexTrade";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
+import { marketMaking } from "./Hoobot/Modes/MarketMaking";
 import { fileURLToPath } from "url";
 import express from "express";
 import { createHash } from "crypto";
@@ -113,6 +87,9 @@ var options = process.env.SIMULATE === "true" ? parseArgsSimulate() : parseArgs(
 const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: ExchangeOptions) => {
   exchangeOptions.balances = await getCurrentBalances(exchange);
   storeBalances(exchange, exchangeOptions.balances);
+  if (exchangeOptions.orderbooks === undefined) {
+    exchangeOptions.orderbooks = {};
+  }
   const candlesticksToPreload = 1000;
   const symbolCandlesticks: Candlesticks = {};
   if (exchangeOptions.mode === "algorithmic") {
@@ -310,6 +287,59 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
             );
           },
         );
+      }
+    }
+  } else if (exchangeOptions.mode === "marketmaking") {
+    console.log(`Start running exchange ${exchangeOptions.name} on market making mode.`);
+    if (Array.isArray(exchangeOptions.symbols)) {
+      for (const symbolOptions of exchangeOptions.symbols) {
+        if (symbolOptions.enabled === false) continue;
+        exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
+        symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
+        // Initial run — place orders immediately on startup without waiting for the first orderbook event.
+        try {
+          await marketMaking(
+            discord,
+            exchange,
+            consoleLogger(),
+            symbolOptions.name,
+            exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)],
+            options,
+            exchangeOptions,
+            symbolOptions,
+          );
+        } catch (err) {
+          logToFile(
+            "./logs/error.log",
+            JSON.stringify({ context: "marketmaking-init", symbol: symbolOptions.name, err }, null, 4),
+          );
+          console.error(`marketmaking init ${symbolOptions.name}:`, err);
+        }
+        listenForOrderbooks(exchange, symbolOptions.name, async (_symbol: string, orderbook: Orderbook) => {
+          if (exchangeOptions.orderbooks === undefined) {
+            exchangeOptions.orderbooks = {};
+          }
+          exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = orderbook;
+          const logger = consoleLogger();
+          try {
+            await marketMaking(
+              discord,
+              exchange,
+              logger,
+              symbolOptions.name,
+              orderbook,
+              options,
+              exchangeOptions,
+              symbolOptions,
+            );
+          } catch (err) {
+            logToFile(
+              "./logs/error.log",
+              JSON.stringify({ context: "marketmaking", symbol: symbolOptions.name, err }, null, 4),
+            );
+            console.error(`marketmaking ${symbolOptions.name}:`, err);
+          }
+        });
       }
     }
   }

@@ -1,30 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are not permitted without prior written permission
- * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
- * software, in whole or in part, is strictly prohibited. All
- * modifications in source or binary must be submitted to Hoosat Oy in source format.
- *
- * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The user of this software uses it at their own risk. Hoosat Oy shall
- * not be liable for any losses, damages, or liabilities arising from
- * the use of this software.
- * ===================================================================== */
-
 import { Orderbook } from "../Exchanges/Orderbook";
 import { ExchangeOptions, SymbolOptions, getSecondsFromInterval, toSymbolKey } from "../Utilities/Args";
 import { ConsoleLogger } from "../Utilities/ConsoleLogger";
@@ -157,17 +130,13 @@ const meetsTakeProfitLimitFloor = (unrealizedPNL: number, tpCfg?: TakeProfitConf
 export const evaluateTakeProfitTrailing = (
   unrealizedPNL: number,
   tpCfg: TakeProfitConfig | undefined,
-  runtime: TakeProfitRuntimeState
+  runtime: TakeProfitRuntimeState,
 ): boolean => {
   const currentMaxPNL = runtime.peakUnrealizedPct;
   const cfgDrop = tpCfg?.drop ?? 0;
   const dropFromPeak = currentMaxPNL - unrealizedPNL;
   const shouldTrailing =
-    runtime.armed &&
-    cfgDrop > 0 &&
-    unrealizedPNL > 0 &&
-    unrealizedPNL < currentMaxPNL &&
-    dropFromPeak >= cfgDrop;
+    runtime.armed && cfgDrop > 0 && unrealizedPNL > 0 && unrealizedPNL < currentMaxPNL && dropFromPeak >= cfgDrop;
   return shouldTrailing && meetsTakeProfitLimitFloor(unrealizedPNL, tpCfg);
 };
 
@@ -175,7 +144,7 @@ export const evaluateTakeProfitTrailing = (
 export const meetsTakeProfitLimitForAction = (
   unrealizedPNL: number,
   symbolOptions: SymbolOptions,
-  next: string
+  next: string,
 ): boolean => {
   return meetsTakeProfitLimitFloor(unrealizedPNL, getTakeProfitConfigForNext(symbolOptions, next));
 };
@@ -184,7 +153,7 @@ export const meetsTakeProfitLimitForAction = (
 export const recordTakeProfitPeakOnOrder = (
   symbolOptions: SymbolOptions,
   next: string,
-  unrealizedPNL: number
+  unrealizedPNL: number,
 ): void => {
   const tpCfg = getTakeProfitConfigForNext(symbolOptions, next);
   if (!tpCfg || (tpCfg.currentMaxSource ?? "update") !== "trade") return;
@@ -241,7 +210,7 @@ export const calculateProfitSignals = async (
   _lastPNL: number,
   unrealizedPNL: number,
   closeTime: number,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   let check = "HOLD";
   const tpCfg = getTakeProfitConfigForNext(symbolOptions, next);
@@ -455,7 +424,7 @@ export const checkProfitSignals = async (
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  isFinalCandle: boolean = true
+  isFinalCandle: boolean = true,
 ) => {
   let check = "HOLD";
   let lastPNL: number = 0;
@@ -481,7 +450,7 @@ export const checkProfitSignals = async (
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        orderBookAsks[0]
+        orderBookAsks[0],
       );
     } else if (!lastTrade.isBuyer) {
       // buying
@@ -491,7 +460,7 @@ export const checkProfitSignals = async (
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        orderBookBids[0]
+        orderBookBids[0],
       );
     }
     unrealizedPNL = applyRoundTripFeeToPnl(unrealizedPNL, symbolOptions.tradeFeePercentage);
@@ -520,7 +489,7 @@ export const checkProfitSignals = async (
       lastPNL,
       unrealizedPNL,
       closeTime,
-      symbolOptions
+      symbolOptions,
     );
     check = signals.check;
     consoleLogger.push("PNL%", {
@@ -559,7 +528,7 @@ export const checkProfitSignalsFromCandlesticks = async (
   closeTime: number,
   ExchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  isFinalCandle: boolean = true
+  isFinalCandle: boolean = true,
 ) => {
   let check = "HOLD";
   let lastPNL: number = 0;
@@ -582,13 +551,13 @@ export const checkProfitSignalsFromCandlesticks = async (
       unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        close
+        close,
       );
     } else {
       unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
         parseFloat(lastTrade.qty),
         parseFloat(lastTrade.price),
-        close
+        close,
       );
     }
     unrealizedPNL = applyRoundTripFeeToPnl(unrealizedPNL, symbolOptions.tradeFeePercentage);
@@ -617,7 +586,7 @@ export const checkProfitSignalsFromCandlesticks = async (
       lastPNL,
       unrealizedPNL,
       closeTime,
-      symbolOptions
+      symbolOptions,
     );
     check = signals.check;
     consoleLogger.push("PNL%", {

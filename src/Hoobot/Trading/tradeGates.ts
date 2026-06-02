@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 export type MayExecuteAlgorithmicTradeOptions = {
   /** Kun false, profit SKIP sallitaan avauskaupassa (ei tradeHistoryä vielä). */
   hasTradeHistory?: boolean;
@@ -12,7 +7,7 @@ export type MayExecuteAlgorithmicTradeOptions = {
 export const mayExecuteAlgorithmicTrade = (
   profit: string,
   direction: string,
-  opts?: MayExecuteAlgorithmicTradeOptions
+  opts?: MayExecuteAlgorithmicTradeOptions,
 ): boolean => {
   const hasTradeHistory = opts?.hasTradeHistory ?? false;
   const allowSkipEntry = !hasTradeHistory && profit === "SKIP";

@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 import { Filter } from "../Exchanges/Filters";
 import { SymbolOptions } from "../Utilities/Args";
 import { simFeeRatePerLeg } from "./tradeGates";
@@ -28,7 +23,7 @@ export function capSellBaseByGrowingMax(baseQuantity: number, symbolOptions: Sym
 export function capBuyQuoteByGrowingMax(
   quoteQuantity: number,
   symbolOptions: SymbolOptions,
-  applyGrowingMaxCap: boolean = true
+  applyGrowingMaxCap: boolean = true,
 ): number {
   if (!applyGrowingMaxCap) return quoteQuantity;
   const cap = symbolOptions.growingMax?.buy;

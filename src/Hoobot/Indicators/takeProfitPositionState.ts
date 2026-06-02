@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 /** SELL-/close-polku vs erillinen BUY-polku (takeProfitBuy.enabled). */
 export type TakeProfitLeg = "sell" | "buy";
 
@@ -40,7 +35,7 @@ export function resetTakeProfitRuntimeForSymbol(symbolKey: string): void {
 /** Ensimmäisellä tickillä: vanha takeProfit.current → peak (asetustiedoston jäännös). */
 function seedFromLegacyCurrent(
   state: TakeProfitRuntimeState,
-  tpCfg: { current?: number; minimum?: number } | undefined
+  tpCfg: { current?: number; minimum?: number } | undefined,
 ): void {
   const legacy = tpCfg?.current;
   if (typeof legacy !== "number" || !Number.isFinite(legacy)) return;
@@ -86,7 +81,10 @@ export function updateTakeProfitRuntimeState(opts: {
   return { ...state };
 }
 
-export function resolveTakeProfitLeg(symbolOptions: { takeProfitBuy?: { enabled?: boolean } }, next: string): TakeProfitLeg {
+export function resolveTakeProfitLeg(
+  symbolOptions: { takeProfitBuy?: { enabled?: boolean } },
+  next: string,
+): TakeProfitLeg {
   if (next === "BUY" && symbolOptions.takeProfitBuy?.enabled === true) {
     return "buy";
   }

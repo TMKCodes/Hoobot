@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 /**
  * Algorithmic: toisiaan täydentävä indikaattorisetti (ei päällekkäisiä stoch/RSI/DMI-duplikaatteja).
  * - MACD: momentum ja käännös

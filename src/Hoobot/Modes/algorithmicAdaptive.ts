@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 /**
  * Algorithmic-adaptive: ATR/vol-skaalaus, trendi-agreement, konfliktisuodatus, idle-ease.
  * Oletus päällä (enabled !== false). Pois: algorithmicAdaptive.enabled = false.
@@ -75,7 +70,9 @@ export const defaultAlgorithmicAdaptiveConfig = (): Required<
   feeAwareMinProfit: true,
 });
 
-export const resolveAlgorithmicAdaptiveConfig = (symbolOptions: SymbolOptions): AlgorithmicAdaptiveConfig & {
+export const resolveAlgorithmicAdaptiveConfig = (
+  symbolOptions: SymbolOptions,
+): AlgorithmicAdaptiveConfig & {
   enabled: boolean;
 } => {
   const raw = symbolOptions.algorithmicAdaptive;
@@ -113,7 +110,7 @@ export const resolveAlgorithmicAdaptiveConfig = (symbolOptions: SymbolOptions): 
 export const atrVolatilityMultiplier = (
   atrSeries: number[] | undefined,
   closePrice: number,
-  lookback: number
+  lookback: number,
 ): number => {
   if (!atrSeries?.length || !(closePrice > 0)) return 1;
   const tail = atrSeries.slice(-Math.min(lookback, atrSeries.length));
@@ -130,7 +127,7 @@ export const resolveVolatilityMultiplier = (
   series: Candlestick[],
   atrSeries: number[] | undefined,
   closePrice: number,
-  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean }
+  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean },
 ): number => {
   if (!cfg.enabled || cfg.volatilityScale === false) return 1;
   const lookback = cfg.atrLookback ?? 48;
@@ -145,9 +142,9 @@ export const roundTripFeePct = (tradeFeePercentage?: number): number => (tradeFe
 export const withAdaptiveProfitScaling = (
   symbolOptions: SymbolOptions,
   volMult: number,
-  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean }
+  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean },
 ): SymbolOptions => {
-  if (!cfg.enabled || volMult === 1 && cfg.feeAwareMinProfit === false) {
+  if (!cfg.enabled || (volMult === 1 && cfg.feeAwareMinProfit === false)) {
     return symbolOptions;
   }
   const floor = cfg.feeAwareMinProfit !== false ? roundTripFeePct(symbolOptions.tradeFeePercentage) + 0.05 : 0;
@@ -195,7 +192,7 @@ export const agreementVolatilityDelta = (volMult: number): number => {
 export const trendAgreementDelta = (
   next: string,
   trend: string,
-  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean }
+  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean },
 ): number => {
   if (!cfg.enabled || cfg.trendAgreement === false) return 0;
   const bonus = cfg.trendAlignedBonus ?? 6;
@@ -219,7 +216,7 @@ export const detectVoteConflict = (directions: DirectionsVote, minSharePct: numb
 export const candlesSinceLastTrade = (
   symbolOptions: SymbolOptions,
   closeTime: number,
-  exchangeOptions: ExchangeOptions
+  exchangeOptions: ExchangeOptions,
 ): number => {
   const symbolKey = toSymbolKey(symbolOptions.name);
   const th = exchangeOptions.tradeHistory?.[symbolKey];
@@ -237,7 +234,7 @@ export const candlesSinceLastTrade = (
 export const agreementEaseFromWait = (
   waited: number,
   next: string,
-  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean }
+  cfg: AlgorithmicAdaptiveConfig & { enabled: boolean },
 ): number => {
   if (!cfg.enabled || waited <= 0) return 0;
   const escapeAt = next === "BUY" ? (cfg.maxCashCandles ?? 288) : (cfg.maxLongCandles ?? 192);

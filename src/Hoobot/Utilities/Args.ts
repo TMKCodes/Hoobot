@@ -1,29 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are not permitted without prior written permission
- * from Hoosat Oy. Unauthorized reproduction, copying, or use of this
- * software, in whole or in part, is strictly prohibited. All
- * modifications in source or binary must be submitted to Hoosat Oy in source format.
- *
- * THIS SOFTWARE IS PROVIDED BY HOOSAT OY "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL HOOSAT OY BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The user of this software uses it at their own risk. Hoosat Oy shall
- * not be liable for any losses, damages, or liabilities arising from
- * the use of this software.
- * ===================================================================== */
 import fs from "fs";
 import path from "path";
 import {
@@ -115,7 +89,7 @@ export interface ExchangeOptions {
   socket: Exchange;
   key: string;
   secret: string;
-  mode: "algorithmic" | "hilow" | "extreme" | "grid" | "consecutive" | "periodic";
+  mode: "algorithmic" | "hilow" | "extreme" | "grid" | "consecutive" | "periodic" | "marketmaking";
   forceStopOnDisconnect: boolean;
   console: string;
   openOrders: OpenOrders;
@@ -472,6 +446,29 @@ export interface SymbolOptions {
       history: string;
       overwrite: boolean;
     };
+  };
+  /** Market Making mode: two-sided limit order quoting around the mid price. */
+  marketMaking?: {
+    /** Full bid-ask spread as % of mid price (e.g. 0.5 = 0.5 %). Minimum effective value: 0.01 %. */
+    spreadPercent: number;
+    /** Number of price levels on each side, 1–5. Each successive level is offset by levelSpacingPercent. */
+    levels: number;
+    /** Additional price gap between consecutive levels as % of mid price (e.g. 0.1 = 0.1 %). */
+    levelSpacingPercent: number;
+    /** Quote-currency amount allocated per bid level (e.g. 50 = spend 50 USDT per bid order). Omit to use full quote balance divided evenly across levels. */
+    orderSizeQuote?: number;
+    /** Base-currency amount allocated per ask level (e.g. 0.001 = sell 0.001 BTC per ask order). Omit to use full base balance divided evenly across levels. */
+    orderSizeBase?: number;
+    /** Minimum milliseconds between full re-quote cycles (e.g. 5000 = 5 s). */
+    refreshIntervalMs: number;
+    /** Target base-asset value ratio 0–1 (default 0.5 = equal value in base and quote). */
+    inventoryTarget?: number;
+    /** Inventory skew strength 0–1 (default 0.5). 0 = no skew, 1 = maximum skew. */
+    inventorySkewFactor?: number;
+    /** Maximum total quote currency committed to open bids (exposure cap). Omit for no cap. */
+    maxQuoteExposure?: number;
+    /** Maximum total base currency committed to open asks (exposure cap). Omit for no cap. */
+    maxBaseExposure?: number;
   };
 }
 

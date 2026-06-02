@@ -1,8 +1,3 @@
-/* =====================================================================
- * Hoobot - Proprietary License
- * Copyright (c) 2023 Hoosat Oy. All rights reserved.
- * ===================================================================== */
-
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_ORDER: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -16,8 +11,7 @@ try {
   // ignore
 }
 
-const shouldLog = (level: LogLevel): boolean =>
-  LEVEL_ORDER.indexOf(level) >= LEVEL_ORDER.indexOf(minLevel);
+const shouldLog = (level: LogLevel): boolean => LEVEL_ORDER.indexOf(level) >= LEVEL_ORDER.indexOf(minLevel);
 
 export const setMinLogLevel = (level: LogLevel): void => {
   minLevel = level;
