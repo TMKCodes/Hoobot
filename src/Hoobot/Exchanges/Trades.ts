@@ -30,8 +30,7 @@ import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval, toSymbolKey } from "../Utilities/Args";
 
 /** Stop loss tai Extreme idle-pakko — sallii sulun myös tappiolla. */
-export const allowsForcedLossTrade = (profit: string): boolean =>
-  profit === "STOP_LOSS" || profit === "FORCE_IDLE";
+export const allowsForcedLossTrade = (profit: string): boolean => profit === "STOP_LOSS" || profit === "FORCE_IDLE";
 import { Filter } from "./Filters";
 import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -41,8 +40,12 @@ import { getOrderbook, Orderbook } from "./Orderbook";
 import { Balances, getCurrentBalances } from "./Balances";
 import { logToFile, safeStringifyForLogs } from "../Utilities/LogToFile";
 import path from "path";
-import { Exchange, isBinance, isNonKYC } from "./Exchange";
-import { meetsTakeProfitLimitForAction, recordTakeProfitPeakOnOrder, resetTakeProfitRuntimeForSymbol } from "../Indicators/Profit";
+import { Exchange, isBinance, isNonKYC, isDexTrade } from "./Exchange";
+import {
+  meetsTakeProfitLimitForAction,
+  recordTakeProfitPeakOnOrder,
+  resetTakeProfitRuntimeForSymbol,
+} from "../Indicators/Profit";
 import { isTerminalOrderStatus, shouldClearTakeProfitAfterOrder } from "../Trading/orderFill";
 import {
   computeLiveBuyExecution,
@@ -52,6 +55,7 @@ import {
   simFeeOnQuote,
 } from "../Trading/executionSizing";
 import { NonKYCResponse, NonKYCTrades } from "./NonKYC/NonKYC";
+import { DexTradeSocketHistEvent } from "./DexTrade/DexTrade";
 
 export const clearTakeProfitAfterTrade = (symbol: string, symbolOptions: SymbolOptions): void => {
   resetTakeProfitRuntimeForSymbol(toSymbolKey(symbol));
@@ -67,7 +71,7 @@ export const clearTakeProfitAfterTrade = (symbol: string, symbolOptions: SymbolO
 export const computeSimBuyClosePnl = (
   tradeHistory: Trade[] | undefined,
   closePrice: number,
-  tradeFeePercentage?: number
+  tradeFeePercentage?: number,
 ): number => {
   const th = tradeHistory ?? [];
   if (th.length < 1) return 0;
@@ -89,7 +93,7 @@ const awaitLiveOrderFollowUp = async (
   processOptions: ConfigOptions,
   symbolOptions: SymbolOptions,
   tradeNext: "SELL" | "BUY",
-  unrealizedPNL: number
+  unrealizedPNL: number,
 ): Promise<string> => {
   if (order.orderId === undefined) return "NO_ORDER_ID";
   recordTakeProfitPeakOnOrder(symbolOptions, tradeNext, unrealizedPNL);
@@ -152,7 +156,7 @@ export interface TradeHistory {
 export const listenForTrades = async (
   exchange: Exchange,
   symbol: string,
-  callback: (trades: Trade) => Promise<void>
+  callback: (trades: Trade) => Promise<void>,
 ): Promise<void> => {
   if (isNonKYC(exchange)) {
     exchange.subscribeTrades(symbol, async (response: NonKYCResponse) => {
@@ -179,6 +183,30 @@ export const listenForTrades = async (
   } else if (isBinance(exchange)) {
     exchange.websockets.trades([toSymbolKey(symbol)], async (trades) => {
       await callback(trades);
+    });
+  } else if (isDexTrade(exchange)) {
+    const pairInfo = await exchange.getPairInfo(toSymbolKey(symbol));
+    const rateDecimal = pairInfo?.rate_decimal ?? 8;
+    const baseDecimal = pairInfo?.base_decimal ?? 8;
+    exchange.subscribeTrades(toSymbolKey(symbol), async (event: DexTradeSocketHistEvent) => {
+      const rate = event.data.rate / Math.pow(10, rateDecimal);
+      const volume = event.data.volume / Math.pow(10, baseDecimal);
+      await callback({
+        symbol: toSymbolKey(symbol),
+        id: event.data.time_create.toString(),
+        orderId: event.data.pair_id.toString(),
+        orderListID: 0,
+        price: rate.toString(),
+        qty: volume.toString(),
+        quoteQty: (rate * volume).toString(),
+        commission: "",
+        commissionAsset: "",
+        time: event.data.time_create * 1000,
+        isBuyer: event.data.type === "BUY",
+        isMaker: false,
+        isBestMatch: true,
+        profit: "",
+      });
     });
   }
 };
@@ -226,7 +254,7 @@ export const calculatePNLPercentageForShort = (entryPrice: number, exitPrice: nu
 export const calculateUnrealizedPNLPercentageForLong = (
   entryQty: number,
   entryPrice: number,
-  highestBidPrice: number
+  highestBidPrice: number,
 ): number => {
   return (((highestBidPrice - entryPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
@@ -234,7 +262,7 @@ export const calculateUnrealizedPNLPercentageForLong = (
 export const calculateUnrealizedPNLPercentageForShort = (
   entryQty: number,
   entryPrice: number,
-  lowestAskPrice: number
+  lowestAskPrice: number,
 ): number => {
   return (((entryPrice - lowestAskPrice) * entryQty) / (entryPrice * entryQty)) * 100;
 };
@@ -281,8 +309,27 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string) => {
         isBuyer: trade.side === "buy" ? true : false,
         isMaker: true,
         isBestMatch: true,
-      })
+      }),
     );
+    return tradeHistory;
+  } else if (isDexTrade(exchange)) {
+    const history = await exchange.getAllTrades(toSymbolKey(symbol), 500, 0);
+    history.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
+    tradeHistory = history.map((trade) => ({
+      symbol: toSymbolKey(symbol),
+      id: trade.id,
+      orderId: trade.orderid,
+      orderListID: parseFloat(trade.orderid),
+      price: trade.price,
+      qty: trade.quantity,
+      quoteQty: (parseFloat(trade.quantity) * parseFloat(trade.price)).toString(),
+      commission: trade.fee,
+      commissionAsset: trade.alternateFeeAsset,
+      time: trade.createdAt,
+      isBuyer: trade.side === "buy",
+      isMaker: true,
+      isBestMatch: true,
+    }));
     return tradeHistory;
   }
   return [];
@@ -374,7 +421,7 @@ export const placeSellOrder = async (
   symbol: string,
   quantityInBase: number,
   price: number,
-  maxRetries: number = 5
+  maxRetries: number = 5,
 ): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
@@ -385,7 +432,7 @@ export const placeSellOrder = async (
   if (exchangeOptions.dryRun === true) {
     logToFile(
       "./logs/trades-binance.log",
-      `[DRY RUN] ${Date.now()} ${symbol} sell at ${price} price, ${quantityInBase} qty (no order placed)`
+      `[DRY RUN] ${Date.now()} ${symbol} sell at ${price} price, ${quantityInBase} qty (no order placed)`,
     );
     const sym = toSymbolKey(symbol);
     return {
@@ -410,13 +457,13 @@ export const placeSellOrder = async (
       if (isBinance(exchange)) {
         logToFile(
           "./logs/trades-binance.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`,
         );
         return await exchange.sell(toSymbolKey(symbol), quantityInBase, price);
       } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
-          `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")}${symbol} sell at ${price} price, ${quantityInBase} qty`,
         );
         const xeggexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityInBase, price);
         if (xeggexOrder) {
@@ -437,6 +484,29 @@ export const placeSellOrder = async (
           };
           return order;
         }
+      } else if (isDexTrade(exchange)) {
+        logToFile(
+          "./logs/trades-dextrade.log",
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`,
+        );
+        const dexOrder = await exchange.newOrder(toSymbolKey(symbol), "sell", "limit", quantityInBase, price);
+        if (dexOrder) {
+          return {
+            symbol: toSymbolKey(symbol),
+            orderId: dexOrder.id,
+            price: dexOrder.price,
+            qty: dexOrder.quantity,
+            quoteQty: (parseFloat(dexOrder.quantity) * parseFloat(dexOrder.price)).toString(),
+            commission: "",
+            commissionAsset: "",
+            time: dexOrder.createdAt,
+            isBuyer: false,
+            isMaker: true,
+            isBestMatch: true,
+            orderStatus: "NEW",
+            tradeId: parseFloat(dexOrder.id),
+          } as Order;
+        }
       }
     } catch (error) {
       retries++;
@@ -446,7 +516,7 @@ export const placeSellOrder = async (
         await syncBinanceServerTime(exchange);
       } else if (error?.code === 20001 || error?.code === -2021 || error?.code === -2010) {
         console.error(
-          `Insufficient funds for SELL order creation in ${symbol}, decreasing quantity for next try by 1%`
+          `Insufficient funds for SELL order creation in ${symbol}, decreasing quantity for next try by 1%`,
         );
         quantityInBase = quantityInBase * 0.99;
         exchangeOptions.balances = await getCurrentBalances(exchange);
@@ -468,7 +538,7 @@ export const placeBuyOrder = async (
   symbol: string,
   quantityInBase: number,
   price: number,
-  maxRetries: number = 5
+  maxRetries: number = 5,
 ): Promise<Order | undefined> => {
   if (price === undefined || Number.isNaN(price)) {
     return undefined;
@@ -479,7 +549,7 @@ export const placeBuyOrder = async (
   if (exchangeOptions.dryRun === true) {
     logToFile(
       "./logs/trades-binance.log",
-      `[DRY RUN] ${Date.now()} ${symbol} buy at ${price} price, ${quantityInBase} qty (no order placed)`
+      `[DRY RUN] ${Date.now()} ${symbol} buy at ${price} price, ${quantityInBase} qty (no order placed)`,
     );
     const sym = toSymbolKey(symbol);
     return {
@@ -504,13 +574,13 @@ export const placeBuyOrder = async (
       if (isBinance(exchange)) {
         logToFile(
           "./logs/trades-binance.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
         );
         return await exchange.buy(toSymbolKey(symbol), quantityInBase, price);
       } else if (isNonKYC(exchange)) {
         logToFile(
           "./logs/trades-xeggex.log",
-          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
         );
         const xeggexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityInBase, price);
         const order = {
@@ -529,6 +599,29 @@ export const placeBuyOrder = async (
           tradeId: parseFloat(xeggexOrder.id),
         };
         return order;
+      } else if (isDexTrade(exchange)) {
+        logToFile(
+          "./logs/trades-dextrade.log",
+          `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
+        );
+        const dexOrder = await exchange.newOrder(toSymbolKey(symbol), "buy", "limit", quantityInBase, price);
+        if (dexOrder) {
+          return {
+            symbol: toSymbolKey(symbol),
+            orderId: dexOrder.id,
+            price: dexOrder.price,
+            qty: dexOrder.quantity,
+            quoteQty: (parseFloat(dexOrder.quantity) * parseFloat(dexOrder.price)).toString(),
+            commission: "",
+            commissionAsset: "",
+            time: dexOrder.createdAt,
+            isBuyer: true,
+            isMaker: true,
+            isBestMatch: true,
+            orderStatus: "NEW",
+            tradeId: parseFloat(dexOrder.id),
+          } as Order;
+        }
       }
     } catch (error) {
       retries++;
@@ -556,7 +649,7 @@ export const placeBuyOrder = async (
 export const getPreviousTrades = (
   direction: string,
   ExchangeOptions: ExchangeOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   const trades = ExchangeOptions.tradeHistory?.[toSymbolKey(symbolOptions.name)];
   let previousTrade = null;
@@ -597,7 +690,7 @@ export const sell = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
   if (orderBook === undefined || orderBook.asks === undefined) {
@@ -613,14 +706,8 @@ export const sell = async (
   if (sellExec === null) {
     return false;
   }
-  const {
-    askPrice,
-    askPriceDiscounted,
-    quantityInBase,
-    roundedPrice,
-    roundedQuantityInBase,
-    roundedQuantityInQuote,
-  } = sellExec;
+  const { askPrice, askPriceDiscounted, quantityInBase, roundedPrice, roundedQuantityInBase, roundedQuantityInQuote } =
+    sellExec;
   if (
     symbolOptions.price?.enabled === true &&
     symbolOptions.price?.maximumSell !== undefined &&
@@ -654,22 +741,19 @@ export const sell = async (
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA SELL ${orderBook.asks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      `TRADEDATA SELL ${orderBook.asks[0]} ${askPrice} ${askPriceDiscounted} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
     let unrealizedPNL = 0;
     if (profit !== "GRID" && profit !== "SKIP") {
-      if (
-        exchangeOptions.tradeHistory !== undefined &&
-        exchangeOptions.tradeHistory[toSymbolKey(symbol)]?.length > 0
-      ) {
+      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[toSymbolKey(symbol)]?.length > 0) {
         const { previousTrade, olderTrade } = getPreviousTrades("SELL", exchangeOptions, symbolOptions);
         if (previousTrade) {
           unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice // Use discounted ask price for PNL calculation
+            roundedPrice, // Use discounted ask price for PNL calculation
           );
           unrealizedPNL = applyRoundTripFeeToPnl(unrealizedPNL, symbolOptions.tradeFeePercentage);
           if (
@@ -678,7 +762,7 @@ export const sell = async (
           ) {
             consoleLogger.push(
               "error",
-              `Take profit estetty: unrealized ${unrealizedPNL.toFixed(2)}% alle takeProfit.limit`
+              `Take profit estetty: unrealized ${unrealizedPNL.toFixed(2)}% alle takeProfit.limit`,
             );
             return false;
           }
@@ -736,7 +820,7 @@ export const sell = async (
           processOptions,
           symbolOptions,
           tradeNext,
-          unrealizedPNL
+          unrealizedPNL,
         );
       }
       updateBuyAmount(roundedQuantityInQuote, symbolOptions);
@@ -753,14 +837,14 @@ export const sell = async (
       return false;
     }
   } else {
-	consoleLogger.push("BUY FILTER FAIL", {
-    roundedQuantityInBase,
-    roundedPrice,
-    notional: roundedQuantityInBase * roundedPrice,
-    filter
-  });
-  consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
-  return false;
+    consoleLogger.push("BUY FILTER FAIL", {
+      roundedQuantityInBase,
+      roundedPrice,
+      notional: roundedQuantityInBase * roundedPrice,
+      filter,
+    });
+    consoleLogger.push("error", "Filter limits failed a check. Check your balances!");
+    return false;
   }
 };
 
@@ -822,7 +906,7 @@ export const buy = async (
   processOptions: ConfigOptions,
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
-  forceQuantityInBase: number | undefined
+  forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
   const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
   if (orderBook === undefined || orderBook.bids === undefined) {
@@ -875,22 +959,19 @@ export const buy = async (
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
-      `TRADEDATA BUY ${orderBook.bids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`
+      `TRADEDATA BUY ${orderBook.bids[0]} ${bidPrice} ${bidPriceIncremented} ${filter.tickSize} ${roundedPrice} ${roundedQuantityInBase} ${roundedQuantityInQuote}`,
     );
   }
   if (checkBeforePlacingOrder(roundedQuantityInBase, roundedPrice, filter) === true) {
     let unrealizedPNL = 0;
     if (profit !== "GRID" && profit !== "SKIP") {
-      if (
-        exchangeOptions.tradeHistory !== undefined &&
-        exchangeOptions.tradeHistory[toSymbolKey(symbol)]?.length > 0
-      ) {
+      if (exchangeOptions.tradeHistory !== undefined && exchangeOptions.tradeHistory[toSymbolKey(symbol)]?.length > 0) {
         const { previousTrade, olderTrade } = getPreviousTrades("BUY", exchangeOptions, symbolOptions);
         if (previousTrade) {
           unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
             parseFloat(previousTrade.qty),
             parseFloat(previousTrade.price),
-            roundedPrice // Use incremented bid price for PNL calculation
+            roundedPrice, // Use incremented bid price for PNL calculation
           );
           unrealizedPNL = applyRoundTripFeeToPnl(unrealizedPNL, symbolOptions.tradeFeePercentage);
           if (
@@ -899,7 +980,7 @@ export const buy = async (
           ) {
             consoleLogger.push(
               "error",
-              `Take profit estetty: unrealized ${unrealizedPNL.toFixed(2)}% alle takeProfit.limit`
+              `Take profit estetty: unrealized ${unrealizedPNL.toFixed(2)}% alle takeProfit.limit`,
             );
             return false;
           }
@@ -958,7 +1039,7 @@ export const buy = async (
           processOptions,
           symbolOptions,
           tradeNext,
-          unrealizedPNL
+          unrealizedPNL,
         );
       }
       updateSellAmount(roundedQuantityInBase, symbolOptions);
@@ -1006,7 +1087,7 @@ export const simulateSell = async (
   symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
-  logger: ConsoleLogger
+  logger: ConsoleLogger,
 ) => {
   // console.log(time);
   if (price === null || quantity === 0) {
@@ -1085,7 +1166,7 @@ export const simulateSell = async (
     });
     if (process.env.SIMULATE === "true") {
       console.log(
-        `[sim] SELL ${symbol} @ ${price.toFixed(2)} base≈${baseQuantity.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKeyS].length}`
+        `[sim] SELL ${symbol} @ ${price.toFixed(2)} base≈${baseQuantity.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKeyS].length}`,
       );
     }
     const baseCoin = symbol.split("/")[0];
@@ -1112,8 +1193,8 @@ export const simulateSell = async (
           tradeHistory: exchangeOptions.tradeHistory,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());
@@ -1138,7 +1219,7 @@ export const simulateBuy = async (
   symbolOptions: SymbolOptions,
   time: number,
   filter: Filter,
-  logger: ConsoleLogger
+  logger: ConsoleLogger,
 ): Promise<Boolean> => {
   // console.log(time);
   if (price === null || quantity === 0) {
@@ -1153,7 +1234,7 @@ export const simulateBuy = async (
   if (process.env.DEBUG == "true") {
     logToFile(
       "./logs/debug.log",
-      `[SIM BUY] symbol=${symbol} quoteBalanceBefore=${quoteBalanceBefore} quoteUsed=${quoteQuantity} fixedBuyAmount=${Number.isFinite(fixedBuyAmount) ? fixedBuyAmount : "n/a"}`
+      `[SIM BUY] symbol=${symbol} quoteBalanceBefore=${quoteBalanceBefore} quoteUsed=${quoteQuantity} fixedBuyAmount=${Number.isFinite(fixedBuyAmount) ? fixedBuyAmount : "n/a"}`,
     );
   }
   let baseQuantity = quoteQuantity / price;
@@ -1225,7 +1306,7 @@ export const simulateBuy = async (
     });
     if (process.env.SIMULATE === "true") {
       console.log(
-        `[sim] BUY ${symbol} @ ${price.toFixed(2)} base≈${baseQuantityWithoutFee.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKey].length}`
+        `[sim] BUY ${symbol} @ ${price.toFixed(2)} base≈${baseQuantityWithoutFee.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKey].length}`,
       );
     }
     const baseCoin = symbol.split("/")[0];
@@ -1251,8 +1332,8 @@ export const simulateBuy = async (
           tradeHistory: exchangeOptions.tradeHistory,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     // logger.flush();
     // logger.push("Time", (new Date(time)).toLocaleString());

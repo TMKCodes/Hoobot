@@ -31,7 +31,8 @@ import { consoleLogger } from "../Utilities/ConsoleLogger";
 import { calculateUnrealizedPNLPercentageForLong, calculateUnrealizedPNLPercentageForShort, delay } from "./Trades";
 import { Orderbook } from "./Orderbook";
 import { logToFile } from "../Utilities/LogToFile";
-import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { Exchange, isBinance, isNonKYC, isDexTrade } from "./Exchange";
+import { DexTradeOrder } from "./DexTrade/DexTrade";
 import { Filter } from "./Filters";
 import { isFullOrderFill } from "../Trading/orderFill";
 
@@ -73,6 +74,23 @@ export interface OrderStatus {
   selfTradePreventionMode: string;
 }
 
+const mapDexTradeOrder = (order: DexTradeOrder, symbol: string): Order => ({
+  symbol: toSymbolKey(symbol),
+  orderId: order.id.toString(),
+  price: (order.rate ?? 0).toString(),
+  qty: (order.volume ?? 0).toString(),
+  quoteQty: ((order.volume ?? 0) * (order.rate ?? 0)).toString(),
+  commission: (order.commission ?? 0).toString(),
+  commissionAsset: "",
+  time: (order.time_create ?? 0) * 1000,
+  isBuyer: order.type === 0,
+  isMaker: true,
+  isBestMatch: true,
+  orderStatus:
+    order.status === 0 ? "PROCESSING" : order.status === 1 ? "NEW" : order.status === 2 ? "FILLED" : "CANCELED",
+  tradeId: order.id,
+});
+
 export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
   if (isBinance(exchange)) {
     return await exchange.openOrders(toSymbolKey(symbol));
@@ -94,8 +112,11 @@ export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        } as Order)
+        }) as Order,
     );
+  } else if (isDexTrade(exchange)) {
+    const orders = await exchange.getAllOrders(toSymbolKey(symbol), "active", 500, 0);
+    return orders.map((order) => mapDexTradeOrder(order, symbol));
   }
   return [] as Order[];
 };
@@ -124,8 +145,13 @@ export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<
           isBestMatch: true,
           orderStatus: order.status,
           tradeId: parseFloat(order.id),
-        } as Order)
+        }) as Order,
     );
+  } else if (isDexTrade(exchange)) {
+    const activeOrders = await exchange.getAllOrders(toSymbolKey(symbol), "active", 500, 0);
+    const filledOrders = await exchange.getAllOrders(toSymbolKey(symbol), "filled", 500, 0);
+    const canceledOrders = await exchange.getAllOrders(toSymbolKey(symbol), "cancelled", 500, 0);
+    return [...activeOrders, ...filledOrders, ...canceledOrders].map((o) => mapDexTradeOrder(o, symbol));
   }
   return [] as Order[];
 };
@@ -151,6 +177,9 @@ export const getOrder = async (exchange: Exchange, symbol: string, orderId: stri
       orderStatus: order.status,
       tradeId: parseFloat(order.id),
     } as Order;
+  } else if (isDexTrade(exchange)) {
+    const order = await exchange.getOrderByID(orderId);
+    if (order) return mapDexTradeOrder(order, symbol);
   }
 };
 
@@ -159,6 +188,9 @@ export const cancelOrder = async (exchange: Exchange, symbol: string, orderId: s
     const response = await exchange.cancel(symbol, orderId);
     return response;
   } else if (isNonKYC(exchange)) {
+    const response = await exchange.cancelOrder(orderId);
+    return response;
+  } else if (isDexTrade(exchange)) {
     const response = await exchange.cancelOrder(orderId);
     return response;
   }
@@ -214,7 +246,7 @@ export const handleOpenOrders = async (
   symbol: string,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ) => {
   var openOrders = await getOpenOrders(exchange, symbol);
   if (openOrders.length == 0) {
@@ -246,7 +278,7 @@ export const handleOpenOrders = async (
         unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
           parseFloat(openOrders[i].qty),
           parseFloat(openOrders[i].price),
-          orderBookBids[0]
+          orderBookBids[0],
         );
       } else {
         // console.log("Checking asks");
@@ -256,7 +288,7 @@ export const handleOpenOrders = async (
         unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
           parseFloat(openOrders[i].qty),
           parseFloat(openOrders[i].price),
-          orderBookAsks[0]
+          orderBookAsks[0],
         );
       }
       // console.log(unrealizedPNL);
@@ -281,7 +313,7 @@ export const handleOpenOrder = async (
   order: Order,
   orderBook: Orderbook,
   processOptions: ConfigOptions,
-  symbolOptions: SymbolOptions
+  symbolOptions: SymbolOptions,
 ): Promise<string> => {
   if (isBinance(exchange)) {
     let partiallyFilledSent = false;
@@ -355,7 +387,7 @@ export const handleOpenOrder = async (
             unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
               parseFloat(order.qty),
               parseFloat(order.price),
-              orderBookBids[0]
+              orderBookBids[0],
             );
           } else {
             const orderBookAsks = Object.keys(orderBook.asks)
@@ -364,7 +396,7 @@ export const handleOpenOrder = async (
             unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
               parseFloat(order.qty),
               parseFloat(order.price),
-              orderBookAsks[0]
+              orderBookAsks[0],
             );
           }
           if (unrealizedPNL > symbolOptions.closePercentage!) {
@@ -415,7 +447,7 @@ export const handleOpenOrder = async (
                 unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
                   parseFloat(order.qty),
                   parseFloat(order.price),
-                  orderBookBids[0]
+                  orderBookBids[0],
                 );
               } else {
                 const orderBookAsks = Object.keys(orderBook.asks)
@@ -424,7 +456,7 @@ export const handleOpenOrder = async (
                 unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
                   parseFloat(order.qty),
                   parseFloat(order.price),
-                  orderBookAsks[0]
+                  orderBookAsks[0],
                 );
               }
               if (unrealizedPNL > symbolOptions.closePercentage!) {
@@ -445,6 +477,85 @@ export const handleOpenOrder = async (
           }
         }
         if (found == false) {
+          if (cancelledOrders !== undefined) {
+            for (const cancelledOrder of cancelledOrders) {
+              if (String(cancelledOrder.id) === order.orderId) {
+                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                  .split("/")
+                  .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
+                return "CANCELED";
+              }
+            }
+          }
+          const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+            .split("/")
+            .join("")}**\nOrder Filled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+          sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
+          return "FILLED";
+        }
+      } else {
+        return "DOES NOT EXIST";
+      }
+      await delay(30000);
+    } while (true);
+  } else if (isDexTrade(exchange)) {
+    do {
+      const currentTime = Date.now();
+      const activeOrders = await exchange.getAllOrders(toSymbolKey(symbol), "active", 500, 0);
+      const filledOrders = await exchange.getAllOrders(toSymbolKey(symbol), "filled", 500, 0);
+      const cancelledOrders = await exchange.getAllOrders(toSymbolKey(symbol), "cancelled", 500, 0);
+      if (activeOrders !== undefined) {
+        for (const activeOrder of activeOrders) {
+          if (String(activeOrder.id) === order.orderId) {
+            const orderAgeSeconds = Math.floor((currentTime - activeOrder.time_create * 1000) / 1000);
+            var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
+            if (orderAgeSeconds > maxOrderAge) {
+              await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
+              const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                .split("/")
+                .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+              sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
+              return "CANCELED";
+            } else {
+              let unrealizedPNL = 0;
+              if (order.isBuyer === true) {
+                const orderBookBids = Object.keys(orderBook.bids)
+                  .map((price) => parseFloat(price))
+                  .sort((a, b) => b - a);
+                unrealizedPNL = calculateUnrealizedPNLPercentageForShort(
+                  parseFloat(order.qty),
+                  parseFloat(order.price),
+                  orderBookBids[0],
+                );
+              } else {
+                const orderBookAsks = Object.keys(orderBook.asks)
+                  .map((price) => parseFloat(price))
+                  .sort((a, b) => a - b);
+                unrealizedPNL = calculateUnrealizedPNLPercentageForLong(
+                  parseFloat(order.qty),
+                  parseFloat(order.price),
+                  orderBookAsks[0],
+                );
+              }
+              if (unrealizedPNL > symbolOptions.closePercentage!) {
+                await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
+                const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
+                  .split("/")
+                  .join("")}**\nOrder Cancelled.\nTime now ${new Date().toLocaleString("fi-fi")}\n`;
+                sendMessageToChannel(discord, processOptions.discord?.channelId, orderMsg);
+                return "CANCELED";
+              }
+            }
+          }
+        }
+        let found = false;
+        for (const filledOrder of filledOrders) {
+          if (String(filledOrder.id) === order.orderId) {
+            found = true;
+          }
+        }
+        if (found === false) {
           if (cancelledOrders !== undefined) {
             for (const cancelledOrder of cancelledOrders) {
               if (String(cancelledOrder.id) === order.orderId) {

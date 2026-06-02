@@ -56,7 +56,12 @@ import { seedTakeProfitRuntimeForAllSymbols, syncTakeProfitRuntimeFromConfig } f
 import { getTakeProfitRuntimeState } from "./Hoobot/Indicators/takeProfitPositionState";
 import { checkLicenseValidity } from "./Hoobot/Utilities/License";
 import { Orderbook, getOrderbook, listenForOrderbooks } from "./Hoobot/Exchanges/Orderbook";
-import { getTradeHistory, Trade, calculatePNLPercentageForLong, calculatePNLPercentageForShort } from "./Hoobot/Exchanges/Trades";
+import {
+  getTradeHistory,
+  Trade,
+  calculatePNLPercentageForLong,
+  calculatePNLPercentageForShort,
+} from "./Hoobot/Exchanges/Trades";
 import { hilow } from "./Hoobot/Modes/HiLow";
 import { extreme } from "./Hoobot/Modes/Extreme";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
@@ -65,6 +70,7 @@ import { Exchange } from "./Hoobot/Exchanges/Exchange";
 import { logToFile } from "./Hoobot/Utilities/LogToFile";
 import { NonKYC } from "./Hoobot/Exchanges/NonKYC/NonKYC";
 import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
+import { DexTrade } from "./Hoobot/Exchanges/DexTrade/DexTrade";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
 import { fileURLToPath } from "url";
@@ -110,17 +116,14 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
   const candlesticksToPreload = 1000;
   const symbolCandlesticks: Candlesticks = {};
   if (exchangeOptions.mode === "algorithmic") {
-    logger.info(`Start running exchange ${exchangeOptions.name} on algorithmic mode.`);
+    console.log(`Start running exchange ${exchangeOptions.name} on algorithmic mode.`);
     if (Array.isArray(exchangeOptions.symbols)) {
       if (exchangeOptions.orderbooks === undefined) {
         exchangeOptions.orderbooks = {};
       }
       for (const symbolOptions of exchangeOptions.symbols) {
         if (symbolOptions.enabled === false) continue;
-        exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(
-          exchange,
-          symbolOptions.name
-        );
+        exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
         symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
 
         const symbolKey = toSymbolKey(symbolOptions.name);
@@ -133,9 +136,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           const last: Trade = trades[trades.length - 1];
           const timeStr = new Date(last.time).toLocaleString("fi-FI");
           const side = last.isBuyer ? "BUY" : "SELL";
-          console.log(
-            `[${symbolOptions.name}] Viimeisin kauppa: ${side} ${last.qty} @ ${last.price} (${timeStr})`
-          );
+          console.log(`[${symbolOptions.name}] Viimeisin kauppa: ${side} ${last.qty} @ ${last.price} (${timeStr})`);
         }
 
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
@@ -171,13 +172,16 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
                 candlesticks,
                 options,
                 exchangeOptions,
-                symbolOptions
+                symbolOptions,
               );
             } catch (err) {
-              logToFile("./logs/error.log", JSON.stringify({ context: "algorithmic", symbol: symbolOptions.name, err }, null, 4));
+              logToFile(
+                "./logs/error.log",
+                JSON.stringify({ context: "algorithmic", symbol: symbolOptions.name, err }, null, 4),
+              );
               console.error(`algorithmic ${symbolOptions.name}:`, err);
             }
-          }
+          },
         );
       }
     }
@@ -185,10 +189,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     console.log(`Start running exchange  ${exchangeOptions.name} on hilow mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
       if (symbolOptions.enabled === false) continue;
-      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(
-        exchange,
-        symbolOptions.name
-      );
+      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
       symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
         if (exchangeOptions.orderbooks === undefined) {
@@ -212,10 +213,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     console.log(`Start running exchange  ${exchangeOptions.name} on extreme mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
       if (symbolOptions.enabled === false) continue;
-      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(
-        exchange,
-        symbolOptions.name
-      );
+      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
       symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
         if (exchangeOptions.orderbooks === undefined) {
@@ -239,10 +237,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     console.log(`Start running exchange  ${exchangeOptions.name} on periodic mode.`);
     for (const symbolOptions of exchangeOptions.symbols) {
       if (symbolOptions.enabled === false) continue;
-      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(
-        exchange,
-        symbolOptions.name
-      );
+      exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
       symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
       listenForOrderbooks(exchange, symbolOptions.name, (_symbol: string, orderbook: Orderbook) => {
         if (exchangeOptions.orderbooks === undefined) {
@@ -267,10 +262,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
     if (Array.isArray(exchangeOptions.symbols)) {
       for (const symbolOptions of exchangeOptions.symbols) {
         if (symbolOptions.enabled === false) continue;
-        exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(
-          exchange,
-          symbolOptions.name
-        );
+        exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = await getOrderbook(exchange, symbolOptions.name);
         symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
         listenForOrderbooks(exchange, symbolOptions.name, (symbol: string, orderbook: Orderbook) => {
           if (exchangeOptions.orderbooks === undefined) {
@@ -314,9 +306,9 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
               candlesticks,
               options,
               exchangeOptions,
-              symbolOptions
+              symbolOptions,
             );
-          }
+          },
         );
       }
     }
@@ -326,14 +318,10 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
 /** Binance REST HTTP-timeout (ms); erillinen recvWindow:sta. Nosta jos ESOCKETTIMEDOUT jatkuu hitaalla verkolla. */
 const DEFAULT_BINANCE_HTTP_REQUEST_TIMEOUT_MS = 300000;
 
-const startBinance = async (
-  exchangeOptions: ExchangeOptions,
-  opts?: { silent?: boolean }
-): Promise<Exchange> => {
+const startBinance = async (exchangeOptions: ExchangeOptions, opts?: { silent?: boolean }): Promise<Exchange> => {
   const exchange = new Binance();
   const httpMs =
-    typeof exchangeOptions.binanceHttpRequestTimeoutMs === "number" &&
-    exchangeOptions.binanceHttpRequestTimeoutMs > 0
+    typeof exchangeOptions.binanceHttpRequestTimeoutMs === "number" && exchangeOptions.binanceHttpRequestTimeoutMs > 0
       ? exchangeOptions.binanceHttpRequestTimeoutMs
       : DEFAULT_BINANCE_HTTP_REQUEST_TIMEOUT_MS;
   exchange.options({
@@ -361,10 +349,7 @@ const startBinance = async (
   return exchange;
 };
 
-const startNonKYC = async (
-  exchangeOptions: ExchangeOptions,
-  opts?: { silent?: boolean }
-): Promise<Exchange> => {
+const startNonKYC = async (exchangeOptions: ExchangeOptions, opts?: { silent?: boolean }): Promise<Exchange> => {
   if (exchangeOptions.forceStopOnDisconnect === undefined) {
     exchangeOptions.forceStopOnDisconnect = false;
   }
@@ -376,10 +361,7 @@ const startNonKYC = async (
   return exchange;
 };
 
-const startMexc = async (
-  exchangeOptions: ExchangeOptions,
-  opts?: { silent?: boolean }
-): Promise<Exchange> => {
+const startMexc = async (exchangeOptions: ExchangeOptions, opts?: { silent?: boolean }): Promise<Exchange> => {
   if (exchangeOptions.forceStopOnDisconnect === undefined) {
     exchangeOptions.forceStopOnDisconnect = false;
   }
@@ -387,6 +369,15 @@ const startMexc = async (
   await exchange.waitConnect();
   if (!opts?.silent) {
     console.log("Started Mexc");
+  }
+  return exchange;
+};
+
+const startDexTrade = async (exchangeOptions: ExchangeOptions, opts?: { silent?: boolean }): Promise<Exchange> => {
+  const exchange = new DexTrade(exchangeOptions.key, exchangeOptions.secret);
+  await exchange.waitConnect();
+  if (!opts?.silent) {
+    console.log("Started DexTrade");
   }
   return exchange;
 };
@@ -430,7 +421,7 @@ const hoobot = async () => {
       console.log("License key is valid. Enjoy the trading with Hoobot!");
     } else {
       console.log(
-        "Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check."
+        "Invalid license key. Please purchase a valid license. Contact toni.lukkaroinen@hoosat.fi to purchase Hoobot Hoobot. There are preventions to notice this if you remove this check.",
       );
     }
     let discord: Awaited<ReturnType<typeof loginDiscord>> = undefined;
@@ -455,6 +446,14 @@ const hoobot = async () => {
       }
       if (exchangeOptions.name === "mexc") {
         exchangeOptions.socket = await startMexc(exchangeOptions);
+        exchanges.push(exchangeOptions.socket);
+      }
+      if (exchangeOptions.name === "dextrade") {
+        const setupDexTrade = async (exchangeOptions: any): Promise<Exchange> => {
+          exchangeOptions.socket = await startDexTrade(exchangeOptions);
+          return exchangeOptions.socket;
+        };
+        exchangeOptions.socket = await setupDexTrade(exchangeOptions);
         exchanges.push(exchangeOptions.socket);
       }
       if (exchangeOptions.name === "binance") {
@@ -493,7 +492,7 @@ const getTargetTimestamp = (duration: string): number => {
 const getHistoricalTradesForDuration = async (
   exchange: Exchange,
   symbol: string,
-  duration: string
+  duration: string,
 ): Promise<Trade[]> => {
   const tradeHistory: Trade[] = await getTradeHistory(exchange, symbol);
   const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());
@@ -531,14 +530,14 @@ const stopHoobot = () => {
     console.log(
       "Symbols to to shut down %d in the exchange %s",
       options.exchanges[i].symbols?.length ?? 0,
-      options.exchanges[i].name
+      options.exchanges[i].name,
     );
     if (options.exchanges[i].name == "nonkyc") {
       for (var x = 0; x < (options.exchanges[i].symbols?.length ?? 0); x++) {
         for (var y = 0; y < (options.exchanges[i].symbols[x].timeframes?.length ?? 0); y++) {
           (socket as NonKYC).unsubscribeCandles(
             options.exchanges[i].symbols[x].name,
-            getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y])
+            getMinutesFromInterval(options.exchanges[i].symbols[x].timeframes[y]),
           );
         }
         (socket as NonKYC).unsubscribeOrderbook(options.exchanges[i].symbols[x].name);
@@ -642,7 +641,7 @@ const webServer = async () => {
   const mergeIncomingSymbolPreserveLiveRuntime = (
     incoming: Record<string, unknown>,
     existing: SymbolOptions | undefined,
-    policy?: SimToLiveSymbolMergePolicy
+    policy?: SimToLiveSymbolMergePolicy,
   ): Record<string, unknown> => {
     if (!existing) return { ...incoming };
 
@@ -744,7 +743,7 @@ const webServer = async () => {
     if (!Array.isArray(exchanges)) return null;
     const pickEx = (): { symbols?: unknown[] } | undefined => {
       const binance = exchanges.find(
-        (e: unknown) => e != null && typeof e === "object" && (e as { name?: string }).name === "binance"
+        (e: unknown) => e != null && typeof e === "object" && (e as { name?: string }).name === "binance",
       ) as { symbols?: unknown[] } | undefined;
       if (binance?.symbols?.length) return binance;
       for (const e of exchanges) {
@@ -771,10 +770,8 @@ const webServer = async () => {
       targetSymbolName?: string;
       applyToAll?: boolean;
       variant?: unknown;
-    }
-  ):
-    | { ok: true; appliedSymbols: string[]; basename: string }
-    | { ok: false; status: number; error: string } => {
+    },
+  ): { ok: true; appliedSymbols: string[]; basename: string } | { ok: false; status: number; error: string } => {
     const patch = extractSymbolPatchFromGridVariant(body.variant);
     if (patch === null) {
       return {
@@ -946,10 +943,7 @@ const webServer = async () => {
     }
   };
 
-  const persistSimulationResult = (
-    result: SimulationApiResult,
-    opts?: { baselineConfig?: ConfigOptions }
-  ): void => {
+  const persistSimulationResult = (result: SimulationApiResult, opts?: { baselineConfig?: ConfigOptions }): void => {
     try {
       if (!result.ok && "aborted" in result && result.aborted === true) {
         return;
@@ -957,7 +951,11 @@ const webServer = async () => {
       if (!existsSync(simulationDir)) mkdirSync(simulationDir, { recursive: true });
       let resultToStore = result;
       if (result.ok && ("persistedAt" in result || "summarySource" in result)) {
-        const { persistedAt: _pa, summarySource: _ss, ...rest } = result as Extract<SimulationApiResult, { ok: true }> & {
+        const {
+          persistedAt: _pa,
+          summarySource: _ss,
+          ...rest
+        } = result as Extract<SimulationApiResult, { ok: true }> & {
           persistedAt?: string;
           summarySource?: string;
         };
@@ -1053,10 +1051,11 @@ const webServer = async () => {
     return null;
   };
 
-  const loadPersistedSimulationResult = (): SimulationApiResult | null => loadPersistedSimulationWithMeta()?.result ?? null;
+  const loadPersistedSimulationResult = (): SimulationApiResult | null =>
+    loadPersistedSimulationWithMeta()?.result ?? null;
 
   const enrichLastResultMetaForApi = (
-    last: SimulationApiResult
+    last: SimulationApiResult,
   ): { persistedAt?: string; summarySource?: "simulate-last" | "grid-last" | "grid-dump" } => {
     if (!last.ok) return {};
     try {
@@ -1137,7 +1136,7 @@ const webServer = async () => {
         Array.isArray(e.symbols) &&
         e.symbols.length > 0 &&
         e.symbols[0] != null &&
-        typeof e.symbols[0] === "object"
+        typeof e.symbols[0] === "object",
     );
     if (!exWithSym) return undefined;
     const symClone = JSON.parse(JSON.stringify(exWithSym.symbols[0])) as Record<string, unknown>;
@@ -1154,7 +1153,7 @@ const webServer = async () => {
   /** Grid baseline (variantIndex 0, patch {}): rakenna variantti baselineConfig / snapshot-tiedostosta. */
   const resolveGridSummaryVariant = (
     item: { variantIndex?: number; variant?: unknown },
-    dump: { baselineConfig?: ConfigOptions; baselineOptionsSnapshotFile?: string }
+    dump: { baselineConfig?: ConfigOptions; baselineOptionsSnapshotFile?: string },
   ): { variant: unknown; baselineOptionsSnapshotFile?: string; hasGridBaselineSnapshot: boolean } => {
     if (isNonemptyVariantPatch(item.variant)) {
       return { variant: item.variant, hasGridBaselineSnapshot: false };
@@ -1213,14 +1212,12 @@ const webServer = async () => {
           }
         }
         const progress = readJsonIfExists<{ results?: Array<{ result?: { ok?: boolean } }> }>(
-          path.join(simulationDir, "grid-progress-summary.json")
+          path.join(simulationDir, "grid-progress-summary.json"),
         );
         if (progress?.results) {
           gridProgressResultCount = progress.results.filter((r) => r?.result?.ok).length;
         }
-        const gridLast = readJsonIfExists<{ results?: Array<{ result?: { ok?: boolean } }> }>(
-          gridLastSummaryFile
-        );
+        const gridLast = readJsonIfExists<{ results?: Array<{ result?: { ok?: boolean } }> }>(gridLastSummaryFile);
         if (gridLast?.results) {
           gridLastOkCount = gridLast.results.filter((r) => r?.result?.ok).length;
         }
@@ -1355,16 +1352,11 @@ const webServer = async () => {
             candleRows: r.candleRows,
             variant: resolvedVariant,
             values: flattenLeafValues(
-              resolvedVariant != null && typeof resolvedVariant === "object" ? resolvedVariant : {}
+              resolvedVariant != null && typeof resolvedVariant === "object" ? resolvedVariant : {},
             ),
             hasPersistedBaseline: (() => {
               const b = parsed.baselineConfig;
-              return !!(
-                b &&
-                typeof b === "object" &&
-                Array.isArray(b.exchanges) &&
-                b.exchanges.length > 0
-              );
+              return !!(b && typeof b === "object" && Array.isArray(b.exchanges) && b.exchanges.length > 0);
             })(),
           };
           const key = `${row.file}|${row.roi}|${row.finalPortfolio}|${row.candleRows}`;
@@ -1406,7 +1398,7 @@ const webServer = async () => {
             {
               baselineConfig: cached.baselineConfig,
               baselineOptionsSnapshotFile: cached.baselineOptionsSnapshotFile,
-            }
+            },
           );
           const row: SimulationRunSummaryRow = {
             source: "grid-cache",
@@ -1424,9 +1416,7 @@ const webServer = async () => {
             hasGridBaselineSnapshot: resolvedGrid.hasGridBaselineSnapshot,
             values: (() => {
               const fromCache =
-                cached.values != null &&
-                typeof cached.values === "object" &&
-                Object.keys(cached.values).length > 0
+                cached.values != null && typeof cached.values === "object" && Object.keys(cached.values).length > 0
                   ? { ...cached.values }
                   : null;
               const flat = fromCache ?? flattenLeafValues(resolvedGrid.variant);
@@ -1497,7 +1487,7 @@ const webServer = async () => {
     logger.warn(
       "Frontend folder not found. Tried:",
       candidates.join(", "),
-      "- Run 'npm run build' to copy Frontend into build/"
+      "- Run 'npm run build' to copy Frontend into build/",
     );
   } else {
     logger.info("Serving frontend from:", frontendPath);
@@ -1519,7 +1509,7 @@ const webServer = async () => {
       return;
     }
     const useLastRaw = req.query.useLast;
-    const useLast = String(Array.isArray(useLastRaw) ? useLastRaw[0] : useLastRaw ?? "").toLowerCase() === "true";
+    const useLast = String(Array.isArray(useLastRaw) ? useLastRaw[0] : (useLastRaw ?? "")).toLowerCase() === "true";
     if (useLast) {
       const last = simulateLastResult ?? loadPersistedSimulationResult();
       if (last) {
@@ -1545,9 +1535,15 @@ const webServer = async () => {
       }
     }
     const baselineSnapshot = maskConfigSecretsForExport(JSON.parse(JSON.stringify(cfg)) as ConfigOptions);
-    const result = await runSimulationWithConfig(cfg, undefined, () => simulateAbortRequested, (p) => {
-      simulateProgress = p;
-    }, { saveCheckpoints: true });
+    const result = await runSimulationWithConfig(
+      cfg,
+      undefined,
+      () => simulateAbortRequested,
+      (p) => {
+        simulateProgress = p;
+      },
+      { saveCheckpoints: true },
+    );
     simulateRunning = false;
     simulateProgress = null;
     simulateLastResult = result;
@@ -1603,7 +1599,7 @@ const webServer = async () => {
       const baselineSnapshot = maskConfigSecretsForExport(JSON.parse(JSON.stringify(cfg)) as ConfigOptions);
       const simCacheKey = sha256({
         config: cfg,
-        years: Number.isFinite(yearsNum) && yearsNum >= 0 ? yearsNum : cfg.simulationHistoryYears ?? null,
+        years: Number.isFinite(yearsNum) && yearsNum >= 0 ? yearsNum : (cfg.simulationHistoryYears ?? null),
         dataSnapshot: getCandlestoreSnapshot(),
       });
       const simCacheFile = path.join(simulationSingleCacheDir, `${simCacheKey}.json`);
@@ -1627,7 +1623,7 @@ const webServer = async () => {
         (p) => {
           simulateProgress = p;
         },
-        { resumeFromFile: resume, checkpointPath, saveCheckpoints: true }
+        { resumeFromFile: resume, checkpointPath, saveCheckpoints: true },
       )
         .then((r) => {
           simulateLastResult = r;
@@ -1762,8 +1758,7 @@ const webServer = async () => {
       return;
     }
     const minRoiRaw = req.query.minRoi;
-    const minRoi =
-      minRoiRaw != null && String(minRoiRaw).trim() !== "" ? Number(String(minRoiRaw).trim()) : undefined;
+    const minRoi = minRoiRaw != null && String(minRoiRaw).trim() !== "" ? Number(String(minRoiRaw).trim()) : undefined;
     const minRoiPercentRaw = req.query.minRoiPercent;
     const minRoiFromPercent =
       minRoiPercentRaw != null && String(minRoiPercentRaw).trim() !== ""
@@ -1877,8 +1872,7 @@ const webServer = async () => {
       typeof body.configPath === "string" && String(body.configPath).trim() !== ""
         ? String(body.configPath).trim()
         : "";
-    const relPath =
-      pathFromBody || fresh.simGrid?.configPath || "settings/sim-grid.example.json";
+    const relPath = pathFromBody || fresh.simGrid?.configPath || "settings/sim-grid.example.json";
     const absPath = resolveProjectRelativePath(relPath);
     if (!existsSync(absPath)) {
       res.status(400).json({
@@ -1909,7 +1903,7 @@ const webServer = async () => {
         });
       }
       console.log(
-        `[sim-grid] Tulos palautettiin välimuistista (sama grid + asetukset) — ei uutta ajoa. Polku: ${relPath}`
+        `[sim-grid] Tulos palautettiin välimuistista (sama grid + asetukset) — ei uutta ajoa. Polku: ${relPath}`,
       );
       res.json({
         ok: true,
@@ -1928,9 +1922,13 @@ const webServer = async () => {
     simGridProgress = null;
     console.log(`[sim-grid] Käynnistetään taustalla: ${relPath}`);
     setImmediate(() => {
-      executeSimGrid(absPath, () => simGridAbortRequested, (p) => {
-        simGridProgress = p;
-      })
+      executeSimGrid(
+        absPath,
+        () => simGridAbortRequested,
+        (p) => {
+          simGridProgress = p;
+        },
+      )
         .then((summary) => {
           simGridLastSummary = summary;
           writeJsonSafe(gridCacheFile, { savedAt: new Date().toISOString(), summary });
@@ -2008,7 +2006,7 @@ const webServer = async () => {
 
   const mergeSettingsForSave = (
     current: Record<string, unknown>,
-    incoming: Record<string, unknown>
+    incoming: Record<string, unknown>,
   ): Record<string, unknown> => {
     const merged = JSON.parse(JSON.stringify(incoming)) as Record<string, unknown>;
     const curEx = current.exchanges as Array<{ key?: string; secret?: string }> | undefined;
@@ -2030,7 +2028,11 @@ const webServer = async () => {
       const curSg = current.simGrid as Record<string, unknown>;
       const inSg = merged.simGrid as Record<string, unknown>;
       const inPath = inSg.configPath;
-      if ((inPath === undefined || inPath === "" || inPath === null) && curSg.configPath != null && curSg.configPath !== "") {
+      if (
+        (inPath === undefined || inPath === "" || inPath === null) &&
+        curSg.configPath != null &&
+        curSg.configPath !== ""
+      ) {
         inSg.configPath = curSg.configPath;
       }
       if (inSg.enabled === undefined && curSg.enabled !== undefined) {
@@ -2282,10 +2284,7 @@ const webServer = async () => {
       if (!out.ok) {
         res.status(out.status).json({
           ok: false,
-          error:
-            out.status === 400
-              ? out.error.replace(/^Asetustiedostoa/, "Simulaatio-asetustiedostoa")
-              : out.error,
+          error: out.status === 400 ? out.error.replace(/^Asetustiedostoa/, "Simulaatio-asetustiedostoa") : out.error,
         });
         return;
       }
@@ -2346,9 +2345,7 @@ const webServer = async () => {
     }
     try {
       const body =
-        req.body && typeof req.body === "object"
-          ? (req.body as { baselineOptionsSnapshotFile?: unknown })
-          : {};
+        req.body && typeof req.body === "object" ? (req.body as { baselineOptionsSnapshotFile?: unknown }) : {};
       const snapFromBody =
         typeof body.baselineOptionsSnapshotFile === "string" ? body.baselineOptionsSnapshotFile.trim() : "";
       let baseline: ConfigOptions | undefined;
@@ -2469,7 +2466,8 @@ const webServer = async () => {
     if (isSimulateInstance) {
       res.status(403).json({
         ok: false,
-        error: "Tämä on simulaatiopalvelin. Käynnistä live-botti erillisessä Hoobot-prosessissa (SIMULATE ei asetettu), tai kutsu tämä endpointti live-portista (esim. 5656).",
+        error:
+          "Tämä on simulaatiopalvelin. Käynnistä live-botti erillisessä Hoobot-prosessissa (SIMULATE ei asetettu), tai kutsu tämä endpointti live-portista (esim. 5656).",
       });
       return;
     }
@@ -2514,6 +2512,8 @@ const webServer = async () => {
         exchange = await startNonKYC(exchangeOptions, { silent: true });
       } else if (exchangeOptions.name === "mexc") {
         exchange = await startMexc(exchangeOptions, { silent: true });
+      } else if (exchangeOptions.name === "dextrade") {
+        exchange = await startDexTrade(exchangeOptions, { silent: true });
       } else {
         res.status(400).json({ error: `Exchange '${exchangeOptions.name}' not supported for PNL dashboard` });
         return;
@@ -2603,7 +2603,7 @@ const webServer = async () => {
       logger.info(`Open Hoobot at http://localhost:${PORT}${isSimulateInstance ? " (simulaatio-istunto)" : ""}`);
       if (isSimulateInstance) {
         console.log(
-          "[simulate] Palvelin odottaa. Käynnistä ajo UI:ssa (Simulaatio → Run Simulation) tai POST /simulate/start."
+          "[simulate] Palvelin odottaa. Käynnistä ajo UI:ssa (Simulaatio → Run Simulation) tai POST /simulate/start.",
         );
         console.log("[simulate] Eteneminen: SIM_PROGRESS_CONSOLE=false poistaa replay-rivit terminaalista.");
       }
@@ -2612,7 +2612,7 @@ const webServer = async () => {
     server.on("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "EADDRINUSE") {
         console.error(
-          `[Hoobot] Portti ${PORT} on jo käytössä. Pysäytä vanha prosessi tai käytä PORT=5658 npm run simulate:start`
+          `[Hoobot] Portti ${PORT} on jo käytössä. Pysäytä vanha prosessi tai käytä PORT=5658 npm run simulate:start`,
         );
       }
       reject(err);
@@ -2640,8 +2640,8 @@ const handleRejection = (reason: unknown) => {
           reason: extra,
         },
         null,
-        4
-      )
+        4,
+      ),
     );
   } catch {
     // ignore

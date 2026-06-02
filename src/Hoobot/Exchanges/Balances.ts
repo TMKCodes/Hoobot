@@ -27,7 +27,7 @@
 
 import fs from "fs";
 import { toSymbolKey, type ExchangeOptions } from "../Utilities/Args";
-import { Exchange, isBinance, isNonKYC } from "./Exchange";
+import { Exchange, isBinance, isNonKYC, isDexTrade } from "./Exchange";
 import { logToFile } from "../Utilities/LogToFile";
 
 export interface DatedBalances {
@@ -150,6 +150,25 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
     } else {
       // Possibly build empty currentBalances.
     }
+  } else if (isDexTrade(exchange)) {
+    const balances = await exchange.getTradingBalance();
+    for (const balance of balances) {
+      const amount = balance.balances?.available ?? balance.balance_available ?? 0;
+      const iso = balance.currency?.iso3;
+      if (!iso) continue;
+      if (iso === "USDT") {
+        currentBalances[iso] = { crypto: amount, usdt: amount };
+      } else {
+        let fiatAmount = 0;
+        try {
+          const ticker = await exchange.getTicker(iso + "USDT");
+          if (ticker?.last) fiatAmount = ticker.last * amount;
+        } catch {
+          // Asset may not have a USDT pair — leave fiatAmount as 0
+        }
+        currentBalances[iso] = { crypto: amount, usdt: fiatAmount };
+      }
+    }
   }
   const balanceAssets = Object.keys(currentBalances);
   for (const balanceAsset of balanceAssets) {
@@ -176,7 +195,7 @@ const BINANCE_BALANCE_DATA_ERROR_REFRESH_MS = 30_000;
  */
 export const createBinanceBalanceDataErrorLogBridge = (
   exchange: Exchange,
-  exchangeOptions: ExchangeOptions
+  exchangeOptions: ExchangeOptions,
 ): ((...args: unknown[]) => void) => {
   let lastRestRefreshAt = 0;
   return (...args: unknown[]): void => {
