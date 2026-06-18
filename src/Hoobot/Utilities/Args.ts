@@ -449,6 +449,8 @@ export interface SymbolOptions {
   };
   /** Market Making mode: two-sided limit order quoting around the mid price. */
   marketMaking?: {
+    /** Initial quote-currency amount allocated per slot (e.g. 50 = spend at least 50 USDT per slot). */
+    startingSlotQuote: number;
     /** Full bid-ask spread as % of mid price (e.g. 0.5 = 0.5 %). Minimum effective value: 0.01 %. */
     spreadPercent: number;
     /** Number of price levels on each side, 1–5. Each successive level is offset by levelSpacingPercent. */
@@ -469,6 +471,10 @@ export interface SymbolOptions {
     maxQuoteExposure?: number;
     /** Maximum total base currency committed to open asks (exposure cap). Omit for no cap. */
     maxBaseExposure?: number;
+    /** Fixed mid price for the market making strategy. */
+    fixedMidPrice?: number;
+    /** Static mid price for the market making strategy. */
+    staticMidPrice?: number;
   };
 }
 

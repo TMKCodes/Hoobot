@@ -34,6 +34,7 @@ import {
   Trade,
   calculatePNLPercentageForLong,
   calculatePNLPercentageForShort,
+  listenForTrades,
 } from "./Hoobot/Exchanges/Trades";
 import { hilow } from "./Hoobot/Modes/HiLow";
 import { extreme } from "./Hoobot/Modes/Extreme";
@@ -46,7 +47,7 @@ import { Mexc } from "./Hoobot/Exchanges/Mexc/Mexc";
 import { DexTrade } from "./Hoobot/Exchanges/DexTrade/DexTrade";
 import { gridTrading } from "./Hoobot/Modes/Grid";
 import { periodic } from "./Hoobot/Modes/Periodic";
-import { marketMaking } from "./Hoobot/Modes/MarketMaking";
+import { initMarketMaking, handleTradeUpdate } from "./Hoobot/Modes/MarketMaking";
 import { fileURLToPath } from "url";
 import express from "express";
 import { createHash } from "crypto";
@@ -298,7 +299,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
         symbolFilters[toSymbolKey(symbolOptions.name)] = await getFilters(exchange, symbolOptions.name);
         // Initial run — place orders immediately on startup without waiting for the first orderbook event.
         try {
-          await marketMaking(
+          await initMarketMaking(
             discord,
             exchange,
             consoleLogger(),
@@ -315,23 +316,16 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           );
           console.error(`marketmaking init ${symbolOptions.name}:`, err);
         }
-        listenForOrderbooks(exchange, symbolOptions.name, async (_symbol: string, orderbook: Orderbook) => {
-          if (exchangeOptions.orderbooks === undefined) {
-            exchangeOptions.orderbooks = {};
-          }
-          exchangeOptions.orderbooks[toSymbolKey(symbolOptions.name)] = orderbook;
-          const logger = consoleLogger();
+        listenForTrades(exchange, symbolOptions.name, async (trades: Trade) => {
           try {
-            await marketMaking(
-              discord,
+            handleTradeUpdate(
               exchange,
-              logger,
+              consoleLogger(),
               symbolOptions.name,
-              orderbook,
-              options,
               exchangeOptions,
               symbolOptions,
-            );
+              trades
+            )
           } catch (err) {
             logToFile(
               "./logs/error.log",
@@ -2693,7 +2687,10 @@ process.on("unhandledRejection", handleRejection);
 process.on("uncaughtException", handleUncaughtException);
 
 if (process.env.NOWEBUI === "true") {
-  hoobot().catch(handleRejection);
+  options.running = true;
+  const optionsInFile = parseArgs();
+  optionsInFile.running = true;
+  hoobot();
 } else {
   // Älä autokäynnistä live-kauppaa simulaatio-istunnossa (SIMULATE=true, oma portti)
   if (options.running && process.env.SIMULATE !== "true") {
