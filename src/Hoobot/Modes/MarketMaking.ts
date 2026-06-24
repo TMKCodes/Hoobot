@@ -52,6 +52,7 @@ interface MmState {
   lockTimestamp: number;
   slots: Map<MmSlotKey, MmGridSlot>;
   recentOwnOrders: Record<string, MmRecentOwnOrder>;
+  openOrders: Order[]
 }
 
 const mmStateMap = new Map<string, MmState>();
@@ -66,6 +67,7 @@ const getMmState = (symbolKey: string): MmState => {
       lockTimestamp: 0,
       slots: new Map<MmSlotKey, MmGridSlot>(),
       recentOwnOrders: {},
+      openOrders: []
     });
   }
   return mmStateMap.get(symbolKey)!;
@@ -277,12 +279,6 @@ const ensureSlotSkeleton = (state: MmState, levels: MmGridLevel[]) => {
   state.slots = nextSlots;
 };
 
-const getSlotByOrderId = (state: MmState, orderId: string): MmGridSlot | undefined => {
-  for (const slot of state.slots.values()) {
-    if (slot.activeOrderId === orderId) return slot;
-  }
-  return undefined;
-};
 
 const pruneRecentOwnOrders = (state: MmState) => {
   const now = Date.now();
@@ -447,8 +443,7 @@ const placeFlippedOrder = async (
   consoleLogger.print();
 };
 
-// NEW: Reconcile missing orders (handles cancellations, expirations, etc.)
-const reconcileMissingOrders = async (
+const reconcileGridOrders = async (
   exchange: Exchange,
   consoleLogger: ConsoleLogger,
   symbol: string,
@@ -456,25 +451,28 @@ const reconcileMissingOrders = async (
   _symbolOptions: SymbolOptions,
   state: MmState,
 ): Promise<void> => {
-  if (state.slots.size === 0) return;
+  if (state.slots.size === 0 || state.isLocked) return;
 
   try {
-    const openOrders = await getOpenOrders(exchange, symbol);
-    const activeOrderIds = new Set(openOrders.map(o => String(o.orderId)));
-
-    for (const slot of state.slots.values()) {
-      if (slot.activeOrderId && !activeOrderIds.has(slot.activeOrderId)) {
-        consoleLogger.push(`MM ${symbol}`, `⚠️ Detected missing order for slot ${slot.slotKey} (${slot.currentSide} @ ${slot.restingPrice.toFixed(8)}). Flipping...`);
-        consoleLogger.print();
-
-        setFlippedSlotState(slot, flipSide(slot.currentSide), 'missing-order', symbol, consoleLogger);
-        const filter = symbolFilters[toSymbolKey(symbol)];
-        await placeFlippedOrder(exchange, consoleLogger, symbol, exchangeOptions, slot, filter);
+    const currentOpenOrders = await getOpenOrders(exchange, symbol);
+    // compare currentOpenOrders to state.openOrders to detect changes
+    for (const order of state.openOrders) {
+      const stillOpen = currentOpenOrders.find(o => o.orderId === order.orderId);
+      if (!stillOpen) {
+        const slot = [...state.slots.values()].find(s => s.activeOrderId === order.orderId);
+        if (slot) {
+          setFlippedSlotState(slot, flipSide(slot.currentSide), "order no longer open", symbol, consoleLogger);
+          await placeFlippedOrder(exchange, consoleLogger, symbol, exchangeOptions, slot, symbolFilters[toSymbolKey(symbol)]);
+        }
       }
     }
   } catch (error: any) {
-    logToFile("./logs/mm-error.log", `Reconcile missing orders failed ${symbol}: ${error?.message}`);
+    logToFile("./logs/mm-error.log", `Reconcile failed ${symbol}: ${error?.message}`);
   }
+  
+  state.openOrders = await getOpenOrders(exchange, symbol);
+
+  consoleLogger.print();
 };
 
 export const handleTradeUpdate = async (
@@ -486,30 +484,14 @@ export const handleTradeUpdate = async (
   trade: Trade,
 ): Promise<void> => {
   if (!symbolOptions?.marketMaking || symbolOptions.enabled === false) return;
+
   const state = getMmState(toSymbolKey(symbol));
   if (state.slots.size === 0) return;
 
-  // Handle fill
-  const slot = getSlotFillCandidateFromTrade(state.slots.values(), trade);
-  if (slot) {
-    const fillQty = Number(trade.qty) || 0;
-    const remaining = Math.max(0, slot.openQtyBase - fillQty);
-    consoleLogger.push(`MM ${symbol}`, `🔄 Trade fill on ${slot.slotKey} @ ${Number(trade.price).toFixed(10)}`);
-    consoleLogger.print();
-
-    if (remaining < Math.max(slot.openQtyBase * 0.1, 1e-8)) {
-      setFlippedSlotState(slot, flipSide(slot.currentSide), 'trade', symbol, consoleLogger);
-      slot.activeOrderId = null;
-      slot.openQtyBase = 0;
-      const filter = symbolFilters[toSymbolKey(symbol)];
-      await placeFlippedOrder(exchange, consoleLogger, symbol, exchangeOptions, slot, filter);
-    } else {
-      slot.openQtyBase = remaining;
-    }
-  }
-
-  // Also reconcile any other missing orders (robustness)
-  await reconcileMissingOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
+  consoleLogger.push(`MM ${symbol}`, `Trade update received @ ${Number(trade.price).toFixed(8)} (${trade.qty} qty). Triggering reconciliation...`);
+  
+  // Just trigger full reconciliation instead of trying to match orderId
+  await reconcileGridOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
 };
 
 export const initMarketMaking = async (
@@ -535,8 +517,8 @@ export const initMarketMaking = async (
   // 2. Cancel everything
   consoleLogger.push(`MM ${symbol}`, "Cancelling all existing open orders...");
   consoleLogger.print();
-  const openOrders = await getOpenOrders(exchange, symbol);
-  for (const order of openOrders) {
+  state.openOrders = await getOpenOrders(exchange, symbol);
+  for (const order of state.openOrders) {
     await cancelOrder(exchange, symbol, order.orderId).catch(() => { });
     await delay(800);
   }
@@ -612,5 +594,8 @@ export const initMarketMaking = async (
   } else {
     consoleLogger.push(`MM ${symbol}`, "⚠️ No placements generated (insufficient balance?).");
   }
+
+  state.openOrders = await getOpenOrders(exchange, symbol);
+
   consoleLogger.print();
 };

@@ -96,7 +96,7 @@ export const getFilters = async (exchange: Exchange, pair: string): Promise<Filt
     minPrice: 0,
     maxPrice: 100000000000000,
     tickSize: 0.000000000001,
-    minQty: 1.000000000001,
+    minQty: 1.01,
     maxQty: 100000000000000,
     stepSize: 0.000000000001,
     minNotional: 0.000000001,

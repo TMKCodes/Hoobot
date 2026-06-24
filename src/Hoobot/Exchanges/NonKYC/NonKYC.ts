@@ -25,14 +25,14 @@ export interface NonKYCResponse {
   method?: string;
   params?: NonKYCTickers | NonKYCOrderbook | NonKYCCandles | NonKYCTrades;
   result?:
-    | NonKYCAsset
-    | NonKYCAsset[]
-    | NonKYCMarket
-    | NonKYCMarket[]
-    | NonKYCBalance[]
-    | NonKYCOrder
-    | NonKYCOrder[]
-    | boolean;
+  | NonKYCAsset
+  | NonKYCAsset[]
+  | NonKYCMarket
+  | NonKYCMarket[]
+  | NonKYCBalance[]
+  | NonKYCOrder
+  | NonKYCOrder[]
+  | boolean;
   error?: NonKYCError;
   id: number;
   name?: string;
@@ -389,6 +389,44 @@ export class NonKYC extends EventEmitter {
     });
   };
 
+
+  private fetchWithTimeout = async (
+    input: RequestInfo | URL,
+    init: RequestInit,
+    timeoutMs = 5000
+  ): Promise<Response> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  private waitForResponse<T>(messageId: number, timeout = 5000): Promise<T> {
+    return new Promise((resolve, reject) => {
+
+      const event = `response_${messageId}`;
+
+      const timer = setTimeout(() => {
+        this.emitter.removeListener(event, handler);
+        reject(new Error(`Timed out waiting for ${event}`));
+      }, timeout);
+
+      const handler = (response: NonKYCResponse) => {
+        clearTimeout(timer);
+        resolve(response.result as T);
+      };
+
+      this.emitter.once(event, handler);
+    });
+  }
+
   private connect = async (): Promise<WebSocket> => {
     this.ws = new WebSocket(this.WebSocketURL);
 
@@ -529,16 +567,7 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as boolean;
-        if (result == true) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+     return this.waitForResponse<boolean>(messageId);
   };
 
   public newOrder = async (
@@ -564,16 +593,7 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCOrder;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+     return this.waitForResponse<NonKYCOrder>(messageId);
   };
 
   public cancelOrder = async (orderId: string): Promise<NonKYCOrder> => {
@@ -586,16 +606,7 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCOrder;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+     return this.waitForResponse<NonKYCOrder>(messageId);
   };
 
   public getOrders = async (symbol: string): Promise<NonKYCOrder[]> => {
@@ -607,16 +618,7 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCOrder[];
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    return this.waitForResponse<NonKYCOrder[]>(messageId);
   };
 
   public getTradingBalance = async (): Promise<NonKYCBalance[]> => {
@@ -626,16 +628,7 @@ export class NonKYC extends EventEmitter {
       params: {},
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCBalance[];
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+     return this.waitForResponse<NonKYCBalance[]>(messageId);
   };
 
   public subscribeReports = async (callback: (response: NonKYCResponse) => void) => {
@@ -674,16 +667,7 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCAsset;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+     return this.waitForResponse<NonKYCAsset>(messageId);
   };
 
   public getAssets = async (): Promise<NonKYCAsset[]> => {
@@ -693,16 +677,7 @@ export class NonKYC extends EventEmitter {
       params: {},
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCAsset[];
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    return this.waitForResponse<NonKYCAsset[]>(messageId);
   };
 
   public getMarket = async (symbol: string): Promise<NonKYCMarket> => {
@@ -714,16 +689,8 @@ export class NonKYC extends EventEmitter {
       },
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCMarket;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    
+     return this.waitForResponse<NonKYCMarket>(messageId);
   };
 
   public getMarkets = async (): Promise<NonKYCMarket[]> => {
@@ -733,16 +700,8 @@ export class NonKYC extends EventEmitter {
       params: {},
       id: messageId,
     });
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as NonKYCMarket[];
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    
+     return this.waitForResponse<NonKYCMarket[]>(messageId);
   };
 
   public getTrades = (
@@ -806,16 +765,8 @@ export class NonKYC extends EventEmitter {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.tickerCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as boolean;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    
+     return this.waitForResponse<boolean>(messageId);
   };
 
   public subscribeOrderbook = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
@@ -853,16 +804,7 @@ export class NonKYC extends EventEmitter {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.orderbookCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as boolean;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    return this.waitForResponse<boolean>(messageId);
   };
 
   public subscribeTrades = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
@@ -900,16 +842,8 @@ export class NonKYC extends EventEmitter {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.tradesCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as boolean;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    
+     return this.waitForResponse<boolean>(messageId);
   };
 
   public subscribeCandles = async (
@@ -952,16 +886,7 @@ export class NonKYC extends EventEmitter {
     });
     this.subscriptions = this.subscriptions.filter((sub) => sub.symbol !== symbol || !sub.candlesCallback);
     this.symbolCallbacks = this.symbolCallbacks.filter((scb) => scb.symbol !== symbol);
-    return new Promise((resolve, reject) => {
-      this.emitter.on(`response_${messageId}`, (response: NonKYCResponse) => {
-        const result = response.result as boolean;
-        if (result) {
-          resolve(result);
-        } else {
-          reject(response.error);
-        }
-      });
-    });
+    return this.waitForResponse<boolean>(messageId);
   };
 
   // NonKYC REST API calls
@@ -986,7 +911,7 @@ export class NonKYC extends EventEmitter {
       let attempts = 0;
       while (attempts < maxRetries) {
         try {
-          const response = await fetch(url, {
+          const response = await this.fetchWithTimeout(url, {
             method: method,
             headers: {
               Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
@@ -1013,7 +938,7 @@ export class NonKYC extends EventEmitter {
         let attempts = 0;
         while (attempts < maxRetries) {
           try {
-            const response = await fetch(url, {
+            const response = await this.fetchWithTimeout(url, {
               method: method,
               headers: {
                 Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
@@ -1039,7 +964,7 @@ export class NonKYC extends EventEmitter {
         let attempts = 0;
         while (attempts < maxRetries) {
           try {
-            const response = await fetch(url, {
+            const response = await this.fetchWithTimeout(url, {
               method: method,
               headers: {
                 Authorization: "Basic " + Buffer.from(this.key + ":" + this.secret).toString("base64"),
