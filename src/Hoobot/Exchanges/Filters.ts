@@ -1,5 +1,5 @@
 import { toSymbolKey } from "../Utilities/Args";
-import { Exchange, isBinance } from "./Exchange";
+import { Exchange, isBinance, isDexTrade } from "./Exchange";
 
 export interface Filter {
   minPrice: number;
@@ -87,10 +87,36 @@ export const fetchBinanceExchangeInfoPublic = async (timeoutMs = 120000): Promis
   }
 };
 
+const stepFromDecimals = (decimals: number | undefined, fallback: number): number => {
+  if (!Number.isFinite(decimals) || decimals === undefined || decimals < 0) return fallback;
+  return 1 / Math.pow(10, decimals);
+};
+
 export const getFilters = async (exchange: Exchange, pair: string): Promise<Filter> => {
   if (isBinance(exchange)) {
     const exchangeInfo = (await exchange.exchangeInfo()) as BinanceExchangeInfoPayload;
     return getFilterFromBinanceExchangeInfo(exchangeInfo, pair);
+  }
+  if (isDexTrade(exchange)) {
+    const pairInfo = await exchange.getPairInfo(pair);
+    if (pairInfo) {
+      const tickSize = stepFromDecimals(pairInfo.rate_decimal, 0.00000001);
+      const stepSize = stepFromDecimals(pairInfo.base_decimal, 0.00000001);
+      return {
+        minPrice: tickSize,
+        maxPrice: 100000000000000,
+        tickSize,
+        minQty: stepSize,
+        maxQty: 100000000000000,
+        stepSize,
+        minNotional: 0.000000001,
+        maxNotional: 100000000000000,
+        bidMultiplierUp: 0.000000000001,
+        bidMultiplierDown: 0.000000000001,
+        askMultiplierUp: 0.000000000001,
+        askMultiplierDown: 0.000000000001,
+      };
+    }
   }
   return {
     minPrice: 0,

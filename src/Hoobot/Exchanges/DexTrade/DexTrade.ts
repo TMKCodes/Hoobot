@@ -9,6 +9,113 @@ const getRequestId = (): string => Date.now().toString();
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+const normalizeDexTradePairKey = (pair: string): string => pair.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+const toDexTradeDecimalString = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    throw new Error(`DexTrade: invalid numeric value ${value}`);
+  }
+
+  const normalized = value.toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: 20,
+  });
+
+  return normalized.includes(".") ? normalized.replace(/\.0+$|(?<=\.[0-9]*?)0+$/g, "") : normalized;
+};
+
+const quantizeDexTradeValue = (value: number, decimals: number, direction: "down" | "nearest" = "nearest"): number => {
+  if (!Number.isFinite(value)) {
+    throw new Error(`DexTrade: invalid numeric value ${value}`);
+  }
+  if (!Number.isFinite(decimals) || decimals < 0) {
+    return value;
+  }
+
+  const factor = Math.pow(10, decimals);
+  const scaled = value * factor;
+  const rounded = direction === "down" ? Math.floor(scaled + 1e-9) : Math.round(scaled);
+  return rounded / factor;
+};
+
+const toDexTradePairDecimalString = (
+  value: number,
+  decimals: number | undefined,
+  direction: "down" | "nearest" = "nearest",
+): string => {
+  if (decimals === undefined) {
+    return toDexTradeDecimalString(value);
+  }
+  return toDexTradeDecimalString(quantizeDexTradeValue(value, decimals, direction));
+};
+
+const countDecimalPlaces = (value: string): number => {
+  const [, fractional = ""] = value.split(".");
+  return fractional.length;
+};
+
+const decimalStringToScaledBigInt = (value: string, scale: number): bigint => {
+  const trimmed = value.trim();
+  const negative = trimmed.startsWith("-");
+  const unsigned = trimmed.replace(/^[+-]/, "");
+  const [integerPartRaw, fractionalPartRaw = ""] = unsigned.split(".");
+  const integerPart = integerPartRaw === "" ? "0" : integerPartRaw;
+  const paddedFraction = (fractionalPartRaw + "0".repeat(scale)).slice(0, scale);
+  const digits = `${integerPart}${paddedFraction}`.replace(/^0+(?=\d)/, "") || "0";
+  const scaled = BigInt(digits);
+  return negative ? -scaled : scaled;
+};
+
+const scaledBigIntToDecimalString = (value: bigint, scale: number): string => {
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const digits = absolute.toString().padStart(scale + 1, "0");
+  const integerPart = scale === 0 ? digits : digits.slice(0, -scale) || "0";
+  const fractionalPart = scale === 0 ? "" : digits.slice(-scale).replace(/0+$/, "");
+  const formatted = fractionalPart.length > 0 ? `${integerPart}.${fractionalPart}` : integerPart;
+  return negative ? `-${formatted}` : formatted;
+};
+
+const quantizeToStepString = (value: number, step: string, direction: "down" | "up" | "nearest" = "down"): string => {
+  const valueString = toDexTradeDecimalString(value);
+  const parsedStep = Number(step);
+  if (!Number.isFinite(parsedStep) || parsedStep <= 0) {
+    return toDexTradeDecimalString(value);
+  }
+
+  const scale = Math.max(countDecimalPlaces(valueString), countDecimalPlaces(step));
+  const valueUnits = decimalStringToScaledBigInt(valueString, scale);
+  const stepUnits = decimalStringToScaledBigInt(step, scale);
+  if (stepUnits <= 0n) {
+    return valueString;
+  }
+
+  const quotient = valueUnits / stepUnits;
+  const remainder = valueUnits % stepUnits;
+
+  let roundedQuotient = quotient;
+  if (direction === "up" && remainder !== 0n) {
+    roundedQuotient += 1n;
+  } else if (direction === "nearest" && remainder !== 0n) {
+    const doubleRemainder = remainder * 2n;
+    if (doubleRemainder >= stepUnits) {
+      roundedQuotient += 1n;
+    }
+  }
+
+  return scaledBigIntToDecimalString(roundedQuotient * stepUnits, scale);
+};
+
+const extractDexTradeStep = (message: string | undefined, field: "volume" | "rate"): string | null => {
+  if (!message) return null;
+  const match = message.match(
+    field === "volume"
+      ? /Incorrect min step volume\. Step is ([0-9.]+)/i
+      : /Incorrect min step rate\. Step is ([0-9.]+)/i,
+  );
+  return match?.[1] ?? null;
+};
+
 /** Deep-sort object keys alphabetically (recursive). */
 const deepSortKeys = (obj: any): any => {
   if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return obj;
@@ -222,6 +329,7 @@ export class DexTrade extends EventEmitter {
   private socket: Socket | null = null;
   private pairCache: DexTradePair[] = [];
   private tickerCache = new Map<string, { expiresAt: number; value: DexTradeTicker | null }>();
+  private orderStepOverrides = new Map<string, { volumeStep?: string; rateStep?: string }>();
 
   private bookCallbacks: Map<string, (event: DexTradeSocketBookEvent) => void> = new Map();
   private histCallbacks: Map<string, (event: DexTradeSocketHistEvent) => void> = new Map();
@@ -354,7 +462,8 @@ export class DexTrade extends EventEmitter {
 
   public getPairInfo = async (pair: string): Promise<DexTradePair | undefined> => {
     await this.ensurePairCache();
-    return this.pairCache.find((p) => p.pair === pair);
+    const normalizedPair = normalizeDexTradePairKey(pair);
+    return this.pairCache.find((p) => normalizeDexTradePairKey(p.pair) === normalizedPair);
   };
 
   public hasPair = async (pair: string): Promise<boolean> => {
@@ -579,25 +688,62 @@ export class DexTrade extends EventEmitter {
     quantity: number,
     price: number = 0,
   ): Promise<DexTradeCreateOrderResult> => {
+    const pairInfo = await this.getPairInfo(symbol);
+    const pair = pairInfo?.pair ?? symbol;
+    const stepOverride = this.orderStepOverrides.get(pair) ?? {};
+    let volume = stepOverride.volumeStep
+      ? quantizeToStepString(quantity, stepOverride.volumeStep, side === "buy" ? "up" : "down")
+      : toDexTradePairDecimalString(quantity, pairInfo?.base_decimal, "down");
+    let rate = stepOverride.rateStep
+      ? quantizeToStepString(price, stepOverride.rateStep, "nearest")
+      : toDexTradePairDecimalString(price, pairInfo?.rate_decimal);
     const typeTradeMap: Record<string, number> = { limit: 0, market: 1 };
     const body: Record<string, any> = {
       type_trade: typeTradeMap[type] ?? 0,
       type: side === "buy" ? 0 : 1,
-      volume: quantity,
-      pair: symbol,
+      volume,
+      pair,
     };
-    if (type === "limit") body.rate = price;
-    const response = await this.privatePost("/private/create-order", body);
+    if (type === "limit") body.rate = rate;
+    let response = await this.privatePost("/private/create-order", body);
+    const stepVolume = extractDexTradeStep(response?.message ?? response?.error, "volume");
+    if (stepVolume) {
+      this.orderStepOverrides.set(pair, { ...stepOverride, volumeStep: stepVolume });
+    }
+    const correctedVolume = stepVolume ? quantizeToStepString(quantity, stepVolume, side === "buy" ? "up" : "down") : null;
+    if (correctedVolume && body.volume !== correctedVolume) {
+      volume = correctedVolume;
+      body.volume = volume;
+      response = await this.privatePost("/private/create-order", body);
+    }
+
+    const stepRate = extractDexTradeStep(response?.message ?? response?.error, "rate");
+    if (stepRate) {
+      const existingOverride = this.orderStepOverrides.get(pair) ?? {};
+      this.orderStepOverrides.set(pair, { ...existingOverride, rateStep: stepRate });
+    }
+    const correctedRate = stepRate ? quantizeToStepString(price, stepRate, "nearest") : null;
+    if (correctedRate && type === "limit" && body.rate !== correctedRate) {
+      rate = correctedRate;
+      body.rate = rate;
+      response = await this.privatePost("/private/create-order", body);
+    }
+
     if (response?.status && response?.data?.id) {
       return {
         id: response.data.id.toString(),
-        price: price.toString(),
-        quantity: quantity.toString(),
+        price: rate,
+        quantity: volume,
         side,
         status: "NEW",
         createdAt: Date.now(),
       };
     }
+    logToFile(
+      "./logs/error.log",
+      `DexTrade create-order failed pair=${pair} side=${side} type=${type} volume=${body.volume} rate=${String(body.rate ?? "")}` +
+        ` response=${JSON.stringify(response)}`,
+    );
     throw new Error(response?.message ?? response?.error ?? "DexTrade: failed to create order");
   };
 

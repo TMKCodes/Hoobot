@@ -462,7 +462,7 @@ export const placeSellOrder = async (
           "./logs/trades-dextrade.log",
           `${Date.now().toLocaleString("fi-FI")} ${symbol} sell at ${price} price, ${quantityInBase} qty`,
         );
-        const dexOrder = await exchange.newOrder(toSymbolKey(symbol), "sell", "limit", quantityInBase, price);
+        const dexOrder = await exchange.newOrder(symbol, "sell", "limit", quantityInBase, price);
         if (dexOrder) {
           return {
             symbol: toSymbolKey(symbol),
@@ -577,7 +577,7 @@ export const placeBuyOrder = async (
           "./logs/trades-dextrade.log",
           `${Date.now().toLocaleString("fi-FI")} ${symbol} buy at ${price} price, ${quantityInBase} qty`,
         );
-        const dexOrder = await exchange.newOrder(toSymbolKey(symbol), "buy", "limit", quantityInBase, price);
+        const dexOrder = await exchange.newOrder(symbol, "buy", "limit", quantityInBase, price);
         if (dexOrder) {
           return {
             symbol: toSymbolKey(symbol),

@@ -307,8 +307,8 @@ const buildSidePlacements = (
 
   for (const slot of sortedSlots) {
     const sizeBase = (side === "sell")
-      ? startingSlotAmount
-      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "down");
+      ? roundToStep(startingSlotAmount, stepSize, "down")
+      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "up");
 
     const notional = sizeBase * slot.restingPrice;
 
@@ -370,8 +370,8 @@ const placeStaticGridOrders = async (
       continue;
     }
     const order = isBuy ? await placeBuyOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2)
-                    : await placeSellOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2);
-    
+      : await placeSellOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2);
+
     if (order?.orderId) {
       slot.currentSide = placement.side;
       slot.restingPrice = Number(order.price) || placement.price;
@@ -469,7 +469,7 @@ const reconcileGridOrders = async (
   } catch (error: any) {
     logToFile("./logs/mm-error.log", `Reconcile failed ${symbol}: ${error?.message}`);
   }
-  
+
   state.openOrders = await getOpenOrders(exchange, symbol);
 
   consoleLogger.print();
@@ -489,7 +489,7 @@ export const handleTradeUpdate = async (
   if (state.slots.size === 0) return;
 
   consoleLogger.push(`MM ${symbol}`, `Trade update received @ ${Number(trade.price).toFixed(8)} (${trade.qty} qty). Triggering reconciliation...`);
-  
+
   // Just trigger full reconciliation instead of trying to match orderId
   await reconcileGridOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
 };
@@ -568,6 +568,7 @@ export const initMarketMaking = async (
 
   // 5. Place initial orders based on current balances
   const balances = await getCurrentBalances(exchange);
+
   const [base, quote] = symbol.split("/");
   const startingQuote = getStartingSlotQuoteNotional(opts, minNotional);
 
