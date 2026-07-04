@@ -413,28 +413,48 @@ const placeFlippedOrder = async (
   exchangeOptions: ExchangeOptions,
   slot: MmGridSlot,
   filter: any,
+  spreadPercent: number,           // Add this parameter
 ): Promise<void> => {
   const sizeBase = roundToStep(slot.targetSizeBase, filter?.stepSize ?? 0, "down");
   if (sizeBase <= 0) return;
-  const price = slot.restingPrice || slot.price;
+
   const minNotional = getEffectiveMinNotional(symbol, filter?.minNotional ?? 1e-9);
+  const originalPrice = slot.restingPrice || slot.price;
+
+  // === SPREAD CAPTURE LOGIC ===
+  let targetPrice: number;
+  const halfSpread = (spreadPercent / 100) / 2;
+
+  if (slot.currentSide === "buy") {
+    // Just bought → now sell HIGHER
+    targetPrice = roundToStep(originalPrice * (1 + halfSpread * 1.5), filter?.tickSize ?? 0, "up"); // slight buffer
+  } else {
+    // Just sold → now buy LOWER
+    targetPrice = roundToStep(originalPrice * (1 - halfSpread * 1.5), filter?.tickSize ?? 0, "down");
+  }
+
   try {
     let order;
     if (slot.currentSide === "buy") {
-      if (sizeBase * price < minNotional) return;
-      order = await placeBuyOrder(exchange, exchangeOptions, symbol, sizeBase, price, 2);
+      // Placing sell
+      if (sizeBase * targetPrice < minNotional) return;
+      order = await placeSellOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     } else {
-      if (sizeBase * price < minNotional) return;
-      order = await placeSellOrder(exchange, exchangeOptions, symbol, sizeBase, price, 2);
+      // Placing buy
+      if (sizeBase * targetPrice < minNotional) return;
+      order = await placeBuyOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     }
+
     if (order?.orderId) {
       slot.activeOrderId = String(order.orderId);
       slot.openQtyBase = Number(order.qty) || sizeBase;
-      slot.restingPrice = Number(order.price) || price;
+      slot.restingPrice = Number(order.price) || targetPrice; // update to new price
+
       rememberPlacedOrder(getMmState(toSymbolKey(symbol)), slot.activeOrderId, slot.restingPrice, slot.currentSide);
+
       consoleLogger.push(
         `MM ${symbol}`,
-        `✅ Re-placed ${slot.currentSide.toUpperCase()} ${sizeBase.toFixed(8)} @ ${price.toFixed(8)} after flip`,
+        `✅ Re-placed ${slot.currentSide.toUpperCase()} ${sizeBase.toFixed(8)} @ ${targetPrice.toFixed(8)} (+spread capture)`
       );
     }
   } catch (error: any) {
@@ -448,7 +468,7 @@ const reconcileGridOrders = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   exchangeOptions: ExchangeOptions,
-  _symbolOptions: SymbolOptions,
+  symbolOptions: SymbolOptions,
   state: MmState,
 ): Promise<void> => {
   if (state.slots.size === 0 || state.isLocked) return;
@@ -462,7 +482,15 @@ const reconcileGridOrders = async (
         const slot = [...state.slots.values()].find(s => s.activeOrderId === order.orderId);
         if (slot) {
           setFlippedSlotState(slot, flipSide(slot.currentSide), "order no longer open", symbol, consoleLogger);
-          await placeFlippedOrder(exchange, consoleLogger, symbol, exchangeOptions, slot, symbolFilters[toSymbolKey(symbol)]);
+          await placeFlippedOrder(
+            exchange,
+            consoleLogger,
+            symbol,
+            exchangeOptions,
+            slot,
+            symbolFilters[toSymbolKey(symbol)],
+            symbolOptions.marketMaking?.spreadPercent ?? 0.2,
+          );
         }
       }
     }

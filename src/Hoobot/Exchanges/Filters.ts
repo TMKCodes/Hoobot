@@ -24,7 +24,7 @@ export interface Filters {
 export type BinanceExchangeInfoPayload = {
   symbols: Array<{
     symbol: string;
-    filters: Array<{ filterType: string; [key: string]: string | number | undefined }>;
+    filters: Array<{ filterType: string;[key: string]: string | number | undefined }>;
   }>;
 };
 

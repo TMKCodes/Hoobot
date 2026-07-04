@@ -742,7 +742,7 @@ export class DexTrade extends EventEmitter {
     logToFile(
       "./logs/error.log",
       `DexTrade create-order failed pair=${pair} side=${side} type=${type} volume=${body.volume} rate=${String(body.rate ?? "")}` +
-        ` response=${JSON.stringify(response)}`,
+      ` response=${JSON.stringify(response)}`,
     );
     throw new Error(response?.message ?? response?.error ?? "DexTrade: failed to create order");
   };
