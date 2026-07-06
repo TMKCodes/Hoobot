@@ -411,11 +411,12 @@ const placeFlippedOrder = async (
   consoleLogger: ConsoleLogger,
   symbol: string,
   exchangeOptions: ExchangeOptions,
+  symbolOptions: SymbolOptions,
   slot: MmGridSlot,
   filter: any,
   spreadPercent: number,           // Add this parameter
 ): Promise<void> => {
-  const sizeBase = roundToStep(slot.targetSizeBase, filter?.stepSize ?? 0, "down");
+  var sizeBase = roundToStep(slot.targetSizeBase, filter?.stepSize ?? 0, "down");
   if (sizeBase <= 0) return;
 
   const minNotional = getEffectiveMinNotional(symbol, filter?.minNotional ?? 1e-9);
@@ -435,13 +436,22 @@ const placeFlippedOrder = async (
 
   try {
     let order;
+    var minSize = symbolOptions?.marketMaking?.startingSlotQuote ?? 5.01
     if (slot.currentSide === "buy") {
       // Placing sell
-      if (sizeBase * targetPrice < minNotional) return;
+      var notional = sizeBase * targetPrice
+      if (notional < minNotional) return;
+      if (notional < minSize) {
+        sizeBase = minSize / targetPrice
+      }
       order = await placeSellOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     } else {
       // Placing buy
-      if (sizeBase * targetPrice < minNotional) return;
+      var notional = sizeBase * targetPrice
+      if (notional < minNotional) return;
+      if (notional < minSize) {
+        sizeBase = minSize / targetPrice
+      }
       order = await placeBuyOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     }
 
@@ -487,6 +497,7 @@ const reconcileGridOrders = async (
             consoleLogger,
             symbol,
             exchangeOptions,
+            symbolOptions,
             slot,
             symbolFilters[toSymbolKey(symbol)],
             symbolOptions.marketMaking?.spreadPercent ?? 0.2,
