@@ -61,7 +61,9 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
     const symbols = Object.keys(prices);
     for (let i = 0; i < assets.length; i++) {
       const { available, onOrder } = balances[assets[i]];
-      const amount = parseFloat(available) + parseFloat(onOrder);
+      const availableNum = Number.isFinite(parseFloat(available)) ? parseFloat(available) : 0;
+      const onOrderNum = Number.isFinite(parseFloat(onOrder)) ? parseFloat(onOrder) : 0;
+      const amount = availableNum + onOrderNum;
       if (amount === 0) {
         currentBalances[assets[i]] = {
           crypto: 0,
@@ -106,14 +108,20 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
           let fiatAmount = 0;
           const price = prices.find((p) => toSymbolKey(p.symbol) === balance.asset + fiat);
           if (symbols.includes(balance.asset + fiat) && price?.lastPrice) {
-            fiatAmount = parseFloat(price.lastPrice) * amount;
+            const priceNum = parseFloat(price.lastPrice);
+            fiatAmount = Number.isFinite(priceNum) ? priceNum * amount : 0;
           } else if (symbols.includes(fiat + balance.asset) && price?.lastPrice) {
-            fiatAmount = amount / parseFloat(price.lastPrice);
+            const priceNum = parseFloat(price.lastPrice);
+            fiatAmount = Number.isFinite(priceNum) && priceNum > 0 ? amount / priceNum : 0;
           } else {
             const tempPrice = prices.find((p) => toSymbolKey(p.symbol) === "BTC" + balance.asset);
             if (price?.lastPrice && tempPrice?.lastPrice) {
-              let tempAmount = amount / parseFloat(tempPrice.lastPrice);
-              fiatAmount = parseFloat(price.lastPrice) * tempAmount;
+              const tempPriceNum = parseFloat(tempPrice.lastPrice);
+              const priceNum = parseFloat(price.lastPrice);
+              if (Number.isFinite(tempPriceNum) && tempPriceNum > 0 && Number.isFinite(priceNum)) {
+                const tempAmount = amount / tempPriceNum;
+                fiatAmount = priceNum * tempAmount;
+              }
             }
           }
           currentBalances[balance.asset] = {

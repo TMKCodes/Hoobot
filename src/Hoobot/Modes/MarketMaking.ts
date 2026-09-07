@@ -235,11 +235,12 @@ const buildStaticGridLevels = (
     const askKey = getPriceKey(roundedAsk);
 
     // Only add valid prices that are positive and make sense relative to the market
-    if (roundedBid > 0 && !seen.has(bidKey) && roundedBid < bestAsk) {
+    // Note: Allow levels to be placed even if outside current best bid/ask to handle wide spreads
+    if (roundedBid > 0 && !seen.has(bidKey) && (bestAsk <= 0 || roundedBid < bestAsk * 1.1)) {
       levels.push({ side: "buy", price: roundedBid, distanceIndex });
       seen.add(bidKey);
     }
-    if (roundedAsk > 0 && !seen.has(askKey) && roundedAsk > bestBid) {
+    if (roundedAsk > 0 && !seen.has(askKey) && (bestBid <= 0 || roundedAsk > bestBid * 0.9)) {
       levels.push({ side: "sell", price: roundedAsk, distanceIndex });
       seen.add(askKey);
     }
@@ -325,7 +326,7 @@ const buildSidePlacements = (
 
     const sizeBase = (side === "sell")
       ? roundToStep(startingSlotAmount, stepSize, "down")
-      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "down");
+      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "up");
 
     const notional = sizeBase * slot.restingPrice;
 
@@ -429,9 +430,9 @@ const placeStaticGridOrders = async (
         rememberPlacedOrder(state, slot.activeOrderId, slot.restingPrice, placement.side);
 
         if (isBuy) {
-          remainingQuote -= actualQuoteRequired;
+          remainingQuote = Math.max(0, remainingQuote - actualQuoteRequired);
         } else {
-          remainingBase -= actualSizeBase;
+          remainingBase = Math.max(0, remainingBase - actualSizeBase);
         }
 
         consoleLogger.push(
@@ -442,9 +443,10 @@ const placeStaticGridOrders = async (
         consoleLogger.push(`MM ${symbol}`, `⚠️ No order ID returned for ${placement.side} ${placement.price}`);
       }
       consoleLogger.print();
-    } catch (error: any) {
-      consoleLogger.push(`MM ${symbol}`, `❌ Failed to place ${placement.side}: ${error?.message}`);
-      logToFile("./logs/mm-error.log", `Place static order failed ${symbol} ${placement.side}: ${error?.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      consoleLogger.push(`MM ${symbol}`, `❌ Failed to place ${placement.side}: ${errorMessage}`);
+      logToFile("./logs/mm-error.log", `Place static order failed ${symbol} ${placement.side}: ${errorMessage}`);
       consoleLogger.print();
     }
     await delay(1000);
@@ -496,10 +498,11 @@ const placeFlippedOrder = async (
 
   if (slot.currentSide === "sell") {
     // Slot was flipped to sell → place sell order HIGHER than original buy price
-    targetPrice = roundToStep(originalPrice * (1 + halfSpread * 1.5), filter?.tickSize ?? 0, "up");
+    // Use conservative spread multiplier to avoid placing orders too far from market
+    targetPrice = roundToStep(originalPrice * (1 + halfSpread * 1.2), filter?.tickSize ?? 0, "up");
   } else {
     // Slot was flipped to buy → place buy order LOWER than original sell price
-    targetPrice = roundToStep(originalPrice * (1 - halfSpread * 1.5), filter?.tickSize ?? 0, "down");
+    targetPrice = roundToStep(originalPrice * (1 - halfSpread * 1.2), filter?.tickSize ?? 0, "down");
   }
   
   // Validate calculated target price
@@ -518,6 +521,7 @@ const placeFlippedOrder = async (
     if (notional < minNotional) return;
     if (notional < minSize) {
       sizeBase = minSize / targetPrice;
+      sizeBase = roundToStep(sizeBase, filter?.stepSize ?? 0, "up"); // Ensure it meets step size requirements
       notional = sizeBase * targetPrice; // Recalculate after adjustment
     }
     
@@ -547,9 +551,10 @@ const placeFlippedOrder = async (
       );
     }
     consoleLogger.print();
-  } catch (error: any) {
-    consoleLogger.push(`MM ${symbol}`, `❌ Place flipped failed: ${error?.message}`);
-    logToFile("./logs/mm-error.log", `Place flipped failed ${symbol}: ${error?.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    consoleLogger.push(`MM ${symbol}`, `❌ Place flipped failed: ${errorMessage}`);
+    logToFile("./logs/mm-error.log", `Place flipped failed ${symbol}: ${errorMessage}`);
     consoleLogger.print();
   }
 };
@@ -604,8 +609,9 @@ const reconcileGridOrders = async (
         }
       }
     }
-  } catch (error: any) {
-    logToFile("./logs/mm-error.log", `Reconcile failed ${symbol}: ${error?.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/mm-error.log", `Reconcile failed ${symbol}: ${errorMessage}`);
   } finally {
     // Always release the lock when done, even if there was an error
     state.isLocked = false;
@@ -650,10 +656,11 @@ export const handleTradeUpdate = async (
 
     // Just trigger full reconciliation instead of trying to match orderId
     await reconcileGridOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
-  } catch (error: any) {
-    consoleLogger.push(`MM ${symbol}`, `❌ Trade update handling failed: ${error?.message}`);
-    logToFile("./logs/mm-error.log", `Trade update failed ${symbol}: ${error?.message}
-${error?.stack}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    consoleLogger.push(`MM ${symbol}`, `❌ Trade update handling failed: ${errorMessage}`);
+    logToFile("./logs/mm-error.log", `Trade update failed ${symbol}: ${errorMessage}\n${errorStack}`);
     consoleLogger.print();
   }
 };
@@ -704,9 +711,10 @@ export const initMarketMaking = async (
   for (const order of state.openOrders) {
     try {
       await cancelOrder(exchange, symbol, order.orderId);
-    } catch (error: any) {
-      consoleLogger.push(`MM ${symbol}`, `⚠️ Failed to cancel order ${order.orderId}: ${error?.message}`);
-      logToFile("./logs/mm-error.log", `Cancel order failed ${symbol} ${order.orderId}: ${error?.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Failed to cancel order ${order.orderId}: ${errorMessage}`);
+      logToFile("./logs/mm-error.log", `Cancel order failed ${symbol} ${order.orderId}: ${errorMessage}`);
     }
     await delay(800);
   }
@@ -814,10 +822,11 @@ export const initMarketMaking = async (
 
   state.openOrders = await getOpenOrders(exchange, symbol);
   consoleLogger.print();
-  } catch (error: any) {
-    consoleLogger.push(`MM ${symbol}`, `❌ Initialization error: ${error?.message}`);
-    logToFile("./logs/mm-error.log", `Market making init failed ${symbol}: ${error?.message}
-${error?.stack}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    consoleLogger.push(`MM ${symbol}`, `❌ Initialization error: ${errorMessage}`);
+    logToFile("./logs/mm-error.log", `Market making init failed ${symbol}: ${errorMessage}\n${errorStack}`);
     consoleLogger.print();
   }
 };
