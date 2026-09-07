@@ -490,8 +490,9 @@ const hoobot = async () => {
       }
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error(errorMessage);
   }
 };
 
@@ -2474,7 +2475,7 @@ const webServer = async () => {
     fresh.running = true;
     fs.writeFileSync(liveOptionsFilename, JSON.stringify(fresh, null, 2));
     Object.assign(options, fresh);
-    void hoobot().catch((err) => console.error("hoobot restart:", err));
+    void hoobot().catch((err) => console.error("hoobot restart:", err instanceof Error ? err : new Error(String(err))));
   };
 
   app.options("/live/restart", (_, res) => {

@@ -636,8 +636,9 @@ export class Mexc {
       }
       return await response.json();
     } catch (error) {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(`Error fetching ${uri} :`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logToFile("./logs/error.log", errorMessage);
+      console.error(`Error fetching ${uri} :`, error instanceof Error ? error : errorMessage);
       throw error;
     }
   };

@@ -99,8 +99,9 @@ const createDiscordClient = async (
         }
       }
     } catch (error) {
-      logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-      console.error(`Discord (${label}) command error:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logToFile("./logs/error.log", errorMessage);
+      console.error(`Discord (${label}) command error:`, error instanceof Error ? error : errorMessage);
       if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
         await interaction
           .reply({ content: "Komennon suoritus epäonnistui.", flags: MessageFlags.Ephemeral })
@@ -152,7 +153,8 @@ export const sendMessageToChannel = async (
       console.log(`Discord: channel ${channelId} not found or is not a text channel.`);
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(`Discord: error sending message to channel ${channelId}:`, error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error(`Discord: error sending message to channel ${channelId}:`, error instanceof Error ? error : errorMessage);
   }
 };

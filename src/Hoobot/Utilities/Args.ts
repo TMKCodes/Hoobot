@@ -829,8 +829,9 @@ export const parseArgsSimulate = (): ConfigOptions => {
       options.exchanges[i].tradeHistory = options.exchanges[i].tradeHistory ?? {};
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error(errorMessage);
   }
   return options;
 };
@@ -859,8 +860,9 @@ export const parseArgs = (): ConfigOptions => {
       options.exchanges[i].tradeHistory = options.exchanges[i].tradeHistory ?? {};
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(JSON.stringify(error, null, 4));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error(errorMessage);
   }
 
   return options;

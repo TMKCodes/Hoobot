@@ -57,7 +57,7 @@ export function computeLiveSellExecution(opts: {
   const topAskQty = opts.orderBookAsks[askPrice.toString()];
   let quantityInBase = opts.baseBalance * LIVE_BASE_RESERVE;
   quantityInBase = capSellBaseByGrowingMax(quantityInBase, opts.symbolOptions);
-  if (!isNaN(topAskQty) && quantityInBase > topAskQty) {
+  if (Number.isFinite(topAskQty) && topAskQty > 0 && quantityInBase > topAskQty) {
     quantityInBase = topAskQty;
   }
   if (opts.forceQuantityInBase !== undefined) {
@@ -103,7 +103,7 @@ export function computeLiveBuyExecution(opts: {
   const bidPriceIncremented = bidPrice * LIVE_BID_PREMIUM;
   const topBidQuote = opts.orderBookBids[bidPrice.toString()];
   let quantityInQuote = capBuyQuoteByGrowingMax(opts.quoteBalance, opts.symbolOptions, true);
-  if (!isNaN(topBidQuote) && quantityInQuote > topBidQuote) {
+  if (Number.isFinite(topBidQuote) && topBidQuote > 0 && quantityInQuote > topBidQuote) {
     quantityInQuote = topBidQuote;
   }
   if (opts.forceQuantityInBase !== undefined) {

@@ -90,8 +90,9 @@ export default {
             await interaction.editReply(msg);
           }
         } catch (error) {
-          logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-          console.error("Error fetching trade history:", error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logToFile("./logs/error.log", errorMessage);
+          console.error("Error fetching trade history:", error instanceof Error ? error : errorMessage);
           await interaction.editReply("An error occurred while fetching trade history.");
         }
       } else {

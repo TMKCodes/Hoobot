@@ -31,7 +31,8 @@ export const deployCommands = async (
     );
     console.log("Discord: application (/) commands reloaded.");
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error("Discord deploy error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error("Discord deploy error:", error instanceof Error ? error : errorMessage);
   }
 };

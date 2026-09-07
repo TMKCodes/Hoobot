@@ -253,7 +253,7 @@ const calculateSimulationPortfolioMtm = (options: ExchangeOptions, candleStore: 
         if (bestClose > 0) markPrice = bestClose;
       }
       // Fallback: viimeisimmän kaupan hinta (auttaa kun replay loppuu BUY:hin eikä closea ole muistissa).
-      if (markPrice <= 0 && options.tradeHistory?.[sk]?.length) {
+      if (markPrice <= 0 && Array.isArray(options.tradeHistory?.[sk]) && options.tradeHistory[sk]!.length > 0) {
         const lastTrade = options.tradeHistory[sk]![options.tradeHistory[sk]!.length - 1];
         const p = Number(lastTrade.price);
         if (Number.isFinite(p) && p > 0) markPrice = p;
@@ -261,8 +261,9 @@ const calculateSimulationPortfolioMtm = (options: ExchangeOptions, candleStore: 
       balance += baseAmt * markPrice;
     }
   } catch (error) {
-    logToFile("./logs/error.log", JSON.stringify(error, null, 4));
-    console.error(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logToFile("./logs/error.log", errorMessage);
+    console.error(errorMessage);
   }
   return balance;
 };

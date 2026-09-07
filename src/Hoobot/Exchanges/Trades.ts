@@ -1086,6 +1086,12 @@ export const simulateSell = async (
   
   const [base, quote] = symbolParts;
   
+  // Validate that balances have entries for both base and quote currencies
+  if (!balances[base] || !balances[quote]) {
+    logger.push("Simulate Sell", `Balances missing for base=${base} or quote=${quote}`);
+    return false;
+  }
+  
   // console.log(time);
   if (price === null || quantity === 0) {
     return false;
@@ -1224,6 +1230,12 @@ export const simulateBuy = async (
   }
   
   const [base, quote] = symbolParts;
+  
+  // Validate that balances have entries for both base and quote currencies
+  if (!balances[base] || !balances[quote]) {
+    logger.push("Simulate Buy", `Balances missing for base=${base} or quote=${quote}`);
+    return false;
+  }
   
   // console.log(time);
   if (price === null || quantity === 0) {
