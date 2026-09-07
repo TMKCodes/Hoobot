@@ -325,7 +325,7 @@ const buildSidePlacements = (
 
     const sizeBase = (side === "sell")
       ? roundToStep(startingSlotAmount, stepSize, "down")
-      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "up");
+      : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "down");
 
     const notional = sizeBase * slot.restingPrice;
 
@@ -418,17 +418,20 @@ const placeStaticGridOrders = async (
         : await placeSellOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2);
 
       if (order?.orderId) {
+        const actualSizeBase = Number(order.qty) || placement.sizeBase;
+        const actualQuoteRequired = actualSizeBase * placement.price;
+        
         slot.currentSide = placement.side;
         slot.restingPrice = Number(order.price) || placement.price;
         slot.targetSizeBase = placement.sizeBase;
         slot.activeOrderId = String(order.orderId);
-        slot.openQtyBase = Number(order.qty) || placement.sizeBase;
+        slot.openQtyBase = actualSizeBase;
         rememberPlacedOrder(state, slot.activeOrderId, slot.restingPrice, placement.side);
 
         if (isBuy) {
-          remainingQuote -= quoteRequired;
+          remainingQuote -= actualQuoteRequired;
         } else {
-          remainingBase -= placement.sizeBase;
+          remainingBase -= actualSizeBase;
         }
 
         consoleLogger.push(
@@ -508,7 +511,7 @@ const placeFlippedOrder = async (
 
   try {
     let order;
-    const minSize = symbolOptions?.marketMaking?.startingSlotQuote ?? 5.01;
+    const minSize = symbolOptions?.marketMaking?.startingSlotQuote ?? 1.02;
     const minQty = filter?.minQty ?? 1e-9;
     let notional = sizeBase * targetPrice;
     
@@ -559,7 +562,17 @@ const reconcileGridOrders = async (
   symbolOptions: SymbolOptions,
   state: MmState,
 ): Promise<void> => {
-  if (state.slots.size === 0 || state.isLocked) return;
+  if (state.slots.size === 0) return;
+  
+  // Prevent concurrent reconciliations for the same symbol
+  if (state.isLocked) {
+    consoleLogger.push(`MM ${symbol}`, "⏳ Reconciliation already in progress, skipping");
+    return;
+  }
+  
+  // Set lock to prevent concurrent executions
+  state.isLocked = true;
+  state.lockTimestamp = Date.now();
 
   try {
     const currentOpenOrders = await getOpenOrders(exchange, symbol);
@@ -593,6 +606,9 @@ const reconcileGridOrders = async (
     }
   } catch (error: any) {
     logToFile("./logs/mm-error.log", `Reconcile failed ${symbol}: ${error?.message}`);
+  } finally {
+    // Always release the lock when done, even if there was an error
+    state.isLocked = false;
   }
 
   state.openOrders = await getOpenOrders(exchange, symbol);
@@ -768,7 +784,12 @@ export const initMarketMaking = async (
   const sellSlots = Array.from(state.slots.values()).filter(s => s.defaultSide === "sell");
 
   // Calculate base amount for sell slots from quote amount
-  const sellBaseAmount = fixedMidPrice > 0 ? startingQuote / fixedMidPrice : startingQuote;
+  if (!Number.isFinite(fixedMidPrice) || fixedMidPrice <= 0) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Invalid fixedMidPrice for sell slot calculation");
+    consoleLogger.print();
+    return;
+  }
+  const sellBaseAmount = startingQuote / fixedMidPrice;
 
   const placements: MmPlacement[] = [
     ...buildSidePlacements(buySlots, "buy", balances[quote]?.crypto ?? 0, minNotional, filter?.minQty ?? 1e-9, filter?.stepSize ?? 0, startingQuote),

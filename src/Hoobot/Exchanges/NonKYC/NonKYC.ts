@@ -744,6 +744,20 @@ export class NonKYC extends EventEmitter {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
+    
+    // Check if we're already subscribed to this symbol's ticker
+    const existingSubscription = this.subscriptions.find(sub => sub.symbol === symbol && sub.tickerCallback);
+    if (existingSubscription) {
+      console.log(`Already subscribed to ticker for ${symbol}, updating callback`);
+      // Update the existing callback instead of creating a new subscription
+      this.callbackMap.add(symbolCallback!.tickerCallbackId, callback);
+      this.subscriptions = this.subscriptions.map(sub => 
+        sub.symbol === symbol && sub.tickerCallback ? { ...sub, tickerCallback: callback } : sub
+      );
+      await unBlock();
+      return;
+    }
+    
     if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
@@ -784,6 +798,19 @@ export class NonKYC extends EventEmitter {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
+    
+    // Check if we're already subscribed to this symbol's orderbook
+    const existingSubscription = this.subscriptions.find(sub => sub.symbol === symbol && sub.orderbookCallback);
+    if (existingSubscription) {
+      console.log(`Already subscribed to orderbook for ${symbol}, updating callback`);
+      this.callbackMap.add(symbolCallback!.orderbookCallbackId, callback);
+      this.subscriptions = this.subscriptions.map(sub => 
+        sub.symbol === symbol && sub.orderbookCallback ? { ...sub, orderbookCallback: callback } : sub
+      );
+      await unBlock();
+      return;
+    }
+    
     if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
@@ -822,6 +849,19 @@ export class NonKYC extends EventEmitter {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
+    
+    // Check if we're already subscribed to this symbol's trades
+    const existingSubscription = this.subscriptions.find(sub => sub.symbol === symbol && sub.tradesCallback);
+    if (existingSubscription) {
+      console.log(`Already subscribed to trades for ${symbol}, updating callback`);
+      this.callbackMap.add(symbolCallback!.tradesCallbackId, callback);
+      this.subscriptions = this.subscriptions.map(sub => 
+        sub.symbol === symbol && sub.tradesCallback ? { ...sub, tradesCallback: callback } : sub
+      );
+      await unBlock();
+      return;
+    }
+    
     if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
@@ -866,6 +906,32 @@ export class NonKYC extends EventEmitter {
     await waitToBlock();
     let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
+    
+    // Check if we're already subscribed to this symbol's candles
+    // WARNING: Current implementation only supports one candle subscription per symbol
+    // because symbolCallbacks uses a single candlesCallbackId per symbol
+    const existingSubscription = this.subscriptions.find(sub => 
+      sub.symbol === symbol && sub.candlesCallback
+    );
+    if (existingSubscription) {
+      // If already subscribed with different period/limit, we need to unsubscribe first
+      if (existingSubscription.candlesPeriod !== period || existingSubscription.candlesLimit !== limit) {
+        console.warn(`Candle subscription conflict for ${symbol}: existing period=${existingSubscription.candlesPeriod}, limit=${existingSubscription.candlesLimit} vs requested period=${period}, limit=${limit}`);
+        console.warn(`To subscribe with different parameters, unsubscribe first`);
+        await unBlock();
+        throw new Error(`Already subscribed to candles for ${symbol} with different parameters`);
+      }
+      // Same parameters, just update the callback
+      console.log(`Already subscribed to candles for ${symbol} with period ${period} and limit ${limit}, updating callback`);
+      this.callbackMap.add(symbolCallback!.candlesCallbackId, callback);
+      this.subscriptions = this.subscriptions.map(sub => 
+        sub.symbol === symbol && sub.candlesCallback
+          ? { ...sub, candlesCallback: callback, candlesPeriod: period, candlesLimit: limit } : sub
+      );
+      await unBlock();
+      return;
+    }
+    
     if (!symbolCallback) {
       symbolCallback = {
         symbol: symbol,
