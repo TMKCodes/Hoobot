@@ -222,7 +222,7 @@ export const handleOpenOrders = async (
   processOptions: ConfigOptions,
   symbolOptions: SymbolOptions,
 ) => {
-  var openOrders = await getOpenOrders(exchange, symbol);
+  const openOrders = await getOpenOrders(exchange, symbol);
   if (openOrders.length == 0) {
     symbolOptions.currentOrder = undefined;
     return true;
@@ -230,7 +230,7 @@ export const handleOpenOrders = async (
   for (var i = 0; i < openOrders.length; i++) {
     const currentTime = Date.now();
     const orderAgeSeconds = Math.floor((currentTime - openOrders[i].time) / 1000);
-    var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
+    const maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
     // console.log(orderAgeSeconds);
     // console.log(maxOrderAge);
     // console.log(orderAgeSeconds > maxOrderAge);
@@ -344,7 +344,7 @@ export const handleOpenOrder = async (
         return "REJECTED";
       }
       if (tryToCancel === true) {
-        var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
+        const maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
         if (orderAgeSeconds > maxOrderAge) {
           await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
@@ -401,7 +401,7 @@ export const handleOpenOrder = async (
         for (const activeOrder of activeOrders) {
           if (String(activeOrders.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
-            var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
+            const maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
             // console.log(orderAgeSeconds);
             // console.log(maxOrderAge);
             // console.log(orderAgeSeconds > maxOrderAge);
@@ -483,7 +483,7 @@ export const handleOpenOrder = async (
         for (const activeOrder of activeOrders) {
           if (String(activeOrder.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.time_create * 1000) / 1000);
-            var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
+            const maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
             if (orderAgeSeconds > maxOrderAge) {
               await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
               const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol

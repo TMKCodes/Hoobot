@@ -836,7 +836,7 @@ export const parseArgsSimulate = (): ConfigOptions => {
 };
 
 export const parseArgs = (): ConfigOptions => {
-  var options: ConfigOptions = {
+  let options: ConfigOptions = {
     running: false,
     debug: false,
     startTime: "",

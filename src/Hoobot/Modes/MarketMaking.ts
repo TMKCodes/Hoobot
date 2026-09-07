@@ -183,7 +183,8 @@ const setFlippedSlotState = (
 };
 
 const getEffectiveMinNotional = (symbol: string, rawMinNotional: number): number => {
-  const quoteAsset = symbol.split("/")[1]?.toUpperCase() ?? "";
+  const symbolParts = symbol?.split("/") || [];
+  const quoteAsset = symbolParts.length >= 2 ? symbolParts[1].toUpperCase() : "";
   if (["USDT", "USDC", "BUSD", "FDUSD", "DAI"].includes(quoteAsset)) return Math.max(rawMinNotional, 1);
   return rawMinNotional;
 };
@@ -359,7 +360,14 @@ const placeStaticGridOrders = async (
   minQty: number,
   consoleLogger: ConsoleLogger,
 ) => {
-  const [baseAsset, quoteAsset] = symbol.split("/");
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger.push("MarketMaking", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return;
+  }
+  
+  const [baseAsset, quoteAsset] = symbolParts;
   const requiredNotional = Math.max(minNotional, startingSlotQuote);
   const queuedSlotKeys = new Set<MmSlotKey>();
 
@@ -744,14 +752,15 @@ export const initMarketMaking = async (
     return;
   }
 
-  const [base, quote] = symbol.split("/");
-  
-  // Validate we have both base and quote assets
-  if (!base || !quote) {
+  // Validate symbol format and split
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
     consoleLogger.push(`MM ${symbol}`, "❌ Invalid symbol format: missing base or quote asset");
     consoleLogger.print();
     return;
   }
+  
+  const [base, quote] = symbolParts;
   
   const startingQuote = getStartingSlotQuoteNotional(opts, minNotional);
 

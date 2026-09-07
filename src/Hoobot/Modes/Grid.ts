@@ -238,7 +238,7 @@ const manageGridOrders = async (
 
           const fees = 0.2; // Assume 0.2% fee, adjust as needed
           const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
-          var minimumProfit =
+          const minimumProfit =
             newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
 
           if (potentialProfit >= minimumProfit / 100) {

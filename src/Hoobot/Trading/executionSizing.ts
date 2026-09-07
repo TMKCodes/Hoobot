@@ -50,8 +50,8 @@ export function computeLiveSellExecution(opts: {
   const askPrices = Object.keys(opts.orderBookAsks)
     .map((p) => parseFloat(p))
     .sort((a, b) => a - b);
-  const askPrice = askPrices[0];
-  if (!askPrice || !Number.isFinite(askPrice)) return null;
+  const askPrice = askPrices.length > 0 ? askPrices[0] : null;
+  if (!askPrice || !Number.isFinite(askPrice) || askPrice <= 0) return null;
 
   const askPriceDiscounted = askPrice * LIVE_ASK_DISCOUNT;
   const topAskQty = opts.orderBookAsks[askPrice.toString()];
@@ -97,8 +97,8 @@ export function computeLiveBuyExecution(opts: {
   const bidPrices = Object.keys(opts.orderBookBids)
     .map((p) => parseFloat(p))
     .sort((a, b) => b - a);
-  const bidPrice = bidPrices[0];
-  if (!bidPrice || !Number.isFinite(bidPrice)) return null;
+  const bidPrice = bidPrices.length > 0 ? bidPrices[0] : null;
+  if (!bidPrice || !Number.isFinite(bidPrice) || bidPrice <= 0) return null;
 
   const bidPriceIncremented = bidPrice * LIVE_BID_PREMIUM;
   const topBidQuote = opts.orderBookBids[bidPrice.toString()];

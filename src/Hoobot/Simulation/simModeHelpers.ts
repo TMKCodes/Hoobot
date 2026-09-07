@@ -48,7 +48,8 @@ export function computeSimulationStartingBalance(
 ): number {
   const quoteTotals = new Map<string, number>();
   for (const s of symbolPasses) {
-    const quote = s.name.split("/")[1];
+    const parts = s.name?.split("/") || [];
+    const quote = parts.length >= 2 ? parts[1] : null;
     if (!quote || quoteTotals.has(quote)) continue;
     quoteTotals.set(quote, s.growingMax?.buy ?? 0);
   }

@@ -103,7 +103,7 @@ const delay = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-var MexcBlocked: boolean = false;
+let MexcBlocked: boolean = false;
 
 const waitToBlock = async () => {
   while (MexcBlocked === true) {

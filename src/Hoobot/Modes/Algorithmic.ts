@@ -414,7 +414,7 @@ export const placeTrade = async (
     filter,
     isFinalCandle,
   );
-  var handledOpenOrders = true;
+  let handledOpenOrders = true;
   if (symbolOptions.currentOrder !== undefined) {
     handledOpenOrders = await handleOpenOrders(discord, exchange, symbol, orderBook, processOptions, symbolOptions);
   }

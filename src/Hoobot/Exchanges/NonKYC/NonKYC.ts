@@ -252,7 +252,7 @@ const delay = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-var NonKYCBlocked: boolean = false;
+let NonKYCBlocked: boolean = false;
 
 const waitToBlock = async () => {
   while (NonKYCBlocked === true) {
@@ -439,7 +439,7 @@ export class NonKYC extends EventEmitter {
             this.emit("logged");
           }
         } catch (error) {
-          console.error("Login failed during connection:", error);
+          console.error("Login failed during connection:", error instanceof Error ? error : new Error(String(error)));
         }
       }
     });
@@ -493,7 +493,7 @@ export class NonKYC extends EventEmitter {
         console.log("NonKYC disconnected.");
       }
     } catch (err) {
-      console.error("Error during disconnect:", err);
+      console.error("Error during disconnect:", err instanceof Error ? err : new Error(String(err)));
     }
   }
 
@@ -510,7 +510,7 @@ export class NonKYC extends EventEmitter {
             }
           });
         } catch (error) {
-          console.error("Unexpected WebSocket send exception:", error);
+          console.error("Unexpected WebSocket send exception:", error instanceof Error ? error : new Error(String(error)));
         }
       } else {
         console.warn("WebSocket is not open. ReadyState:", this.ws.readyState);
@@ -532,19 +532,29 @@ export class NonKYC extends EventEmitter {
     if (response.id !== undefined) {
       this.emitter.emit(`response_${response.id}`, response);
     } else {
-      let callbacks = this.symbolCallbacks.filter(
-        (scb) => toSymbolKey(scb.symbol) === toSymbolKey((response.params as { symbol?: string })?.symbol ?? "")
-      )[0];
-      if (response.method === "ticker") {
-        this.callbackMap.call(callbacks.tickerCallbackId, response);
-      } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
-        this.callbackMap.call(callbacks.orderbookCallbackId, response);
-      } else if (response.method === "snapshotTrades" || response.method === "updateTrades") {
-        this.callbackMap.call(callbacks.tradesCallbackId, response);
-      } else if (response.method === "snapshotCandles" || response.method === "updateCandles") {
-        this.callbackMap.call(callbacks.candlesCallbackId, response);
+      const responseSymbol = (response.params as { symbol?: string })?.symbol ?? "";
+      const callbacks = this.symbolCallbacks.find(
+        (scb) => toSymbolKey(scb.symbol) === toSymbolKey(responseSymbol)
+      );
+      if (callbacks) {
+        if (response.method === "ticker") {
+          this.callbackMap.call(callbacks.tickerCallbackId, response);
+        } else if (response.method === "snapshotOrderbook" || response.method === "updateOrderbook") {
+          this.callbackMap.call(callbacks.orderbookCallbackId, response);
+        } else if (response.method === "snapshotTrades" || response.method === "updateTrades") {
+          this.callbackMap.call(callbacks.tradesCallbackId, response);
+        } else if (response.method === "snapshotCandles" || response.method === "updateCandles") {
+          this.callbackMap.call(callbacks.candlesCallbackId, response);
+        } else {
+          // Method doesn't match known types for this symbol - ignore or route to reports
+          this.callbackMap.call(this.reportsCallbackId, response);
+        }
       } else {
-        this.callbackMap.call(this.reportsCallbackId, response);
+        // No matching symbol callback found - route to reports if available
+        if (this.reportsCallbackId !== 0) {
+          this.callbackMap.call(this.reportsCallbackId, response);
+        }
+        // If reportsCallbackId is 0 (not initialized), silently ignore
       }
     }
   };
@@ -732,7 +742,7 @@ export class NonKYC extends EventEmitter {
   public subscribeTicker = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     console.log("Subscribing Ticker");
     await waitToBlock();
-    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
     if (!symbolCallback) {
       symbolCallback = {
@@ -772,7 +782,7 @@ export class NonKYC extends EventEmitter {
   public subscribeOrderbook = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     console.log("Subscribing Orderbook");
     await waitToBlock();
-    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
     if (!symbolCallback) {
       symbolCallback = {
@@ -810,7 +820,7 @@ export class NonKYC extends EventEmitter {
   public subscribeTrades = async (symbol: string, callback: (response: NonKYCResponse) => void) => {
     console.log("Subscribing Trades");
     await waitToBlock();
-    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
     if (!symbolCallback) {
       symbolCallback = {
@@ -854,7 +864,7 @@ export class NonKYC extends EventEmitter {
   ) => {
     console.log("Subscribing Candles");
     await waitToBlock();
-    let symbolCallback = this.symbolCallbacks.filter((scb) => scb.symbol === symbol)[0];
+    let symbolCallback = this.symbolCallbacks.find((scb) => scb.symbol === symbol);
     let symbols = this.symbolCallbacks.length + 1;
     if (!symbolCallback) {
       symbolCallback = {
@@ -924,7 +934,8 @@ export class NonKYC extends EventEmitter {
           }
           return await response.json();
         } catch (error) {
-          logToFile("./logs/error.log", error.message); // Log network or other errors
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logToFile("./logs/error.log", errorMessage); // Log network or other errors
           attempts++;
           if (attempts >= maxRetries) {
             throw error;
@@ -952,7 +963,8 @@ export class NonKYC extends EventEmitter {
             }
             return await response.json();
           } catch (error) {
-            logToFile("./logs/error.log", error.message); // Log network or other errors
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logToFile("./logs/error.log", errorMessage); // Log network or other errors
             attempts++;
             if (attempts >= maxRetries) {
               throw error;
@@ -979,7 +991,8 @@ export class NonKYC extends EventEmitter {
             }
             return await response.json();
           } catch (error) {
-            logToFile("./logs/error.log", error.message); // Log network or other errors
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logToFile("./logs/error.log", errorMessage); // Log network or other errors
             attempts++;
             if (attempts >= maxRetries) {
               throw error;

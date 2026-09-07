@@ -361,7 +361,7 @@ export const readForceSkip = (symbol: string): boolean => {
   }
 };
 
-var blocks: string[] = [];
+let blocks: string[] = [];
 
 export const isBlocking = async (symbol: string): Promise<boolean> => {
   symbol = symbol.replace("/", "");
