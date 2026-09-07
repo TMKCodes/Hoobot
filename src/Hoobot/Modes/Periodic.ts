@@ -22,6 +22,16 @@ export const simulatePeriodic = async (
   filter: Filter,
 ): Promise<boolean> => {
   if (symbolOptions.enabled === false) return false;
+  
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger().push("Periodic", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
+  
   const symbolKey = toSymbolKey(symbol);
   const primaryTf = simulationTimeframesForSymbol(symbolOptions)[0]!;
   const series = candlesticks[symbolKey]?.[primaryTf];
@@ -47,7 +57,7 @@ export const simulatePeriodic = async (
   if (symbolOptions.periodicDirection) {
     await simulateBuy(
       symbol,
-      qty > 0 ? qty * price : (balances[symbol.split("/")[1]!]?.crypto ?? 0),
+      qty > 0 ? qty * price : (balances[quoteSymbol]?.crypto ?? 0),
       price,
       balances,
       "SKIP",
@@ -61,7 +71,7 @@ export const simulatePeriodic = async (
   } else {
     await simulateSell(
       symbol,
-      qty > 0 ? qty : simSellBaseQuantity(balances[symbol.split("/")[0]!]?.crypto ?? 0),
+      qty > 0 ? qty : simSellBaseQuantity(balances[baseSymbol]?.crypto ?? 0),
       price,
       balances,
       "SKIP",

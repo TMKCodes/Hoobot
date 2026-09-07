@@ -150,9 +150,9 @@ export const listenForCandlesticks = async (
   }
   const maxCandlesticks = 10000;
   let timeframes = [...intervals];
-  if (isBinance(exchange) && symbolOptions.trend?.enabled) {
-    if (!intervals.includes(symbolOptions.trend?.timeframe!)) {
-      timeframes.push(symbolOptions.trend?.timeframe!);
+  if (isBinance(exchange) && symbolOptions.trend?.enabled && symbolOptions.trend?.timeframe) {
+    if (!intervals.includes(symbolOptions.trend.timeframe)) {
+      timeframes.push(symbolOptions.trend.timeframe);
     }
   }
   for (let i = 0; i < timeframes.length; i++) {

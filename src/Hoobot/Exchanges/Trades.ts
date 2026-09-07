@@ -4,6 +4,15 @@ import { ConfigOptions, ExchangeOptions, SymbolOptions, getSecondsFromInterval, 
 
 /** Stop loss tai Extreme idle-pakko — sallii sulun myös tappiolla. */
 export const allowsForcedLossTrade = (profit: string): boolean => profit === "STOP_LOSS" || profit === "FORCE_IDLE";
+
+/** Split symbol into base and quote assets with validation */
+const splitSymbol = (symbol: string): [string, string] => {
+  const parts = symbol.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error(`Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+  }
+  return [parts[0], parts[1]];
+};
 import { Filter } from "./Filters";
 import { handleOpenOrder, Order, checkBeforePlacingOrder } from "./Orders";
 import { sendMessageToChannel } from "../../Discord/discord";
@@ -665,7 +674,8 @@ export const sell = async (
   symbolOptions: SymbolOptions,
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
-  const baseBalance = exchangeOptions.balances![symbol.split("/")[0]].crypto;
+  const [base, quote] = splitSymbol(symbol);
+  const baseBalance = exchangeOptions.balances?.[base]?.crypto ?? 0;
   if (orderBook === undefined || orderBook.asks === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
@@ -881,7 +891,8 @@ export const buy = async (
   symbolOptions: SymbolOptions,
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
-  const quoteBalance = exchangeOptions.balances![symbol.split("/")[1]].crypto;
+  const [base, quote] = splitSymbol(symbol);
+  const quoteBalance = exchangeOptions.balances?.[quote]?.crypto ?? 0;
   if (orderBook === undefined || orderBook.bids === undefined) {
     orderBook = await getOrderbook(exchange, symbol);
   }
@@ -912,9 +923,13 @@ export const buy = async (
     consoleLogger.push("error", "Too low price to buy.");
     return false;
   }
+  const parts = symbol.split("/");
+  if (parts.length < 2) {
+    throw new Error(`Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+  }
   consoleLogger.push("BUY CHECK", {
-    quoteBalance: exchangeOptions.balances![symbol.split("/")[1]]?.crypto,
-    baseBalance: exchangeOptions.balances![symbol.split("/")[0]]?.crypto,
+    quoteBalance: exchangeOptions.balances?.[parts[1]]?.crypto,
+    baseBalance: exchangeOptions.balances?.[parts[0]]?.crypto,
     bidPrice,
     quantityInQuote: roundedQuantityInQuote,
     quantityInBase: roundedQuantityInBase,
@@ -1062,6 +1077,15 @@ export const simulateSell = async (
   filter: Filter,
   logger: ConsoleLogger,
 ) => {
+  // Validate symbol and split into components
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    logger.push("Simulate Sell", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [base, quote] = symbolParts;
+  
   // console.log(time);
   if (price === null || quantity === 0) {
     return false;
@@ -1089,8 +1113,8 @@ export const simulateSell = async (
     let pnl = 0;
     const symbolKeyS = toSymbolKey(symbol);
     const thS = exchangeOptions.tradeHistory?.[symbolKeyS];
-    if ((thS?.length ?? 0) >= 1) {
-      lastTrade = thS![thS!.length - 1];
+    if (thS && thS.length >= 1) {
+      lastTrade = thS[thS.length - 1];
       if (lastTrade.isBuyer) {
         pnl = calculatePNLPercentageForLong(parseFloat(lastTrade.price), price);
         pnl = applyRoundTripFeeToPnl(pnl, symbolOptions.tradeFeePercentage);
@@ -1130,7 +1154,7 @@ export const simulateSell = async (
       qty: baseQuantity.toString(),
       quoteQty: quoteQuontityWithoutFee.toString(),
       commission: fee.toString(),
-      commissionAsset: symbol.split("/")[1],
+      commissionAsset: quote,
       time: time,
       isBuyer: false,
       isMaker: true,
@@ -1142,10 +1166,8 @@ export const simulateSell = async (
         `[sim] SELL ${symbol} @ ${price.toFixed(2)} base≈${baseQuantity.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKeyS].length}`,
       );
     }
-    const baseCoin = symbol.split("/")[0];
-    const quoteCoin = symbol.split("/")[1];
-    balances[baseCoin].crypto = balances[baseCoin].crypto - baseQuantity;
-    balances[quoteCoin].crypto = balances[quoteCoin].crypto + quoteQuontityWithoutFee;
+    balances[base].crypto = balances[base].crypto - baseQuantity;
+    balances[quote].crypto = balances[quote].crypto + quoteQuontityWithoutFee;
     const sanitizedStartTime = options.startTime.replace(/:/g, "-");
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);
@@ -1194,6 +1216,15 @@ export const simulateBuy = async (
   filter: Filter,
   logger: ConsoleLogger,
 ): Promise<Boolean> => {
+  // Validate symbol and split into components
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    logger.push("Simulate Buy", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [base, quote] = symbolParts;
+  
   // console.log(time);
   if (price === null || quantity === 0) {
     return false;
@@ -1233,8 +1264,8 @@ export const simulateBuy = async (
     const symbolKey = toSymbolKey(symbol);
     const th = exchangeOptions.tradeHistory?.[symbolKey];
     pnl = computeSimBuyClosePnl(th, price, symbolOptions.tradeFeePercentage);
-    if ((th?.length ?? 0) >= 1) {
-      lastTrade = th![th!.length - 1];
+    if (th && th.length >= 1) {
+      lastTrade = th[th.length - 1];
     }
     // Prevent "minus trades" unless stop loss / idle force.
     if (!allowsForcedLossTrade(profit) && pnl < 0) {
@@ -1270,7 +1301,7 @@ export const simulateBuy = async (
       qty: baseQuantityWithoutFee.toString(),
       quoteQty: quoteQuantity.toString(),
       commission: fee.toString(),
-      commissionAsset: symbol.split("/")[0],
+      commissionAsset: base,
       time: time,
       isBuyer: true,
       isMaker: true,
@@ -1282,10 +1313,8 @@ export const simulateBuy = async (
         `[sim] BUY ${symbol} @ ${price.toFixed(2)} base≈${baseQuantityWithoutFee.toFixed(6)} (${profit}) | kauppoja yhteensä ${exchangeOptions.tradeHistory[symbolKey].length}`,
       );
     }
-    const baseCoin = symbol.split("/")[0];
-    const quoteCoin = symbol.split("/")[1];
-    balances[baseCoin].crypto = balances[baseCoin].crypto + baseQuantityWithoutFee;
-    balances[quoteCoin].crypto = balances[quoteCoin].crypto - quoteQuantity;
+    balances[base].crypto = balances[base].crypto + baseQuantityWithoutFee;
+    balances[quote].crypto = balances[quote].crypto - quoteQuantity;
     const sanitizedStartTime = options.startTime.replace(/:/g, "-");
     const filePath = `./simulation/${sanitizedStartTime}/trades.json`;
     const directory = path.dirname(filePath);

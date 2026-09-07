@@ -19,6 +19,12 @@ import { sendMessageToChannel } from "../../Discord/discord";
 
 const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] => {
   const grid: GridLevel[] = [];
+  
+  // Validate inputs
+  if (!Number.isFinite(currentPrice) || currentPrice <= 0) return grid;
+  if (!options.gridRange || !Number.isFinite(options.gridRange.upper) || !Number.isFinite(options.gridRange.lower)) return grid;
+  if (!Number.isFinite(options.gridLevels) || options.gridLevels <= 0) return grid;
+  
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
   const step = (upper - lower) / options.gridLevels;
@@ -45,7 +51,7 @@ const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
       price: parseFloat(order.price),
       type: order.isBuyer === true ? "buy" : "sell",
       executed: false,
-      size: order.qty,
+      size: String(order.qty),
     });
   }
   // Sort the grid by price
@@ -99,7 +105,7 @@ const placeGridOrders = async (
   symbolOptions: SymbolOptions,
 ): Promise<void> => {
   const placedOrders = [];
-  for (var i = 0; i < grid.length; i++) {
+  for (let i = 0; i < grid.length; i++) {
     if (!grid[i].executed) {
       try {
         const order = await placeOrder(
@@ -110,14 +116,16 @@ const placeGridOrders = async (
           parseFloat(grid[i].size),
           exchangeOptions,
         );
-        grid[i].orderId = order.orderId;
-        grid[i].size = order.qty;
-        placedOrders.push({
-          id: grid[i].orderId,
-          direction: grid[i].type,
-          price: grid[i].price,
-          size: symbolOptions.gridOrderSize,
-        });
+        if (order?.orderId) {
+          grid[i].orderId = order.orderId;
+          grid[i].size = String(order.qty);
+          placedOrders.push({
+            id: grid[i].orderId,
+            direction: grid[i].type,
+            price: grid[i].price,
+            size: symbolOptions.gridOrderSize,
+          });
+        }
       } catch (error) {
         consoleLogger.push(
           `Failed to place order`,
@@ -130,8 +138,11 @@ const placeGridOrders = async (
 };
 
 const isOutsideGridRange = (currentPrice: number, grid: GridLevel[]): boolean => {
-  const lowestPrice = Math.min(...grid.map((level) => level.price));
-  const highestPrice = Math.max(...grid.map((level) => level.price));
+  if (grid.length === 0) return false;
+  const prices = grid.map((level) => level.price).filter(p => Number.isFinite(p));
+  if (prices.length === 0) return false;
+  const lowestPrice = Math.min(...prices);
+  const highestPrice = Math.max(...prices);
   return currentPrice < lowestPrice || currentPrice > highestPrice;
 };
 
@@ -161,7 +172,11 @@ const rebalanceGrid = async (
   }
   // If we reach here, rebalancing is necessary
   for (const order of openOrders) {
-    await cancelOrder(exchange, symbol, order.orderId);
+    try {
+      await cancelOrder(exchange, symbol, order.orderId);
+    } catch (error) {
+      consoleLogger.push("Grid rebalance", `Failed to cancel order ${order.orderId}: ${error}`);
+    }
   }
   symbolOptions.grid = createGrid(currentPrice, symbolOptions);
   await placeGridOrders(exchange, consoleLogger, symbol, symbolOptions.grid, filter, exchangeOptions, symbolOptions);

@@ -33,10 +33,13 @@ export type CandlestickInterval =
   | "1w"
   | "1M";
 
-export type BotMode = "algorithmic" | "hilow" | "arbitrage";
+export type BotMode = "algorithmic" | "hilow";
 
 /** Normalizes symbol to exchange key format (e.g. "BTC/USDT" -> "BTCUSDT"). */
-export const toSymbolKey = (symbol: string): string => symbol.split("/").join("");
+export const toSymbolKey = (symbol: string): string => {
+  if (!symbol || typeof symbol !== "string") return "";
+  return symbol.split("/").join("");
+};
 
 export const getSecondsFromInterval = (interval: CandlestickInterval): number => {
   const intervalToSeconds: Record<CandlestickInterval, number> = {
@@ -755,7 +758,7 @@ const readConfigJsonFile = (filePath: string): Record<string, unknown> | null =>
 };
 
 const configHasExchanges = (doc: Record<string, unknown> | null | undefined): boolean =>
-  Array.isArray(doc?.exchanges) && (doc!.exchanges as unknown[]).length > 0;
+  Array.isArray(doc?.exchanges) && (doc?.exchanges as unknown[]).length > 0;
 
 /** Kun simulate-tiedosto on tyhjä: ota livestä vain ensimmäinen enabled-symboli per pörssi (ei kaikkia live-pareja). */
 const seedSimExchangesFromLive = (liveDoc: Record<string, unknown>): unknown[] => {

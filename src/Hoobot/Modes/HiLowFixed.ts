@@ -126,10 +126,18 @@ const runHilowFixedTrade = async (
     orderBook: Orderbook;
   },
 ): Promise<void> => {
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    logger.push("HiLowFixed", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return;
+  }
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
+  
   if (!HILOW_FIXED_TRADE_TAGS.has(check)) return;
   const tag = check;
   if (lastTradeIsBuyer) {
-    const baseSymbol = symbol.split("/")[0]!;
     const qty = simSellBaseQuantity(balances[baseSymbol]?.crypto ?? 0);
     if (live) {
       await sell(
@@ -161,7 +169,6 @@ const runHilowFixedTrade = async (
       );
     }
   } else {
-    const quoteSymbol = symbol.split("/")[1]!;
     const quoteAmt = balances[quoteSymbol]?.crypto ?? 0;
     if (live) {
       await buy(
@@ -205,6 +212,15 @@ export const simulateHilowFixed = async (
   filter: Filter,
 ): Promise<boolean> => {
   if (symbolOptions.enabled === false) return false;
+  
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger().push("HiLowFixed Simulation", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
   const symbolKey = toSymbolKey(symbol);
   const primaryTf = simulationTimeframesForSymbol(symbolOptions)[0]!;
   const series = candlesticks[symbolKey]?.[primaryTf];
@@ -228,7 +244,6 @@ export const simulateHilowFixed = async (
   const feePct = symbolOptions.tradeFeePercentage ?? 0;
 
   if (tradeHistory.length === 0) {
-    const quoteSymbol = symbol.split("/")[1]!;
     await simulateBuy(
       symbol,
       balances[quoteSymbol]?.crypto ?? 0,
@@ -289,8 +304,17 @@ export const hilowFixed = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
 ) => {
-  const filter = symbolFilters[toSymbolKey(symbol)];
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger.push("HiLowFixed", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return;
+  }
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
   const symbolKey = toSymbolKey(symbol);
+  
+  const filter = symbolFilters[symbolKey];
   if (exchangeOptions.tradeHistory[symbolKey] === undefined) {
     exchangeOptions.tradeHistory[symbolKey] = await getTradeHistory(exchange, symbol);
   }
@@ -298,8 +322,8 @@ export const hilowFixed = async (
   const lastTrade = tradeHistory[tradeHistory.length - 1];
   consoleLogger.push("Symbol", symbolKey);
   const roi = calculateROI(exchangeOptions.tradeHistory[symbolKey]);
-  consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
-  consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
+  consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + baseSymbol);
+  consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + quoteSymbol);
   const orderBook = exchangeOptions.orderbooks[symbolKey];
   if (
     orderBook === undefined ||
@@ -336,7 +360,7 @@ export const hilowFixed = async (
       check,
       lastTrade.isBuyer,
       bestBid(orderBook),
-      exchangeOptions.balances!,
+      exchangeOptions.balances ?? {},
       processOptions,
       exchangeOptions,
       symbolOptions,

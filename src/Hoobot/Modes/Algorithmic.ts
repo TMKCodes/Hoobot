@@ -494,9 +494,10 @@ const subCalculateIndicators = (
       seedEmptyIndicatorSeries(indicators, timeframe, symbolOptions);
       return indicators;
     }
+    const smaLength = symbolOptions.indicators?.sma?.length ?? 20; // Default to 20 if not specified
     indicators.sma[timeframe] = calculateSMA(
       candlesticks,
-      symbolOptions.indicators?.sma?.length!,
+      smaLength,
       symbolOptions.source,
     );
     if (symbolOptions.indicators.sma?.enabled) {
@@ -627,28 +628,33 @@ export const calculateIndicators = (
     dmi: {},
     renko: {},
   };
-  if (symbolOptions.trend?.enabled && candlesticks[toSymbolKey(symbol)][symbolOptions.trend.timeframe] !== undefined) {
-    const trendShort = symbolOptions.trend?.ema?.short ?? symbolOptions.indicators?.ema?.short ?? 9;
-    const trendLong = symbolOptions.trend?.ema?.long ?? symbolOptions.indicators?.ema?.long ?? 21;
-    indicators.trend = {
-      short: calculateEMA(candlesticks[toSymbolKey(symbol)][symbolOptions.trend?.timeframe!], trendShort, "close"),
-      long: calculateEMA(candlesticks[toSymbolKey(symbol)][symbolOptions.trend?.timeframe!], trendLong, "close"),
-    };
+  if (symbolOptions.trend?.enabled && symbolOptions.trend?.timeframe) {
+    const trendTimeframe = symbolOptions.trend.timeframe;
+    if (candlesticks[toSymbolKey(symbol)][trendTimeframe] !== undefined) {
+      const trendShort = symbolOptions.trend?.ema?.short ?? symbolOptions.indicators?.ema?.short ?? 9;
+      const trendLong = symbolOptions.trend?.ema?.long ?? symbolOptions.indicators?.ema?.long ?? 21;
+      indicators.trend = {
+        short: calculateEMA(candlesticks[toSymbolKey(symbol)][trendTimeframe], trendShort, "close"),
+        long: calculateEMA(candlesticks[toSymbolKey(symbol)][trendTimeframe], trendLong, "close"),
+      };
+    }
   }
   const timeframes = symbolOptions.timeframes;
   for (let i = 0; i < timeframes.length; i++) {
     if (symbolOptions.indicators !== undefined) {
       indicators.avg[timeframes[i]] = calculateAverage(candlesticks[toSymbolKey(symbol)][timeframes[i]]);
       //logAverageSignals(consoleLogger, candlesticks[toSymbolKey(symbol)][timeframes[i]], indicators.avg[timeframes[i]]);
+      const emaShort = symbolOptions.indicators?.ema?.short ?? 9; // Default to 9 if not specified
+      const emaLong = symbolOptions.indicators?.ema?.long ?? 21; // Default to 21 if not specified
       indicators.ema[timeframes[i]] = {
         short: calculateEMA(
           candlesticks[toSymbolKey(symbol)][timeframes[i]],
-          symbolOptions.indicators?.ema?.short!,
+          emaShort,
           symbolOptions.source,
         ),
         long: calculateEMA(
           candlesticks[toSymbolKey(symbol)][timeframes[i]],
-          symbolOptions.indicators?.ema?.long!,
+          emaLong,
           symbolOptions.source,
         ),
       };
@@ -696,7 +702,15 @@ export const algorithmic = async (
   symbolOptions: SymbolOptions,
 ) => {
   if (symbolOptions.enabled === false) return false;
-  const [baseCurrency, quoteCurrency] = symbol.split("/");
+  
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger.push("Algorithmic", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [baseCurrency, quoteCurrency] = symbolParts;
   const balancesKey = throttleKeyBalances(exchangeOptions.name);
   if (
     (exchangeOptions.balances == undefined ||
@@ -864,6 +878,15 @@ export const simulateAlgorithmic = async (
   filter: Filter,
 ) => {
   if (symbolOptions.enabled === false) return false;
+  
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger().push("Simulate Algorithmic", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [baseCurrency, quoteCurrency] = symbolParts;
   const logger = consoleLogger();
   const symbolKey = toSymbolKey(symbol);
 
@@ -916,8 +939,8 @@ export const simulateAlgorithmic = async (
   logger.push("Time", candleTime);
   logger.push("Color", latestCandle.close > latestCandle.open ? "Green" : "Red");
   logger.push("Balance", {
-    base: (exchangeOptions.balances?.[symbol.split("/")[0]]?.crypto ?? 0).toFixed(7) + " " + symbol.split("/")[0],
-    quote: (exchangeOptions.balances?.[symbol.split("/")[1]]?.crypto ?? 0).toFixed(7) + " " + symbol.split("/")[1],
+    base: (exchangeOptions.balances?.[baseCurrency]?.crypto ?? 0).toFixed(7) + " " + baseCurrency,
+    quote: (exchangeOptions.balances?.[quoteCurrency]?.crypto ?? 0).toFixed(7) + " " + quoteCurrency,
   });
   const emptyLogger = consoleLogger();
   const indicators: Indicators = calculateIndicators(symbol, candlesticks, symbolOptions, logger);
@@ -942,8 +965,7 @@ export const simulateAlgorithmic = async (
   const sellPrice = simPriceFromCandle(latestCandle);
   const buyPrice = simPriceFromCandle(latestCandle);
   if (direction === "SELL") {
-    const baseSymbol = symbol.split("/")[0];
-    const sellQty = simSellBaseQuantity(balances[baseSymbol].crypto);
+    const sellQty = simSellBaseQuantity(balances[baseCurrency].crypto);
     simulateSell(
       symbol,
       sellQty,
@@ -958,10 +980,9 @@ export const simulateAlgorithmic = async (
       logger,
     );
   } else if (direction === "BUY") {
-    const quoteSymbol = symbol.split("/")[1];
     simulateBuy(
       symbol,
-      balances[quoteSymbol].crypto,
+      balances[quoteCurrency].crypto,
       buyPrice,
       balances,
       profit,

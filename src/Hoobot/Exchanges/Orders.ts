@@ -230,7 +230,7 @@ export const handleOpenOrders = async (
   for (var i = 0; i < openOrders.length; i++) {
     const currentTime = Date.now();
     const orderAgeSeconds = Math.floor((currentTime - openOrders[i].time) / 1000);
-    var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
+    var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
     // console.log(orderAgeSeconds);
     // console.log(maxOrderAge);
     // console.log(orderAgeSeconds > maxOrderAge);
@@ -266,7 +266,7 @@ export const handleOpenOrders = async (
         );
       }
       // console.log(unrealizedPNL);
-      if (unrealizedPNL > symbolOptions.closePercentage!) {
+      if (symbolOptions.closePercentage !== undefined && unrealizedPNL > symbolOptions.closePercentage) {
         await cancelOrder(exchange, toSymbolKey(symbol), openOrders[i].orderId);
         const orderMsg = `>>> Order ID **${openOrders[i].orderId}**\nSymbol **${symbol
           .split("/")
@@ -344,7 +344,7 @@ export const handleOpenOrder = async (
         return "REJECTED";
       }
       if (tryToCancel === true) {
-        var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
+        var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
         if (orderAgeSeconds > maxOrderAge) {
           await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
           const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
@@ -373,7 +373,7 @@ export const handleOpenOrder = async (
               orderBookAsks[0],
             );
           }
-          if (unrealizedPNL > symbolOptions.closePercentage!) {
+          if (symbolOptions.closePercentage !== undefined && unrealizedPNL > symbolOptions.closePercentage) {
             await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
             const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
               .split("/")
@@ -401,7 +401,7 @@ export const handleOpenOrder = async (
         for (const activeOrder of activeOrders) {
           if (String(activeOrders.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.createdAt) / 1000);
-            var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
+            var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
             // console.log(orderAgeSeconds);
             // console.log(maxOrderAge);
             // console.log(orderAgeSeconds > maxOrderAge);
@@ -433,7 +433,7 @@ export const handleOpenOrder = async (
                   orderBookAsks[0],
                 );
               }
-              if (unrealizedPNL > symbolOptions.closePercentage!) {
+              if (symbolOptions.closePercentage !== undefined && unrealizedPNL > symbolOptions.closePercentage) {
                 await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                   .split("/")
@@ -483,7 +483,7 @@ export const handleOpenOrder = async (
         for (const activeOrder of activeOrders) {
           if (String(activeOrder.id) === order.orderId) {
             const orderAgeSeconds = Math.floor((currentTime - activeOrder.time_create * 1000) / 1000);
-            var maxOrderAge = symbolOptions.maximumAgeOfOrder! * 60;
+            var maxOrderAge = (symbolOptions.maximumAgeOfOrder ?? 0) * 60;
             if (orderAgeSeconds > maxOrderAge) {
               await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
               const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
@@ -512,7 +512,7 @@ export const handleOpenOrder = async (
                   orderBookAsks[0],
                 );
               }
-              if (unrealizedPNL > symbolOptions.closePercentage!) {
+              if (symbolOptions.closePercentage !== undefined && unrealizedPNL > symbolOptions.closePercentage) {
                 await cancelOrder(exchange, toSymbolKey(symbol), order.orderId);
                 const orderMsg = `>>> Order ID **${order.orderId}**\nSymbol **${symbol
                   .split("/")

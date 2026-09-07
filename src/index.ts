@@ -316,7 +316,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
           );
           console.error(`marketmaking init ${symbolOptions.name}:`, err);
         }
-        listenForTrades(exchange, symbolOptions.name, async (trades: Trade) => {
+        listenForTrades(exchange, symbolOptions.name, async (trade: Trade) => {
           try {
             handleTradeUpdate(
               exchange,
@@ -324,7 +324,7 @@ const runExchange = async (exchange: Exchange, discord: any, exchangeOptions: Ex
               symbolOptions.name,
               exchangeOptions,
               symbolOptions,
-              trades
+              trade
             )
           } catch (err) {
             logToFile(

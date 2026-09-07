@@ -93,7 +93,7 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
   } else if (isNonKYC(exchange)) {
     const balances = await exchange.getTradingBalance();
     const prices = await exchange.getMarkets();
-    const symbols = prices.map((price) => toSymbolKey(price.symbol));
+    const symbols = Array.isArray(prices) ? prices.map((price) => toSymbolKey(price.symbol)) : [];
     if (balances.length > 0) {
       for (const balance of balances) {
         const amount = parseFloat(balance.available);
@@ -105,14 +105,16 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
         } else {
           let fiatAmount = 0;
           const price = prices.find((p) => toSymbolKey(p.symbol) === balance.asset + fiat);
-          if (symbols.includes(balance.asset + fiat)) {
-            fiatAmount = parseFloat(price?.lastPrice!) * amount;
-          } else if (symbols.includes(fiat + balance.asset)) {
-            fiatAmount = amount / parseFloat(price?.lastPrice!);
+          if (symbols.includes(balance.asset + fiat) && price?.lastPrice) {
+            fiatAmount = parseFloat(price.lastPrice) * amount;
+          } else if (symbols.includes(fiat + balance.asset) && price?.lastPrice) {
+            fiatAmount = amount / parseFloat(price.lastPrice);
           } else {
             const tempPrice = prices.find((p) => toSymbolKey(p.symbol) === "BTC" + balance.asset);
-            let tempAmount = amount / parseFloat(tempPrice?.lastPrice!);
-            fiatAmount = parseFloat(price?.lastPrice!) * tempAmount;
+            if (price?.lastPrice && tempPrice?.lastPrice) {
+              let tempAmount = amount / parseFloat(tempPrice.lastPrice);
+              fiatAmount = parseFloat(price.lastPrice) * tempAmount;
+            }
           }
           currentBalances[balance.asset] = {
             crypto: amount,

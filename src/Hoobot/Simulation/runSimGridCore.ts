@@ -164,15 +164,15 @@ export function validateGridPayload(grid: unknown): { ok: true; data: GridPayloa
           errors.push(`axes[${i}]: käytä joko values tai range, ei molempia.`);
           return;
         }
-        if (hasValues) {
-          axisObj.values!.forEach((v, j) => {
+        if (hasValues && Array.isArray(axisObj.values)) {
+          axisObj.values.forEach((v, j) => {
             if (v !== null && !isPlainObject(v)) {
               errors.push(`axes[${i}].values[${j}]: oltava objekti tai tyhjä {}.`);
             }
           });
         }
-        if (hasRange) {
-          const r = axisObj.range!;
+        if (hasRange && axisObj.range) {
+          const r = axisObj.range;
           const from = Number(r.from);
           const to = Number(r.to);
           const step = Number(r.step);
@@ -550,7 +550,7 @@ export async function executeSimGrid(
     variantPatchAt = (i: number) => patchForVariantIndex(preparedAxes, i);
   } else if (Array.isArray(grid.variants) && grid.variants.length > 0) {
     variantCount = grid.variants.length;
-    variantPatchAt = (i: number) => grid.variants![i] ?? {};
+    variantPatchAt = (i: number) => grid.variants?.[i] ?? {};
   } else {
     variantCount = 1;
     variantPatchAt = () => ({});

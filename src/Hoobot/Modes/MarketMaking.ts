@@ -3,7 +3,7 @@ import { ConsoleLogger } from "../Utilities/ConsoleLogger";
 import { ConfigOptions, ExchangeOptions, SymbolOptions, toSymbolKey } from "../Utilities/Args";
 import { Exchange } from "../Exchanges/Exchange";
 import { Orderbook } from "../Exchanges/Orderbook";
-import { Order, getOpenOrders, getOrder, cancelOrder } from "../Exchanges/Orders";
+import { Order, getOpenOrders, cancelOrder } from "../Exchanges/Orders";
 import { placeBuyOrder, placeSellOrder, Trade } from "../Exchanges/Trades";
 import { getCurrentBalances } from "../Exchanges/Balances";
 import { logToFile } from "../Utilities/LogToFile";
@@ -207,8 +207,13 @@ const buildStaticGridLevels = (
 ): MmGridLevel[] => {
   if (!Number.isFinite(midPrice) || midPrice <= 0) return [];
 
-  const bestBid = Math.max(...Object.keys(orderbook.bids).map(Number).filter(n => Number.isFinite(n)));
-  const bestAsk = Math.min(...Object.keys(orderbook.asks).map(Number).filter(n => Number.isFinite(n)));
+  const validBids = Object.keys(orderbook.bids).map(Number).filter(n => Number.isFinite(n) && n > 0);
+  const validAsks = Object.keys(orderbook.asks).map(Number).filter(n => Number.isFinite(n) && n > 0);
+  
+  if (validBids.length === 0 || validAsks.length === 0) return [];
+
+  const bestBid = Math.max(...validBids);
+  const bestAsk = Math.min(...validAsks);
 
   const spread = Math.max(0, spreadPercent / 100);
   const gridSpacing = Math.max(0.000001, gridSpacingPercent / 100);
@@ -217,6 +222,7 @@ const buildStaticGridLevels = (
   const levels: MmGridLevel[] = [];
   const seen = new Set<MmSlotKey>();
 
+  // Start with initial prices around midPrice with spread
   let bidPrice = midPrice * (1 - spreadHalf);
   let askPrice = midPrice * (1 + spreadHalf);
 
@@ -227,6 +233,7 @@ const buildStaticGridLevels = (
     const bidKey = getPriceKey(roundedBid);
     const askKey = getPriceKey(roundedAsk);
 
+    // Only add valid prices that are positive and make sense relative to the market
     if (roundedBid > 0 && !seen.has(bidKey) && roundedBid < bestAsk) {
       levels.push({ side: "buy", price: roundedBid, distanceIndex });
       seen.add(bidKey);
@@ -236,8 +243,14 @@ const buildStaticGridLevels = (
       seen.add(askKey);
     }
 
-    bidPrice *= 1 - gridSpacing;
-    askPrice *= 1 + gridSpacing;
+    // Use compound multiplication for grid spacing
+    bidPrice *= (1 - gridSpacing);
+    askPrice *= (1 + gridSpacing);
+    
+    // Stop if prices become invalid
+    if (bidPrice <= 0 || !Number.isFinite(bidPrice) || askPrice <= 0 || !Number.isFinite(askPrice)) {
+      break;
+    }
   }
   return levels.sort((left, right) => left.distanceIndex - right.distanceIndex || (left.side === "buy" ? -1 : 1));
 };
@@ -252,11 +265,11 @@ const buildGridSignature = (
 ) =>
   [
     symbol,
-    fixedMidPrice.toFixed(12),
-    spreadPercent.toFixed(8),
-    gridSpacingPercent.toFixed(8),
+    Number.isFinite(fixedMidPrice) ? fixedMidPrice.toFixed(12) : "invalid",
+    Number.isFinite(spreadPercent) ? spreadPercent.toFixed(8) : "invalid",
+    Number.isFinite(gridSpacingPercent) ? gridSpacingPercent.toFixed(8) : "invalid",
     levelsPerSide,
-    levels.map((level) => `${level.side}:${level.price.toFixed(12)}`).join("|"),
+    levels.map((level) => `${level.side}:${Number.isFinite(level.price) ? level.price.toFixed(12) : "invalid"}`).join("|"),
   ].join("::");
 
 const ensureSlotSkeleton = (state: MmState, levels: MmGridLevel[]) => {
@@ -306,12 +319,16 @@ const buildSidePlacements = (
   let remainingBudget = availableBudget;
 
   for (const slot of sortedSlots) {
+    // Skip slots with invalid prices
+    if (!Number.isFinite(slot.restingPrice) || slot.restingPrice <= 0) continue;
+
     const sizeBase = (side === "sell")
       ? roundToStep(startingSlotAmount, stepSize, "down")
       : roundToStep(startingSlotAmount / slot.restingPrice, stepSize, "up");
 
     const notional = sizeBase * slot.restingPrice;
 
+    if (!Number.isFinite(sizeBase) || sizeBase <= 0 || !Number.isFinite(notional) || notional <= 0) continue;
     if (sizeBase < minQty || notional < minNotional) continue;
 
     const cost = (side === "buy") ? notional : sizeBase;
@@ -347,8 +364,16 @@ const placeStaticGridOrders = async (
   const queuedSlotKeys = new Set<MmSlotKey>();
 
   let balances = await getCurrentBalances(exchange);
-  let remainingBase = balances[baseAsset!]?.crypto ?? 0;
-  let remainingQuote = balances[quoteAsset!]?.crypto ?? 0;
+  
+  // Validate we got balances
+  if (!balances || typeof balances !== "object") {
+    consoleLogger.push(`MM ${symbol}`, `❌ Failed to get valid balances`);
+    consoleLogger.print();
+    return;
+  }
+  
+  let remainingBase = balances[baseAsset]?.crypto ?? 0;
+  let remainingQuote = balances[quoteAsset]?.crypto ?? 0;
 
   for (const placement of placements) {
     if (queuedSlotKeys.has(placement.slotKey)) continue;
@@ -365,34 +390,52 @@ const placeStaticGridOrders = async (
 
     const safeBalance = sideBalance * 0.999;
 
-    if (placement.sizeBase < minQty || (isBuy && quoteRequired < requiredNotional) || cost > safeBalance) {
-      consoleLogger.push(`MM ${symbol}`, `Skipping ${placement.side} ${placement.price}: Insufficient tracked funds or limits.`);
+    // Check for invalid numerical values
+    if (!Number.isFinite(placement.sizeBase) || !Number.isFinite(placement.price) || 
+        !Number.isFinite(quoteRequired) || !Number.isFinite(cost)) {
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Skipping ${placement.side} ${placement.price}: Invalid numerical values`);
+      consoleLogger.print();
       continue;
     }
-    const order = isBuy ? await placeBuyOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2)
-      : await placeSellOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2);
 
-    if (order?.orderId) {
-      slot.currentSide = placement.side;
-      slot.restingPrice = Number(order.price) || placement.price;
-      slot.targetSizeBase = placement.sizeBase;
-      slot.activeOrderId = String(order.orderId);
-      slot.openQtyBase = Number(order.qty) || placement.sizeBase;
-      rememberPlacedOrder(state, slot.activeOrderId, slot.restingPrice, placement.side);
-
-      if (isBuy) {
-        remainingQuote -= quoteRequired;
-      } else {
-        remainingBase -= placement.sizeBase;
-      }
-
-      consoleLogger.push(
-        `MM ${symbol}`,
-        `✅ Placed ${placement.side.toUpperCase()} ${placement.sizeBase.toFixed(8)} @ ${placement.price.toFixed(8)}`,
-      );
+    // Check minimum requirements and sufficient funds
+    if (placement.sizeBase < minQty || quoteRequired < requiredNotional || cost > safeBalance) {
+      consoleLogger.push(`MM ${symbol}`, `Skipping ${placement.side} ${placement.price}: Insufficient tracked funds or limits.`);
+      consoleLogger.print();
+      continue;
     }
+    
+    try {
+      const order = isBuy ? await placeBuyOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2)
+        : await placeSellOrder(exchange, exchangeOptions, symbol, placement.sizeBase, placement.price, 2);
 
-    consoleLogger.print();
+      if (order?.orderId) {
+        slot.currentSide = placement.side;
+        slot.restingPrice = Number(order.price) || placement.price;
+        slot.targetSizeBase = placement.sizeBase;
+        slot.activeOrderId = String(order.orderId);
+        slot.openQtyBase = Number(order.qty) || placement.sizeBase;
+        rememberPlacedOrder(state, slot.activeOrderId, slot.restingPrice, placement.side);
+
+        if (isBuy) {
+          remainingQuote -= quoteRequired;
+        } else {
+          remainingBase -= placement.sizeBase;
+        }
+
+        consoleLogger.push(
+          `MM ${symbol}`,
+          `✅ Placed ${placement.side.toUpperCase()} ${placement.sizeBase.toFixed(8)} @ ${placement.price.toFixed(8)}`,
+        );
+      } else {
+        consoleLogger.push(`MM ${symbol}`, `⚠️ No order ID returned for ${placement.side} ${placement.price}`);
+      }
+      consoleLogger.print();
+    } catch (error: any) {
+      consoleLogger.push(`MM ${symbol}`, `❌ Failed to place ${placement.side}: ${error?.message}`);
+      logToFile("./logs/mm-error.log", `Place static order failed ${symbol} ${placement.side}: ${error?.message}`);
+      consoleLogger.print();
+    }
     await delay(1000);
   }
 };
@@ -414,44 +457,69 @@ const placeFlippedOrder = async (
   symbolOptions: SymbolOptions,
   slot: MmGridSlot,
   filter: any,
-  spreadPercent: number,           // Add this parameter
+  spreadPercent: number,
 ): Promise<void> => {
-  var sizeBase = roundToStep(slot.targetSizeBase, filter?.stepSize ?? 0, "down");
+  // Validate slot has valid target size
+  if (!Number.isFinite(slot.targetSizeBase) || slot.targetSizeBase <= 0) {
+    consoleLogger.push(`MM ${symbol}`, `⚠️ Cannot place flipped order: invalid target size`);
+    consoleLogger.print();
+    return;
+  }
+  
+  let sizeBase = roundToStep(slot.targetSizeBase, filter?.stepSize ?? 0, "down");
   if (sizeBase <= 0) return;
 
   const minNotional = getEffectiveMinNotional(symbol, filter?.minNotional ?? 1e-9);
   const originalPrice = slot.restingPrice || slot.price;
+  
+  // Validate original price
+  if (!Number.isFinite(originalPrice) || originalPrice <= 0) {
+    consoleLogger.push(`MM ${symbol}`, `⚠️ Cannot place flipped order: invalid original price`);
+    consoleLogger.print();
+    return;
+  }
 
-  // === SPREAD CAPTURE LOGIC ===
+  // Spread capture logic - the slot has already been flipped, so we place orders for its current side
   let targetPrice: number;
   const halfSpread = (spreadPercent / 100) / 2;
 
-  if (slot.currentSide === "buy") {
-    // Just bought → now sell HIGHER
-    targetPrice = roundToStep(originalPrice * (1 + halfSpread * 1.5), filter?.tickSize ?? 0, "up"); // slight buffer
+  if (slot.currentSide === "sell") {
+    // Slot was flipped to sell → place sell order HIGHER than original buy price
+    targetPrice = roundToStep(originalPrice * (1 + halfSpread * 1.5), filter?.tickSize ?? 0, "up");
   } else {
-    // Just sold → now buy LOWER
+    // Slot was flipped to buy → place buy order LOWER than original sell price
     targetPrice = roundToStep(originalPrice * (1 - halfSpread * 1.5), filter?.tickSize ?? 0, "down");
+  }
+  
+  // Validate calculated target price
+  if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
+    consoleLogger.push(`MM ${symbol}`, `⚠️ Cannot place flipped order: invalid target price calculated`);
+    consoleLogger.print();
+    return;
   }
 
   try {
     let order;
-    var minSize = symbolOptions?.marketMaking?.startingSlotQuote ?? 5.01
-    if (slot.currentSide === "buy") {
-      // Placing sell
-      var notional = sizeBase * targetPrice
-      if (notional < minNotional) return;
-      if (notional < minSize) {
-        sizeBase = minSize / targetPrice
-      }
+    const minSize = symbolOptions?.marketMaking?.startingSlotQuote ?? 5.01;
+    const minQty = filter?.minQty ?? 1e-9;
+    let notional = sizeBase * targetPrice;
+    
+    if (notional < minNotional) return;
+    if (notional < minSize) {
+      sizeBase = minSize / targetPrice;
+      notional = sizeBase * targetPrice; // Recalculate after adjustment
+    }
+    
+    // Validate adjusted size meets minimum requirements
+    if (sizeBase <= 0 || sizeBase < minQty || notional < minNotional) {
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Cannot place flipped order: size too small after adjustment`);
+      consoleLogger.print();
+      return;
+    }
+    
+    if (slot.currentSide === "sell") {
       order = await placeSellOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     } else {
-      // Placing buy
-      var notional = sizeBase * targetPrice
-      if (notional < minNotional) return;
-      if (notional < minSize) {
-        sizeBase = minSize / targetPrice
-      }
       order = await placeBuyOrder(exchange, exchangeOptions, symbol, sizeBase, targetPrice, 2);
     }
 
@@ -467,10 +535,12 @@ const placeFlippedOrder = async (
         `✅ Re-placed ${slot.currentSide.toUpperCase()} ${sizeBase.toFixed(8)} @ ${targetPrice.toFixed(8)} (+spread capture)`
       );
     }
+    consoleLogger.print();
   } catch (error: any) {
+    consoleLogger.push(`MM ${symbol}`, `❌ Place flipped failed: ${error?.message}`);
     logToFile("./logs/mm-error.log", `Place flipped failed ${symbol}: ${error?.message}`);
+    consoleLogger.print();
   }
-  consoleLogger.print();
 };
 
 const reconcileGridOrders = async (
@@ -485,11 +555,19 @@ const reconcileGridOrders = async (
 
   try {
     const currentOpenOrders = await getOpenOrders(exchange, symbol);
+    
+    // Validate currentOpenOrders
+    if (!Array.isArray(currentOpenOrders)) {
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Invalid open orders data received`);
+      consoleLogger.print();
+      return;
+    }
+    
     // compare currentOpenOrders to state.openOrders to detect changes
     for (const order of state.openOrders) {
       const stillOpen = currentOpenOrders.find(o => o.orderId === order.orderId);
       if (!stillOpen) {
-        const slot = [...state.slots.values()].find(s => s.activeOrderId === order.orderId);
+        const slot = Array.from(state.slots.values()).find(s => s.activeOrderId === order.orderId);
         if (slot) {
           setFlippedSlotState(slot, flipSide(slot.currentSide), "order no longer open", symbol, consoleLogger);
           await placeFlippedOrder(
@@ -527,10 +605,33 @@ export const handleTradeUpdate = async (
   const state = getMmState(toSymbolKey(symbol));
   if (state.slots.size === 0) return;
 
-  consoleLogger.push(`MM ${symbol}`, `Trade update received @ ${Number(trade.price).toFixed(8)} (${trade.qty} qty). Triggering reconciliation...`);
+  // Validate trade object
+  if (!trade || !trade.price || !trade.qty) {
+    consoleLogger.push(`MM ${symbol}`, `⚠️ Invalid trade data received`);
+    consoleLogger.print();
+    return;
+  }
 
-  // Just trigger full reconciliation instead of trying to match orderId
-  await reconcileGridOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
+  try {
+    const priceNum = Number(trade.price);
+    const qtyNum = Number(trade.qty);
+    
+    if (!Number.isFinite(priceNum) || priceNum <= 0 || !Number.isFinite(qtyNum) || qtyNum <= 0) {
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Invalid trade values: price=${trade.price}, qty=${trade.qty}`);
+      consoleLogger.print();
+      return;
+    }
+    
+    consoleLogger.push(`MM ${symbol}`, `Trade update received @ ${priceNum.toFixed(8)} (${qtyNum} qty). Triggering reconciliation...`);
+
+    // Just trigger full reconciliation instead of trying to match orderId
+    await reconcileGridOrders(exchange, consoleLogger, symbol, exchangeOptions, symbolOptions, state);
+  } catch (error: any) {
+    consoleLogger.push(`MM ${symbol}`, `❌ Trade update handling failed: ${error?.message}`);
+    logToFile("./logs/mm-error.log", `Trade update failed ${symbol}: ${error?.message}
+${error?.stack}`);
+    consoleLogger.print();
+  }
 };
 
 export const initMarketMaking = async (
@@ -543,12 +644,31 @@ export const initMarketMaking = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
 ): Promise<void> => {
-  if (!symbolOptions?.marketMaking || symbolOptions.enabled === false) return;
+  if (!symbolOptions?.marketMaking || symbolOptions.enabled === false) {
+    consoleLogger.push(`MM ${symbol}`, "Market making disabled or not configured");
+    consoleLogger.print();
+    return;
+  }
 
-  const symbolKey = toSymbolKey(symbol);
-  const state = getMmState(symbolKey);
+  // Validate symbol format
+  if (!symbol || typeof symbol !== "string" || !symbol.includes("/")) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Invalid symbol format. Expected format: BASE/QUOTE");
+    consoleLogger.print();
+    return;
+  }
+  
+  // Validate orderbook
+  if (!orderbook || typeof orderbook !== "object" || !orderbook.bids || !orderbook.asks) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Invalid orderbook provided");
+    consoleLogger.print();
+    return;
+  }
 
-  // 1. Full reset
+  try {
+    const symbolKey = toSymbolKey(symbol);
+    const state = getMmState(symbolKey);
+
+    // 1. Full reset
   state.slots.clear();
   state.fixedMidPrice = null;
   state.gridSignature = "";
@@ -558,13 +678,23 @@ export const initMarketMaking = async (
   consoleLogger.print();
   state.openOrders = await getOpenOrders(exchange, symbol);
   for (const order of state.openOrders) {
-    await cancelOrder(exchange, symbol, order.orderId).catch(() => { });
+    try {
+      await cancelOrder(exchange, symbol, order.orderId);
+    } catch (error: any) {
+      consoleLogger.push(`MM ${symbol}`, `⚠️ Failed to cancel order ${order.orderId}: ${error?.message}`);
+      logToFile("./logs/mm-error.log", `Cancel order failed ${symbol} ${order.orderId}: ${error?.message}`);
+    }
     await delay(800);
   }
   await delay(3000);
 
   // 3. Resolve mid price
   const opts = symbolOptions.marketMaking;
+  if (!opts) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Market making configuration missing");
+    consoleLogger.print();
+    return;
+  }
   const fixedMidPrice = resolveStaticMidPrice(state, opts, orderbook);
   if (!fixedMidPrice) {
     consoleLogger.push(`MM ${symbol}`, "❌ Could not determine fixed mid price. Aborting init.");
@@ -607,16 +737,33 @@ export const initMarketMaking = async (
 
   // 5. Place initial orders based on current balances
   const balances = await getCurrentBalances(exchange);
+  
+  if (!balances) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Failed to get current balances");
+    consoleLogger.print();
+    return;
+  }
 
   const [base, quote] = symbol.split("/");
+  
+  // Validate we have both base and quote assets
+  if (!base || !quote) {
+    consoleLogger.push(`MM ${symbol}`, "❌ Invalid symbol format: missing base or quote asset");
+    consoleLogger.print();
+    return;
+  }
+  
   const startingQuote = getStartingSlotQuoteNotional(opts, minNotional);
 
-  const buySlots = [...state.slots.values()].filter(s => s.defaultSide === "buy");
-  const sellSlots = [...state.slots.values()].filter(s => s.defaultSide === "sell");
+  const buySlots = Array.from(state.slots.values()).filter(s => s.defaultSide === "buy");
+  const sellSlots = Array.from(state.slots.values()).filter(s => s.defaultSide === "sell");
+
+  // Calculate base amount for sell slots from quote amount
+  const sellBaseAmount = fixedMidPrice > 0 ? startingQuote / fixedMidPrice : startingQuote;
 
   const placements: MmPlacement[] = [
     ...buildSidePlacements(buySlots, "buy", balances[quote]?.crypto ?? 0, minNotional, filter?.minQty ?? 1e-9, filter?.stepSize ?? 0, startingQuote),
-    ...buildSidePlacements(sellSlots, "sell", balances[base]?.crypto ?? 0, minNotional, filter?.minQty ?? 1e-9, filter?.stepSize ?? 0, startingQuote / fixedMidPrice),
+    ...buildSidePlacements(sellSlots, "sell", balances[base]?.crypto ?? 0, minNotional, filter?.minQty ?? 1e-9, filter?.stepSize ?? 0, sellBaseAmount),
   ];
 
   if (placements.length > 0) {
@@ -636,6 +783,11 @@ export const initMarketMaking = async (
   }
 
   state.openOrders = await getOpenOrders(exchange, symbol);
-
   consoleLogger.print();
+  } catch (error: any) {
+    consoleLogger.push(`MM ${symbol}`, `❌ Initialization error: ${error?.message}`);
+    logToFile("./logs/mm-error.log", `Market making init failed ${symbol}: ${error?.message}
+${error?.stack}`);
+    consoleLogger.print();
+  }
 };

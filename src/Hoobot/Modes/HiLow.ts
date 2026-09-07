@@ -24,6 +24,15 @@ export const simulateHilow = async (
   filter: Filter,
 ): Promise<boolean> => {
   if (symbolOptions.enabled === false) return false;
+  
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger().push("HiLow Simulation", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return false;
+  }
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
   const symbolKey = toSymbolKey(symbol);
   const primaryTf = simulationTimeframesForSymbol(symbolOptions)[0]!;
   const series = candlesticks[symbolKey]?.[primaryTf];
@@ -45,7 +54,6 @@ export const simulateHilow = async (
   const logger = consoleLogger();
 
   if (tradeHistory.length === 0) {
-    const quoteSymbol = symbol.split("/")[1]!;
     await simulateBuy(
       symbol,
       balances[quoteSymbol]?.crypto ?? 0,
@@ -81,7 +89,6 @@ export const simulateHilow = async (
   }
 
   if (lastTrade.isBuyer) {
-    const baseSymbol = symbol.split("/")[0]!;
     await simulateSell(
       symbol,
       simSellBaseQuantity(balances[baseSymbol]?.crypto ?? 0),
@@ -96,7 +103,6 @@ export const simulateHilow = async (
       logger,
     );
   } else {
-    const quoteSymbol = symbol.split("/")[1]!;
     await simulateBuy(
       symbol,
       balances[quoteSymbol]?.crypto ?? 0,
@@ -123,18 +129,28 @@ export const hilow = async (
   exchangeOptions: ExchangeOptions,
   symbolOptions: SymbolOptions,
 ) => {
-  const filter = symbolFilters[toSymbolKey(symbol)];
-  if (exchangeOptions.tradeHistory[toSymbolKey(symbol)] === undefined) {
-    exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
+  // Validate symbol format
+  const symbolParts = symbol?.split("/") || [];
+  if (symbolParts.length !== 2 || !symbolParts[0] || !symbolParts[1]) {
+    consoleLogger.push("HiLow", `Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+    return;
   }
-  const tradeHistory = exchangeOptions.tradeHistory[toSymbolKey(symbol)];
+  
+  const [baseSymbol, quoteSymbol] = symbolParts;
+  const symbolKey = toSymbolKey(symbol);
+  
+  const filter = symbolFilters[symbolKey];
+  if (exchangeOptions.tradeHistory[symbolKey] === undefined) {
+    exchangeOptions.tradeHistory[symbolKey] = await getTradeHistory(exchange, symbol);
+  }
+  const tradeHistory = exchangeOptions.tradeHistory[symbolKey];
   const lastTrade = tradeHistory[tradeHistory.length - 1];
-  consoleLogger.push("Symbol", toSymbolKey(symbol));
-  const roi = calculateROI(exchangeOptions.tradeHistory[toSymbolKey(symbol)]);
-  consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + symbol.split("/")[0]);
-  consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + symbol.split("/")[1]);
-  if (symbolOptions.growingMax?.buy! > 0) {
-    consoleLogger.push("Max buy amount", symbolOptions.growingMax?.buy + " " + symbol.split("/")[1]);
+  consoleLogger.push("Symbol", symbolKey);
+  const roi = calculateROI(exchangeOptions.tradeHistory[symbolKey]);
+  consoleLogger.push("Profit in Base", roi[0].toFixed(7) + " " + baseSymbol);
+  consoleLogger.push("Profit in Quote", roi[1].toFixed(7) + " " + quoteSymbol);
+  if (symbolOptions.growingMax?.buy && symbolOptions.growingMax.buy > 0) {
+    consoleLogger.push("Max buy amount", symbolOptions.growingMax?.buy + " " + quoteSymbol);
   }
   const orderBook = exchangeOptions.orderbooks[toSymbolKey(symbol)];
   if (

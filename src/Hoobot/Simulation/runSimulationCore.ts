@@ -478,14 +478,18 @@ export const runSimulationWithConfig = async (
   for (let symIdx = startSymIdx; symIdx < symbolPasses.length; symIdx++) {
     const symbolOptions = symbolPasses[symIdx];
     if (!skipBalanceInit) {
-      exchangeOptions.balances![symbolOptions.name.split("/")[0]] = {
-        crypto: 0,
-        usdt: 0,
-      };
-      exchangeOptions.balances![symbolOptions.name.split("/")[1]] = {
-        crypto: symbolOptions.growingMax?.buy!,
-        usdt: 0,
-      };
+      const symbolParts = symbolOptions.name?.split("/") || [];
+      if (symbolParts.length === 2 && symbolParts[0] && symbolParts[1]) {
+        exchangeOptions.balances = exchangeOptions.balances ?? {};
+        exchangeOptions.balances[symbolParts[0]] = {
+          crypto: 0,
+          usdt: 0,
+        };
+        exchangeOptions.balances[symbolParts[1]] = {
+          crypto: symbolOptions.growingMax?.buy ?? 0,
+          usdt: 0,
+        };
+      }
     } else {
       skipBalanceInit = false;
     }
@@ -531,7 +535,7 @@ export const runSimulationWithConfig = async (
             simulateOptions,
             exchangeOptions,
             symbolOptions,
-            exchangeOptions.balances!,
+            exchangeOptions.balances ?? {},
             symbolFilters[toSymbolKey(symbol)]
           );
         } catch (error) {
