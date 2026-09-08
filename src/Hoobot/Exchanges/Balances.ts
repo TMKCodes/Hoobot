@@ -16,7 +16,7 @@ export interface Balances {
   [asset: string]: Balance;
 }
 
-const isBinanceTimestampAheadError = (error: any): boolean => {
+const isBinanceTimestampAheadError = (error: unknown): boolean => {
   if (Number(error?.code) === -1021) return true;
   const msg = String(error?.body ?? error?.msg ?? error ?? "");
   return msg.includes("Timestamp for this request");
@@ -29,7 +29,7 @@ const syncBinanceServerTime = async (exchange: Exchange): Promise<void> => {
     if (typeof binanceAny.useServerTime === "function") {
       await binanceAny.useServerTime();
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logToFile("./logs/error.log", `syncBinanceServerTime(balance): ${String(err)}`);
   }
 };
@@ -79,12 +79,18 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
       } else {
         let fiatAmount = 0;
         if (symbols.includes(assets[i] + fiat)) {
-          fiatAmount = prices[assets[i] + fiat] * amount;
+          const price = prices[assets[i] + fiat];
+          fiatAmount = Number.isFinite(price) ? price * amount : 0;
         } else if (symbols.includes(fiat + assets[i])) {
-          fiatAmount = amount / prices[fiat + assets[i]];
+          const price = prices[fiat + assets[i]];
+          fiatAmount = Number.isFinite(price) && price > 0 ? amount / price : 0;
         } else {
-          let tempAmount = amount / prices["BTC" + assets[i]];
-          fiatAmount = prices[assets[i] + fiat] * tempAmount;
+          const btcPrice = prices["BTC" + assets[i]];
+          const assetPrice = prices[assets[i] + fiat];
+          if (Number.isFinite(btcPrice) && btcPrice > 0 && Number.isFinite(assetPrice)) {
+            const tempAmount = amount / btcPrice;
+            fiatAmount = assetPrice * tempAmount;
+          }
         }
         currentBalances[assets[i]] = {
           crypto: amount,
@@ -98,7 +104,7 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
     const symbols = Array.isArray(prices) ? prices.map((price) => toSymbolKey(price.symbol)) : [];
     if (balances.length > 0) {
       for (const balance of balances) {
-        const amount = parseFloat(balance.available);
+        const amount = Number.isFinite(parseFloat(balance.available)) ? parseFloat(balance.available) : 0;
         if (balance.asset === "USDT") {
           currentBalances[balance.asset] = {
             crypto: amount,
@@ -145,9 +151,12 @@ export const getCurrentBalances = async (exchange: Exchange): Promise<Balances> 
         let fiatAmount = 0;
         try {
           const ticker = await exchange.getTicker(iso + "USDT");
-          if (ticker?.last) fiatAmount = ticker.last * amount;
-        } catch {
+          if (ticker?.last != null && Number.isFinite(ticker.last) && Number.isFinite(amount)) {
+            fiatAmount = ticker.last * amount;
+          }
+        } catch (error: unknown) {
           // Asset may not have a USDT pair — leave fiatAmount as 0
+          logToFile("./logs/balances-error.log", `Failed to get ticker for ${iso}USDT: ${error instanceof Error ? error.message : String(error)}`);
         }
         currentBalances[iso] = { crypto: amount, usdt: fiatAmount };
       }
@@ -192,7 +201,7 @@ export const createBinanceBalanceDataErrorLogBridge = (
       try {
         exchangeOptions.balances = await getCurrentBalances(exchange);
         console.log("[Binance] Saldot päivitetty REST-pyynnöllä (balanceData error / user data stream).");
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn("[Binance] Saldopäivitys balanceData-virheen jälkeen epäonnistui:", err);
         logToFile("./logs/error.log", `balanceData error → REST refresh failed: ${String(err)}\n`);
       }
