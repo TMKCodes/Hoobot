@@ -50,19 +50,24 @@ export const getFilterFromBinanceExchangeInfo = (exchangeInfo: BinanceExchangeIn
   const minNotional =
     (notionalFilter as { minNotional?: string }).minNotional ?? (notionalFilter as { notional?: string }).notional;
   const maxNotional = (notionalFilter as { maxNotional?: string }).maxNotional ?? "100000000000000";
+  const safeParse = (value: any, defaultValue: number = 0): number => {
+    const result = parseFloat(String(value ?? defaultValue));
+    return Number.isFinite(result) ? result : defaultValue;
+  };
+  
   return {
-    minPrice: parseFloat(String(priceFilter.minPrice)),
-    maxPrice: parseFloat(String(priceFilter.maxPrice)),
-    tickSize: parseFloat(String(priceFilter.tickSize)),
-    minQty: parseFloat(String(lotSizeFilter.minQty)),
-    maxQty: parseFloat(String(lotSizeFilter.maxQty)),
-    stepSize: parseFloat(String(lotSizeFilter.stepSize)),
-    minNotional: parseFloat(String(minNotional ?? "0")),
-    maxNotional: parseFloat(String(maxNotional)),
-    bidMultiplierUp: parseFloat(String(percentPriceFilter.bidMultiplierUp ?? "1")),
-    bidMultiplierDown: parseFloat(String(percentPriceFilter.bidMultiplierDown ?? "1")),
-    askMultiplierUp: parseFloat(String(percentPriceFilter.askMultiplierUp ?? "1")),
-    askMultiplierDown: parseFloat(String(percentPriceFilter.askMultiplierDown ?? "1")),
+    minPrice: safeParse(priceFilter.minPrice, 0),
+    maxPrice: safeParse(priceFilter.maxPrice, Number.MAX_SAFE_INTEGER),
+    tickSize: safeParse(priceFilter.tickSize, 0),
+    minQty: safeParse(lotSizeFilter.minQty, 0),
+    maxQty: safeParse(lotSizeFilter.maxQty, Number.MAX_SAFE_INTEGER),
+    stepSize: safeParse(lotSizeFilter.stepSize, 0),
+    minNotional: safeParse(minNotional, 0),
+    maxNotional: safeParse(maxNotional, Number.MAX_SAFE_INTEGER),
+    bidMultiplierUp: safeParse(percentPriceFilter.bidMultiplierUp, 1),
+    bidMultiplierDown: safeParse(percentPriceFilter.bidMultiplierDown, 1),
+    askMultiplierUp: safeParse(percentPriceFilter.askMultiplierUp, 1),
+    askMultiplierDown: safeParse(percentPriceFilter.askMultiplierDown, 1),
   };
 };
 
