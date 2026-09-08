@@ -261,8 +261,8 @@ export class Mexc {
         this.ws = null;
         console.log("MEXC disconnected.");
       }
-    } catch (err) {
-      console.error("Error during disconnect:", err);
+    } catch (err: unknown) {
+      console.error("Error during disconnect:", err instanceof Error ? err : new Error(String(err)));
     }
   }
 
