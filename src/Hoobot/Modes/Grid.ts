@@ -27,17 +27,19 @@ const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] =
   
   const upper = currentPrice * (1 + options.gridRange.upper / 100);
   const lower = currentPrice * (1 - options.gridRange.lower / 100);
-  const step = (upper - lower) / options.gridLevels;
+  const range = upper - lower;
+  if (!Number.isFinite(range) || range <= 0) return grid;
+  const step = range / options.gridLevels;
 
   for (let i = 0; i < options.gridLevels; i++) {
     const price = lower + i * step;
-    const type = price < currentPrice ? "buy" : "sell";
+    const type = price < currentPrice ? "buy" : (price > currentPrice ? "sell" : "buy");
     grid.push({
       orderId: "",
       price: price,
       type: type,
       executed: false,
-      size: options.gridOrderSize.toFixed(8),
+      size: Number.isFinite(options.gridOrderSize) ? options.gridOrderSize.toFixed(8) : "0",
     });
   }
   return grid;
@@ -46,13 +48,17 @@ const createGrid = (currentPrice: number, options: SymbolOptions): GridLevel[] =
 const buildGridFromExistingOrders = (openOrders: Order[]): GridLevel[] => {
   const grid: GridLevel[] = [];
   for (const order of openOrders) {
-    grid.push({
-      orderId: order.orderId,
-      price: parseFloat(order.price),
-      type: order.isBuyer === true ? "buy" : "sell",
-      executed: false,
-      size: String(order.qty),
-    });
+    const price = Number.isFinite(parseFloat(order.price)) ? parseFloat(order.price) : 0;
+    const qty = Number.isFinite(parseFloat(order.qty)) ? parseFloat(order.qty) : 0;
+    if (price > 0 && qty >= 0) {
+      grid.push({
+        orderId: order.orderId,
+        price: price,
+        type: order.isBuyer === true ? "buy" : "sell",
+        executed: false,
+        size: String(qty),
+      });
+    }
   }
   // Sort the grid by price
   grid.sort((a, b) => a.price - b.price);
@@ -69,30 +75,26 @@ export const placeOrder = async (
 ): Promise<Order> => {
   if (direction === "sell") {
     let order = await placeSellOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
-    if (order !== undefined) {
+    if (order !== undefined && order.orderId) {
       exchangeOptions.balances = await getCurrentBalances(exchange);
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
       exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
       return order;
-    } else {
-      return {} as Order;
     }
   } else if (direction === "buy") {
     let order = await placeBuyOrder(exchange, exchangeOptions, symbol, quantityInBase, price);
-    if (order !== undefined) {
+    if (order !== undefined && order.orderId) {
       exchangeOptions.balances = await getCurrentBalances(exchange);
       if (exchangeOptions.tradeHistory === undefined) {
         exchangeOptions.tradeHistory = {};
       }
       exchangeOptions.tradeHistory[toSymbolKey(symbol)] = await getTradeHistory(exchange, symbol);
       return order;
-    } else {
-      return {} as Order;
     }
   }
-  return {} as Order;
+  throw new Error(`Failed to place ${direction} order for ${symbol}`);
 };
 
 const placeGridOrders = async (
@@ -126,10 +128,11 @@ const placeGridOrders = async (
             size: symbolOptions.gridOrderSize,
           });
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         consoleLogger.push(
           `Failed to place order`,
-          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${error}`,
+          `Direction: ${grid[i].type}, Price: ${grid[i].price}, Error: ${errorMessage}`,
         );
       }
     }
@@ -157,7 +160,9 @@ const rebalanceGrid = async (
 ): Promise<void> => {
   const openOrders = await getOpenOrders(exchange, symbol);
 
-  if (openOrders.length < symbolOptions.gridOrderSize * 2) {
+  // Only rebalance if we have enough existing orders to form a proper grid
+  const expectedGridLevels = symbolOptions.gridLevels ?? symbolOptions.grid?.length ?? 0;
+  if (openOrders.length < expectedGridLevels) {
     return;
   }
   const existingGrid = buildGridFromExistingOrders(openOrders);
@@ -174,8 +179,9 @@ const rebalanceGrid = async (
   for (const order of openOrders) {
     try {
       await cancelOrder(exchange, symbol, order.orderId);
-    } catch (error) {
-      consoleLogger.push("Grid rebalance", `Failed to cancel order ${order.orderId}: ${error}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      consoleLogger.push("Grid rebalance", `Failed to cancel order ${order.orderId}: ${errorMessage}`);
     }
   }
   symbolOptions.grid = createGrid(currentPrice, symbolOptions);
@@ -206,11 +212,12 @@ const manageGridOrders = async (
     if (grid[i].orderId.length > 0 && grid[i].executed == false) {
       const orderExists = openOrders.some((order) => order.orderId === grid[i].orderId);
       if (!orderExists) {
-        await delay(150);
-        const order = await getOrder(exchange, symbol, grid[i].orderId);
-        if (order.orderStatus === "Cancelled") {
-          grid[i].executed = true;
-        } else if (order.orderStatus === "Filled") {
+        try {
+          await delay(150);
+          const order = await getOrder(exchange, symbol, grid[i].orderId);
+          if (order?.orderStatus === "Cancelled") {
+            grid[i].executed = true;
+          } else if (order?.orderStatus === "Filled") {
           // Order was filled
           grid[i].executed = true;
           orderExecuted = true;
@@ -236,27 +243,29 @@ const manageGridOrders = async (
           const step = (upper - lower) / symbolOptions.gridLevels;
           const newOrderPrice = grid[i].type === "buy" ? grid[i].price + step : grid[i].price - step;
 
-          const fees = 0.2; // Assume 0.2% fee, adjust as needed
+          // Use configured fees or default to 0.2%
+          const fees = symbolOptions.tradingFeePercentage ?? 0.2;
           const potentialProfit = calculatePotentialProfit(grid[i].price, newOrderPrice, fees);
           const minimumProfit =
             newDirection === "buy" ? symbolOptions.profit?.minimumBuy || 0 : symbolOptions.profit?.minimumSell || 0;
 
           if (potentialProfit >= minimumProfit / 100) {
-            const newOrder = await placeOrder(
-              exchange,
-              symbol,
-              newDirection,
-              newOrderPrice,
-              symbolOptions.gridOrderSize,
-              exchangeOptions,
-            );
+            try {
+              const newOrder = await placeOrder(
+                exchange,
+                symbol,
+                newDirection,
+                newOrderPrice,
+                symbolOptions.gridOrderSize,
+                exchangeOptions,
+              );
 
-            // Update the grid level with new order details
-            grid[i].type = newDirection;
-            grid[i].price = newOrderPrice;
-            grid[i].orderId = newOrder.orderId;
-            grid[i].executed = false;
-            grid[i].size = newOrder.qty;
+              // Update the grid level with new order details
+              grid[i].type = newDirection;
+              grid[i].price = newOrderPrice;
+              grid[i].orderId = newOrder.orderId;
+              grid[i].executed = false;
+              grid[i].size = newOrder.qty;
 
             // let msg = "```";
             // msg += `Placed new order: ${symbol}\r\n`;
@@ -271,12 +280,25 @@ const manageGridOrders = async (
               `Placed new ${newDirection} order`,
               `Price: ${newOrderPrice}, OrderID: ${grid[i].orderId}`,
             );
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              consoleLogger.push(
+                `Failed to place ${newDirection} order`,
+                `Price: ${newOrderPrice}, Error: ${errorMessage}`,
+              );
+            }
           } else {
             consoleLogger.push(
               `Skipped unprofitable ${newDirection} order`,
               `Price: ${newOrderPrice}, Potential Profit: ${(potentialProfit * 100).toFixed(2)}%`,
             );
           }
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          consoleLogger.push(
+            `Failed to check order status`,
+            `OrderID: ${grid[i].orderId}, Error: ${errorMessage}`,
+          );
         }
       }
     }
