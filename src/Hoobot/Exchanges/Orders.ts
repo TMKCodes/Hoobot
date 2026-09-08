@@ -48,51 +48,69 @@ export interface OrderStatus {
   selfTradePreventionMode: string;
 }
 
-const mapDexTradeOrder = (order: DexTradeOrder, symbol: string): Order => ({
-  symbol: toSymbolKey(symbol),
-  orderId: order.id.toString(),
-  price: (order.rate ?? 0).toString(),
-  qty: (order.volume ?? 0).toString(),
-  quoteQty: ((order.volume ?? 0) * (order.rate ?? 0)).toString(),
-  commission: (order.commission ?? 0).toString(),
-  commissionAsset: "",
-  time: (order.time_create ?? 0) * 1000,
-  isBuyer: order.type === 0,
-  isMaker: true,
-  isBestMatch: true,
-  orderStatus:
-    order.status === 0 ? "PROCESSING" : order.status === 1 ? "NEW" : order.status === 2 ? "FILLED" : "CANCELED",
-  tradeId: order.id,
-});
+const mapDexTradeOrder = (order: DexTradeOrder, symbol: string): Order => {
+  const rate = Number.isFinite(order.rate) ? order.rate : 0;
+  const volume = Number.isFinite(order.volume) ? order.volume : 0;
+  const commission = Number.isFinite(order.commission) ? order.commission : 0;
+  const time = Number.isFinite(order.time_create) ? order.time_create * 1000 : 0;
+  
+  return {
+    symbol: toSymbolKey(symbol),
+    orderId: order.id.toString(),
+    price: rate.toString(),
+    qty: volume.toString(),
+    quoteQty: (volume * rate).toString(),
+    commission: commission.toString(),
+    commissionAsset: "",
+    time: time,
+    isBuyer: order.type === 0,
+    isMaker: true,
+    isBestMatch: true,
+    orderStatus:
+      order.status === 0 ? "PROCESSING" : order.status === 1 ? "NEW" : order.status === 2 ? "FILLED" : "CANCELED",
+    tradeId: order.id,
+  };
+};
 
 export const getOpenOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
-  if (isBinance(exchange)) {
-    return await exchange.openOrders(toSymbolKey(symbol));
+  try {
+    if (isBinance(exchange)) {
+      return await exchange.openOrders(toSymbolKey(symbol));
   } else if (isNonKYC(exchange)) {
     const orders = await exchange.getAllOrders(symbol, "active", 500, 0);
     return orders.map(
-      (order: any) =>
-        ({
+      (order: any) => {
+        const qty = Number.isFinite(parseFloat(order.quantity)) ? parseFloat(order.quantity) : 0;
+        const price = Number.isFinite(parseFloat(order.price)) ? parseFloat(order.price) : 0;
+        const createdAt = Number.isFinite(order.createdAt) ? order.createdAt : 0;
+        const orderId = order.id !== undefined ? String(order.id) : "";
+        
+        return {
           symbol: toSymbolKey(symbol),
-          orderId: order.id,
-          price: order.price,
-          qty: order.quantity,
-          quoteQty: (parseFloat(order.quantity) * parseFloat(order.price)).toString(),
+          orderId: orderId,
+          price: price.toString(),
+          qty: qty.toString(),
+          quoteQty: (qty * price).toString(),
           commission: "",
           commissionAsset: "",
-          time: order.createdAt,
+          time: createdAt,
           isBuyer: order.side === "buy" ? true : false,
           isMaker: true,
           isBestMatch: true,
-          orderStatus: order.status,
-          tradeId: parseFloat(order.id),
-        }) as Order,
+          orderStatus: order.status || "UNKNOWN",
+          tradeId: parseFloat(orderId) || 0,
+        } as Order;
+      }
     );
   } else if (isDexTrade(exchange)) {
     const orders = await exchange.getAllOrders(toSymbolKey(symbol), "active", 500, 0);
     return orders.map((order) => mapDexTradeOrder(order, symbol));
   }
   return [] as Order[];
+  } catch (error: unknown) {
+    logToFile("./logs/orders-error.log", `getOpenOrders failed for ${symbol}: ${error instanceof Error ? error.message : String(error)}`);
+    return [] as Order[];
+  }
 };
 
 export const getAllOrders = async (exchange: Exchange, symbol: string): Promise<Order[]> => {
