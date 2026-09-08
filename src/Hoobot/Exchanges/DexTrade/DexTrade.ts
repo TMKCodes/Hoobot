@@ -455,8 +455,9 @@ export class DexTrade extends EventEmitter {
       if (response?.status && Array.isArray(response?.data)) {
         this.pairCache = response.data as DexTradePair[];
       }
-    } catch (err: any) {
-      logToFile("./logs/error.log", `DexTrade ensurePairCache: ${String(err)}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logToFile("./logs/error.log", `DexTrade ensurePairCache: ${errorMessage}`);
     }
   };
 
@@ -487,8 +488,9 @@ export class DexTrade extends EventEmitter {
           logToFile("./logs/error.log", `DexTrade GET ${fullUrl} → ${res.status}`);
         }
         return await res.json();
-      } catch (err: any) {
-        logToFile("./logs/error.log", `DexTrade GET ${fullUrl} error: ${String(err)}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logToFile("./logs/error.log", `DexTrade GET ${fullUrl} error: ${errorMessage}`);
         if (attempt + 1 >= maxRetries) throw err;
         await delay(1000);
       }
@@ -515,8 +517,9 @@ export class DexTrade extends EventEmitter {
           logToFile("./logs/error.log", `DexTrade POST ${endpoint} → ${res.status}`);
         }
         return await res.json();
-      } catch (err: any) {
-        logToFile("./logs/error.log", `DexTrade POST ${endpoint} error: ${String(err)}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logToFile("./logs/error.log", `DexTrade POST ${endpoint} error: ${errorMessage}`);
         if (attempt + 1 >= maxRetries) throw err;
         await delay(1000);
       }
