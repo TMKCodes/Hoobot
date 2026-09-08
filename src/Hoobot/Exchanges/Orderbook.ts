@@ -27,24 +27,40 @@ export const getOrderbook = async (exchange: Exchange, symbol: string): Promise<
     const fetchedOrderbook = await exchange.getOrderbook(symbol, "50");
     if (fetchedOrderbook.asks && fetchedOrderbook.asks.length > 0) {
       for (const ask of fetchedOrderbook.asks) {
-        orderbook.asks[ask[0]] = parseFloat(ask[1]);
+        const price = ask[0];
+        const quantity = Number.isFinite(parseFloat(ask[1])) ? parseFloat(ask[1]) : 0;
+        if (quantity > 0) {
+          orderbook.asks[price] = quantity;
+        }
       }
     }
     if (fetchedOrderbook.bids && fetchedOrderbook.bids.length > 0) {
       for (const bid of fetchedOrderbook.bids) {
-        orderbook.bids[bid[0]] = parseFloat(bid[1]);
+        const price = bid[0];
+        const quantity = Number.isFinite(parseFloat(bid[1])) ? parseFloat(bid[1]) : 0;
+        if (quantity > 0) {
+          orderbook.bids[price] = quantity;
+        }
       }
     }
   } else if (isDexTrade(exchange)) {
     const fetchedOrderbook = await exchange.getOrderbook(toSymbolKey(symbol));
     if (fetchedOrderbook?.data?.sell) {
       for (const entry of fetchedOrderbook.data.sell) {
-        orderbook.asks[entry.rate.toString()] = entry.volume;
+        const rate = Number.isFinite(entry.rate) ? entry.rate.toString() : "0";
+        const volume = Number.isFinite(entry.volume) ? entry.volume : 0;
+        if (volume > 0) {
+          orderbook.asks[rate] = volume;
+        }
       }
     }
     if (fetchedOrderbook?.data?.buy) {
       for (const entry of fetchedOrderbook.data.buy) {
-        orderbook.bids[entry.rate.toString()] = entry.volume;
+        const rate = Number.isFinite(entry.rate) ? entry.rate.toString() : "0";
+        const volume = Number.isFinite(entry.volume) ? entry.volume : 0;
+        if (volume > 0) {
+          orderbook.bids[rate] = volume;
+        }
       }
     }
   }
