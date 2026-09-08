@@ -97,7 +97,7 @@ const applyRoundTripFeeToPnl = (pnl: number, feePerTradePct?: number): number =>
   const fee = (feePerTradePct ?? 0) * 2;
   return pnl - fee;
 };
-const isBinanceTimestampAheadError = (error: any): boolean => {
+const isBinanceTimestampAheadError = (error: unknown): boolean => {
   if (Number(error?.code) === -1021) return true;
   const msg = String(error?.body ?? error?.msg ?? error ?? "");
   return msg.includes("Timestamp for this request");
@@ -254,7 +254,7 @@ export const getTradeHistory = async (exchange: Exchange, symbol: string) => {
   if (isBinance(exchange)) {
     try {
       tradeHistory = await exchange.trades(toSymbolKey(symbol));
-    } catch (error) {
+    } catch (error: unknown) {
       if (isBinanceTimestampAheadError(error)) {
         console.warn(`Binance aikaheitto (trades ${symbol}) — synkataan serveriaika ja yritetään uudelleen.`);
         await syncBinanceServerTime(exchange);
@@ -405,10 +405,13 @@ export const placeSellOrder = async (
   price: number,
   maxRetries: number = 5,
 ): Promise<Order | undefined> => {
-  if (price === undefined || Number.isNaN(price)) {
+  if (price === undefined || !Number.isFinite(price) || price <= 0) {
     return undefined;
   }
-  if (quantityInBase === undefined || Number.isNaN(quantityInBase)) {
+  if (quantityInBase === undefined || !Number.isFinite(quantityInBase) || quantityInBase <= 0) {
+    return undefined;
+  }
+  if (!symbol || typeof symbol !== "string" || !symbol.includes("/")) {
     return undefined;
   }
   if (exchangeOptions.dryRun === true) {
@@ -490,7 +493,7 @@ export const placeSellOrder = async (
           } as Order;
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       retries++;
       console.error(`Error happened in placing SELL order ${error}, retrying (${retries}/${maxRetries})`);
       if (isBinanceTimestampAheadError(error)) {
@@ -522,10 +525,13 @@ export const placeBuyOrder = async (
   price: number,
   maxRetries: number = 5,
 ): Promise<Order | undefined> => {
-  if (price === undefined || Number.isNaN(price)) {
+  if (price === undefined || !Number.isFinite(price) || price <= 0) {
     return undefined;
   }
-  if (quantityInBase === undefined || Number.isNaN(quantityInBase)) {
+  if (quantityInBase === undefined || !Number.isFinite(quantityInBase) || quantityInBase <= 0) {
+    return undefined;
+  }
+  if (!symbol || typeof symbol !== "string" || !symbol.includes("/")) {
     return undefined;
   }
   if (exchangeOptions.dryRun === true) {
@@ -605,7 +611,7 @@ export const placeBuyOrder = async (
           } as Order;
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       retries++;
       console.error(`Error happened in placing BUY order ${error}, retrying (${retries}/${maxRetries})`);
       if (isBinanceTimestampAheadError(error)) {
@@ -674,6 +680,9 @@ export const sell = async (
   symbolOptions: SymbolOptions,
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
+  if (!symbol || typeof symbol !== "string" || !symbol.includes("/")) {
+    throw new Error(`Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+  }
   const [base, quote] = splitSymbol(symbol);
   const baseBalance = exchangeOptions.balances?.[base]?.crypto ?? 0;
   if (orderBook === undefined || orderBook.asks === undefined) {
@@ -891,6 +900,9 @@ export const buy = async (
   symbolOptions: SymbolOptions,
   forceQuantityInBase: number | undefined,
 ): Promise<Order | boolean> => {
+  if (!symbol || typeof symbol !== "string" || !symbol.includes("/")) {
+    throw new Error(`Invalid symbol format: ${symbol}. Expected BASE/QUOTE`);
+  }
   const [base, quote] = splitSymbol(symbol);
   const quoteBalance = exchangeOptions.balances?.[quote]?.crypto ?? 0;
   if (orderBook === undefined || orderBook.bids === undefined) {
