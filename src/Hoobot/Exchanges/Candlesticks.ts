@@ -56,49 +56,61 @@ export async function getLastCandlesticks(
             return resolve([]);
           }
           const parsedData: Candlestick[] = ticks.map((candle: string[]) => {
-            const openTime = parseFloat(candle[0]);
+            const openTime = Number.isFinite(parseFloat(candle[0])) ? parseFloat(candle[0]) : 0;
             return {
               symbol: symbol,
               interval: interval,
-              type: candle[8],
+              type: candle[8] || "",
               time: openTime,
               startTime: openTime,
-              open: parseFloat(candle[1]),
-              high: parseFloat(candle[2]),
-              low: parseFloat(candle[3]),
-              close: parseFloat(candle[4]),
-              trades: parseFloat(candle[9]),
-              volume: parseFloat(candle[5]),
-              quoteVolume: parseFloat(candle[7]),
-              buyVolume: parseFloat(candle[10]),
-              quoteBuyVolume: parseFloat(candle[11]),
+              open: Number.isFinite(parseFloat(candle[1])) ? parseFloat(candle[1]) : 0,
+              high: Number.isFinite(parseFloat(candle[2])) ? parseFloat(candle[2]) : 0,
+              low: Number.isFinite(parseFloat(candle[3])) ? parseFloat(candle[3]) : 0,
+              close: Number.isFinite(parseFloat(candle[4])) ? parseFloat(candle[4]) : 0,
+              trades: Number.isFinite(parseFloat(candle[9])) ? parseFloat(candle[9]) : 0,
+              volume: Number.isFinite(parseFloat(candle[5])) ? parseFloat(candle[5]) : 0,
+              quoteVolume: Number.isFinite(parseFloat(candle[7])) ? parseFloat(candle[7]) : 0,
+              buyVolume: Number.isFinite(parseFloat(candle[10])) ? parseFloat(candle[10]) : 0,
+              quoteBuyVolume: Number.isFinite(parseFloat(candle[11])) ? parseFloat(candle[11]) : 0,
               isFinal: Boolean(candle[12]) && candle[12] !== "false" && candle[12] !== "0",
             };
-          });
+          }).filter(candle => candle.open > 0 || candle.close > 0 || candle.high > 0 || candle.low > 0);
           resolve(parsedData);
         },
         { limit: limit },
       );
     } else if (isNonKYC(exchange)) {
       const candlesticks = await exchange.getCandles(symbol, null, null, getMinutesFromInterval(interval), limit, 1);
-      const parsedData: Candlestick[] = candlesticks.bars.map(
-        (candle: { time: number; close: number; open: number; high: number; low: number; volume: number }) => ({
-          symbol: symbol,
-          interval: interval,
-          type: "kline",
-          time: candle.time,
-          open: candle.open,
-          high: candle.high,
-          low: candle.low,
-          close: candle.close,
-          trades: 0,
-          volume: candle.volume,
-          quoteVolume: 0,
-          buyVolume: 0,
-          quoteBuyVolume: 0,
-          isFinal: true,
-        }),
-      );
+      const parsedData: Candlestick[] = (candlesticks.bars || []).map(
+        (candle: { time: number; close: number; open: number; high: number; low: number; volume: number }) => {
+          const time = Number.isFinite(candle?.time) ? candle.time : 0;
+          const open = Number.isFinite(candle?.open) ? candle.open : 0;
+          const high = Number.isFinite(candle?.high) ? candle.high : 0;
+          const low = Number.isFinite(candle?.low) ? candle.low : 0;
+          const close = Number.isFinite(candle?.close) ? candle.close : 0;
+          const volume = Number.isFinite(candle?.volume) ? candle.volume : 0;
+          
+          // Only include valid candles with at least some price data
+          if (open === 0 && high === 0 && low === 0 && close === 0) return null;
+          
+          return {
+            symbol: symbol,
+            interval: interval,
+            type: "kline",
+            time: time,
+            open: open,
+            high: high,
+            low: low,
+            close: close,
+            trades: 0,
+            volume: volume,
+            quoteVolume: 0,
+            buyVolume: 0,
+            quoteBuyVolume: 0,
+            isFinal: true,
+          };
+        }
+      ).filter(Boolean) as Candlestick[];
       resolve(parsedData);
     } else if (isDexTrade(exchange)) {
       const candlesticks = await exchange.getCandles(
@@ -109,23 +121,35 @@ export async function getLastCandlesticks(
         limit,
         1,
       );
-      const parsedData: Candlestick[] = candlesticks.bars.map((candle) => ({
-        symbol: symbol,
-        interval: interval,
-        type: "kline",
-        time: candle.time,
-        startTime: candle.time,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-        trades: 0,
-        volume: candle.volume,
-        quoteVolume: 0,
-        buyVolume: 0,
-        quoteBuyVolume: 0,
-        isFinal: true,
-      }));
+      const parsedData: Candlestick[] = (candlesticks.bars || []).map((candle) => {
+        const time = Number.isFinite(candle?.time) ? candle.time : 0;
+        const open = Number.isFinite(candle?.open) ? candle.open : 0;
+        const high = Number.isFinite(candle?.high) ? candle.high : 0;
+        const low = Number.isFinite(candle?.low) ? candle.low : 0;
+        const close = Number.isFinite(candle?.close) ? candle.close : 0;
+        const volume = Number.isFinite(candle?.volume) ? candle.volume : 0;
+        
+        // Only include valid candles with at least some price data
+        if (open === 0 && high === 0 && low === 0 && close === 0) return null;
+        
+        return {
+          symbol: symbol,
+          interval: interval,
+          type: "kline",
+          time: time,
+          startTime: time,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          trades: 0,
+          volume: volume,
+          quoteVolume: 0,
+          buyVolume: 0,
+          quoteBuyVolume: 0,
+          isFinal: true,
+        };
+      }).filter(Boolean) as Candlestick[];
       resolve(parsedData);
     }
   });
