@@ -55,19 +55,28 @@ export default {
           let lastTrade: Trade = tradesInDuration[i];
           let lastPNL: number = 0;
           let commission: number = 0;
-          if (olderTrade.isBuyer) {
-            lastPNL = calculatePNLPercentageForLong(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
-          } else if (!olderTrade.isBuyer) {
-            lastPNL = calculatePNLPercentageForShort(parseFloat(olderTrade.price), parseFloat(lastTrade.price));
+          const olderPrice = Number.isFinite(parseFloat(olderTrade.price)) ? parseFloat(olderTrade.price) : 0;
+          const lastPrice = Number.isFinite(parseFloat(lastTrade.price)) ? parseFloat(lastTrade.price) : 0;
+          
+          if (olderPrice > 0 && lastPrice > 0) {
+            if (olderTrade.isBuyer) {
+              lastPNL = calculatePNLPercentageForLong(olderPrice, lastPrice);
+            } else if (!olderTrade.isBuyer) {
+              lastPNL = calculatePNLPercentageForShort(olderPrice, lastPrice);
+            }
           }
-          if (parseFloat(olderTrade.commission) > 0) {
+          
+          const olderCommission = Number.isFinite(parseFloat(olderTrade.commission)) ? parseFloat(olderTrade.commission) : 0;
+          const lastCommission = Number.isFinite(parseFloat(lastTrade.commission)) ? parseFloat(lastTrade.commission) : 0;
+          
+          if (olderCommission > 0) {
             if (olderTrade.commissionAsset === "BNB") {
               commission += 0.075;
             } else {
               commission += 0.1;
             }
           }
-          if (parseFloat(lastTrade.commission) > 0) {
+          if (lastCommission > 0) {
             if (lastTrade.commissionAsset === "BNB") {
               commission += 0.075;
             } else {
@@ -76,8 +85,9 @@ export default {
           }
           pnlPercentage += lastPNL - commission;
         }
+        const finalPnl = Number.isFinite(pnlPercentage) ? pnlPercentage.toFixed(2) : "0.00";
         let msg = "```";
-        msg += `PNL% for ${symbol} over ${duration.toUpperCase()}: ${pnlPercentage.toFixed(2)}%.\r\n`;
+        msg += `PNL% for ${symbol} over ${duration.toUpperCase()}: ${finalPnl}%.\r\n`;
         msg += "```";
         await interaction.editReply(msg);
       } else {
@@ -96,8 +106,12 @@ export const getHistoricalDataForDuration = async (
 ): Promise<Trade[]> => {
   const tradeHistory: Trade[] = await getTradeHistory(exchange, symbol);
   const targetTimestamp: number = getTargetTimestamp(duration.toUpperCase());
-  const tradesInDuration: Trade[] = tradeHistory.filter((trade) => trade.time / 1000 >= targetTimestamp);
-  const tradesBeforeDuration: Trade[] = tradeHistory.filter((trade) => trade.time / 1000 < targetTimestamp);
+  const tradesInDuration: Trade[] = tradeHistory.filter((trade) => 
+    Number.isFinite(trade.time) && trade.time / 1000 >= targetTimestamp
+  );
+  const tradesBeforeDuration: Trade[] = tradeHistory.filter((trade) => 
+    Number.isFinite(trade.time) && trade.time / 1000 < targetTimestamp
+  );
   const previousTradeBeforeDuration = tradesBeforeDuration[tradesBeforeDuration.length - 1];
   if (previousTradeBeforeDuration === undefined) {
     return tradesInDuration;

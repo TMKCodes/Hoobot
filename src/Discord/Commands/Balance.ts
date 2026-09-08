@@ -33,7 +33,11 @@ export default {
       if (exchangeByName !== undefined) {
         const sortedBalances = await getCurrentBalances(exchangeByName);
         const resultBalances = Object.entries(sortedBalances).map(
-          ([symbol, data]) => `${data.crypto.toFixed(7)} ${symbol} = ${data.usdt.toFixed(2)} USDT`,
+          ([symbol, data]) => {
+            const crypto = Number.isFinite(data.crypto) ? data.crypto.toFixed(7) : "0.0000000";
+            const usdt = Number.isFinite(data.usdt) ? data.usdt.toFixed(2) : "0.00";
+            return `${crypto} ${symbol} = ${usdt} USDT`;
+          }
         );
         await interaction.editReply(`${exchangeName} balances: \r\n${JSON.stringify(resultBalances, null, 4)}`);
       } else {
